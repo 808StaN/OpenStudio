@@ -57,6 +57,34 @@ function shouldIgnoreSpaceShortcut(target) {
   return inputType !== "range";
 }
 
+function getSampleWindowTitle(activeChannel) {
+  if (!activeChannel) {
+    return "Sample Settings";
+  }
+
+  const rawSampleRef = String(activeChannel.sampleRef || "").trim();
+  let baseName = String(activeChannel.name || "Sample").trim() || "Sample";
+
+  if (rawSampleRef) {
+    const leaf = rawSampleRef.split("/").pop() || rawSampleRef;
+    const withoutExtension = leaf.replace(/\.[^.]+$/, "");
+
+    try {
+      baseName = decodeURIComponent(withoutExtension);
+    } catch {
+      baseName = withoutExtension;
+    }
+  }
+
+  const insertRaw = String(activeChannel.mixerInsertId || "").trim();
+  const insertMatch = insertRaw.match(/insert[-_\s]?(\d+)/i);
+  const insertLabel = insertMatch
+    ? "insert" + insertMatch[1]
+    : (insertRaw.toLowerCase() || "insert?");
+
+  return baseName + " (" + insertLabel + ")";
+}
+
 function App() {
   const dispatch = useDispatch();
   const isPlaying = useSelector(function (state) {
@@ -65,6 +93,17 @@ function App() {
   const windows = useSelector(function (state) {
     return state.daw.ui.windows;
   });
+  const activeChannelId = useSelector(function (state) {
+    return state.daw.project.activeChannelId;
+  });
+  const channels = useSelector(function (state) {
+    return state.daw.project.channels;
+  });
+
+  const activeChannel = channels.find(function (channel) {
+    return channel.id === activeChannelId;
+  });
+  const sampleWindowTitle = getSampleWindowTitle(activeChannel);
 
   useAudioScheduler();
 
@@ -170,7 +209,7 @@ function App() {
 
           <FloatingWindow
             id="sampleSettings"
-            title="Sample Settings"
+            title={sampleWindowTitle}
             minWidth={460}
             minHeight={280}
           >

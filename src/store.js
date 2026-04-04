@@ -13,9 +13,20 @@ const makeFxSlots = function () {
 const makeSampleSettings = function () {
   return {
     cutItself: false,
+    normalize: false,
     lengthPct: 100,
     fadeInPct: 0,
     fadeOutPct: 0,
+    envDelayMs: 0,
+    envAttackMs: 0,
+    envHoldMs: 0,
+    envDecayMs: 0,
+    envSustainPct: 100,
+    envReleaseMs: 0,
+    attackMs: 8,
+    releaseMs: 420,
+    pitchCents: 0,
+    monoMode: false,
   };
 };
 
@@ -1156,6 +1167,10 @@ const dawSlice = createSlice({
         next.cutItself = Boolean(changes.cutItself);
       }
 
+      if (Object.hasOwn(changes, "normalize")) {
+        next.normalize = Boolean(changes.normalize);
+      }
+
       if (Object.hasOwn(changes, "lengthPct")) {
         next.lengthPct = Math.max(
           5,
@@ -1175,6 +1190,80 @@ const dawSlice = createSlice({
           0,
           Math.min(95, Number(changes.fadeOutPct || next.fadeOutPct)),
         );
+      }
+
+      if (Object.hasOwn(changes, "envDelayMs")) {
+        next.envDelayMs = Math.max(
+          0,
+          Math.min(3000, Number(changes.envDelayMs ?? next.envDelayMs ?? 0)),
+        );
+      }
+
+      if (Object.hasOwn(changes, "envAttackMs")) {
+        next.envAttackMs = Math.max(
+          0,
+          Math.min(3000, Number(changes.envAttackMs ?? next.envAttackMs ?? 0)),
+        );
+      }
+
+      if (Object.hasOwn(changes, "envHoldMs")) {
+        next.envHoldMs = Math.max(
+          0,
+          Math.min(3000, Number(changes.envHoldMs ?? next.envHoldMs ?? 0)),
+        );
+      }
+
+      if (Object.hasOwn(changes, "envDecayMs")) {
+        next.envDecayMs = Math.max(
+          0,
+          Math.min(3000, Number(changes.envDecayMs ?? next.envDecayMs ?? 0)),
+        );
+      }
+
+      if (Object.hasOwn(changes, "envSustainPct")) {
+        next.envSustainPct = Math.max(
+          0,
+          Math.min(100, Number(changes.envSustainPct ?? next.envSustainPct ?? 100)),
+        );
+      }
+
+      if (Object.hasOwn(changes, "envReleaseMs")) {
+        next.envReleaseMs = Math.max(
+          0,
+          Math.min(3000, Number(changes.envReleaseMs ?? next.envReleaseMs ?? 0)),
+        );
+      }
+
+      if (Object.hasOwn(changes, "attackMs")) {
+        next.attackMs = Math.max(
+          0,
+          Math.min(400, Number(changes.attackMs ?? next.attackMs ?? 8)),
+        );
+      }
+
+      if (Object.hasOwn(changes, "releaseMs")) {
+        next.releaseMs = Math.max(
+          0,
+          Math.min(1000, Number(changes.releaseMs ?? next.releaseMs ?? 420)),
+        );
+      }
+
+      if (
+        Object.hasOwn(changes, "pitchCents") ||
+        Object.hasOwn(changes, "pitchSemitones")
+      ) {
+        const rawPitchCents = Object.hasOwn(changes, "pitchCents")
+          ? Number(changes.pitchCents)
+          : Number(changes.pitchSemitones) * 100;
+
+        next.pitchCents = Math.max(
+          -100,
+          Math.min(100, Math.round(rawPitchCents ?? next.pitchCents ?? 0)),
+        );
+      }
+
+      if (Object.hasOwn(changes, "monoMode")) {
+        next.monoMode = Boolean(changes.monoMode);
       }
 
       const fadeTotal = next.fadeInPct + next.fadeOutPct;

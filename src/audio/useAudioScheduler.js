@@ -6,9 +6,16 @@ import { setInsertMeter, setPlayheadStep } from "../store";
 
 const defaultSampleSettings = {
   cutItself: false,
+  normalize: false,
   lengthPct: 100,
   fadeInPct: 0,
   fadeOutPct: 0,
+  envDelayMs: 0,
+  envAttackMs: 0,
+  envHoldMs: 0,
+  envDecayMs: 0,
+  envSustainPct: 100,
+  envReleaseMs: 0,
 };
 
 const DEFAULT_SAMPLE_MIDI_PITCH = 72;
@@ -19,17 +26,106 @@ function midiPitchToPlaybackRate(midiPitch) {
   return Math.max(0.125, Math.min(8, rawRate));
 }
 
+function applyVolumeEnvelopeToGain(gainParam, startTime, duration, settings) {
+  const minGain = 0.0001;
+  const envDelay = Math.max(0, Number(settings.envDelayMs ?? 0) / 1000);
+  const envAttack = Math.max(0, Number(settings.envAttackMs ?? 0) / 1000);
+  const envHold = Math.max(0, Number(settings.envHoldMs ?? 0) / 1000);
+  const envDecay = Math.max(0, Number(settings.envDecayMs ?? 0) / 1000);
+  const envRelease = Math.max(0, Number(settings.envReleaseMs ?? 0) / 1000);
+  const envSustain = Math.max(
+    minGain,
+    Math.min(1, Number(settings.envSustainPct ?? 100) / 100),
+  );
+
+  const envelopeSegmentTotal =
+    envDelay + envAttack + envHold + envDecay + envRelease;
+  const envelopeScale =
+    envelopeSegmentTotal > duration && envelopeSegmentTotal > 0
+      ? duration / envelopeSegmentTotal
+      : 1;
+
+  const delaySec = envDelay * envelopeScale;
+  const attackSec = envAttack * envelopeScale;
+  const holdSec = envHold * envelopeScale;
+  const decaySec = envDecay * envelopeScale;
+  const releaseSec = envRelease * envelopeScale;
+  const sustainSec = Math.max(
+    0,
+    duration - (delaySec + attackSec + holdSec + decaySec + releaseSec),
+  );
+
+  const delayEnd = startTime + delaySec;
+  const attackEnd = delayEnd + attackSec;
+  const holdEnd = attackEnd + holdSec;
+  const decayEnd = holdEnd + decaySec;
+  const sustainEnd = decayEnd + sustainSec;
+  const releaseEnd = sustainEnd + releaseSec;
+
+  gainParam.cancelScheduledValues(startTime);
+  gainParam.setValueAtTime(minGain, startTime);
+
+  if (delaySec > 0.0005) {
+    gainParam.setValueAtTime(minGain, delayEnd);
+  }
+
+  if (attackSec > 0.0005) {
+    gainParam.linearRampToValueAtTime(1, attackEnd);
+  } else {
+    gainParam.setValueAtTime(1, delayEnd);
+  }
+
+  if (holdSec > 0.0005) {
+    gainParam.setValueAtTime(1, holdEnd);
+  }
+
+  if (decaySec > 0.0005) {
+    gainParam.linearRampToValueAtTime(envSustain, decayEnd);
+  } else {
+    gainParam.setValueAtTime(envSustain, holdEnd);
+  }
+
+  gainParam.setValueAtTime(envSustain, sustainEnd);
+
+  if (releaseSec > 0.0005) {
+    gainParam.linearRampToValueAtTime(minGain, releaseEnd);
+  } else {
+    gainParam.setValueAtTime(minGain, sustainEnd);
+  }
+}
+
 function getSafeSampleSettings(raw) {
+  const hasPitchCents = Object.hasOwn(raw || {}, "pitchCents");
   const base = {
     ...defaultSampleSettings,
+    attackMs: 8,
+    releaseMs: 420,
+    pitchCents: hasPitchCents
+      ? Number(raw.pitchCents)
+      : Number(raw?.pitchSemitones || 0) * 100,
+    monoMode: false,
     ...(raw || {}),
   };
 
   const next = {
     cutItself: Boolean(base.cutItself),
-    lengthPct: Math.max(5, Math.min(100, Number(base.lengthPct || 100))),
-    fadeInPct: Math.max(0, Math.min(95, Number(base.fadeInPct || 0))),
-    fadeOutPct: Math.max(0, Math.min(95, Number(base.fadeOutPct || 0))),
+    normalize: Boolean(base.normalize),
+    lengthPct: Math.max(5, Math.min(100, Number(base.lengthPct ?? 100))),
+    fadeInPct: Math.max(0, Math.min(95, Number(base.fadeInPct ?? 0))),
+    fadeOutPct: Math.max(0, Math.min(95, Number(base.fadeOutPct ?? 0))),
+    envDelayMs: Math.max(0, Math.min(3000, Number(base.envDelayMs ?? 0))),
+    envAttackMs: Math.max(0, Math.min(3000, Number(base.envAttackMs ?? 0))),
+    envHoldMs: Math.max(0, Math.min(3000, Number(base.envHoldMs ?? 0))),
+    envDecayMs: Math.max(0, Math.min(3000, Number(base.envDecayMs ?? 0))),
+    envSustainPct: Math.max(0, Math.min(100, Number(base.envSustainPct ?? 100))),
+    envReleaseMs: Math.max(0, Math.min(3000, Number(base.envReleaseMs ?? 0))),
+    attackMs: Math.max(0, Math.min(400, Number(base.attackMs ?? 8))),
+    releaseMs: Math.max(0, Math.min(1000, Number(base.releaseMs ?? 420))),
+    pitchCents: Math.max(
+      -100,
+      Math.min(100, Math.round(Number(base.pitchCents ?? 0))),
+    ),
+    monoMode: Boolean(base.monoMode),
   };
 
   const fadeTotal = next.fadeInPct + next.fadeOutPct;
@@ -151,6 +247,7 @@ export function useAudioScheduler() {
   const sampleBufferCacheRef = useRef(new Map());
   const sampleLoadPromiseRef = useRef(new Map());
   const sampleLoadFailedRef = useRef(new Set());
+  const sampleNormalizeGainRef = useRef(new WeakMap());
   const activeSampleVoicesRef = useRef(new Map());
   const activeSynthVoicesRef = useRef(new Map());
   const pluginInstrumentRef = useRef(new Map());
@@ -674,13 +771,54 @@ export function useAudioScheduler() {
       ) {
         const source = audioCtx.createBufferSource();
         const gain = audioCtx.createGain();
+        const envelopeGain = audioCtx.createGain();
         const panner = audioCtx.createStereoPanner();
 
         const settings = getSafeSampleSettings(channel.sampleSettings);
+
+        const getNormalizeGain = function () {
+          if (!settings.normalize) {
+            return 1;
+          }
+
+          const cached = sampleNormalizeGainRef.current.get(sampleBuffer);
+          if (Number.isFinite(cached)) {
+            return cached;
+          }
+
+          let peak = 0;
+          const channelsCount = Math.max(
+            1,
+            Number(sampleBuffer.numberOfChannels || 1),
+          );
+
+          for (let ch = 0; ch < channelsCount; ch += 1) {
+            const channelData = sampleBuffer.getChannelData(ch);
+            const step = Math.max(1, Math.floor(channelData.length / 64000));
+
+            for (let i = 0; i < channelData.length; i += step) {
+              const abs = Math.abs(channelData[i]);
+              if (abs > peak) {
+                peak = abs;
+              }
+            }
+          }
+
+          const normalized =
+            peak > 0.0001 ? Math.max(0.25, Math.min(4, 0.9 / peak)) : 1;
+
+          sampleNormalizeGainRef.current.set(sampleBuffer, normalized);
+          return normalized;
+        };
+
         const safeMidiPitch = Number.isFinite(midiPitch)
           ? midiPitch
           : DEFAULT_SAMPLE_MIDI_PITCH;
-        const playbackRate = midiPitchToPlaybackRate(safeMidiPitch);
+        const pitchRate = Math.pow(2, Number(settings.pitchCents || 0) / 1200);
+        const playbackRate = Math.max(
+          0.125,
+          Math.min(8, midiPitchToPlaybackRate(safeMidiPitch) * pitchRate),
+        );
 
         if (settings.cutItself) {
           stopActiveChannelSamples(channel.id, time);
@@ -700,7 +838,7 @@ export function useAudioScheduler() {
             : 1;
         const finalFadeIn = fadeInSec * fadeScale;
         const finalFadeOut = fadeOutSec * fadeScale;
-        const finalGain = Math.max(0.001, gainAmount);
+        const finalGain = Math.max(0.001, gainAmount * getNormalizeGain());
         const sampleStopAt = time + playDuration;
         const fadeOutStart = Math.max(time, sampleStopAt - finalFadeOut);
 
@@ -723,7 +861,9 @@ export function useAudioScheduler() {
         panner.pan.setValueAtTime(Math.max(-1, Math.min(1, panValue)), time);
 
         source.connect(gain);
-        gain.connect(panner);
+        gain.connect(envelopeGain);
+        applyVolumeEnvelopeToGain(envelopeGain.gain, time, playDuration, settings);
+        envelopeGain.connect(panner);
         panner.connect(outputNode);
 
         const channelVoices =
@@ -758,6 +898,7 @@ export function useAudioScheduler() {
         outputNode,
         midiPitch,
         noteLengthSteps,
+        channelSettings,
       ) {
         const key = String(pluginRef || "").trim();
         const instrument = pluginInstrumentRef.current.get(key);
@@ -771,15 +912,36 @@ export function useAudioScheduler() {
         const safeMidiPitch = Number.isFinite(midiPitch)
           ? midiPitch
           : DEFAULT_SAMPLE_MIDI_PITCH;
+        const transposedPitch = Math.max(
+          0,
+          Math.min(
+            127,
+            safeMidiPitch + Number(channelSettings.pitchCents || 0) / 100,
+          ),
+        );
+        const attackSec = Math.max(
+          0,
+          Number(channelSettings.attackMs || 0) / 1000,
+        );
+        const releaseSec = Math.max(
+          0,
+          Number(channelSettings.releaseMs ?? 420) / 1000,
+        );
         const noteDuration = Math.max(
           0.1,
-          Number(noteLengthSteps || 1) * sixteenth * 0.95 + 0.35,
+          Number(noteLengthSteps || 1) * sixteenth * 0.95 + releaseSec,
         );
         const noteGain = Math.max(0.03, gainAmount * 2.2);
 
-        const voiceNode = instrument.play(safeMidiPitch, time, {
+        if (channelSettings.monoMode) {
+          stopActiveChannelSynthVoices(channel.id, time);
+        }
+
+        const voiceNode = instrument.play(transposedPitch, time, {
           duration: noteDuration,
           gain: noteGain,
+          attack: attackSec,
+          release: releaseSec,
           pan: Math.max(-1, Math.min(1, panValue)),
           destination: outputNode,
         });
@@ -889,6 +1051,7 @@ export function useAudioScheduler() {
           const pluginRef = String(channel.pluginRef || "");
           const plugin = getPluginInstrument(pluginRef);
           const hasPluginInstrument = Boolean(plugin && plugin.soundfont);
+          const channelSettings = getSafeSampleSettings(channel.sampleSettings);
 
           if (!sampleRef && !hasPluginInstrument) {
             return;
@@ -909,6 +1072,7 @@ export function useAudioScheduler() {
                 outputNode,
                 midiPitch,
                 lengthSteps,
+                channelSettings,
               );
               return;
             }

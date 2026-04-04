@@ -364,11 +364,6 @@ export function ChannelRackWindow() {
                     onClick={function (event) {
                       event.stopPropagation();
                       dispatch(setActiveChannel(channel.id));
-                      if (channel.pluginRef) {
-                        dispatch(openWindow("pianoRoll"));
-                        return;
-                      }
-
                       dispatch(openWindow("sampleSettings"));
                     }}
                   >
