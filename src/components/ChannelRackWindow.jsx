@@ -1,6 +1,7 @@
 import { useDispatch, useSelector } from "react-redux";
 import {
   addChannel,
+  assignPluginToChannel,
   createPattern,
   assignSampleToChannel,
   openWindow,
@@ -15,6 +16,7 @@ import {
   setChannelVolume,
   toggleStep,
 } from "../store";
+import { getPluginInstrument } from "../data/pluginInstruments";
 import { C5_PITCH, getChannelMergedNotes } from "../utils/patternNotes";
 
 const MIDI_PITCH_MIN = 0;
@@ -240,15 +242,36 @@ export function ChannelRackWindow() {
                 }}
                 onDrop={function (event) {
                   event.preventDefault();
-                  const raw = event.dataTransfer.getData(
+
+                  const rawPlugin = event.dataTransfer.getData(
+                    "application/x-daw-plugin",
+                  );
+
+                  if (rawPlugin) {
+                    try {
+                      const payload = JSON.parse(rawPlugin);
+                      dispatch(
+                        assignPluginToChannel({
+                          channelId: channel.id,
+                          pluginRef: payload.pluginRef,
+                          pluginName: payload.pluginName,
+                        }),
+                      );
+                      return;
+                    } catch {
+                      return;
+                    }
+                  }
+
+                  const rawSample = event.dataTransfer.getData(
                     "application/x-daw-sample",
                   );
-                  if (!raw) {
+                  if (!rawSample) {
                     return;
                   }
 
                   try {
-                    const payload = JSON.parse(raw);
+                    const payload = JSON.parse(rawSample);
                     dispatch(
                       assignSampleToChannel({
                         channelId: channel.id,
@@ -331,10 +354,21 @@ export function ChannelRackWindow() {
 
                   <button
                     className="channel-name"
-                    title={channel.sampleRef || "Drop WAV from Browser"}
+                    title={
+                      channel.pluginRef
+                        ? "Instrument: " +
+                          (getPluginInstrument(channel.pluginRef)?.name ||
+                            channel.name)
+                        : channel.sampleRef || "Drop WAV from Browser"
+                    }
                     onClick={function (event) {
                       event.stopPropagation();
                       dispatch(setActiveChannel(channel.id));
+                      if (channel.pluginRef) {
+                        dispatch(openWindow("pianoRoll"));
+                        return;
+                      }
+
                       dispatch(openWindow("sampleSettings"));
                     }}
                   >

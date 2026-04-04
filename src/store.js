@@ -184,6 +184,7 @@ const initialState = {
         id: "ch-kick",
         name: "Kick",
         sampleRef: "",
+        pluginRef: "",
         sampleSettings: makeSampleSettings(),
         muted: false,
         solo: false,
@@ -196,6 +197,7 @@ const initialState = {
         id: "ch-snare",
         name: "Snare",
         sampleRef: "",
+        pluginRef: "",
         sampleSettings: makeSampleSettings(),
         muted: false,
         solo: false,
@@ -208,6 +210,7 @@ const initialState = {
         id: "ch-hat",
         name: "Hat",
         sampleRef: "",
+        pluginRef: "",
         sampleSettings: makeSampleSettings(),
         muted: false,
         solo: false,
@@ -220,6 +223,7 @@ const initialState = {
         id: "ch-clap",
         name: "Clap",
         sampleRef: "",
+        pluginRef: "",
         sampleSettings: makeSampleSettings(),
         muted: false,
         solo: false,
@@ -232,6 +236,7 @@ const initialState = {
         id: "ch-perc",
         name: "Perc",
         sampleRef: "",
+        pluginRef: "",
         sampleSettings: makeSampleSettings(),
         muted: false,
         solo: false,
@@ -909,6 +914,7 @@ const dawSlice = createSlice({
         id: newChannelId,
         name: "Channel " + nextChannelNumber,
         sampleRef: "",
+        pluginRef: "",
         sampleSettings: makeSampleSettings(),
         muted: false,
         solo: false,
@@ -1187,12 +1193,30 @@ const dawSlice = createSlice({
         return;
       }
       channel.sampleRef = action.payload.sampleRef;
+      channel.pluginRef = "";
       const sourceName = action.payload.sampleName || action.payload.sampleRef;
       channel.name = sourceName
         .split("/")
         .pop()
         .replace(/\.[^.]+$/, "")
         .slice(0, 14);
+    },
+
+    assignPluginToChannel(state, action) {
+      const channel = state.project.channels.find(function (item) {
+        return item.id === action.payload.channelId;
+      });
+      if (!channel) {
+        return;
+      }
+
+      channel.pluginRef = String(action.payload.pluginRef || "").trim();
+      channel.sampleRef = "";
+
+      const pluginName = String(action.payload.pluginName || "Plugin").trim();
+      if (pluginName) {
+        channel.name = pluginName.slice(0, 14);
+      }
     },
 
     selectInsert(state, action) {
@@ -1361,6 +1385,7 @@ export const {
   setChannelMixerInsert,
   setChannelSampleSettings,
   assignSampleToChannel,
+  assignPluginToChannel,
   selectInsert,
   addMixerTrack,
   setInsertActive,

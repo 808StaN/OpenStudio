@@ -1,17 +1,14 @@
 import { FolderOpen, Package2 } from "lucide-react";
 import { useCallback, useEffect, useRef, useState } from "react";
 import { useDispatch, useSelector } from "react-redux";
+import { PLUGIN_INSTRUMENTS } from "../data/pluginInstruments";
 import { setBrowserTab } from "../store";
 
 const browserData = {
   plugins: [
     {
-      folder: "Generators",
-      items: ["Sytrus", "FLEX", "3xOSC", "Harmor"],
-    },
-    {
-      folder: "Effects",
-      items: ["Parametric EQ 2", "Compressor", "Reverb 2", "Delay 3"],
+      folder: "Instruments",
+      items: PLUGIN_INSTRUMENTS,
     },
   ],
   drumkits: [
@@ -422,10 +419,22 @@ export function BrowserPanel() {
                     {group.items.map(function (item) {
                       return (
                         <li
-                          key={group.folder + "-" + item}
+                          key={group.folder + "-" + item.pluginRef}
                           className="tree-item plugin-item"
+                          title={item.description}
+                          draggable
+                          onDragStart={function (event) {
+                            event.dataTransfer.setData(
+                              "application/x-daw-plugin",
+                              JSON.stringify({
+                                tab: "plugins",
+                                pluginRef: item.pluginRef,
+                                pluginName: item.name,
+                              }),
+                            );
+                          }}
                         >
-                          {item}
+                          {item.name}
                         </li>
                       );
                     })}

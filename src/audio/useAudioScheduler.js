@@ -1,5 +1,7 @@
 import { useCallback, useEffect, useRef } from "react";
+import Soundfont from "soundfont-player";
 import { useDispatch, useSelector } from "react-redux";
+import { getPluginInstrument } from "../data/pluginInstruments";
 import { setInsertMeter, setPlayheadStep } from "../store";
 
 const defaultSampleSettings = {
@@ -150,6 +152,10 @@ export function useAudioScheduler() {
   const sampleLoadPromiseRef = useRef(new Map());
   const sampleLoadFailedRef = useRef(new Set());
   const activeSampleVoicesRef = useRef(new Map());
+  const activeSynthVoicesRef = useRef(new Map());
+  const pluginInstrumentRef = useRef(new Map());
+  const pluginInstrumentLoadRef = useRef(new Map());
+  const pluginInstrumentFailedRef = useRef(new Set());
   const channelsRef = useRef(channels);
   const activePatternRef = useRef(activePattern);
   const patternsRef = useRef(patterns);
@@ -166,6 +172,51 @@ export function useAudioScheduler() {
     }
     return audioCtxRef.current;
   }, []);
+
+  const loadPluginInstrument = useCallback(
+    async function (pluginRef) {
+      const plugin = getPluginInstrument(pluginRef);
+      if (!plugin || !plugin.soundfont) {
+        return null;
+      }
+
+      const key = plugin.pluginRef;
+      const cached = pluginInstrumentRef.current.get(key);
+      if (cached) {
+        return cached;
+      }
+
+      const pending = pluginInstrumentLoadRef.current.get(key);
+      if (pending) {
+        return pending;
+      }
+
+      if (pluginInstrumentFailedRef.current.has(key)) {
+        return null;
+      }
+
+      const audioCtx = ensureContext();
+      const request = Soundfont.instrument(audioCtx, plugin.soundfont, {
+        destination: audioCtx.destination,
+      })
+        .then(function (instrument) {
+          pluginInstrumentRef.current.set(key, instrument);
+          pluginInstrumentFailedRef.current.delete(key);
+          return instrument;
+        })
+        .catch(function () {
+          pluginInstrumentFailedRef.current.add(key);
+          return null;
+        })
+        .finally(function () {
+          pluginInstrumentLoadRef.current.delete(key);
+        });
+
+      pluginInstrumentLoadRef.current.set(key, request);
+      return request;
+    },
+    [ensureContext],
+  );
 
   const loadSampleBuffer = useCallback(
     async function (sampleUrl) {
@@ -460,6 +511,41 @@ export function useAudioScheduler() {
 
   useEffect(
     function () {
+      const pluginRefs = Array.from(
+        new Set(
+          channels
+            .map(function (channel) {
+              return String(channel.pluginRef || "").trim();
+            })
+            .filter(Boolean),
+        ),
+      );
+
+      if (pluginRefs.length === 0) {
+        return;
+      }
+
+      pluginRefs.forEach(function (pluginRef) {
+        if (!getPluginInstrument(pluginRef)) {
+          return;
+        }
+
+        if (pluginInstrumentRef.current.has(pluginRef)) {
+          return;
+        }
+
+        if (pluginInstrumentFailedRef.current.has(pluginRef)) {
+          return;
+        }
+
+        void loadPluginInstrument(pluginRef);
+      });
+    },
+    [channels, loadPluginInstrument],
+  );
+
+  useEffect(
+    function () {
       const stopActiveChannelSamples = function (channelId, atTime) {
         const voices = activeSampleVoicesRef.current.get(channelId);
         if (!voices || voices.size === 0) {
@@ -481,10 +567,35 @@ export function useAudioScheduler() {
         voices.clear();
       };
 
+      const stopActiveChannelSynthVoices = function (channelId, atTime) {
+        const voices = activeSynthVoicesRef.current.get(channelId);
+        if (!voices || voices.size === 0) {
+          return;
+        }
+
+        voices.forEach(function (voice) {
+          try {
+            if (voice.node && typeof voice.node.stop === "function") {
+              voice.node.stop(atTime);
+            }
+          } catch {
+            return;
+          }
+        });
+
+        voices.clear();
+      };
+
       const stopAllActiveSamples = function (atTime) {
         Array.from(activeSampleVoicesRef.current.keys()).forEach(
           function (channelId) {
             stopActiveChannelSamples(channelId, atTime);
+          },
+        );
+
+        Array.from(activeSynthVoicesRef.current.keys()).forEach(
+          function (channelId) {
+            stopActiveChannelSynthVoices(channelId, atTime);
           },
         );
       };
@@ -638,6 +749,68 @@ export function useAudioScheduler() {
         source.stop(sampleStopAt + 0.005);
       };
 
+      const schedulePluginInstrument = function (
+        pluginRef,
+        time,
+        gainAmount,
+        panValue,
+        channel,
+        outputNode,
+        midiPitch,
+        noteLengthSteps,
+      ) {
+        const key = String(pluginRef || "").trim();
+        const instrument = pluginInstrumentRef.current.get(key);
+        if (!instrument) {
+          if (!pluginInstrumentFailedRef.current.has(key)) {
+            void loadPluginInstrument(key);
+          }
+          return;
+        }
+
+        const safeMidiPitch = Number.isFinite(midiPitch)
+          ? midiPitch
+          : DEFAULT_SAMPLE_MIDI_PITCH;
+        const noteDuration = Math.max(
+          0.1,
+          Number(noteLengthSteps || 1) * sixteenth * 0.95 + 0.35,
+        );
+        const noteGain = Math.max(0.03, gainAmount * 2.2);
+
+        const voiceNode = instrument.play(safeMidiPitch, time, {
+          duration: noteDuration,
+          gain: noteGain,
+          pan: Math.max(-1, Math.min(1, panValue)),
+          destination: outputNode,
+        });
+
+        if (!voiceNode || typeof voiceNode.stop !== "function") {
+          return;
+        }
+
+        const channelVoices =
+          activeSynthVoicesRef.current.get(channel.id) || new Set();
+        if (!activeSynthVoicesRef.current.has(channel.id)) {
+          activeSynthVoicesRef.current.set(channel.id, channelVoices);
+        }
+
+        const voice = { node: voiceNode };
+
+        channelVoices.add(voice);
+
+        const removeAfterMs = Math.max(
+          40,
+          Math.round((time - audioCtx.currentTime + noteDuration + 0.4) * 1000),
+        );
+
+        window.setTimeout(function () {
+          channelVoices.delete(voice);
+          if (channelVoices.size === 0) {
+            activeSynthVoicesRef.current.delete(channel.id);
+          }
+        }, removeAfterMs);
+      };
+
       if (!transport.isPlaying) {
         if (rafIdRef.current) {
           cancelAnimationFrame(rafIdRef.current);
@@ -692,30 +865,60 @@ export function useAudioScheduler() {
           const stepHit = Boolean(row && row[stepIndex]);
 
           const pianoNotes = pattern.pianoPreview?.[channel.id] || [];
-          const noteHits = pianoNotes.filter(function (note) {
+          const noteHits = pianoNotes.reduce(function (acc, note) {
             const noteStart = Math.max(0, Number(note.start || 0));
-            return Math.floor(noteStart) === stepIndex;
-          });
+            const startStep = Math.floor(noteStart);
+            if (startStep !== stepIndex) {
+              return acc;
+            }
+
+            const stepOffset = noteStart - startStep;
+            acc.push({
+              pitch: Math.round(note.pitch || DEFAULT_SAMPLE_MIDI_PITCH),
+              offsetSeconds: Math.max(0, stepOffset * sixteenth),
+              lengthSteps: Math.max(0.0625, Number(note.length || 1)),
+            });
+            return acc;
+          }, []);
 
           if (!stepHit && noteHits.length === 0) {
             return;
           }
 
           const sampleRef = channel.sampleRef;
-          if (!sampleRef) {
+          const pluginRef = String(channel.pluginRef || "");
+          const plugin = getPluginInstrument(pluginRef);
+          const hasPluginInstrument = Boolean(plugin && plugin.soundfont);
+
+          if (!sampleRef && !hasPluginInstrument) {
             return;
           }
 
-          const gainAmount = 0.2 * channel.volume;
           const outputNode = getInsertInputNodeForChannel(channel);
 
-          const playOneHit = function (midiPitch) {
+          const playOneHit = function (midiPitch, offsetSeconds, lengthSteps) {
+            const hitTime = noteTime + Math.max(0, Number(offsetSeconds || 0));
+
+            if (hasPluginInstrument) {
+              schedulePluginInstrument(
+                pluginRef,
+                hitTime,
+                0.16 * channel.volume,
+                channel.pan,
+                channel,
+                outputNode,
+                midiPitch,
+                lengthSteps,
+              );
+              return;
+            }
+
             const sampleBuffer = sampleBufferCacheRef.current.get(sampleRef);
             if (sampleBuffer) {
               scheduleSample(
                 sampleBuffer,
-                noteTime,
-                gainAmount,
+                hitTime,
+                0.2 * channel.volume,
                 channel.pan,
                 channel,
                 outputNode,
@@ -730,11 +933,11 @@ export function useAudioScheduler() {
           };
 
           if (stepHit) {
-            playOneHit(DEFAULT_SAMPLE_MIDI_PITCH);
+            playOneHit(DEFAULT_SAMPLE_MIDI_PITCH, 0, 1);
           }
 
           noteHits.forEach(function (note) {
-            playOneHit(Math.round(note.pitch || DEFAULT_SAMPLE_MIDI_PITCH));
+            playOneHit(note.pitch, note.offsetSeconds, note.lengthSteps);
           });
         });
       };
@@ -867,6 +1070,7 @@ export function useAudioScheduler() {
       ensureMixerGraph,
       getInsertInputNodeForChannel,
       loadSampleBuffer,
+      loadPluginInstrument,
     ],
   );
 }

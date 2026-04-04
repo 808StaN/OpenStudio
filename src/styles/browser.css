@@ -137,7 +137,12 @@
 }
 
 .plugin-item {
-  cursor: default;
+  cursor: grab;
+  color: #9fe7be;
+}
+
+.plugin-item:active {
+  cursor: grabbing;
 }
 
 .tree-item:hover {
