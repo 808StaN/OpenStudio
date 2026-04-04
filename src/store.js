@@ -50,6 +50,15 @@ function makePatternStepGrid(channels, lengthSteps) {
   }, {});
 }
 
+function makeChannelId() {
+  return (
+    "ch-" +
+    Date.now().toString(36) +
+    "-" +
+    Math.random().toString(36).slice(2, 6)
+  );
+}
+
 const MIN_CLIP_BAR_LENGTH = 1 / 16;
 
 function normalizeBarValue(raw, minValue, maxValue) {
@@ -207,13 +216,43 @@ const initialState = {
         inputMode: "piano",
         mixerInsertId: "insert-3",
       },
+      {
+        id: "ch-clap",
+        name: "Clap",
+        sampleRef: "",
+        sampleSettings: makeSampleSettings(),
+        muted: false,
+        solo: false,
+        volume: 0.78,
+        pan: 0.08,
+        inputMode: "steps",
+        mixerInsertId: "insert-4",
+      },
+      {
+        id: "ch-perc",
+        name: "Perc",
+        sampleRef: "",
+        sampleSettings: makeSampleSettings(),
+        muted: false,
+        solo: false,
+        volume: 0.72,
+        pan: -0.08,
+        inputMode: "steps",
+        mixerInsertId: "insert-5",
+      },
     ],
     patterns: [
       makeEmptyPattern({
         id: "pat-1",
         name: "Pattern 1",
         lengthSteps: 128,
-        channels: [{ id: "ch-kick" }, { id: "ch-snare" }, { id: "ch-hat" }],
+        channels: [
+          { id: "ch-kick" },
+          { id: "ch-snare" },
+          { id: "ch-hat" },
+          { id: "ch-clap" },
+          { id: "ch-perc" },
+        ],
       }),
     ],
     playlistTracks: makePlaylistTracks(10),
@@ -857,6 +896,40 @@ const dawSlice = createSlice({
       state.project.activeChannelId = channelId;
     },
 
+    addChannel(state) {
+      const nextChannelNumber = state.project.channels.length + 1;
+      const newChannelId = makeChannelId();
+      const mixerTargets = state.mixer.inserts.filter(function (insert) {
+        return !insert.isMaster;
+      });
+      const targetInsert =
+        mixerTargets[Math.min(nextChannelNumber - 1, mixerTargets.length - 1)];
+
+      state.project.channels.push({
+        id: newChannelId,
+        name: "Channel " + nextChannelNumber,
+        sampleRef: "",
+        sampleSettings: makeSampleSettings(),
+        muted: false,
+        solo: false,
+        volume: 0.75,
+        pan: 0,
+        inputMode: "steps",
+        mixerInsertId: targetInsert?.id || "insert-1",
+      });
+
+      state.project.patterns.forEach(function (pattern) {
+        if (!pattern.stepGrid) {
+          pattern.stepGrid = {};
+        }
+
+        const length = Math.max(1, pattern.lengthSteps || 16);
+        pattern.stepGrid[newChannelId] = makeStepRow(length, []);
+      });
+
+      state.project.activeChannelId = newChannelId;
+    },
+
     togglePianoNote(state, action) {
       const pattern = state.project.patterns.find(function (item) {
         return item.id === action.payload.patternId;
@@ -1247,6 +1320,7 @@ export const {
   setPlaylistClipLength,
   setPlaylistClipPlacement,
   setActiveChannel,
+  addChannel,
   togglePianoNote,
   setPianoNoteLength,
   movePianoNote,

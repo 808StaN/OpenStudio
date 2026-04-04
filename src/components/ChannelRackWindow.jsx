@@ -1,5 +1,6 @@
 import { useDispatch, useSelector } from "react-redux";
 import {
+  addChannel,
   createPattern,
   assignSampleToChannel,
   openWindow,
@@ -107,6 +108,16 @@ export function ChannelRackWindow() {
             }}
           >
             +
+          </button>
+          <button
+            className="rack-channel-add"
+            title="Add channel"
+            aria-label="Add channel"
+            onClick={function () {
+              dispatch(addChannel());
+            }}
+          >
+            + Channel
           </button>
         </div>
 

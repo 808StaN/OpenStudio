@@ -198,6 +198,25 @@
   color: #92a2bb;
 }
 
+.rack-channel-add {
+  height: 28px;
+  border: 1px solid #3a9a6b;
+  border-radius: 6px;
+  color: #d2ffe9;
+  background: linear-gradient(180deg, #34cf83 0%, #178f55 100%);
+  padding: 0 10px;
+  font-size: 12px;
+  font-weight: 600;
+  cursor: pointer;
+  box-shadow:
+    inset 0 1px 0 rgba(255, 255, 255, 0.35),
+    0 0 10px rgba(47, 210, 127, 0.24);
+}
+
+.rack-channel-add:hover {
+  filter: brightness(1.06);
+}
+
 .rack-row {
   border: 1px solid #4a505a;
   border-radius: 9px;
