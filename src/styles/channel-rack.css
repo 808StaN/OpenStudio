@@ -341,7 +341,7 @@
 }
 
 .rack-input-piano {
-  width: clamp(380px, 42vw, 640px);
+  width: max-content;
 }
 
 .step-grid {

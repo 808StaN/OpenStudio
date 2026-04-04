@@ -8,7 +8,7 @@ import {
   setPlaylistClipPlacement,
   setPlaylistClipLength,
 } from "../store";
-import { C5_PITCH, PIANO_PITCH_MAX, PIANO_PITCH_MIN } from "../utils/patternNotes";
+import { C5_PITCH } from "../utils/patternNotes";
 
 const BAR_COUNT = 16;
 const BASE_BAR_WIDTH = 56;
@@ -18,6 +18,8 @@ const MIN_BAR_WIDTH = 42;
 const MAX_BAR_WIDTH = 320;
 const DEFAULT_PATTERN_COLOR = "#4bef9f";
 const MIN_CLIP_BAR_LENGTH = 1 / 16;
+const MIDI_PITCH_MIN = 0;
+const MIDI_PITCH_MAX = 127;
 
 const SNAP_OPTIONS = [
   { key: "none", label: "(none)", stepSize: null },
@@ -47,7 +49,9 @@ function quantizeBySnap(value, snapSize) {
 }
 
 function hexToRgb(hexColor) {
-  const safe = String(hexColor || "").trim().replace("#", "");
+  const safe = String(hexColor || "")
+    .trim()
+    .replace("#", "");
   if (!/^[0-9a-fA-F]{6}$/.test(safe)) {
     return { r: 75, g: 239, b: 159 };
   }
@@ -87,7 +91,10 @@ function getPatternPreviewNotes(pattern) {
     });
   });
 
-  Object.entries(pattern.pianoPreview || {}).forEach(function ([channelId, notes]) {
+  Object.entries(pattern.pianoPreview || {}).forEach(function ([
+    channelId,
+    notes,
+  ]) {
     (notes || []).forEach(function (note) {
       const start = Math.max(
         0,
@@ -97,7 +104,12 @@ function getPatternPreviewNotes(pattern) {
       merged.push({
         id:
           note.id ||
-          "piano-" + channelId + "-" + String(note.start) + "-" + String(note.pitch),
+          "piano-" +
+            channelId +
+            "-" +
+            String(note.start) +
+            "-" +
+            String(note.pitch),
         start,
         length: Math.max(0.0625, Math.min(maxLen, Number(note.length || 1))),
         pitch: Math.round(note.pitch || C5_PITCH),
@@ -121,8 +133,13 @@ const ClipPreviewNotes = memo(function ClipPreviewNotes(props) {
 
   const renderedPreviewNotes = useMemo(
     function () {
-      const rendered = [];
-      const visiblePatternSteps = Math.max(1, Math.min(patternLength, clipLengthSteps));
+      const visibleNotes = [];
+      const visiblePatternSteps = Math.max(
+        1,
+        Math.min(patternLength, clipLengthSteps),
+      );
+      let minPitch = Infinity;
+      let maxPitch = -Infinity;
 
       for (let noteIndex = 0; noteIndex < previewNotes.length; noteIndex += 1) {
         const note = previewNotes[noteIndex];
@@ -138,34 +155,45 @@ const ClipPreviewNotes = memo(function ClipPreviewNotes(props) {
             Math.max(0.0625, visiblePatternSteps - noteStart),
           ),
         );
-        const left = (noteStart / clipLengthSteps) * 100;
-        const width = Math.max(0.8, (noteLength / clipLengthSteps) * 100);
-        const clampedPitch = Math.max(
-          PIANO_PITCH_MIN,
-          Math.min(PIANO_PITCH_MAX, Math.round(note.pitch || C5_PITCH)),
-        );
-        const pitchRange = Math.max(1, PIANO_PITCH_MAX - PIANO_PITCH_MIN);
-        const pitchRatio = (PIANO_PITCH_MAX - clampedPitch) / pitchRange;
-        const top = 6 + pitchRatio * 78;
-
-        rendered.push(
-          <span
-            key={clipId + "-" + note.id + "-" + noteIndex}
-            className="clip-mini-note"
-            style={{
-              left: left + "%",
-              width: width + "%",
-              top: top + "%",
-            }}
-          />,
+        const pitch = Math.max(
+          MIDI_PITCH_MIN,
+          Math.min(MIDI_PITCH_MAX, Math.round(note.pitch || C5_PITCH)),
         );
 
-        if (rendered.length >= 700) {
-          break;
-        }
+        minPitch = Math.min(minPitch, pitch);
+        maxPitch = Math.max(maxPitch, pitch);
+        visibleNotes.push({
+          id: note.id,
+          noteIndex,
+          left: (noteStart / clipLengthSteps) * 100,
+          width: Math.max(0.8, (noteLength / clipLengthSteps) * 100),
+          pitch,
+        });
       }
 
-      return rendered;
+      if (visibleNotes.length === 0) {
+        return [];
+      }
+
+      const pitchRange = maxPitch - minPitch;
+
+      return visibleNotes.slice(0, 700).map(function (note) {
+        const pitchRatio =
+          pitchRange <= 0 ? 0.5 : (maxPitch - note.pitch) / pitchRange;
+        const top = 6 + pitchRatio * 88;
+
+        return (
+          <span
+            key={clipId + "-" + note.id + "-" + note.noteIndex}
+            className="clip-mini-note"
+            style={{
+              left: note.left + "%",
+              width: note.width + "%",
+              top: top + "%",
+            }}
+          />
+        );
+      });
     },
     [clipId, previewNotes, clipLengthSteps, patternLength],
   );
@@ -305,7 +333,8 @@ export function PlaylistWindow() {
       return;
     }
 
-    header.style.transform = "translateX(" + -event.currentTarget.scrollLeft + "px)";
+    header.style.transform =
+      "translateX(" + -event.currentTarget.scrollLeft + "px)";
   };
 
   const onPlaylistBodyWheel = function (event) {
@@ -450,7 +479,8 @@ export function PlaylistWindow() {
         return;
       }
 
-      const targetTrackId = targetGrid.getAttribute("data-track-id") || fallbackTrackId;
+      const targetTrackId =
+        targetGrid.getAttribute("data-track-id") || fallbackTrackId;
       const rect = targetGrid.getBoundingClientRect();
       const barWidthPx = rect.width / BAR_COUNT;
       const deltaBars = Math.round(
@@ -539,7 +569,8 @@ export function PlaylistWindow() {
           ref={playlistHeaderRef}
           className="playlist-header"
           style={{
-            gridTemplateColumns: "92px repeat(" + BAR_COUNT + ", " + barWidth + "px)",
+            gridTemplateColumns:
+              "92px repeat(" + BAR_COUNT + ", " + barWidth + "px)",
             width: 92 + timelineWidth,
           }}
         >
@@ -620,7 +651,8 @@ export function PlaylistWindow() {
                     1,
                     Math.round(Number(clip.barLength || 1)) * 16,
                   );
-                  const previewNotes = previewNotesByPatternId[clip.patternId] || [];
+                  const previewNotes =
+                    previewNotesByPatternId[clip.patternId] || [];
 
                   return (
                     <div
@@ -659,7 +691,9 @@ export function PlaylistWindow() {
                         clipLengthSteps={clipLengthSteps}
                         patternLength={patternLength}
                       />
-                      <span className="clip-label">{pattern?.name || "Pattern"}</span>
+                      <span className="clip-label">
+                        {pattern?.name || "Pattern"}
+                      </span>
                       <button
                         type="button"
                         className="clip-resize-handle"

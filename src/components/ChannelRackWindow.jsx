@@ -14,12 +14,14 @@ import {
   setChannelVolume,
   toggleStep,
 } from "../store";
-import {
-  C5_PITCH,
-  PIANO_PITCH_MAX,
-  PIANO_PITCH_MIN,
-  getChannelMergedNotes,
-} from "../utils/patternNotes";
+import { C5_PITCH, getChannelMergedNotes } from "../utils/patternNotes";
+
+const MIDI_PITCH_MIN = 0;
+const MIDI_PITCH_MAX = 127;
+const PREVIEW_TOP_MIN_PERCENT = 9;
+const PREVIEW_TOP_MAX_PERCENT = 91;
+const STEP_CELL_WIDTH_PX = 24;
+const STEP_CELL_GAP_PX = 5;
 
 function isMelodyShapeNote(note) {
   const pitch = Math.round(Number(note.pitch || C5_PITCH));
@@ -183,6 +185,27 @@ export function ChannelRackWindow() {
               return Boolean(rawRow[i]);
             });
             const notes = getChannelMergedNotes(activePattern, channel.id);
+            const notePitchBounds = notes.reduce(
+              function (acc, note) {
+                const pitch = Math.max(
+                  MIDI_PITCH_MIN,
+                  Math.min(MIDI_PITCH_MAX, Math.round(note.pitch || C5_PITCH)),
+                );
+
+                return {
+                  min: Math.min(acc.min, pitch),
+                  max: Math.max(acc.max, pitch),
+                };
+              },
+              {
+                min: Infinity,
+                max: -Infinity,
+              },
+            );
+            const hasPitchBounds = Number.isFinite(notePitchBounds.min);
+            const notePitchRange = hasPitchBounds
+              ? notePitchBounds.max - notePitchBounds.min
+              : 0;
             const pianoNotes = activePattern?.pianoPreview?.[channel.id] || [];
             const shouldAutoShowMelodyInSequencer =
               pianoNotes.some(isMelodyShapeNote);
@@ -190,6 +213,9 @@ export function ChannelRackWindow() {
               channelRackMode === "melody" ||
               (channelRackMode === "sequencer" &&
                 shouldAutoShowMelodyInSequencer);
+            const channelGridWidthPx =
+              patternLength * STEP_CELL_WIDTH_PX +
+              Math.max(0, patternLength - 1) * STEP_CELL_GAP_PX;
 
             return (
               <article
@@ -338,6 +364,7 @@ export function ChannelRackWindow() {
                   {showPianoPreview ? (
                     <button
                       className="piano-preview"
+                      style={{ width: channelGridWidthPx + "px" }}
                       onClick={function () {
                         dispatch(setActiveChannel(channel.id));
                         dispatch(openWindow("pianoRoll"));
@@ -346,20 +373,21 @@ export function ChannelRackWindow() {
                       {notes.map(function (note) {
                         const left = (note.start / patternLength) * 100;
                         const width = (note.length / patternLength) * 100;
-                        const clampedPitch = Math.max(
-                          PIANO_PITCH_MIN,
+                        const pitch = Math.max(
+                          MIDI_PITCH_MIN,
                           Math.min(
-                            PIANO_PITCH_MAX,
-                            note.pitch || PIANO_PITCH_MIN,
+                            MIDI_PITCH_MAX,
+                            Math.round(note.pitch || C5_PITCH),
                           ),
                         );
-                        const pitchRange = Math.max(
-                          1,
-                          PIANO_PITCH_MAX - PIANO_PITCH_MIN,
-                        );
                         const pitchRatio =
-                          (PIANO_PITCH_MAX - clampedPitch) / pitchRange;
-                        const top = 8 + pitchRatio * 84;
+                          notePitchRange <= 0
+                            ? 0.5
+                            : (notePitchBounds.max - pitch) / notePitchRange;
+                        const top =
+                          PREVIEW_TOP_MIN_PERCENT +
+                          pitchRatio *
+                            (PREVIEW_TOP_MAX_PERCENT - PREVIEW_TOP_MIN_PERCENT);
 
                         return (
                           <span
@@ -380,7 +408,11 @@ export function ChannelRackWindow() {
                       className="step-grid"
                       style={{
                         gridTemplateColumns:
-                          "repeat(" + patternLength + ", 24px)",
+                          "repeat(" +
+                          patternLength +
+                          ", " +
+                          STEP_CELL_WIDTH_PX +
+                          "px)",
                       }}
                     >
                       {row.map(function (isOn, stepIndex) {
