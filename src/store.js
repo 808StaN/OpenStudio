@@ -213,11 +213,7 @@ const initialState = {
         id: "pat-1",
         name: "Pattern 1",
         lengthSteps: 128,
-        channels: [
-          { id: "ch-kick" },
-          { id: "ch-snare" },
-          { id: "ch-hat" },
-        ],
+        channels: [{ id: "ch-kick" }, { id: "ch-snare" }, { id: "ch-hat" }],
       }),
     ],
     playlistTracks: makePlaylistTracks(10),
@@ -598,7 +594,8 @@ const dawSlice = createSlice({
     },
 
     addPlaylistPatternClip(state, action) {
-      const patternId = action.payload.patternId || state.project.activePatternId;
+      const patternId =
+        action.payload.patternId || state.project.activePatternId;
       const pattern = state.project.patterns.find(function (item) {
         return item.id === patternId;
       });
@@ -616,7 +613,10 @@ const dawSlice = createSlice({
 
       const barStart = normalizeBarValue(action.payload.barStart || 1, 1, 128);
 
-      const patternBarLength = Math.max(1, Math.ceil((pattern.lengthSteps || 16) / 16));
+      const patternBarLength = Math.max(
+        1,
+        Math.ceil((pattern.lengthSteps || 16) / 16),
+      );
       const barLength = normalizeBarValue(
         action.payload.barLength || patternBarLength,
         MIN_CLIP_BAR_LENGTH,
@@ -624,21 +624,23 @@ const dawSlice = createSlice({
       );
       const newClipEnd = barStart + barLength;
 
-      state.project.playlistClips = state.project.playlistClips.filter(function (clip) {
-        if (clip.trackId !== trackId) {
-          return true;
-        }
+      state.project.playlistClips = state.project.playlistClips.filter(
+        function (clip) {
+          if (clip.trackId !== trackId) {
+            return true;
+          }
 
-        const start = normalizeBarValue(clip.barStart || 1, 1, 128);
-        const length = normalizeBarValue(
-          clip.barLength || 1,
-          MIN_CLIP_BAR_LENGTH,
-          64,
-        );
-        const end = start + length;
+          const start = normalizeBarValue(clip.barStart || 1, 1, 128);
+          const length = normalizeBarValue(
+            clip.barLength || 1,
+            MIN_CLIP_BAR_LENGTH,
+            64,
+          );
+          const end = start + length;
 
-        return end <= barStart || start >= newClipEnd;
-      });
+          return end <= barStart || start >= newClipEnd;
+        },
+      );
 
       state.project.playlistClips.push({
         id:
@@ -663,7 +665,8 @@ const dawSlice = createSlice({
 
       state.project.playlistClips.sort(function (a, b) {
         const trackDelta =
-          (trackOrderById[a.trackId] ?? 999) - (trackOrderById[b.trackId] ?? 999);
+          (trackOrderById[a.trackId] ?? 999) -
+          (trackOrderById[b.trackId] ?? 999);
         if (trackDelta !== 0) {
           return trackDelta;
         }
@@ -766,9 +769,11 @@ const dawSlice = createSlice({
         maxStartByTimeline,
       );
 
-      const clipsOnTargetTrack = state.project.playlistClips.filter(function (item) {
-        return item.trackId === trackId && item.id !== clip.id;
-      });
+      const clipsOnTargetTrack = state.project.playlistClips.filter(
+        function (item) {
+          return item.trackId === trackId && item.id !== clip.id;
+        },
+      );
 
       const isSlotFree = function (start) {
         const end = start + clipLength;
@@ -829,7 +834,8 @@ const dawSlice = createSlice({
 
       state.project.playlistClips.sort(function (a, b) {
         const trackDelta =
-          (trackOrderById[a.trackId] ?? 999) - (trackOrderById[b.trackId] ?? 999);
+          (trackOrderById[a.trackId] ?? 999) -
+          (trackOrderById[b.trackId] ?? 999);
         if (trackDelta !== 0) {
           return trackDelta;
         }

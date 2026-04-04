@@ -673,7 +673,8 @@ export function useAudioScheduler() {
         }
 
         const patternLength = Math.max(1, pattern.lengthSteps || 16);
-        const stepIndex = ((patternStep % patternLength) + patternLength) % patternLength;
+        const stepIndex =
+          ((patternStep % patternLength) + patternLength) % patternLength;
 
         const soloChannels = currentChannels.filter(function (channel) {
           return channel.solo;

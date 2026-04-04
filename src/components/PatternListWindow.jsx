@@ -62,7 +62,9 @@ function rgbToHex(rgb) {
 }
 
 function hexToRgb(hexColor) {
-  const safe = String(hexColor || "").trim().replace("#", "");
+  const safe = String(hexColor || "")
+    .trim()
+    .replace("#", "");
   if (!/^[0-9a-fA-F]{6}$/.test(safe)) {
     return { r: 75, g: 239, b: 159 };
   }
@@ -407,7 +409,10 @@ export function PatternListWindow() {
                         type="button"
                         className="pattern-list-color-reset"
                         onClick={function () {
-                          updatePickerColor(pattern, rgbToHsv(hexToRgb(DEFAULT_PATTERN_COLOR)));
+                          updatePickerColor(
+                            pattern,
+                            rgbToHsv(hexToRgb(DEFAULT_PATTERN_COLOR)),
+                          );
                         }}
                       >
                         Reset
@@ -418,7 +423,10 @@ export function PatternListWindow() {
               </div>
 
               <div className="pattern-list-meta">
-                <span>{Math.max(1, Math.ceil((pattern.lengthSteps || 16) / 16))} bars</span>
+                <span>
+                  {Math.max(1, Math.ceil((pattern.lengthSteps || 16) / 16))}{" "}
+                  bars
+                </span>
                 <span>{clipCountByPattern[pattern.id] || 0} clips</span>
               </div>
             </article>
