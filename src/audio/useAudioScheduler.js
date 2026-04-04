@@ -9,6 +9,14 @@ const defaultSampleSettings = {
   fadeOutPct: 0,
 };
 
+const DEFAULT_SAMPLE_MIDI_PITCH = 72;
+
+function midiPitchToPlaybackRate(midiPitch) {
+  const semitoneOffset = midiPitch - DEFAULT_SAMPLE_MIDI_PITCH;
+  const rawRate = Math.pow(2, semitoneOffset / 12);
+  return Math.max(0.125, Math.min(8, rawRate));
+}
+
 function getSafeSampleSettings(raw) {
   const base = {
     ...defaultSampleSettings,
@@ -521,21 +529,27 @@ export function useAudioScheduler() {
         panValue,
         channel,
         outputNode,
+        midiPitch,
       ) {
         const source = audioCtx.createBufferSource();
         const gain = audioCtx.createGain();
         const panner = audioCtx.createStereoPanner();
 
         const settings = getSafeSampleSettings(channel.sampleSettings);
+        const safeMidiPitch = Number.isFinite(midiPitch)
+          ? midiPitch
+          : DEFAULT_SAMPLE_MIDI_PITCH;
+        const playbackRate = midiPitchToPlaybackRate(safeMidiPitch);
 
         if (settings.cutItself) {
           stopActiveChannelSamples(channel.id, time);
         }
 
-        const playDuration = Math.max(
+        const sampleReadDuration = Math.max(
           0.01,
           sampleBuffer.duration * (settings.lengthPct / 100),
         );
+        const playDuration = Math.max(0.01, sampleReadDuration / playbackRate);
         const fadeInSec = playDuration * (settings.fadeInPct / 100);
         const fadeOutSec = playDuration * (settings.fadeOutPct / 100);
         const fadeTotal = fadeInSec + fadeOutSec;
@@ -550,6 +564,7 @@ export function useAudioScheduler() {
         const fadeOutStart = Math.max(time, sampleStopAt - finalFadeOut);
 
         source.buffer = sampleBuffer;
+        source.playbackRate.setValueAtTime(playbackRate, time);
         if (finalFadeIn > 0.001) {
           gain.gain.setValueAtTime(0.0001, time);
           gain.gain.linearRampToValueAtTime(finalGain, time + finalFadeIn);
@@ -585,7 +600,7 @@ export function useAudioScheduler() {
           }
         };
 
-        source.start(time, 0, Math.min(playDuration, sampleBuffer.duration));
+        source.start(time, 0, Math.min(sampleReadDuration, sampleBuffer.duration));
         source.stop(sampleStopAt + 0.005);
       };
 
@@ -659,7 +674,7 @@ export function useAudioScheduler() {
           const gainAmount = 0.2 * channel.volume;
           const outputNode = getInsertInputNodeForChannel(channel);
 
-          const playOneHit = function () {
+          const playOneHit = function (midiPitch) {
             const sampleBuffer = sampleBufferCacheRef.current.get(sampleRef);
             if (sampleBuffer) {
               scheduleSample(
@@ -669,6 +684,7 @@ export function useAudioScheduler() {
                 channel.pan,
                 channel,
                 outputNode,
+                midiPitch,
               );
               return;
             }
@@ -679,11 +695,11 @@ export function useAudioScheduler() {
           };
 
           if (stepHit) {
-            playOneHit();
+            playOneHit(DEFAULT_SAMPLE_MIDI_PITCH);
           }
 
-          noteHits.forEach(function () {
-            playOneHit();
+          noteHits.forEach(function (note) {
+            playOneHit(Math.round(note.pitch || DEFAULT_SAMPLE_MIDI_PITCH));
           });
         });
       };
