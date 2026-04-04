@@ -11,9 +11,10 @@ import { C5_PITCH, PIANO_PITCH_MAX, PIANO_PITCH_MIN } from "../utils/patternNote
 
 const BAR_COUNT = 16;
 const BASE_BAR_WIDTH = 56;
-const PLAYLIST_ZOOM_X = 1.5;
+const PLAYLIST_ZOOM_X = 3;
 const BAR_WIDTH = Math.round(BASE_BAR_WIDTH * PLAYLIST_ZOOM_X);
 const DEFAULT_PATTERN_COLOR = "#4bef9f";
+const MIN_CLIP_BAR_LENGTH = 1 / 16;
 
 const SNAP_OPTIONS = [
   { key: "none", label: "(none)", stepSize: null },
@@ -118,49 +119,43 @@ const ClipPreviewNotes = memo(function ClipPreviewNotes(props) {
   const renderedPreviewNotes = useMemo(
     function () {
       const rendered = [];
-      const repeatCount = Math.max(1, Math.ceil(clipLengthSteps / patternLength));
+      const visiblePatternSteps = Math.max(1, Math.min(patternLength, clipLengthSteps));
 
-      for (let repeatIndex = 0; repeatIndex < repeatCount; repeatIndex += 1) {
-        for (let noteIndex = 0; noteIndex < previewNotes.length; noteIndex += 1) {
-          const note = previewNotes[noteIndex];
-          const noteStart = note.start + repeatIndex * patternLength;
-          if (noteStart >= clipLengthSteps) {
-            continue;
-          }
-
-          const noteLength = Math.max(
-            0.0625,
-            Math.min(
-              Number(note.length || 1),
-              Math.max(0.0625, clipLengthSteps - noteStart),
-            ),
-          );
-          const left = (noteStart / clipLengthSteps) * 100;
-          const width = Math.max(0.8, (noteLength / clipLengthSteps) * 100);
-          const clampedPitch = Math.max(
-            PIANO_PITCH_MIN,
-            Math.min(PIANO_PITCH_MAX, Math.round(note.pitch || C5_PITCH)),
-          );
-          const pitchRange = Math.max(1, PIANO_PITCH_MAX - PIANO_PITCH_MIN);
-          const pitchRatio = (PIANO_PITCH_MAX - clampedPitch) / pitchRange;
-          const top = 6 + pitchRatio * 78;
-
-          rendered.push(
-            <span
-              key={clipId + "-" + repeatIndex + "-" + note.id + "-" + noteIndex}
-              className="clip-mini-note"
-              style={{
-                left: left + "%",
-                width: width + "%",
-                top: top + "%",
-              }}
-            />,
-          );
-
-          if (rendered.length >= 700) {
-            break;
-          }
+      for (let noteIndex = 0; noteIndex < previewNotes.length; noteIndex += 1) {
+        const note = previewNotes[noteIndex];
+        const noteStart = Number(note.start || 0);
+        if (noteStart >= visiblePatternSteps) {
+          continue;
         }
+
+        const noteLength = Math.max(
+          0.0625,
+          Math.min(
+            Number(note.length || 1),
+            Math.max(0.0625, visiblePatternSteps - noteStart),
+          ),
+        );
+        const left = (noteStart / clipLengthSteps) * 100;
+        const width = Math.max(0.8, (noteLength / clipLengthSteps) * 100);
+        const clampedPitch = Math.max(
+          PIANO_PITCH_MIN,
+          Math.min(PIANO_PITCH_MAX, Math.round(note.pitch || C5_PITCH)),
+        );
+        const pitchRange = Math.max(1, PIANO_PITCH_MAX - PIANO_PITCH_MIN);
+        const pitchRatio = (PIANO_PITCH_MAX - clampedPitch) / pitchRange;
+        const top = 6 + pitchRatio * 78;
+
+        rendered.push(
+          <span
+            key={clipId + "-" + note.id + "-" + noteIndex}
+            className="clip-mini-note"
+            style={{
+              left: left + "%",
+              width: width + "%",
+              top: top + "%",
+            }}
+          />,
+        );
 
         if (rendered.length >= 700) {
           break;
@@ -286,7 +281,11 @@ export function PlaylistWindow() {
       const deltaBarsRaw = deltaPx / Math.max(1, barWidthPx);
       const nextRawLength = initialLength + deltaBarsRaw;
       const snappedLength = quantizeBySnap(nextRawLength, snapBarSize);
-      const nextLength = clamp(snappedLength, 1, maxTrackLength);
+      const nextLength = clamp(
+        snappedLength,
+        MIN_CLIP_BAR_LENGTH,
+        maxTrackLength,
+      );
 
       dispatch(
         setPlaylistClipLength({

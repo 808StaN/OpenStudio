@@ -40,6 +40,8 @@ function makePatternStepGrid(channels, lengthSteps) {
   }, {});
 }
 
+const MIN_CLIP_BAR_LENGTH = 1 / 16;
+
 function normalizeBarValue(raw, minValue, maxValue) {
   const normalized = Math.round(Number(raw || 0) * 16) / 16;
   return Math.max(minValue, Math.min(maxValue, normalized));
@@ -612,7 +614,7 @@ const dawSlice = createSlice({
       const patternBarLength = Math.max(1, Math.ceil((pattern.lengthSteps || 16) / 16));
       const barLength = normalizeBarValue(
         action.payload.barLength || patternBarLength,
-        1,
+        MIN_CLIP_BAR_LENGTH,
         64,
       );
       const newClipEnd = barStart + barLength;
@@ -623,7 +625,11 @@ const dawSlice = createSlice({
         }
 
         const start = normalizeBarValue(clip.barStart || 1, 1, 128);
-        const length = normalizeBarValue(clip.barLength || 1, 1, 64);
+        const length = normalizeBarValue(
+          clip.barLength || 1,
+          MIN_CLIP_BAR_LENGTH,
+          64,
+        );
         const end = start + length;
 
         return end <= barStart || start >= newClipEnd;
@@ -690,16 +696,23 @@ const dawSlice = createSlice({
       });
 
       const maxLengthByNextClip = nextClip
-        ? Math.max(1, nextClip.barStart - clip.barStart)
+        ? Math.max(MIN_CLIP_BAR_LENGTH, nextClip.barStart - clip.barStart)
         : 64;
 
       const currentStart = normalizeBarValue(clip.barStart || 1, 1, 128);
-      const maxLengthByTimeline = Math.max(1, 128 - currentStart + 1);
-      const requestedLength = normalizeBarValue(action.payload.barLength || 1, 1, 64);
+      const maxLengthByTimeline = Math.max(
+        MIN_CLIP_BAR_LENGTH,
+        128 - currentStart + 1,
+      );
+      const requestedLength = normalizeBarValue(
+        action.payload.barLength || 1,
+        MIN_CLIP_BAR_LENGTH,
+        64,
+      );
 
       clip.barLength = normalizeBarValue(
         requestedLength,
-        1,
+        MIN_CLIP_BAR_LENGTH,
         Math.min(maxLengthByNextClip, maxLengthByTimeline),
       );
     },
@@ -720,7 +733,11 @@ const dawSlice = createSlice({
         return;
       }
 
-      const clipLength = normalizeBarValue(clip.barLength || 1, 1, 64);
+      const clipLength = normalizeBarValue(
+        clip.barLength || 1,
+        MIN_CLIP_BAR_LENGTH,
+        64,
+      );
       const maxStartByTimeline = Math.max(1, 128 - clipLength + 1);
       const desiredStart = normalizeBarValue(
         action.payload.barStart || 1,
@@ -737,7 +754,11 @@ const dawSlice = createSlice({
 
         return clipsOnTargetTrack.every(function (item) {
           const otherStart = normalizeBarValue(item.barStart || 1, 1, 128);
-          const otherLength = normalizeBarValue(item.barLength || 1, 1, 64);
+          const otherLength = normalizeBarValue(
+            item.barLength || 1,
+            MIN_CLIP_BAR_LENGTH,
+            64,
+          );
           const otherEnd = otherStart + otherLength;
           return otherEnd <= start || otherStart >= end;
         });
