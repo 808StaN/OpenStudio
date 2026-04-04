@@ -153,20 +153,11 @@ const initialState = {
         name: "Pattern 1",
         lengthSteps: 128,
         stepGrid: {
-          "ch-kick": makeStepRow(128, [0, 4, 8, 12]),
-          "ch-snare": makeStepRow(128, [2, 6, 10, 14]),
-          "ch-hat": makeStepRow(
-            128,
-            [0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15],
-          ),
+          "ch-kick": makeStepRow(128, []),
+          "ch-snare": makeStepRow(128, []),
+          "ch-hat": makeStepRow(128, []),
         },
-        pianoPreview: {
-          "ch-hat": [
-            { id: "n1", start: 0, length: 1, pitch: 54 },
-            { id: "n2", start: 2, length: 1, pitch: 56 },
-            { id: "n3", start: 4, length: 1, pitch: 58 },
-          ],
-        },
+        pianoPreview: {},
       },
     ],
     playlistTracks: [
