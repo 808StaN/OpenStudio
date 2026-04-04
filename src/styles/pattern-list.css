@@ -1,0 +1,100 @@
+.pattern-list-shell {
+  width: 100%;
+  height: 100%;
+  border: 1px solid #465268;
+  border-radius: 10px;
+  background: linear-gradient(180deg, #1c2637 0%, #111827 100%);
+  display: grid;
+  grid-template-rows: 44px 1fr;
+  overflow: hidden;
+}
+
+.pattern-list-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  border-bottom: 1px solid #42506a;
+  padding: 0 10px;
+  color: #d9e5f8;
+  font-size: 13px;
+  letter-spacing: 0.4px;
+}
+
+.pattern-list-header button {
+  height: 26px;
+  min-width: 68px;
+  border-radius: 6px;
+  border: 1px solid #5b6780;
+  color: #0f1e15;
+  background: linear-gradient(180deg, #6dffbd 0%, #26ca77 100%);
+  cursor: pointer;
+  font-size: 12px;
+  font-weight: 600;
+}
+
+.pattern-list-body {
+  overflow: auto;
+  padding: 8px;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.pattern-list-row {
+  border: 1px solid #4d5972;
+  border-radius: 8px;
+  background: linear-gradient(180deg, #2a354a 0%, #1e2738 100%);
+  padding: 8px;
+  display: grid;
+  gap: 8px;
+}
+
+.pattern-list-row.is-active {
+  border-color: #4bef9f;
+  box-shadow: 0 0 0 1px rgba(75, 239, 159, 0.4);
+}
+
+.pattern-list-row-top {
+  display: grid;
+  grid-template-columns: 70px minmax(0, 1fr);
+  gap: 8px;
+}
+
+.pattern-list-select {
+  height: 28px;
+  border-radius: 6px;
+  border: 1px solid #5d6985;
+  color: #c9d5e8;
+  background: linear-gradient(180deg, #3b4a63 0%, #273349 100%);
+  cursor: pointer;
+  font-size: 12px;
+}
+
+.pattern-list-row.is-active .pattern-list-select {
+  color: #0d1a12;
+  border-color: #37c57b;
+  background: linear-gradient(180deg, #89ffd0 0%, #38d484 100%);
+}
+
+.pattern-list-name {
+  height: 28px;
+  border-radius: 6px;
+  border: 1px solid #61708d;
+  color: #ecf3ff;
+  background: linear-gradient(180deg, #151f2f 0%, #101827 100%);
+  padding: 0 8px;
+  font-size: 12px;
+}
+
+.pattern-list-name:focus {
+  outline: none;
+  border-color: #6ef4b7;
+  box-shadow: 0 0 0 1px rgba(92, 235, 167, 0.45);
+}
+
+.pattern-list-meta {
+  display: flex;
+  justify-content: space-between;
+  color: #9fb0ca;
+  font-size: 11px;
+}

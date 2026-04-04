@@ -1,7 +1,9 @@
 import { useDispatch, useSelector } from "react-redux";
 import {
+  createPattern,
   assignSampleToChannel,
   openWindow,
+  setActivePattern,
   setActiveChannel,
   setChannelRackMode,
   setChannelMute,
@@ -31,6 +33,9 @@ export function ChannelRackWindow() {
 
   const activePatternId = useSelector(function (state) {
     return state.daw.project.activePatternId;
+  });
+  const patterns = useSelector(function (state) {
+    return state.daw.project.patterns;
   });
   const activePattern = useSelector(function (state) {
     return state.daw.project.patterns.find(function (item) {
@@ -73,7 +78,36 @@ export function ChannelRackWindow() {
   return (
     <section className="rack-shell">
       <header className="rack-topbar">
-        <div className="rack-topbar-title">Pattern Controls</div>
+        <div className="rack-pattern-picker-wrap">
+          <label className="rack-pattern-picker">
+            <span className="rack-pattern-picker-prefix">Pattern</span>
+            <select
+              value={activePatternId}
+              aria-label="Active pattern"
+              onChange={function (event) {
+                dispatch(setActivePattern(event.target.value));
+              }}
+            >
+              {patterns.map(function (pattern) {
+                return (
+                  <option key={pattern.id} value={pattern.id}>
+                    {pattern.name}
+                  </option>
+                );
+              })}
+            </select>
+          </label>
+          <button
+            className="rack-pattern-add"
+            title="Add pattern"
+            aria-label="Add pattern"
+            onClick={function () {
+              dispatch(createPattern());
+            }}
+          >
+            +
+          </button>
+        </div>
 
         <div className="rack-topbar-controls">
           <div className="rack-mode-toggle">
@@ -151,9 +185,8 @@ export function ChannelRackWindow() {
             });
             const notes = getChannelMergedNotes(activePattern, channel.id);
             const pianoNotes = activePattern?.pianoPreview?.[channel.id] || [];
-            const shouldAutoShowMelodyInSequencer = pianoNotes.some(
-              isMelodyShapeNote,
-            );
+            const shouldAutoShowMelodyInSequencer =
+              pianoNotes.some(isMelodyShapeNote);
             const showPianoPreview =
               channelRackMode === "melody" ||
               (channelRackMode === "sequencer" &&

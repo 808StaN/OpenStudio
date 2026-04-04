@@ -69,6 +69,7 @@
       transparent 6.25%
     ),
     linear-gradient(180deg, #121928 0%, #0d131f 100%);
+  cursor: cell;
 }
 
 .clip {
@@ -86,4 +87,17 @@
   display: flex;
   align-items: center;
   justify-content: center;
+  padding: 0 6px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  cursor: pointer;
+}
+
+.clip.is-active {
+  border-color: #f9f46e;
+  box-shadow:
+    inset 0 1px 0 rgba(255, 255, 255, 0.45),
+    0 0 0 1px rgba(250, 243, 107, 0.65),
+    0 0 10px rgba(250, 243, 107, 0.32);
 }

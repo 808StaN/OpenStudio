@@ -121,6 +121,12 @@ export function useAudioScheduler() {
       return item.id === activePatternId;
     });
   });
+  const patterns = useSelector(function (state) {
+    return state.daw.project.patterns;
+  });
+  const playlistClips = useSelector(function (state) {
+    return state.daw.project.playlistClips;
+  });
   const mixerSettings = useSelector(function (state) {
     return state.daw.mixer.inserts.map(function (insert) {
       return {
@@ -146,6 +152,9 @@ export function useAudioScheduler() {
   const activeSampleVoicesRef = useRef(new Map());
   const channelsRef = useRef(channels);
   const activePatternRef = useRef(activePattern);
+  const patternsRef = useRef(patterns);
+  const playlistClipsRef = useRef(playlistClips);
+  const transportModeRef = useRef(transport.mode);
   const mixerSettingsRef = useRef(mixerSettings);
   const mixerGraphRef = useRef(null);
   const lastMeterDispatchAtRef = useRef(0);
@@ -395,6 +404,27 @@ export function useAudioScheduler() {
 
   useEffect(
     function () {
+      patternsRef.current = patterns;
+    },
+    [patterns],
+  );
+
+  useEffect(
+    function () {
+      playlistClipsRef.current = playlistClips;
+    },
+    [playlistClips],
+  );
+
+  useEffect(
+    function () {
+      transportModeRef.current = transport.mode;
+    },
+    [transport.mode],
+  );
+
+  useEffect(
+    function () {
       mixerSettingsRef.current = mixerSettings;
 
       if (!audioCtxRef.current) {
@@ -600,7 +630,11 @@ export function useAudioScheduler() {
           }
         };
 
-        source.start(time, 0, Math.min(sampleReadDuration, sampleBuffer.duration));
+        source.start(
+          time,
+          0,
+          Math.min(sampleReadDuration, sampleBuffer.duration),
+        );
         source.stop(sampleStopAt + 0.005);
       };
 
@@ -631,8 +665,7 @@ export function useAudioScheduler() {
       const sixteenth = 60 / transport.bpm / 4;
       const scheduleAhead = 0.11;
 
-      const scheduleStep = function (stepIndex, noteTime) {
-        const pattern = activePatternRef.current;
+      const schedulePatternStep = function (pattern, patternStep, noteTime) {
         const currentChannels = channelsRef.current;
 
         if (!pattern || !currentChannels) {
@@ -640,6 +673,7 @@ export function useAudioScheduler() {
         }
 
         const patternLength = Math.max(1, pattern.lengthSteps || 16);
+        const stepIndex = ((patternStep % patternLength) + patternLength) % patternLength;
 
         const soloChannels = currentChannels.filter(function (channel) {
           return channel.solo;
@@ -659,7 +693,7 @@ export function useAudioScheduler() {
           const pianoNotes = pattern.pianoPreview?.[channel.id] || [];
           const noteHits = pianoNotes.filter(function (note) {
             const noteStart = Math.max(0, Number(note.start || 0));
-            return Math.floor(noteStart) % patternLength === stepIndex;
+            return Math.floor(noteStart) === stepIndex;
           });
 
           if (!stepHit && noteHits.length === 0) {
@@ -704,34 +738,97 @@ export function useAudioScheduler() {
         });
       };
 
+      const getSongLengthInSteps = function () {
+        const clips = playlistClipsRef.current || [];
+        if (clips.length === 0) {
+          return Math.max(1, activePatternRef.current?.lengthSteps || 16);
+        }
+
+        let maxSongStep = 16;
+        clips.forEach(function (clip) {
+          const barStart = Math.max(1, Math.round(Number(clip.barStart || 1)));
+          const barLength = Math.max(1, Math.round(Number(clip.barLength || 1)));
+          const clipEndStep = (barStart - 1 + barLength) * 16;
+          maxSongStep = Math.max(maxSongStep, clipEndStep);
+        });
+
+        return maxSongStep;
+      };
+
+      const scheduleSongStep = function (songStep, noteTime) {
+        const allPatterns = patternsRef.current || [];
+        const clips = playlistClipsRef.current || [];
+        if (allPatterns.length === 0 || clips.length === 0) {
+          return;
+        }
+
+        const patternsById = allPatterns.reduce(function (acc, pattern) {
+          acc[pattern.id] = pattern;
+          return acc;
+        }, {});
+
+        clips.forEach(function (clip) {
+          const pattern = patternsById[clip.patternId];
+          if (!pattern) {
+            return;
+          }
+
+          const clipStartStep = Math.max(0, (Math.round(Number(clip.barStart || 1)) - 1) * 16);
+          const clipLengthSteps = Math.max(1, Math.round(Number(clip.barLength || 1)) * 16);
+          const relativeStep = songStep - clipStartStep;
+
+          if (relativeStep < 0 || relativeStep >= clipLengthSteps) {
+            return;
+          }
+
+          const patternLength = Math.max(1, pattern.lengthSteps || 16);
+          if (relativeStep >= patternLength) {
+            return;
+          }
+
+          schedulePatternStep(pattern, relativeStep, noteTime);
+        });
+      };
+
       nextNoteTimeRef.current = audioCtx.currentTime + 0.02;
       startedAtRef.current = nextNoteTimeRef.current;
       stepRef.current = 0;
 
       const tick = function () {
         const now = audioCtx.currentTime;
+        const transportMode = transportModeRef.current;
 
         applyMixerSettingsToGraph();
         updateMixerMeters(now);
 
         while (nextNoteTimeRef.current < now + scheduleAhead) {
-          const patternLength = Math.max(
-            1,
-            activePatternRef.current?.lengthSteps || 16,
-          );
-          const currentStep = stepRef.current % patternLength;
-          scheduleStep(currentStep, nextNoteTimeRef.current);
+          if (transportMode === "song") {
+            const songLength = Math.max(1, getSongLengthInSteps());
+            const currentSongStep = stepRef.current % songLength;
+            scheduleSongStep(currentSongStep, nextNoteTimeRef.current);
+          } else {
+            const patternLength = Math.max(
+              1,
+              activePatternRef.current?.lengthSteps || 16,
+            );
+            const currentStep = stepRef.current % patternLength;
+            schedulePatternStep(
+              activePatternRef.current,
+              currentStep,
+              nextNoteTimeRef.current,
+            );
+          }
 
           stepRef.current += 1;
           nextNoteTimeRef.current += sixteenth;
         }
 
         const elapsed = now - startedAtRef.current;
-        const uiPatternLength = Math.max(
-          1,
-          activePatternRef.current?.lengthSteps || 16,
-        );
-        const uiStep = Math.floor(elapsed / sixteenth) % uiPatternLength;
+        const uiLength =
+          transportMode === "song"
+            ? Math.max(1, getSongLengthInSteps())
+            : Math.max(1, activePatternRef.current?.lengthSteps || 16);
+        const uiStep = Math.floor(elapsed / sixteenth) % uiLength;
         dispatch(setPlayheadStep(uiStep));
 
         rafIdRef.current = requestAnimationFrame(tick);

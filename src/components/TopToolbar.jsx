@@ -1,6 +1,7 @@
 import {
   Circle,
   Grid2X2,
+  ListMusic,
   Music2,
   Play,
   Rows3,
@@ -128,6 +129,15 @@ export function TopToolbar() {
         >
           <Grid2X2 size={14} />
           Channel Rack
+        </button>
+        <button
+          className="transport-btn small"
+          onClick={function () {
+            dispatch(openWindow("patternList"));
+          }}
+        >
+          <ListMusic size={14} />
+          Patterns
         </button>
         <button
           className="transport-btn small"

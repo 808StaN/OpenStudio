@@ -5,6 +5,7 @@ import { BrowserPanel } from "./components/BrowserPanel";
 import { ChannelRackWindow } from "./components/ChannelRackWindow";
 import { FloatingWindow } from "./components/FloatingWindow";
 import { MixerWindow } from "./components/MixerWindow";
+import { PatternListWindow } from "./components/PatternListWindow";
 import { PianoRollWindow } from "./components/PianoRollWindow";
 import { PlaylistWindow } from "./components/PlaylistWindow";
 import { SampleSettingsWindow } from "./components/SampleSettingsWindow";
@@ -16,6 +17,7 @@ import "./styles/channel-rack.css";
 import "./styles/piano-roll.css";
 import "./styles/playlist.css";
 import "./styles/mixer.css";
+import "./styles/pattern-list.css";
 
 function getActiveWindowId(windows) {
   const openWindows = Object.entries(windows).filter(function (_entry) {
@@ -173,6 +175,15 @@ function App() {
             minHeight={280}
           >
             <SampleSettingsWindow />
+          </FloatingWindow>
+
+          <FloatingWindow
+            id="patternList"
+            title="Pattern List"
+            minWidth={300}
+            minHeight={320}
+          >
+            <PatternListWindow />
           </FloatingWindow>
         </main>
       </div>

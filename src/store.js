@@ -33,6 +33,28 @@ function makeStepRow(length, activeIndexes) {
   return row;
 }
 
+function makePatternStepGrid(channels, lengthSteps) {
+  return channels.reduce(function (acc, channel) {
+    acc[channel.id] = makeStepRow(lengthSteps, []);
+    return acc;
+  }, {});
+}
+
+function makeEmptyPattern(options) {
+  const safeLength = Math.max(
+    4,
+    Math.min(128, Math.round(options.lengthSteps || 16)),
+  );
+
+  return {
+    id: options.id,
+    name: options.name,
+    lengthSteps: safeLength,
+    stepGrid: makePatternStepGrid(options.channels || [], safeLength),
+    pianoPreview: {},
+  };
+}
+
 const initialState = {
   transport: {
     bpm: 140,
@@ -104,6 +126,16 @@ const initialState = {
         isMaximized: false,
         restoreRect: null,
       },
+      patternList: {
+        open: false,
+        z: 8,
+        x: 780,
+        y: 140,
+        width: 360,
+        height: 440,
+        isMaximized: false,
+        restoreRect: null,
+      },
     },
   },
   project: {
@@ -148,17 +180,16 @@ const initialState = {
       },
     ],
     patterns: [
-      {
+      makeEmptyPattern({
         id: "pat-1",
         name: "Pattern 1",
         lengthSteps: 128,
-        stepGrid: {
-          "ch-kick": makeStepRow(128, []),
-          "ch-snare": makeStepRow(128, []),
-          "ch-hat": makeStepRow(128, []),
-        },
-        pianoPreview: {},
-      },
+        channels: [
+          { id: "ch-kick" },
+          { id: "ch-snare" },
+          { id: "ch-hat" },
+        ],
+      }),
     ],
     playlistTracks: [
       { id: "trk-1", name: "Track 1" },
@@ -452,6 +483,157 @@ const dawSlice = createSlice({
       if (state.transport.currentStep16 >= nextLength) {
         state.transport.currentStep16 = 0;
       }
+    },
+
+    setActivePattern(state, action) {
+      const patternId = action.payload;
+      const exists = state.project.patterns.some(function (pattern) {
+        return pattern.id === patternId;
+      });
+      if (!exists) {
+        return;
+      }
+
+      state.project.activePatternId = patternId;
+    },
+
+    createPattern(state, action) {
+      const activePattern = state.project.patterns.find(function (item) {
+        return item.id === state.project.activePatternId;
+      });
+
+      const requestedLength = Number(action.payload?.lengthSteps);
+      const baseLength = Math.max(
+        4,
+        Math.min(
+          128,
+          Math.round(
+            Number.isFinite(requestedLength)
+              ? requestedLength
+              : activePattern?.lengthSteps || 16,
+          ),
+        ),
+      );
+
+      const nextPatternNumber =
+        state.project.patterns.reduce(function (maxValue, pattern) {
+          const byName = String(pattern.name || "").match(/pattern\s+(\d+)/i);
+          const byId = String(pattern.id || "").match(/pat-(\d+)/i);
+          const parsedByName = byName ? Number(byName[1]) : 0;
+          const parsedById = byId ? Number(byId[1]) : 0;
+          return Math.max(maxValue, parsedByName, parsedById);
+        }, 0) + 1;
+
+      const newPatternId =
+        "pat-" +
+        Date.now().toString(36) +
+        "-" +
+        Math.random().toString(36).slice(2, 6);
+
+      const newPattern = makeEmptyPattern({
+        id: newPatternId,
+        name: "Pattern " + nextPatternNumber,
+        lengthSteps: baseLength,
+        channels: state.project.channels,
+      });
+
+      state.project.patterns.push(newPattern);
+      state.project.activePatternId = newPatternId;
+    },
+
+    renamePattern(state, action) {
+      const pattern = state.project.patterns.find(function (item) {
+        return item.id === action.payload.patternId;
+      });
+      if (!pattern) {
+        return;
+      }
+
+      const nextName = String(action.payload.name || "").trim();
+      if (!nextName) {
+        return;
+      }
+
+      pattern.name = nextName.slice(0, 40);
+    },
+
+    addPlaylistPatternClip(state, action) {
+      const patternId = action.payload.patternId || state.project.activePatternId;
+      const pattern = state.project.patterns.find(function (item) {
+        return item.id === patternId;
+      });
+      if (!pattern) {
+        return;
+      }
+
+      const trackId = action.payload.trackId;
+      const hasTrack = state.project.playlistTracks.some(function (track) {
+        return track.id === trackId;
+      });
+      if (!hasTrack) {
+        return;
+      }
+
+      const requestedBarStart = Math.round(Number(action.payload.barStart || 1));
+      const barStart = Math.max(1, Math.min(128, requestedBarStart));
+
+      const patternBarLength = Math.max(1, Math.ceil((pattern.lengthSteps || 16) / 16));
+      const requestedBarLength = Math.round(
+        Number(action.payload.barLength || patternBarLength),
+      );
+      const barLength = Math.max(1, Math.min(64, requestedBarLength));
+      const newClipEnd = barStart + barLength;
+
+      state.project.playlistClips = state.project.playlistClips.filter(function (clip) {
+        if (clip.trackId !== trackId) {
+          return true;
+        }
+
+        const start = Math.round(Number(clip.barStart || 1));
+        const length = Math.max(1, Math.round(Number(clip.barLength || 1)));
+        const end = start + length;
+
+        return end <= barStart || start >= newClipEnd;
+      });
+
+      state.project.playlistClips.push({
+        id:
+          "clip-" +
+          Date.now().toString(36) +
+          "-" +
+          Math.random().toString(36).slice(2, 6),
+        patternId,
+        trackId,
+        barStart,
+        barLength,
+      });
+
+      const trackOrderById = state.project.playlistTracks.reduce(function (
+        acc,
+        track,
+        index,
+      ) {
+        acc[track.id] = index;
+        return acc;
+      }, {});
+
+      state.project.playlistClips.sort(function (a, b) {
+        const trackDelta =
+          (trackOrderById[a.trackId] ?? 999) - (trackOrderById[b.trackId] ?? 999);
+        if (trackDelta !== 0) {
+          return trackDelta;
+        }
+
+        return a.barStart - b.barStart;
+      });
+    },
+
+    removePlaylistClip(state, action) {
+      state.project.playlistClips = state.project.playlistClips.filter(
+        function (clip) {
+          return clip.id !== action.payload;
+        },
+      );
     },
 
     setActiveChannel(state, action) {
@@ -847,6 +1029,11 @@ export const {
   toggleBrowserFolder,
   toggleStep,
   setPatternLength,
+  setActivePattern,
+  createPattern,
+  renamePattern,
+  addPlaylistPatternClip,
+  removePlaylistClip,
   setActiveChannel,
   togglePianoNote,
   setPianoNoteLength,
