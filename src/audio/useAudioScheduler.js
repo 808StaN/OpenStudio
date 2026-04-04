@@ -10,6 +10,7 @@ const defaultSampleSettings = {
   lengthPct: 100,
   fadeInPct: 0,
   fadeOutPct: 0,
+  envEnabled: false,
   envDelayMs: 0,
   envAttackMs: 0,
   envHoldMs: 0,
@@ -26,7 +27,12 @@ function midiPitchToPlaybackRate(midiPitch) {
   return Math.max(0.125, Math.min(8, rawRate));
 }
 
-function applyVolumeEnvelopeToGain(gainParam, startTime, duration, settings) {
+function applyVolumeEnvelopeToGain(
+  gainParam,
+  startTime,
+  gateDuration,
+  settings,
+) {
   const minGain = 0.0001;
   const envDelay = Math.max(0, Number(settings.envDelayMs ?? 0) / 1000);
   const envAttack = Math.max(0, Number(settings.envAttackMs ?? 0) / 1000);
@@ -38,59 +44,57 @@ function applyVolumeEnvelopeToGain(gainParam, startTime, duration, settings) {
     Math.min(1, Number(settings.envSustainPct ?? 100) / 100),
   );
 
-  const envelopeSegmentTotal =
-    envDelay + envAttack + envHold + envDecay + envRelease;
-  const envelopeScale =
-    envelopeSegmentTotal > duration && envelopeSegmentTotal > 0
-      ? duration / envelopeSegmentTotal
-      : 1;
+  const noteOffTime = startTime + Math.max(0.001, Number(gateDuration || 0));
 
-  const delaySec = envDelay * envelopeScale;
-  const attackSec = envAttack * envelopeScale;
-  const holdSec = envHold * envelopeScale;
-  const decaySec = envDecay * envelopeScale;
-  const releaseSec = envRelease * envelopeScale;
-  const sustainSec = Math.max(
-    0,
-    duration - (delaySec + attackSec + holdSec + decaySec + releaseSec),
-  );
-
-  const delayEnd = startTime + delaySec;
-  const attackEnd = delayEnd + attackSec;
-  const holdEnd = attackEnd + holdSec;
-  const decayEnd = holdEnd + decaySec;
-  const sustainEnd = decayEnd + sustainSec;
-  const releaseEnd = sustainEnd + releaseSec;
+  let cursor = startTime;
 
   gainParam.cancelScheduledValues(startTime);
   gainParam.setValueAtTime(minGain, startTime);
 
-  if (delaySec > 0.0005) {
-    gainParam.setValueAtTime(minGain, delayEnd);
+  const advanceWithHold = function (seconds, value) {
+    const endTime = Math.min(noteOffTime, cursor + Math.max(0, seconds));
+    gainParam.setValueAtTime(value, endTime);
+    cursor = endTime;
+  };
+
+  const advanceWithRamp = function (seconds, targetValue) {
+    const endTime = Math.min(noteOffTime, cursor + Math.max(0, seconds));
+    if (endTime <= cursor) {
+      gainParam.setValueAtTime(targetValue, cursor);
+      return;
+    }
+
+    if (seconds > 0.0005) {
+      gainParam.linearRampToValueAtTime(targetValue, endTime);
+    } else {
+      gainParam.setValueAtTime(targetValue, endTime);
+    }
+
+    cursor = endTime;
+  };
+
+  if (envDelay > 0) {
+    advanceWithHold(envDelay, minGain);
   }
 
-  if (attackSec > 0.0005) {
-    gainParam.linearRampToValueAtTime(1, attackEnd);
+  if (cursor < noteOffTime) {
+    advanceWithRamp(envAttack, 1);
+  }
+
+  if (cursor < noteOffTime) {
+    advanceWithHold(envHold, 1);
+  }
+
+  if (cursor < noteOffTime) {
+    advanceWithRamp(envDecay, envSustain);
+  }
+
+  gainParam.setValueAtTime(envSustain, noteOffTime);
+
+  if (envRelease > 0.0005) {
+    gainParam.linearRampToValueAtTime(minGain, noteOffTime + envRelease);
   } else {
-    gainParam.setValueAtTime(1, delayEnd);
-  }
-
-  if (holdSec > 0.0005) {
-    gainParam.setValueAtTime(1, holdEnd);
-  }
-
-  if (decaySec > 0.0005) {
-    gainParam.linearRampToValueAtTime(envSustain, decayEnd);
-  } else {
-    gainParam.setValueAtTime(envSustain, holdEnd);
-  }
-
-  gainParam.setValueAtTime(envSustain, sustainEnd);
-
-  if (releaseSec > 0.0005) {
-    gainParam.linearRampToValueAtTime(minGain, releaseEnd);
-  } else {
-    gainParam.setValueAtTime(minGain, sustainEnd);
+    gainParam.setValueAtTime(minGain, noteOffTime);
   }
 }
 
@@ -113,11 +117,15 @@ function getSafeSampleSettings(raw) {
     lengthPct: Math.max(5, Math.min(100, Number(base.lengthPct ?? 100))),
     fadeInPct: Math.max(0, Math.min(95, Number(base.fadeInPct ?? 0))),
     fadeOutPct: Math.max(0, Math.min(95, Number(base.fadeOutPct ?? 0))),
+    envEnabled: Boolean(base.envEnabled),
     envDelayMs: Math.max(0, Math.min(3000, Number(base.envDelayMs ?? 0))),
     envAttackMs: Math.max(0, Math.min(3000, Number(base.envAttackMs ?? 0))),
     envHoldMs: Math.max(0, Math.min(3000, Number(base.envHoldMs ?? 0))),
     envDecayMs: Math.max(0, Math.min(3000, Number(base.envDecayMs ?? 0))),
-    envSustainPct: Math.max(0, Math.min(100, Number(base.envSustainPct ?? 100))),
+    envSustainPct: Math.max(
+      0,
+      Math.min(100, Number(base.envSustainPct ?? 100)),
+    ),
     envReleaseMs: Math.max(0, Math.min(3000, Number(base.envReleaseMs ?? 0))),
     attackMs: Math.max(0, Math.min(400, Number(base.attackMs ?? 8))),
     releaseMs: Math.max(0, Math.min(1000, Number(base.releaseMs ?? 420))),
@@ -768,6 +776,7 @@ export function useAudioScheduler() {
         channel,
         outputNode,
         midiPitch,
+        noteLengthSteps,
       ) {
         const source = audioCtx.createBufferSource();
         const gain = audioCtx.createGain();
@@ -828,18 +837,40 @@ export function useAudioScheduler() {
           0.01,
           sampleBuffer.duration * (settings.lengthPct / 100),
         );
-        const playDuration = Math.max(0.01, sampleReadDuration / playbackRate);
-        const fadeInSec = playDuration * (settings.fadeInPct / 100);
-        const fadeOutSec = playDuration * (settings.fadeOutPct / 100);
+        const samplePlayableDuration = Math.max(
+          0.01,
+          sampleReadDuration / playbackRate,
+        );
+        const noteGateDuration = Math.max(
+          0.01,
+          Number(noteLengthSteps || 1) * sixteenth,
+        );
+        const envReleaseSec = settings.envEnabled
+          ? Math.max(0, Number(settings.envReleaseMs ?? 0) / 1000)
+          : 0;
+        const sourcePlayDuration = settings.envEnabled
+          ? Math.max(
+              0.01,
+              Math.min(
+                samplePlayableDuration,
+                noteGateDuration + envReleaseSec,
+              ),
+            )
+          : samplePlayableDuration;
+        const envelopeGateDuration = settings.envEnabled
+          ? Math.max(0.01, Math.min(noteGateDuration, sourcePlayDuration))
+          : sourcePlayDuration;
+        const fadeInSec = sourcePlayDuration * (settings.fadeInPct / 100);
+        const fadeOutSec = sourcePlayDuration * (settings.fadeOutPct / 100);
         const fadeTotal = fadeInSec + fadeOutSec;
         const fadeScale =
-          fadeTotal > playDuration * 0.98
-            ? (playDuration * 0.98) / fadeTotal
+          fadeTotal > sourcePlayDuration * 0.98
+            ? (sourcePlayDuration * 0.98) / fadeTotal
             : 1;
         const finalFadeIn = fadeInSec * fadeScale;
         const finalFadeOut = fadeOutSec * fadeScale;
         const finalGain = Math.max(0.001, gainAmount * getNormalizeGain());
-        const sampleStopAt = time + playDuration;
+        const sampleStopAt = time + sourcePlayDuration;
         const fadeOutStart = Math.max(time, sampleStopAt - finalFadeOut);
 
         source.buffer = sampleBuffer;
@@ -862,7 +893,16 @@ export function useAudioScheduler() {
 
         source.connect(gain);
         gain.connect(envelopeGain);
-        applyVolumeEnvelopeToGain(envelopeGain.gain, time, playDuration, settings);
+        if (settings.envEnabled) {
+          applyVolumeEnvelopeToGain(
+            envelopeGain.gain,
+            time,
+            envelopeGateDuration,
+            settings,
+          );
+        } else {
+          envelopeGain.gain.setValueAtTime(1, time);
+        }
         envelopeGain.connect(panner);
         panner.connect(outputNode);
 
@@ -884,7 +924,11 @@ export function useAudioScheduler() {
         source.start(
           time,
           0,
-          Math.min(sampleReadDuration, sampleBuffer.duration),
+          Math.min(
+            sampleReadDuration,
+            sampleBuffer.duration,
+            sourcePlayDuration * playbackRate,
+          ),
         );
         source.stop(sampleStopAt + 0.005);
       };
@@ -1087,6 +1131,7 @@ export function useAudioScheduler() {
                 channel,
                 outputNode,
                 midiPitch,
+                lengthSteps,
               );
               return;
             }

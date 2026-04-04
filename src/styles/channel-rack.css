@@ -690,9 +690,23 @@
 }
 
 .sample-envelope-header {
+  display: flex;
+  align-items: center;
+  justify-content: flex-start;
+  gap: 6px;
   color: #8fffd0;
   font-size: 12px;
   letter-spacing: 0.3px;
+}
+
+.sample-envelope-enable {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.sample-envelope-enable input[type="checkbox"] {
+  flex-shrink: 0;
 }
 
 .sample-envelope-graph {
@@ -819,9 +833,46 @@
 }
 
 .sample-setting-row.cut-toggle input[type="checkbox"] {
-  width: 16px;
-  height: 16px;
-  accent-color: #2fdf82;
+  flex-shrink: 0;
+}
+
+.sample-settings-panel input[type="checkbox"] {
+  width: 14px;
+  height: 14px;
+  margin: 0;
+  border: 1px solid #5b6a85;
+  border-radius: 3px;
+  background: linear-gradient(180deg, #26324a 0%, #1a2538 100%);
+  appearance: none;
+  -webkit-appearance: none;
+  display: grid;
+  place-content: center;
+  cursor: pointer;
+}
+
+.sample-settings-panel input[type="checkbox"]::before {
+  content: "";
+  width: 8px;
+  height: 8px;
+  clip-path: polygon(14% 44%, 0 59%, 42% 100%, 100% 18%, 84% 3%, 41% 70%);
+  background: #0c2014;
+  transform: scale(0);
+  transform-origin: center;
+  transition: transform 110ms ease-out;
+}
+
+.sample-settings-panel input[type="checkbox"]:checked {
+  border-color: #35b278;
+  background: linear-gradient(180deg, #66ffad 0%, #1ece73 100%);
+}
+
+.sample-settings-panel input[type="checkbox"]:checked::before {
+  transform: scale(1);
+}
+
+.sample-settings-panel input[type="checkbox"]:focus-visible {
+  outline: none;
+  box-shadow: 0 0 0 1px rgba(127, 143, 174, 0.45);
 }
 
 .sample-window-empty {

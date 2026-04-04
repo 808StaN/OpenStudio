@@ -54,7 +54,7 @@ function shouldIgnoreSpaceShortcut(target) {
   }
 
   const inputType = inputElement.getAttribute("type");
-  return inputType !== "range";
+  return inputType !== "range" && inputType !== "checkbox";
 }
 
 function getSampleWindowTitle(activeChannel) {
@@ -80,7 +80,7 @@ function getSampleWindowTitle(activeChannel) {
   const insertMatch = insertRaw.match(/insert[-_\s]?(\d+)/i);
   const insertLabel = insertMatch
     ? "insert" + insertMatch[1]
-    : (insertRaw.toLowerCase() || "insert?");
+    : insertRaw.toLowerCase() || "insert?";
 
   return baseName + " (" + insertLabel + ")";
 }

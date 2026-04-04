@@ -17,6 +17,7 @@ const makeSampleSettings = function () {
     lengthPct: 100,
     fadeInPct: 0,
     fadeOutPct: 0,
+    envEnabled: false,
     envDelayMs: 0,
     envAttackMs: 0,
     envHoldMs: 0,
@@ -1181,15 +1182,19 @@ const dawSlice = createSlice({
       if (Object.hasOwn(changes, "fadeInPct")) {
         next.fadeInPct = Math.max(
           0,
-          Math.min(95, Number(changes.fadeInPct || next.fadeInPct)),
+          Math.min(95, Number(changes.fadeInPct ?? next.fadeInPct)),
         );
       }
 
       if (Object.hasOwn(changes, "fadeOutPct")) {
         next.fadeOutPct = Math.max(
           0,
-          Math.min(95, Number(changes.fadeOutPct || next.fadeOutPct)),
+          Math.min(95, Number(changes.fadeOutPct ?? next.fadeOutPct)),
         );
+      }
+
+      if (Object.hasOwn(changes, "envEnabled")) {
+        next.envEnabled = Boolean(changes.envEnabled);
       }
 
       if (Object.hasOwn(changes, "envDelayMs")) {
@@ -1223,14 +1228,20 @@ const dawSlice = createSlice({
       if (Object.hasOwn(changes, "envSustainPct")) {
         next.envSustainPct = Math.max(
           0,
-          Math.min(100, Number(changes.envSustainPct ?? next.envSustainPct ?? 100)),
+          Math.min(
+            100,
+            Number(changes.envSustainPct ?? next.envSustainPct ?? 100),
+          ),
         );
       }
 
       if (Object.hasOwn(changes, "envReleaseMs")) {
         next.envReleaseMs = Math.max(
           0,
-          Math.min(3000, Number(changes.envReleaseMs ?? next.envReleaseMs ?? 0)),
+          Math.min(
+            3000,
+            Number(changes.envReleaseMs ?? next.envReleaseMs ?? 0),
+          ),
         );
       }
 

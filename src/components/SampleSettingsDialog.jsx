@@ -13,6 +13,7 @@ const defaultChannelSettings = {
   lengthPct: 100,
   fadeInPct: 0,
   fadeOutPct: 0,
+  envEnabled: false,
   envDelayMs: 0,
   envAttackMs: 0,
   envHoldMs: 0,
@@ -78,7 +79,12 @@ function clampSettingValue(rawValue, min, max, step) {
   return Number(snapped.toFixed(4));
 }
 
-function applyVolumeEnvelopeToGain(gainParam, startTime, duration, settings) {
+function applyVolumeEnvelopeToGain(
+  gainParam,
+  startTime,
+  gateDuration,
+  settings,
+) {
   const minGain = 0.0001;
   const envDelay = Math.max(0, Number(settings.envDelayMs ?? 0) / 1000);
   const envAttack = Math.max(0, Number(settings.envAttackMs ?? 0) / 1000);
@@ -90,59 +96,57 @@ function applyVolumeEnvelopeToGain(gainParam, startTime, duration, settings) {
     Math.min(1, Number(settings.envSustainPct ?? 100) / 100),
   );
 
-  const envelopeSegmentTotal =
-    envDelay + envAttack + envHold + envDecay + envRelease;
-  const envelopeScale =
-    envelopeSegmentTotal > duration && envelopeSegmentTotal > 0
-      ? duration / envelopeSegmentTotal
-      : 1;
+  const noteOffTime = startTime + Math.max(0.001, Number(gateDuration || 0));
 
-  const delaySec = envDelay * envelopeScale;
-  const attackSec = envAttack * envelopeScale;
-  const holdSec = envHold * envelopeScale;
-  const decaySec = envDecay * envelopeScale;
-  const releaseSec = envRelease * envelopeScale;
-  const sustainSec = Math.max(
-    0,
-    duration - (delaySec + attackSec + holdSec + decaySec + releaseSec),
-  );
-
-  const delayEnd = startTime + delaySec;
-  const attackEnd = delayEnd + attackSec;
-  const holdEnd = attackEnd + holdSec;
-  const decayEnd = holdEnd + decaySec;
-  const sustainEnd = decayEnd + sustainSec;
-  const releaseEnd = sustainEnd + releaseSec;
+  let cursor = startTime;
 
   gainParam.cancelScheduledValues(startTime);
   gainParam.setValueAtTime(minGain, startTime);
 
-  if (delaySec > 0.0005) {
-    gainParam.setValueAtTime(minGain, delayEnd);
+  const advanceWithHold = function (seconds, value) {
+    const endTime = Math.min(noteOffTime, cursor + Math.max(0, seconds));
+    gainParam.setValueAtTime(value, endTime);
+    cursor = endTime;
+  };
+
+  const advanceWithRamp = function (seconds, targetValue) {
+    const endTime = Math.min(noteOffTime, cursor + Math.max(0, seconds));
+    if (endTime <= cursor) {
+      gainParam.setValueAtTime(targetValue, cursor);
+      return;
+    }
+
+    if (seconds > 0.0005) {
+      gainParam.linearRampToValueAtTime(targetValue, endTime);
+    } else {
+      gainParam.setValueAtTime(targetValue, endTime);
+    }
+
+    cursor = endTime;
+  };
+
+  if (envDelay > 0) {
+    advanceWithHold(envDelay, minGain);
   }
 
-  if (attackSec > 0.0005) {
-    gainParam.linearRampToValueAtTime(1, attackEnd);
+  if (cursor < noteOffTime) {
+    advanceWithRamp(envAttack, 1);
+  }
+
+  if (cursor < noteOffTime) {
+    advanceWithHold(envHold, 1);
+  }
+
+  if (cursor < noteOffTime) {
+    advanceWithRamp(envDecay, envSustain);
+  }
+
+  gainParam.setValueAtTime(envSustain, noteOffTime);
+
+  if (envRelease > 0.0005) {
+    gainParam.linearRampToValueAtTime(minGain, noteOffTime + envRelease);
   } else {
-    gainParam.setValueAtTime(1, delayEnd);
-  }
-
-  if (holdSec > 0.0005) {
-    gainParam.setValueAtTime(1, holdEnd);
-  }
-
-  if (decaySec > 0.0005) {
-    gainParam.linearRampToValueAtTime(envSustain, decayEnd);
-  } else {
-    gainParam.setValueAtTime(envSustain, holdEnd);
-  }
-
-  gainParam.setValueAtTime(envSustain, sustainEnd);
-
-  if (releaseSec > 0.0005) {
-    gainParam.linearRampToValueAtTime(minGain, releaseEnd);
-  } else {
-    gainParam.setValueAtTime(minGain, sustainEnd);
+    gainParam.setValueAtTime(minGain, noteOffTime);
   }
 }
 
@@ -153,16 +157,31 @@ function buildEnvelopePath(settings) {
   const padY = 8;
   const plotW = width - padX * 2;
   const plotH = height - padY * 2;
-  const sustain = Math.max(0, Math.min(1, Number(settings.envSustainPct ?? 100) / 100));
+  const sustain = settings.envEnabled
+    ? Math.max(0, Math.min(1, Number(settings.envSustainPct ?? 100) / 100))
+    : 1;
 
-  const delay = Math.max(0, Number(settings.envDelayMs ?? 0));
-  const attack = Math.max(0, Number(settings.envAttackMs ?? 0));
-  const hold = Math.max(0, Number(settings.envHoldMs ?? 0));
-  const decay = Math.max(0, Number(settings.envDecayMs ?? 0));
-  const release = Math.max(0, Number(settings.envReleaseMs ?? 0));
+  const delay = settings.envEnabled
+    ? Math.max(0, Number(settings.envDelayMs ?? 0))
+    : 0;
+  const attack = settings.envEnabled
+    ? Math.max(0, Number(settings.envAttackMs ?? 0))
+    : 0;
+  const hold = settings.envEnabled
+    ? Math.max(0, Number(settings.envHoldMs ?? 0))
+    : 0;
+  const decay = settings.envEnabled
+    ? Math.max(0, Number(settings.envDecayMs ?? 0))
+    : 0;
+  const release = settings.envEnabled
+    ? Math.max(0, Number(settings.envReleaseMs ?? 0))
+    : 0;
 
   const sustainSlot = 280;
-  const total = Math.max(1, delay + attack + hold + decay + sustainSlot + release);
+  const total = Math.max(
+    1,
+    delay + attack + hold + decay + sustainSlot + release,
+  );
 
   const x0 = 0;
   const x1 = delay / total;
@@ -801,12 +820,16 @@ export function SampleSettingsDialog({ channel }) {
 
       source.connect(gain);
       gain.connect(envelopeGain);
-      applyVolumeEnvelopeToGain(
-        envelopeGain.gain,
-        context.currentTime,
-        playDuration,
-        settings,
-      );
+      if (settings.envEnabled) {
+        applyVolumeEnvelopeToGain(
+          envelopeGain.gain,
+          context.currentTime,
+          playDuration,
+          settings,
+        );
+      } else {
+        envelopeGain.gain.setValueAtTime(1, context.currentTime);
+      }
       envelopeGain.connect(panner);
       panner.connect(context.destination);
 
@@ -1096,7 +1119,9 @@ export function SampleSettingsDialog({ channel }) {
                     step="1"
                     value={settings.lengthPct}
                     onChange={function (event) {
-                      onSettingChange({ lengthPct: Number(event.target.value) });
+                      onSettingChange({
+                        lengthPct: Number(event.target.value),
+                      });
                     }}
                   />
                   <SettingValueEditor
@@ -1121,7 +1146,9 @@ export function SampleSettingsDialog({ channel }) {
                     step="1"
                     value={settings.fadeInPct}
                     onChange={function (event) {
-                      onSettingChange({ fadeInPct: Number(event.target.value) });
+                      onSettingChange({
+                        fadeInPct: Number(event.target.value),
+                      });
                     }}
                   />
                   <SettingValueEditor
@@ -1146,7 +1173,9 @@ export function SampleSettingsDialog({ channel }) {
                     step="1"
                     value={settings.fadeOutPct}
                     onChange={function (event) {
-                      onSettingChange({ fadeOutPct: Number(event.target.value) });
+                      onSettingChange({
+                        fadeOutPct: Number(event.target.value),
+                      });
                     }}
                   />
                   <SettingValueEditor
@@ -1171,7 +1200,9 @@ export function SampleSettingsDialog({ channel }) {
                     step="1"
                     value={settings.pitchCents}
                     onChange={function (event) {
-                      onSettingChange({ pitchCents: Number(event.target.value) });
+                      onSettingChange({
+                        pitchCents: Number(event.target.value),
+                      });
                     }}
                   />
                   <SettingValueEditor
@@ -1192,6 +1223,15 @@ export function SampleSettingsDialog({ channel }) {
                 <section className="sample-envelope-panel">
                   <header className="sample-envelope-header">
                     <span>Volume Envelope</span>
+                    <label className="sample-envelope-enable">
+                      <input
+                        type="checkbox"
+                        checked={Boolean(settings.envEnabled)}
+                        onChange={function (event) {
+                          onSettingChange({ envEnabled: event.target.checked });
+                        }}
+                      />
+                    </label>
                   </header>
                   <div className="sample-envelope-graph">
                     <svg viewBox="0 0 276 92" preserveAspectRatio="none">
@@ -1209,7 +1249,9 @@ export function SampleSettingsDialog({ channel }) {
                     step="1"
                     value={settings.envDelayMs}
                     onChange={function (event) {
-                      onSettingChange({ envDelayMs: Number(event.target.value) });
+                      onSettingChange({
+                        envDelayMs: Number(event.target.value),
+                      });
                     }}
                   />
                   <SettingValueEditor
@@ -1234,7 +1276,9 @@ export function SampleSettingsDialog({ channel }) {
                     step="1"
                     value={settings.envAttackMs}
                     onChange={function (event) {
-                      onSettingChange({ envAttackMs: Number(event.target.value) });
+                      onSettingChange({
+                        envAttackMs: Number(event.target.value),
+                      });
                     }}
                   />
                   <SettingValueEditor
@@ -1259,7 +1303,9 @@ export function SampleSettingsDialog({ channel }) {
                     step="1"
                     value={settings.envHoldMs}
                     onChange={function (event) {
-                      onSettingChange({ envHoldMs: Number(event.target.value) });
+                      onSettingChange({
+                        envHoldMs: Number(event.target.value),
+                      });
                     }}
                   />
                   <SettingValueEditor
@@ -1284,7 +1330,9 @@ export function SampleSettingsDialog({ channel }) {
                     step="1"
                     value={settings.envDecayMs}
                     onChange={function (event) {
-                      onSettingChange({ envDecayMs: Number(event.target.value) });
+                      onSettingChange({
+                        envDecayMs: Number(event.target.value),
+                      });
                     }}
                   />
                   <SettingValueEditor
@@ -1309,7 +1357,9 @@ export function SampleSettingsDialog({ channel }) {
                     step="1"
                     value={settings.envSustainPct}
                     onChange={function (event) {
-                      onSettingChange({ envSustainPct: Number(event.target.value) });
+                      onSettingChange({
+                        envSustainPct: Number(event.target.value),
+                      });
                     }}
                   />
                   <SettingValueEditor
@@ -1334,7 +1384,9 @@ export function SampleSettingsDialog({ channel }) {
                     step="1"
                     value={settings.envReleaseMs}
                     onChange={function (event) {
-                      onSettingChange({ envReleaseMs: Number(event.target.value) });
+                      onSettingChange({
+                        envReleaseMs: Number(event.target.value),
+                      });
                     }}
                   />
                   <SettingValueEditor
