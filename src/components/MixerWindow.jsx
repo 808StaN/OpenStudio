@@ -2,6 +2,7 @@ import { ChevronRight, Power } from "lucide-react";
 import { useEffect, useRef, useState } from "react";
 import { useDispatch, useSelector } from "react-redux";
 import {
+  addMixerTrack,
   selectInsert,
   setInsertActive,
   setInsertFader,
@@ -268,7 +269,18 @@ export function MixerWindow() {
       </section>
 
       <aside className="mixer-right">
-        <div className="fx-header">FX Slots</div>
+        <div className="mixer-right-header">
+          <div className="fx-header">FX Slots</div>
+          <button
+            className="mixer-track-add"
+            type="button"
+            onClick={function () {
+              dispatch(addMixerTrack());
+            }}
+          >
+            + Track
+          </button>
+        </div>
 
         <div className="fx-list">
           {selectedInsert.fxSlots.map(function (slot) {

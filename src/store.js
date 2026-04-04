@@ -150,7 +150,7 @@ const initialState = {
         x: 1170,
         y: 90,
         width: 650,
-        height: 700,
+        height: 450,
         isMaximized: false,
         restoreRect: null,
       },
@@ -1199,6 +1199,35 @@ const dawSlice = createSlice({
       state.mixer.selectedInsertId = action.payload;
     },
 
+    addMixerTrack(state) {
+      const nextInsertNumber =
+        state.mixer.inserts.reduce(function (maxValue, insert) {
+          const match = String(insert.id || "").match(/insert-(\d+)/i);
+          if (!match) {
+            return maxValue;
+          }
+
+          return Math.max(maxValue, Number(match[1] || 0));
+        }, 0) + 1;
+
+      const newInsertId = "insert-" + nextInsertNumber;
+
+      state.mixer.inserts.push({
+        id: newInsertId,
+        name: "Insert " + nextInsertNumber,
+        isMaster: false,
+        active: true,
+        pan: 0,
+        stereoSeparation: 0,
+        fader: 1,
+        meter: 0,
+        routesTo: ["master"],
+        fxSlots: makeFxSlots(),
+      });
+
+      state.mixer.selectedInsertId = newInsertId;
+    },
+
     setInsertActive(state, action) {
       const insert = state.mixer.inserts.find(function (item) {
         return item.id === action.payload.insertId;
@@ -1333,6 +1362,7 @@ export const {
   setChannelSampleSettings,
   assignSampleToChannel,
   selectInsert,
+  addMixerTrack,
   setInsertActive,
   setInsertPan,
   setInsertStereo,

@@ -278,6 +278,13 @@
   gap: 8px;
 }
 
+.mixer-right-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+}
+
 .mixer-value-readout {
   position: absolute;
   left: 10px;
@@ -311,6 +318,25 @@
   color: #dce3f2;
   font-size: 12px;
   letter-spacing: 0.5px;
+}
+
+.mixer-track-add {
+  height: 24px;
+  border: 1px solid #577196;
+  border-radius: 6px;
+  padding: 0 8px;
+  color: #d9e7ff;
+  background: linear-gradient(180deg, #2f4361 0%, #1d2d45 100%);
+  font-size: 11px;
+  font-weight: 600;
+  cursor: pointer;
+  box-shadow:
+    inset 0 1px 0 rgba(255, 255, 255, 0.24),
+    0 0 8px rgba(77, 129, 199, 0.2);
+}
+
+.mixer-track-add:hover {
+  filter: brightness(1.08);
 }
 
 .fx-list {
