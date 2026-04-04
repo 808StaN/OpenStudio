@@ -8,6 +8,7 @@ import {
   setPlaylistClipPlacement,
   setPlaylistClipLength,
 } from "../store";
+import { getPatternDragSession } from "../utils/patternDragSession";
 import { C5_PITCH } from "../utils/patternNotes";
 
 const BAR_COUNT = 16;
@@ -18,6 +19,7 @@ const MIN_BAR_WIDTH = 42;
 const MAX_BAR_WIDTH = 320;
 const DEFAULT_PATTERN_COLOR = "#4bef9f";
 const MIN_CLIP_BAR_LENGTH = 1 / 16;
+const PATTERN_DRAG_MIME = "application/x-daw-pattern";
 const MIDI_PITCH_MIN = 0;
 const MIDI_PITCH_MAX = 127;
 
@@ -211,6 +213,9 @@ export function PlaylistWindow() {
   const [barWidth, setBarWidth] = useState(INITIAL_BAR_WIDTH);
   const [snapKey, setSnapKey] = useState("bar");
   const [isSnapMenuOpen, setIsSnapMenuOpen] = useState(false);
+  const [dropPreview, setDropPreview] = useState(null);
+  const [isPointerOverPlaylist, setIsPointerOverPlaylist] = useState(false);
+  const [lastHoverPlacement, setLastHoverPlacement] = useState(null);
 
   const activePatternId = useSelector(function (state) {
     return state.daw.project.activePatternId;
@@ -223,6 +228,9 @@ export function PlaylistWindow() {
   });
   const clips = useSelector(function (state) {
     return state.daw.project.playlistClips;
+  });
+  const clipboardPatternIds = useSelector(function (state) {
+    return state.daw.ui.patternClipboardIds;
   });
 
   const patternsById = patterns.reduce(function (acc, pattern) {
@@ -324,6 +332,20 @@ export function PlaylistWindow() {
 
     return function () {
       shell.removeEventListener("wheel", preventBrowserZoom, options);
+    };
+  }, []);
+
+  useEffect(function () {
+    const clearDropPreview = function () {
+      setDropPreview(null);
+    };
+
+    window.addEventListener("dragend", clearDropPreview);
+    window.addEventListener("drop", clearDropPreview);
+
+    return function () {
+      window.removeEventListener("dragend", clearDropPreview);
+      window.removeEventListener("drop", clearDropPreview);
     };
   }, []);
 
@@ -507,10 +529,227 @@ export function PlaylistWindow() {
     window.addEventListener("mouseup", onMouseUp);
   };
 
+  const getPatternBarLength = function (patternId) {
+    const pattern = patternsById[patternId];
+    if (!pattern) {
+      return 1;
+    }
+
+    return Math.max(1, Math.ceil((pattern.lengthSteps || 16) / 16));
+  };
+
+  const normalizePatternIds = function (rawIds) {
+    const seen = new Set();
+
+    return (rawIds || [])
+      .map(function (patternId) {
+        return String(patternId || "").trim();
+      })
+      .filter(function (patternId) {
+        if (!patternId || !patternsById[patternId] || seen.has(patternId)) {
+          return false;
+        }
+
+        seen.add(patternId);
+        return true;
+      });
+  };
+
+  const getDraggedPatternIds = function (event) {
+    const rawPayload = event.dataTransfer?.getData(PATTERN_DRAG_MIME);
+    if (rawPayload) {
+      try {
+        const payload = JSON.parse(rawPayload);
+        const fromArray = normalizePatternIds(payload.patternIds);
+        if (fromArray.length > 0) {
+          return fromArray;
+        }
+
+        const patternId = String(payload.patternId || "").trim();
+        if (patternId && patternsById[patternId]) {
+          return [patternId];
+        }
+      } catch {
+        return [];
+      }
+    }
+
+    const textPatternId = String(
+      event.dataTransfer?.getData("text/plain") || "",
+    ).trim();
+    if (textPatternId && patternsById[textPatternId]) {
+      return [textPatternId];
+    }
+
+    return [];
+  };
+
+  const getDraggedPatternIdsWithFallback = function (event) {
+    const idsFromDataTransfer = getDraggedPatternIds(event);
+    if (idsFromDataTransfer.length > 0) {
+      return idsFromDataTransfer;
+    }
+
+    return normalizePatternIds(getPatternDragSession());
+  };
+
+  const resolvePatternIdsForPlacement = function (candidateIds) {
+    const normalized = normalizePatternIds(candidateIds);
+    if (normalized.length > 0) {
+      return normalized;
+    }
+
+    return normalizePatternIds([activePatternId]);
+  };
+
+  const hasDraggedPatternData = function (event) {
+    const types = Array.from(event.dataTransfer?.types || []);
+    return (
+      types.includes(PATTERN_DRAG_MIME) ||
+      types.includes("text/plain") ||
+      types.includes("Text")
+    );
+  };
+
+  const resolveBarStartFromPointer = function (event, trackElement) {
+    const rect = trackElement.getBoundingClientRect();
+    const x = clamp(event.clientX - rect.left, 0, rect.width);
+    const rawBarStart = (x / Math.max(1, rect.width)) * BAR_COUNT + 1;
+    const snappedBarStart = quantizeBySnap(rawBarStart, snapBarSize);
+    return clamp(snappedBarStart, 1, BAR_COUNT);
+  };
+
+  const buildDropPlacements = function (trackId, startBar, patternIds) {
+    const resolvedPatternIds = resolvePatternIdsForPlacement(patternIds);
+    if (!trackId || resolvedPatternIds.length === 0) {
+      return [];
+    }
+
+    const trackIndex = tracks.findIndex(function (track) {
+      return track.id === trackId;
+    });
+    if (trackIndex < 0) {
+      return [];
+    }
+
+    const barStart = clamp(startBar, 1, BAR_COUNT);
+
+    return resolvedPatternIds
+      .map(function (patternId, offset) {
+        const targetTrack = tracks[trackIndex + offset];
+        if (!targetTrack) {
+          return null;
+        }
+
+        return {
+          trackId: targetTrack.id,
+          patternId,
+          barStart,
+          barLength: getPatternBarLength(patternId),
+        };
+      })
+      .filter(Boolean);
+  };
+
+  const placePatternsOnTrack = function (trackId, startBar, patternIds) {
+    const placements = buildDropPlacements(trackId, startBar, patternIds);
+    if (placements.length === 0) {
+      return;
+    }
+
+    placements.forEach(function (placement) {
+      dispatch(
+        addPlaylistPatternClip({
+          patternId: placement.patternId,
+          trackId: placement.trackId,
+          barStart: placement.barStart,
+          barLength: placement.barLength,
+        }),
+      );
+    });
+
+    dispatch(setActivePattern(placements[placements.length - 1].patternId));
+  };
+
+  useEffect(
+    function () {
+      const shouldIgnoreShortcutTarget = function (target) {
+        if (!(target instanceof HTMLElement)) {
+          return false;
+        }
+
+        if (target.isContentEditable) {
+          return true;
+        }
+
+        return Boolean(
+          target.closest("input, textarea, select, [contenteditable='true']"),
+        );
+      };
+
+      const onKeyDown = function (event) {
+        const isPasteShortcut =
+          (event.ctrlKey || event.metaKey) &&
+          !event.shiftKey &&
+          event.code === "KeyV";
+        if (!isPasteShortcut) {
+          return;
+        }
+
+        const root = playlistShellRef.current;
+        const activeElement = document.activeElement;
+        const hasContext =
+          isPointerOverPlaylist ||
+          (root instanceof HTMLElement && root.contains(activeElement));
+
+        if (!hasContext || shouldIgnoreShortcutTarget(event.target)) {
+          return;
+        }
+
+        const patternIds = resolvePatternIdsForPlacement(clipboardPatternIds);
+        if (patternIds.length === 0) {
+          return;
+        }
+
+        const fallbackTrackId = tracks[0]?.id;
+        const targetTrackId = lastHoverPlacement?.trackId || fallbackTrackId;
+        if (!targetTrackId) {
+          return;
+        }
+
+        event.preventDefault();
+        placePatternsOnTrack(
+          targetTrackId,
+          clamp(lastHoverPlacement?.barStart ?? 1, 1, BAR_COUNT),
+          patternIds,
+        );
+      };
+
+      window.addEventListener("keydown", onKeyDown);
+      return function () {
+        window.removeEventListener("keydown", onKeyDown);
+      };
+    },
+    [
+      clipboardPatternIds,
+      isPointerOverPlaylist,
+      lastHoverPlacement,
+      tracks,
+      placePatternsOnTrack,
+      resolvePatternIdsForPlacement,
+    ],
+  );
+
   return (
     <section
       ref={playlistShellRef}
       className="playlist-shell"
+      onMouseEnter={function () {
+        setIsPointerOverPlaylist(true);
+      }}
+      onMouseLeave={function () {
+        setIsPointerOverPlaylist(false);
+      }}
       style={{
         "--playlist-bar-width": barWidth + "px",
         "--playlist-snap-width": snapLineWidth + "px",
@@ -617,6 +856,10 @@ export function PlaylistWindow() {
               1,
               BAR_COUNT,
             );
+            setLastHoverPlacement({
+              trackId: track.id,
+              barStart,
+            });
 
             dispatch(
               addPlaylistPatternClip({
@@ -626,6 +869,131 @@ export function PlaylistWindow() {
               }),
             );
           };
+
+          const onTrackGridDragOver = function (event) {
+            if (!hasDraggedPatternData(event)) {
+              return;
+            }
+
+            event.preventDefault();
+            event.dataTransfer.dropEffect = "copy";
+
+            const patternIds = resolvePatternIdsForPlacement(
+              getDraggedPatternIdsWithFallback(event),
+            );
+            if (patternIds.length === 0) {
+              return;
+            }
+
+            const barStart = resolveBarStartFromPointer(
+              event,
+              event.currentTarget,
+            );
+            const placements = buildDropPlacements(
+              track.id,
+              barStart,
+              patternIds,
+            );
+            if (placements.length === 0) {
+              return;
+            }
+
+            setDropPreview(function (prev) {
+              const samePatternList =
+                prev &&
+                prev.patternIds.length === patternIds.length &&
+                prev.patternIds.every(function (id, index) {
+                  return id === patternIds[index];
+                });
+
+              if (
+                prev &&
+                prev.trackId === track.id &&
+                samePatternList &&
+                Math.abs(prev.barStart - barStart) <= 0.0001
+              ) {
+                return prev;
+              }
+
+              return {
+                trackId: track.id,
+                patternIds,
+                barStart,
+                placements,
+              };
+            });
+          };
+
+          const onTrackGridMouseMove = function (event) {
+            const barStart = resolveBarStartFromPointer(
+              event,
+              event.currentTarget,
+            );
+            setLastHoverPlacement(function (prev) {
+              if (
+                prev &&
+                prev.trackId === track.id &&
+                Math.abs(prev.barStart - barStart) <= 0.0001
+              ) {
+                return prev;
+              }
+
+              return {
+                trackId: track.id,
+                barStart,
+              };
+            });
+          };
+
+          const onTrackGridDragLeave = function (event) {
+            const pointerX = event.clientX;
+            const pointerY = event.clientY;
+
+            requestAnimationFrame(function () {
+              const hoveredElement = document.elementFromPoint(
+                pointerX,
+                pointerY,
+              );
+              if (hoveredElement?.closest(".track-grid")) {
+                return;
+              }
+
+              setDropPreview(function (prev) {
+                if (!prev || prev.trackId !== track.id) {
+                  return prev;
+                }
+
+                return null;
+              });
+            });
+          };
+
+          const onTrackGridDrop = function (event) {
+            if (!hasDraggedPatternData(event)) {
+              return;
+            }
+
+            event.preventDefault();
+            const patternIds = resolvePatternIdsForPlacement(
+              getDraggedPatternIdsWithFallback(event),
+            );
+            if (patternIds.length === 0) {
+              return;
+            }
+
+            const barStart = resolveBarStartFromPointer(
+              event,
+              event.currentTarget,
+            );
+            placePatternsOnTrack(track.id, barStart, patternIds);
+            setDropPreview(null);
+          };
+
+          const dropPlacementsOnTrack = (dropPreview?.placements || []).filter(
+            function (placement) {
+              return placement.trackId === track.id;
+            },
+          );
 
           return (
             <article
@@ -638,10 +1006,56 @@ export function PlaylistWindow() {
             >
               <div className="track-name">{track.name}</div>
               <div
-                className="track-grid"
+                className={
+                  "track-grid" +
+                  (dropPlacementsOnTrack.length > 0 ? " is-drop-target" : "")
+                }
                 data-track-id={track.id}
                 onMouseDown={onTrackGridMouseDown}
+                onMouseMove={onTrackGridMouseMove}
+                onDragOver={onTrackGridDragOver}
+                onDragLeave={onTrackGridDragLeave}
+                onDrop={onTrackGridDrop}
               >
+                {dropPlacementsOnTrack.map(function (placement) {
+                  const previewPattern = patternsById[placement.patternId];
+                  const previewColor =
+                    previewPattern?.color || DEFAULT_PATTERN_COLOR;
+                  const previewBarLength = clamp(
+                    placement.barLength,
+                    MIN_CLIP_BAR_LENGTH,
+                    Math.max(
+                      MIN_CLIP_BAR_LENGTH,
+                      BAR_COUNT - placement.barStart + 1,
+                    ),
+                  );
+
+                  return (
+                    <div
+                      key={
+                        "drop-" + placement.trackId + "-" + placement.patternId
+                      }
+                      className="track-drop-preview"
+                      style={{
+                        left:
+                          "calc(" +
+                          ((placement.barStart - 1) / BAR_COUNT) * 100 +
+                          "% + 0.5px)",
+                        width:
+                          "calc(" +
+                          (previewBarLength / BAR_COUNT) * 100 +
+                          "% - 1px)",
+                        borderColor: withAlpha(previewColor, 0.95),
+                        backgroundColor: withAlpha(previewColor, 0.22),
+                        boxShadow:
+                          "inset 0 0 0 1px " +
+                          withAlpha(previewColor, 0.72) +
+                          ", 0 0 10px " +
+                          withAlpha(previewColor, 0.28),
+                      }}
+                    />
+                  );
+                })}
                 {clipsOnTrack.map(function (clip) {
                   const pattern = patternsById[clip.patternId];
                   const clipColor = pattern?.color || DEFAULT_PATTERN_COLOR;

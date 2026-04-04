@@ -47,11 +47,22 @@
   padding: 8px;
   display: grid;
   gap: 8px;
+  cursor: grab;
 }
 
 .pattern-list-row.is-active {
   border-color: #4bef9f;
   box-shadow: 0 0 0 1px rgba(75, 239, 159, 0.4);
+}
+
+.pattern-list-row.is-selected {
+  border-color: #4bef9f;
+  box-shadow: 0 0 0 1px rgba(75, 239, 159, 0.4);
+}
+
+.pattern-list-row.is-dragging {
+  opacity: 0.66;
+  box-shadow: 0 0 0 1px rgba(125, 202, 255, 0.35);
 }
 
 .pattern-list-row-top {

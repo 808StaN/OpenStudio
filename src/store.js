@@ -105,6 +105,70 @@ function makeEmptyPattern(options) {
   };
 }
 
+function getNextPatternNumber(patterns) {
+  return (
+    patterns.reduce(function (maxValue, pattern) {
+      const byName = String(pattern.name || "").match(/pattern\s+(\d+)/i);
+      const byId = String(pattern.id || "").match(/pat-(\d+)/i);
+      const parsedByName = byName ? Number(byName[1]) : 0;
+      const parsedById = byId ? Number(byId[1]) : 0;
+      return Math.max(maxValue, parsedByName, parsedById);
+    }, 0) + 1
+  );
+}
+
+function clonePatternForCopy(sourcePattern, nextId, nextName) {
+  const safeLength = Math.max(
+    4,
+    Math.min(128, Math.round(Number(sourcePattern.lengthSteps || 16))),
+  );
+
+  const clonedStepGrid = Object.entries(sourcePattern.stepGrid || {}).reduce(
+    function (acc, entry) {
+      const channelId = entry[0];
+      const row = entry[1];
+      const safeRow = Array.isArray(row) ? row.slice(0, safeLength) : [];
+
+      if (safeRow.length < safeLength) {
+        safeRow.push(...Array(safeLength - safeRow.length).fill(false));
+      }
+
+      acc[channelId] = safeRow.map(Boolean);
+      return acc;
+    },
+    {},
+  );
+
+  const clonedPianoPreview = Object.entries(
+    sourcePattern.pianoPreview || {},
+  ).reduce(function (acc, entry) {
+    const channelId = entry[0];
+    const notes = entry[1];
+
+    acc[channelId] = (notes || []).map(function (note) {
+      return {
+        ...note,
+        start: Math.max(
+          0,
+          Math.min(safeLength - 0.0625, Number(note.start || 0)),
+        ),
+        length: Math.max(0.0625, Number(note.length || 1)),
+      };
+    });
+
+    return acc;
+  }, {});
+
+  return {
+    id: nextId,
+    name: String(nextName || sourcePattern.name || "Pattern").slice(0, 40),
+    color: getSafePatternColor(sourcePattern.color),
+    lengthSteps: safeLength,
+    stepGrid: clonedStepGrid,
+    pianoPreview: clonedPianoPreview,
+  };
+}
+
 const initialState = {
   transport: {
     bpm: 140,
@@ -116,6 +180,7 @@ const initialState = {
   ui: {
     browserTab: "drumkits",
     channelRackMode: "sequencer",
+    patternClipboardIds: [],
     browserCollapsedFolders: {
       Drumkits: false,
       Plugins: false,
@@ -478,6 +543,32 @@ const dawSlice = createSlice({
     setBrowserTab(state, action) {
       state.ui.browserTab = action.payload;
     },
+
+    setPatternClipboard(state, action) {
+      const requestedIds = Array.isArray(action.payload?.patternIds)
+        ? action.payload.patternIds
+        : [];
+
+      const existingIdSet = new Set(
+        state.project.patterns.map(function (pattern) {
+          return pattern.id;
+        }),
+      );
+
+      const sanitized = requestedIds
+        .map(function (patternId) {
+          return String(patternId || "").trim();
+        })
+        .filter(function (patternId, index, arr) {
+          return Boolean(patternId) && arr.indexOf(patternId) === index;
+        })
+        .filter(function (patternId) {
+          return existingIdSet.has(patternId);
+        });
+
+      state.ui.patternClipboardIds = sanitized;
+    },
+
     setChannelRackMode(state, action) {
       const nextMode = action.payload;
       if (nextMode !== "sequencer" && nextMode !== "melody") {
@@ -591,14 +682,7 @@ const dawSlice = createSlice({
         ),
       );
 
-      const nextPatternNumber =
-        state.project.patterns.reduce(function (maxValue, pattern) {
-          const byName = String(pattern.name || "").match(/pattern\s+(\d+)/i);
-          const byId = String(pattern.id || "").match(/pat-(\d+)/i);
-          const parsedByName = byName ? Number(byName[1]) : 0;
-          const parsedById = byId ? Number(byId[1]) : 0;
-          return Math.max(maxValue, parsedByName, parsedById);
-        }, 0) + 1;
+      const nextPatternNumber = getNextPatternNumber(state.project.patterns);
 
       const newPatternId =
         "pat-" +
@@ -615,6 +699,50 @@ const dawSlice = createSlice({
 
       state.project.patterns.push(newPattern);
       state.project.activePatternId = newPatternId;
+    },
+
+    duplicatePatterns(state, action) {
+      const requestedIdsRaw = Array.isArray(action.payload?.patternIds)
+        ? action.payload.patternIds
+        : [];
+      const requestedIds = requestedIdsRaw
+        .map(function (patternId) {
+          return String(patternId || "").trim();
+        })
+        .filter(Boolean);
+
+      if (requestedIds.length === 0) {
+        requestedIds.push(String(state.project.activePatternId || "").trim());
+      }
+
+      const requestedIdSet = new Set(requestedIds);
+      const sourcePatterns = state.project.patterns.filter(function (pattern) {
+        return requestedIdSet.has(pattern.id);
+      });
+
+      if (sourcePatterns.length === 0) {
+        return;
+      }
+
+      let nextPatternNumber = getNextPatternNumber(state.project.patterns);
+      const duplicates = sourcePatterns.map(function (sourcePattern) {
+        const nextId =
+          "pat-" +
+          Date.now().toString(36) +
+          "-" +
+          Math.random().toString(36).slice(2, 6);
+        const duplicatedPattern = clonePatternForCopy(
+          sourcePattern,
+          nextId,
+          "Pattern " + nextPatternNumber,
+        );
+
+        nextPatternNumber += 1;
+        return duplicatedPattern;
+      });
+
+      state.project.patterns.push(...duplicates);
+      state.project.activePatternId = duplicates[duplicates.length - 1].id;
     },
 
     renamePattern(state, action) {
@@ -1459,12 +1587,14 @@ export const {
   setWindowRect,
   toggleWindowMaximize,
   setBrowserTab,
+  setPatternClipboard,
   setChannelRackMode,
   toggleBrowserFolder,
   toggleStep,
   setPatternLength,
   setActivePattern,
   createPattern,
+  duplicatePatterns,
   renamePattern,
   setPatternColor,
   addPlaylistPatternClip,
