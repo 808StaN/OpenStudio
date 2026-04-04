@@ -1,3 +1,4 @@
+import { useEffect, useRef, useState } from "react";
 import { useDispatch, useSelector } from "react-redux";
 import {
   createPattern,
@@ -8,8 +9,111 @@ import {
 
 const DEFAULT_PATTERN_COLOR = "#4bef9f";
 
+function clamp(value, min, max) {
+  return Math.max(min, Math.min(max, value));
+}
+
+function hsvToRgb(h, s, v) {
+  const hue = ((h % 360) + 360) % 360;
+  const sat = clamp(s, 0, 1);
+  const val = clamp(v, 0, 1);
+
+  const c = val * sat;
+  const x = c * (1 - Math.abs(((hue / 60) % 2) - 1));
+  const m = val - c;
+
+  let rPrime = 0;
+  let gPrime = 0;
+  let bPrime = 0;
+
+  if (hue < 60) {
+    rPrime = c;
+    gPrime = x;
+  } else if (hue < 120) {
+    rPrime = x;
+    gPrime = c;
+  } else if (hue < 180) {
+    gPrime = c;
+    bPrime = x;
+  } else if (hue < 240) {
+    gPrime = x;
+    bPrime = c;
+  } else if (hue < 300) {
+    rPrime = x;
+    bPrime = c;
+  } else {
+    rPrime = c;
+    bPrime = x;
+  }
+
+  return {
+    r: Math.round((rPrime + m) * 255),
+    g: Math.round((gPrime + m) * 255),
+    b: Math.round((bPrime + m) * 255),
+  };
+}
+
+function rgbToHex(rgb) {
+  const toHex = function (value) {
+    return clamp(Math.round(value), 0, 255).toString(16).padStart(2, "0");
+  };
+
+  return "#" + toHex(rgb.r) + toHex(rgb.g) + toHex(rgb.b);
+}
+
+function hexToRgb(hexColor) {
+  const safe = String(hexColor || "").trim().replace("#", "");
+  if (!/^[0-9a-fA-F]{6}$/.test(safe)) {
+    return { r: 75, g: 239, b: 159 };
+  }
+
+  return {
+    r: Number.parseInt(safe.slice(0, 2), 16),
+    g: Number.parseInt(safe.slice(2, 4), 16),
+    b: Number.parseInt(safe.slice(4, 6), 16),
+  };
+}
+
+function rgbToHsv(rgb) {
+  const r = clamp(rgb.r / 255, 0, 1);
+  const g = clamp(rgb.g / 255, 0, 1);
+  const b = clamp(rgb.b / 255, 0, 1);
+
+  const max = Math.max(r, g, b);
+  const min = Math.min(r, g, b);
+  const delta = max - min;
+
+  let h = 0;
+  if (delta !== 0) {
+    if (max === r) {
+      h = ((g - b) / delta) % 6;
+    } else if (max === g) {
+      h = (b - r) / delta + 2;
+    } else {
+      h = (r - g) / delta + 4;
+    }
+    h *= 60;
+    if (h < 0) {
+      h += 360;
+    }
+  }
+
+  const s = max === 0 ? 0 : delta / max;
+  const v = max;
+
+  return {
+    h,
+    s,
+    v,
+  };
+}
+
 export function PatternListWindow() {
   const dispatch = useDispatch();
+  const [openColorPatternId, setOpenColorPatternId] = useState(null);
+  const [pickerStateByPatternId, setPickerStateByPatternId] = useState({});
+  const colorRafMapRef = useRef(new Map());
+  const pendingColorMapRef = useRef(new Map());
 
   const activePatternId = useSelector(function (state) {
     return state.daw.project.activePatternId;
@@ -25,6 +129,157 @@ export function PatternListWindow() {
     acc[clip.patternId] = (acc[clip.patternId] || 0) + 1;
     return acc;
   }, {});
+
+  useEffect(function () {
+    return function () {
+      colorRafMapRef.current.forEach(function (rafId) {
+        cancelAnimationFrame(rafId);
+      });
+      colorRafMapRef.current.clear();
+      pendingColorMapRef.current.clear();
+    };
+  }, []);
+
+  useEffect(function () {
+    const onDocumentMouseDown = function (event) {
+      const target = event.target;
+      if (!(target instanceof HTMLElement)) {
+        return;
+      }
+
+      if (target.closest(".pattern-list-color-wrap")) {
+        return;
+      }
+
+      setOpenColorPatternId(null);
+    };
+
+    window.addEventListener("mousedown", onDocumentMouseDown);
+    return function () {
+      window.removeEventListener("mousedown", onDocumentMouseDown);
+    };
+  }, []);
+
+  const queuePatternColorUpdate = function (patternId, color) {
+    pendingColorMapRef.current.set(patternId, color);
+
+    if (colorRafMapRef.current.has(patternId)) {
+      return;
+    }
+
+    const rafId = requestAnimationFrame(function () {
+      colorRafMapRef.current.delete(patternId);
+      const nextColor = pendingColorMapRef.current.get(patternId);
+      pendingColorMapRef.current.delete(patternId);
+      if (!nextColor) {
+        return;
+      }
+
+      dispatch(
+        setPatternColor({
+          patternId,
+          color: nextColor,
+        }),
+      );
+    });
+
+    colorRafMapRef.current.set(patternId, rafId);
+  };
+
+  const getPickerStateForPattern = function (pattern) {
+    const patternId = pattern.id;
+    const existing = pickerStateByPatternId[patternId];
+    if (existing) {
+      return existing;
+    }
+
+    return rgbToHsv(hexToRgb(pattern.color || DEFAULT_PATTERN_COLOR));
+  };
+
+  const updatePickerColor = function (pattern, nextPartial) {
+    const patternId = pattern.id;
+    const current = getPickerStateForPattern(pattern);
+    const next = {
+      h: clamp(Number(nextPartial.h ?? current.h), 0, 360),
+      s: clamp(Number(nextPartial.s ?? current.s), 0, 1),
+      v: clamp(Number(nextPartial.v ?? current.v), 0, 1),
+    };
+
+    setPickerStateByPatternId(function (prev) {
+      return {
+        ...prev,
+        [patternId]: next,
+      };
+    });
+
+    const hex = rgbToHex(hsvToRgb(next.h, next.s, next.v));
+    queuePatternColorUpdate(patternId, hex);
+  };
+
+  const startSvDrag = function (event, pattern) {
+    event.preventDefault();
+    event.stopPropagation();
+
+    const element = event.currentTarget;
+
+    const updateFromPointer = function (pointerEvent) {
+      const rect = element.getBoundingClientRect();
+      const x = clamp(pointerEvent.clientX - rect.left, 0, rect.width);
+      const y = clamp(pointerEvent.clientY - rect.top, 0, rect.height);
+      const nextS = rect.width > 0 ? x / rect.width : 0;
+      const nextV = rect.height > 0 ? 1 - y / rect.height : 0;
+
+      updatePickerColor(pattern, {
+        s: nextS,
+        v: nextV,
+      });
+    };
+
+    updateFromPointer(event);
+
+    const onMouseMove = function (moveEvent) {
+      updateFromPointer(moveEvent);
+    };
+
+    const onMouseUp = function () {
+      window.removeEventListener("mousemove", onMouseMove);
+      window.removeEventListener("mouseup", onMouseUp);
+    };
+
+    window.addEventListener("mousemove", onMouseMove);
+    window.addEventListener("mouseup", onMouseUp);
+  };
+
+  const startHueDrag = function (event, pattern) {
+    event.preventDefault();
+    event.stopPropagation();
+
+    const element = event.currentTarget;
+
+    const updateFromPointer = function (pointerEvent) {
+      const rect = element.getBoundingClientRect();
+      const x = clamp(pointerEvent.clientX - rect.left, 0, rect.width);
+      const nextHue = rect.width > 0 ? (x / rect.width) * 360 : 0;
+
+      updatePickerColor(pattern, {
+        h: nextHue,
+      });
+    };
+
+    updateFromPointer(event);
+
+    const onMouseMove = function (moveEvent) {
+      updateFromPointer(moveEvent);
+    };
+
+    const onMouseUp = function () {
+      window.removeEventListener("mousemove", onMouseMove);
+      window.removeEventListener("mouseup", onMouseUp);
+    };
+
+    window.addEventListener("mousemove", onMouseMove);
+    window.addEventListener("mouseup", onMouseUp);
+  };
 
   return (
     <section className="pattern-list-shell">
@@ -43,6 +298,14 @@ export function PatternListWindow() {
       <div className="pattern-list-body">
         {patterns.map(function (pattern) {
           const isActive = pattern.id === activePatternId;
+          const pickerState = getPickerStateForPattern(pattern);
+          const pickerColor = rgbToHex(
+            hsvToRgb(pickerState.h, pickerState.s, pickerState.v),
+          );
+          const hueColor = rgbToHex(hsvToRgb(pickerState.h, 1, 1));
+          const svCursorLeft = clamp(pickerState.s * 100, 0, 100);
+          const svCursorTop = clamp((1 - pickerState.v) * 100, 0, 100);
+          const hueCursorLeft = clamp((pickerState.h / 360) * 100, 0, 100);
 
           return (
             <article
@@ -81,24 +344,77 @@ export function PatternListWindow() {
                   }}
                 />
 
-                <label className="pattern-list-color-label" title="Pattern color">
-                  <input
-                    type="color"
-                    className="pattern-list-color"
-                    value={pattern.color || DEFAULT_PATTERN_COLOR}
+                <div
+                  className="pattern-list-color-wrap"
+                  onMouseDown={function (event) {
+                    event.stopPropagation();
+                  }}
+                >
+                  <button
+                    type="button"
+                    className="pattern-list-color-label"
+                    title="Pattern color"
                     onClick={function (event) {
                       event.stopPropagation();
+                      setOpenColorPatternId(function (prev) {
+                        return prev === pattern.id ? null : pattern.id;
+                      });
                     }}
-                    onChange={function (event) {
-                      dispatch(
-                        setPatternColor({
-                          patternId: pattern.id,
-                          color: event.target.value,
-                        }),
-                      );
-                    }}
-                  />
-                </label>
+                  >
+                    <span
+                      className="pattern-list-color-chip"
+                      style={{
+                        backgroundColor: pickerColor,
+                      }}
+                    />
+                  </button>
+
+                  {openColorPatternId === pattern.id ? (
+                    <div className="pattern-list-color-popover">
+                      <div
+                        className="pattern-list-sv"
+                        style={{
+                          backgroundColor: hueColor,
+                        }}
+                        onMouseDown={function (event) {
+                          startSvDrag(event, pattern);
+                        }}
+                      >
+                        <span
+                          className="pattern-list-sv-cursor"
+                          style={{
+                            left: svCursorLeft + "%",
+                            top: svCursorTop + "%",
+                          }}
+                        />
+                      </div>
+
+                      <div
+                        className="pattern-list-hue"
+                        onMouseDown={function (event) {
+                          startHueDrag(event, pattern);
+                        }}
+                      >
+                        <span
+                          className="pattern-list-hue-cursor"
+                          style={{
+                            left: hueCursorLeft + "%",
+                          }}
+                        />
+                      </div>
+
+                      <button
+                        type="button"
+                        className="pattern-list-color-reset"
+                        onClick={function () {
+                          updatePickerColor(pattern, rgbToHsv(hexToRgb(DEFAULT_PATTERN_COLOR)));
+                        }}
+                      >
+                        Reset
+                      </button>
+                    </div>
+                  ) : null}
+                </div>
               </div>
 
               <div className="pattern-list-meta">

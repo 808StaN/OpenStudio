@@ -577,7 +577,12 @@ const dawSlice = createSlice({
         return;
       }
 
-      pattern.color = getSafePatternColor(action.payload.color);
+      const nextColor = getSafePatternColor(action.payload.color);
+      if (pattern.color === nextColor) {
+        return;
+      }
+
+      pattern.color = nextColor;
     },
 
     addPlaylistPatternClip(state, action) {

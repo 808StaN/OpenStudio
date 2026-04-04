@@ -1,3 +1,4 @@
+import { memo, useMemo, useRef } from "react";
 import { useDispatch, useSelector } from "react-redux";
 import {
   addPlaylistPatternClip,
@@ -88,8 +89,72 @@ function getPatternPreviewNotes(pattern) {
   return merged;
 }
 
+const ClipPreviewNotes = memo(function ClipPreviewNotes(props) {
+  const { clipId, previewNotes, clipLengthSteps, patternLength } = props;
+
+  const renderedPreviewNotes = useMemo(
+    function () {
+      const rendered = [];
+      const repeatCount = Math.max(1, Math.ceil(clipLengthSteps / patternLength));
+
+      for (let repeatIndex = 0; repeatIndex < repeatCount; repeatIndex += 1) {
+        for (let noteIndex = 0; noteIndex < previewNotes.length; noteIndex += 1) {
+          const note = previewNotes[noteIndex];
+          const noteStart = note.start + repeatIndex * patternLength;
+          if (noteStart >= clipLengthSteps) {
+            continue;
+          }
+
+          const noteLength = Math.max(
+            0.0625,
+            Math.min(
+              Number(note.length || 1),
+              Math.max(0.0625, clipLengthSteps - noteStart),
+            ),
+          );
+          const left = (noteStart / clipLengthSteps) * 100;
+          const width = Math.max(0.8, (noteLength / clipLengthSteps) * 100);
+          const clampedPitch = Math.max(
+            PIANO_PITCH_MIN,
+            Math.min(PIANO_PITCH_MAX, Math.round(note.pitch || C5_PITCH)),
+          );
+          const pitchRange = Math.max(1, PIANO_PITCH_MAX - PIANO_PITCH_MIN);
+          const pitchRatio = (PIANO_PITCH_MAX - clampedPitch) / pitchRange;
+          const top = 6 + pitchRatio * 78;
+
+          rendered.push(
+            <span
+              key={clipId + "-" + repeatIndex + "-" + note.id + "-" + noteIndex}
+              className="clip-mini-note"
+              style={{
+                left: left + "%",
+                width: width + "%",
+                top: top + "%",
+              }}
+            />,
+          );
+
+          if (rendered.length >= 700) {
+            break;
+          }
+        }
+
+        if (rendered.length >= 700) {
+          break;
+        }
+      }
+
+      return rendered;
+    },
+    [clipId, previewNotes, clipLengthSteps, patternLength],
+  );
+
+  return <div className="clip-note-preview">{renderedPreviewNotes}</div>;
+});
+
 export function PlaylistWindow() {
   const dispatch = useDispatch();
+  const previewCacheRef = useRef(new Map());
 
   const activePatternId = useSelector(function (state) {
     return state.daw.project.activePatternId;
@@ -110,7 +175,25 @@ export function PlaylistWindow() {
   }, {});
 
   const previewNotesByPatternId = patterns.reduce(function (acc, pattern) {
-    acc[pattern.id] = getPatternPreviewNotes(pattern);
+    const cached = previewCacheRef.current.get(pattern.id);
+    if (
+      cached &&
+      cached.lengthSteps === pattern.lengthSteps &&
+      cached.stepGrid === pattern.stepGrid &&
+      cached.pianoPreview === pattern.pianoPreview
+    ) {
+      acc[pattern.id] = cached.notes;
+      return acc;
+    }
+
+    const nextNotes = getPatternPreviewNotes(pattern);
+    previewCacheRef.current.set(pattern.id, {
+      lengthSteps: pattern.lengthSteps,
+      stepGrid: pattern.stepGrid,
+      pianoPreview: pattern.pianoPreview,
+      notes: nextNotes,
+    });
+    acc[pattern.id] = nextNotes;
     return acc;
   }, {});
 
@@ -309,63 +392,7 @@ export function PlaylistWindow() {
                     1,
                     Math.round(Number(clip.barLength || 1)) * 16,
                   );
-                  const repeatCount = Math.max(
-                    1,
-                    Math.ceil(clipLengthSteps / patternLength),
-                  );
                   const previewNotes = previewNotesByPatternId[clip.patternId] || [];
-                  const renderedPreviewNotes = [];
-
-                  for (let repeatIndex = 0; repeatIndex < repeatCount; repeatIndex += 1) {
-                    for (
-                      let noteIndex = 0;
-                      noteIndex < previewNotes.length;
-                      noteIndex += 1
-                    ) {
-                      const note = previewNotes[noteIndex];
-                      const noteStart = note.start + repeatIndex * patternLength;
-                      if (noteStart >= clipLengthSteps) {
-                        continue;
-                      }
-
-                      const noteLength = Math.max(
-                        0.0625,
-                        Math.min(
-                          Number(note.length || 1),
-                          Math.max(0.0625, clipLengthSteps - noteStart),
-                        ),
-                      );
-                      const left = (noteStart / clipLengthSteps) * 100;
-                      const width = Math.max(0.8, (noteLength / clipLengthSteps) * 100);
-                      const clampedPitch = Math.max(
-                        PIANO_PITCH_MIN,
-                        Math.min(PIANO_PITCH_MAX, Math.round(note.pitch || C5_PITCH)),
-                      );
-                      const pitchRange = Math.max(1, PIANO_PITCH_MAX - PIANO_PITCH_MIN);
-                      const pitchRatio = (PIANO_PITCH_MAX - clampedPitch) / pitchRange;
-                      const top = 6 + pitchRatio * 78;
-
-                      renderedPreviewNotes.push(
-                        <span
-                          key={clip.id + "-" + repeatIndex + "-" + note.id + "-" + noteIndex}
-                          className="clip-mini-note"
-                          style={{
-                            left: left + "%",
-                            width: width + "%",
-                            top: top + "%",
-                          }}
-                        />,
-                      );
-
-                      if (renderedPreviewNotes.length >= 700) {
-                        break;
-                      }
-                    }
-
-                    if (renderedPreviewNotes.length >= 700) {
-                      break;
-                    }
-                  }
 
                   return (
                     <div
@@ -398,7 +425,12 @@ export function PlaylistWindow() {
                         dispatch(removePlaylistClip(clip.id));
                       }}
                     >
-                      <div className="clip-note-preview">{renderedPreviewNotes}</div>
+                      <ClipPreviewNotes
+                        clipId={clip.id}
+                        previewNotes={previewNotes}
+                        clipLengthSteps={clipLengthSteps}
+                        patternLength={patternLength}
+                      />
                       <span className="clip-label">{pattern?.name || "Pattern"}</span>
                       <button
                         type="button"
