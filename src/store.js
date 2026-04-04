@@ -33,6 +33,16 @@ function makeStepRow(length, activeIndexes) {
   return row;
 }
 
+function makePlaylistTracks(count) {
+  return Array.from({ length: count }).map(function (_, index) {
+    const number = index + 1;
+    return {
+      id: "trk-" + number,
+      name: "Track " + number,
+    };
+  });
+}
+
 function makePatternStepGrid(channels, lengthSteps) {
   return channels.reduce(function (acc, channel) {
     acc[channel.id] = makeStepRow(lengthSteps, []);
@@ -210,12 +220,7 @@ const initialState = {
         ],
       }),
     ],
-    playlistTracks: [
-      { id: "trk-1", name: "Track 1" },
-      { id: "trk-2", name: "Track 2" },
-      { id: "trk-3", name: "Track 3" },
-      { id: "trk-4", name: "Track 4" },
-    ],
+    playlistTracks: makePlaylistTracks(10),
     playlistClips: [
       {
         id: "clip-1",
@@ -664,6 +669,22 @@ const dawSlice = createSlice({
         }
 
         return a.barStart - b.barStart;
+      });
+    },
+
+    addPlaylistTrack(state) {
+      const nextTrackNumber =
+        state.project.playlistTracks.reduce(function (maxNumber, track) {
+          const fromId = String(track.id || "").match(/trk-(\d+)/i);
+          const fromName = String(track.name || "").match(/track\s+(\d+)/i);
+          const idNumber = fromId ? Number(fromId[1]) : 0;
+          const nameNumber = fromName ? Number(fromName[1]) : 0;
+          return Math.max(maxNumber, idNumber, nameNumber);
+        }, 0) + 1;
+
+      state.project.playlistTracks.push({
+        id: "trk-" + nextTrackNumber,
+        name: "Track " + nextTrackNumber,
       });
     },
 
@@ -1215,6 +1236,7 @@ export const {
   renamePattern,
   setPatternColor,
   addPlaylistPatternClip,
+  addPlaylistTrack,
   removePlaylistClip,
   setPlaylistClipLength,
   setPlaylistClipPlacement,

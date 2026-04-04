@@ -2,6 +2,7 @@ import { memo, useEffect, useMemo, useRef, useState } from "react";
 import { useDispatch, useSelector } from "react-redux";
 import {
   addPlaylistPatternClip,
+  addPlaylistTrack,
   removePlaylistClip,
   setActivePattern,
   setPlaylistClipPlacement,
@@ -12,7 +13,9 @@ import { C5_PITCH, PIANO_PITCH_MAX, PIANO_PITCH_MIN } from "../utils/patternNote
 const BAR_COUNT = 16;
 const BASE_BAR_WIDTH = 56;
 const PLAYLIST_ZOOM_X = 3;
-const BAR_WIDTH = Math.round(BASE_BAR_WIDTH * PLAYLIST_ZOOM_X);
+const INITIAL_BAR_WIDTH = Math.round(BASE_BAR_WIDTH * PLAYLIST_ZOOM_X);
+const MIN_BAR_WIDTH = 42;
+const MAX_BAR_WIDTH = 320;
 const DEFAULT_PATTERN_COLOR = "#4bef9f";
 const MIN_CLIP_BAR_LENGTH = 1 / 16;
 
@@ -174,6 +177,10 @@ export function PlaylistWindow() {
   const dispatch = useDispatch();
   const previewCacheRef = useRef(new Map());
   const snapMenuRef = useRef(null);
+  const playlistShellRef = useRef(null);
+  const playlistBodyRef = useRef(null);
+  const playlistHeaderRef = useRef(null);
+  const [barWidth, setBarWidth] = useState(INITIAL_BAR_WIDTH);
   const [snapKey, setSnapKey] = useState("bar");
   const [isSnapMenuOpen, setIsSnapMenuOpen] = useState(false);
 
@@ -218,13 +225,13 @@ export function PlaylistWindow() {
     return acc;
   }, {});
 
-  const timelineWidth = BAR_COUNT * BAR_WIDTH;
+  const timelineWidth = BAR_COUNT * barWidth;
   const activeSnap =
     SNAP_OPTIONS.find(function (option) {
       return option.key === snapKey;
     }) || SNAP_OPTIONS[11];
   const snapLineWidth = activeSnap.stepSize
-    ? Math.max(1, (activeSnap.stepSize / 16) * BAR_WIDTH)
+    ? Math.max(1, (activeSnap.stepSize / 16) * barWidth)
     : 0;
   const snapLineOpacity = activeSnap.stepSize ? 0.09 : 0;
   const snapBarSize = activeSnap.stepSize
@@ -256,6 +263,105 @@ export function PlaylistWindow() {
     },
     [isSnapMenuOpen],
   );
+
+  useEffect(
+    function () {
+      const viewport = playlistBodyRef.current;
+      const header = playlistHeaderRef.current;
+      if (!viewport || !header) {
+        return;
+      }
+
+      header.style.transform = "translateX(" + -viewport.scrollLeft + "px)";
+    },
+    [barWidth],
+  );
+
+  useEffect(function () {
+    const shell = playlistShellRef.current;
+    if (!shell) {
+      return;
+    }
+
+    const preventBrowserZoom = function (event) {
+      if (!event.ctrlKey) {
+        return;
+      }
+
+      event.preventDefault();
+    };
+
+    const options = { passive: false };
+    shell.addEventListener("wheel", preventBrowserZoom, options);
+
+    return function () {
+      shell.removeEventListener("wheel", preventBrowserZoom, options);
+    };
+  }, []);
+
+  const onPlaylistBodyScroll = function (event) {
+    const header = playlistHeaderRef.current;
+    if (!header) {
+      return;
+    }
+
+    header.style.transform = "translateX(" + -event.currentTarget.scrollLeft + "px)";
+  };
+
+  const onPlaylistBodyWheel = function (event) {
+    const viewport = playlistBodyRef.current;
+    if (!viewport) {
+      return;
+    }
+
+    if (!event.ctrlKey) {
+      if (event.shiftKey || Math.abs(event.deltaX) > Math.abs(event.deltaY)) {
+        event.preventDefault();
+        viewport.scrollLeft += event.deltaX + event.deltaY;
+        const header = playlistHeaderRef.current;
+        if (header) {
+          header.style.transform = "translateX(" + -viewport.scrollLeft + "px)";
+        }
+        return;
+      }
+
+      event.preventDefault();
+      viewport.scrollTop += event.deltaY;
+      return;
+    }
+
+    event.preventDefault();
+
+    const rect = viewport.getBoundingClientRect();
+    const pointerX = clamp(event.clientX - rect.left, 0, viewport.clientWidth);
+    const previousBarWidth = barWidth;
+    const nextBarWidth = clamp(
+      previousBarWidth + (event.deltaY < 0 ? 8 : -8),
+      MIN_BAR_WIDTH,
+      MAX_BAR_WIDTH,
+    );
+
+    if (nextBarWidth === previousBarWidth) {
+      return;
+    }
+
+    const fixedTrackNameWidth = 92;
+    const worldX = viewport.scrollLeft + pointerX;
+    const timelineX = Math.max(0, worldX - fixedTrackNameWidth);
+    const barPosition = timelineX / previousBarWidth;
+
+    setBarWidth(nextBarWidth);
+
+    requestAnimationFrame(function () {
+      const nextWorldX = fixedTrackNameWidth + barPosition * nextBarWidth;
+      viewport.scrollLeft = Math.max(0, nextWorldX - pointerX);
+
+      const header = playlistHeaderRef.current;
+      if (header) {
+        header.style.transform = "translateX(" + -viewport.scrollLeft + "px)";
+      }
+    });
+  };
 
   const startResize = function (event, clip, trackId) {
     if (event.button !== 0) {
@@ -373,9 +479,10 @@ export function PlaylistWindow() {
 
   return (
     <section
+      ref={playlistShellRef}
       className="playlist-shell"
       style={{
-        "--playlist-bar-width": BAR_WIDTH + "px",
+        "--playlist-bar-width": barWidth + "px",
         "--playlist-snap-width": snapLineWidth + "px",
         "--playlist-snap-opacity": String(snapLineOpacity),
       }}
@@ -415,26 +522,44 @@ export function PlaylistWindow() {
             </div>
           ) : null}
         </div>
+
+        <button
+          type="button"
+          className="playlist-add-track-btn"
+          onClick={function () {
+            dispatch(addPlaylistTrack());
+          }}
+        >
+          + Track
+        </button>
+      </div>
+
+      <div className="playlist-header-shell">
+        <div
+          ref={playlistHeaderRef}
+          className="playlist-header"
+          style={{
+            gridTemplateColumns: "92px repeat(" + BAR_COUNT + ", " + barWidth + "px)",
+            width: 92 + timelineWidth,
+          }}
+        >
+          <div className="bar-label empty" />
+          {Array.from({ length: BAR_COUNT }).map(function (_, index) {
+            return (
+              <div className="bar-cell" key={index}>
+                {index + 1}
+              </div>
+            );
+          })}
+        </div>
       </div>
 
       <div
-        className="playlist-header"
-        style={{
-          gridTemplateColumns: "92px repeat(" + BAR_COUNT + ", " + BAR_WIDTH + "px)",
-          width: 92 + timelineWidth,
-        }}
+        ref={playlistBodyRef}
+        className="playlist-body"
+        onScroll={onPlaylistBodyScroll}
+        onWheel={onPlaylistBodyWheel}
       >
-        <div className="bar-label empty" />
-        {Array.from({ length: BAR_COUNT }).map(function (_, index) {
-          return (
-            <div className="bar-cell" key={index}>
-              {index + 1}
-            </div>
-          );
-        })}
-      </div>
-
-      <div className="playlist-body">
         {tracks.map(function (track) {
           const clipsOnTrack = clips.filter(function (clip) {
             return clip.trackId === track.id;

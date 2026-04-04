@@ -80,7 +80,6 @@ export function ChannelRackWindow() {
       <header className="rack-topbar">
         <div className="rack-pattern-picker-wrap">
           <label className="rack-pattern-picker">
-            <span className="rack-pattern-picker-prefix">Pattern</span>
             <select
               value={activePatternId}
               aria-label="Active pattern"

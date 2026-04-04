@@ -79,8 +79,8 @@
   display: inline-flex;
   align-items: center;
   gap: 6px;
-  padding: 0 8px;
-  min-width: 170px;
+  padding: 0 6px;
+  min-width: 0;
 }
 
 .rack-pattern-picker-prefix {
@@ -96,8 +96,9 @@
   color: #7ff8cc;
   font-size: 13px;
   font-weight: 600;
-  min-width: 108px;
-  max-width: 160px;
+  min-width: 92px;
+  max-width: 124px;
+  width: auto;
   text-overflow: ellipsis;
   cursor: pointer;
 }
