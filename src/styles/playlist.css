@@ -11,8 +11,8 @@
 
 .playlist-header {
   display: grid;
-  grid-template-columns: 92px repeat(16, minmax(0, 1fr));
   border-bottom: 1px solid #3f4758;
+  width: max-content;
 }
 
 .bar-label.empty {
@@ -40,8 +40,7 @@
 
 .playlist-track {
   display: grid;
-  grid-template-columns: 92px 1fr;
-  min-height: 38px;
+  min-height: 56px;
 }
 
 .track-name {
@@ -70,28 +69,82 @@
     ),
     linear-gradient(180deg, #121928 0%, #0d131f 100%);
   cursor: cell;
+  min-height: 56px;
 }
 
 .clip {
   position: absolute;
-  top: 4px;
-  bottom: 4px;
+  top: 6px;
+  bottom: 6px;
   border-radius: 4px;
-  border: 1px solid #ff8e35;
-  color: #1c1308;
+  border: 1px solid rgba(168, 183, 207, 0.45);
+  color: #dce8f8;
   font-size: 12px;
-  background: linear-gradient(180deg, #ffc983 0%, #ff9a31 100%);
+  background: linear-gradient(
+    180deg,
+    rgba(170, 182, 199, 0.24) 0%,
+    rgba(128, 138, 155, 0.18) 100%
+  );
   box-shadow:
-    inset 0 1px 0 rgba(255, 255, 255, 0.45),
-    0 0 8px rgba(255, 163, 74, 0.4);
+    inset 0 1px 0 rgba(255, 255, 255, 0.2),
+    0 0 8px rgba(70, 80, 102, 0.22);
   display: flex;
   align-items: center;
   justify-content: center;
-  padding: 0 6px;
+  padding: 0 14px 0 6px;
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
   cursor: pointer;
+}
+
+.clip-note-preview {
+  position: absolute;
+  inset: 2px 2px 2px 2px;
+  border-radius: 3px;
+  overflow: hidden;
+  pointer-events: none;
+}
+
+.clip-mini-note {
+  position: absolute;
+  height: 4px;
+  transform: translateY(-50%);
+  border-radius: 2px;
+  background: linear-gradient(180deg, #7effbf 0%, #2ad877 100%);
+  box-shadow:
+    0 0 5px rgba(65, 235, 145, 0.36),
+    inset 0 1px 0 rgba(229, 255, 243, 0.45);
+  opacity: 0.82;
+  pointer-events: none;
+}
+
+.clip-label {
+  position: relative;
+  z-index: 1;
+  padding: 0 2px;
+  border-radius: 3px;
+  background: rgba(18, 25, 34, 0.42);
+}
+
+.clip-resize-handle {
+  position: absolute;
+  top: 2px;
+  right: 2px;
+  bottom: 2px;
+  width: 10px;
+  border: 0;
+  border-radius: 2px;
+  background: linear-gradient(
+    90deg,
+    rgba(255, 255, 255, 0) 0%,
+    rgba(255, 255, 255, 0.08) 100%
+  );
+  cursor: ew-resize;
+}
+
+.clip-resize-handle:hover {
+  filter: brightness(1.08);
 }
 
 .clip.is-active {

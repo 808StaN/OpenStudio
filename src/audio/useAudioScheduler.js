@@ -782,11 +782,9 @@ export function useAudioScheduler() {
           }
 
           const patternLength = Math.max(1, pattern.lengthSteps || 16);
-          if (relativeStep >= patternLength) {
-            return;
-          }
+          const loopedPatternStep = relativeStep % patternLength;
 
-          schedulePatternStep(pattern, relativeStep, noteTime);
+          schedulePatternStep(pattern, loopedPatternStep, noteTime);
         });
       };
 

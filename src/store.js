@@ -636,6 +636,131 @@ const dawSlice = createSlice({
       );
     },
 
+    setPlaylistClipLength(state, action) {
+      const clip = state.project.playlistClips.find(function (item) {
+        return item.id === action.payload.clipId;
+      });
+      if (!clip) {
+        return;
+      }
+
+      const trackClips = state.project.playlistClips
+        .filter(function (item) {
+          return item.trackId === clip.trackId && item.id !== clip.id;
+        })
+        .sort(function (a, b) {
+          return a.barStart - b.barStart;
+        });
+
+      const nextClip = trackClips.find(function (item) {
+        return item.barStart > clip.barStart;
+      });
+
+      const maxLengthByNextClip = nextClip
+        ? Math.max(1, nextClip.barStart - clip.barStart)
+        : 64;
+
+      const maxLengthByTimeline = Math.max(1, 128 - clip.barStart + 1);
+      const requestedLength = Math.round(Number(action.payload.barLength || 1));
+
+      clip.barLength = Math.max(
+        1,
+        Math.min(maxLengthByNextClip, maxLengthByTimeline, requestedLength),
+      );
+    },
+
+    setPlaylistClipPlacement(state, action) {
+      const clip = state.project.playlistClips.find(function (item) {
+        return item.id === action.payload.clipId;
+      });
+      if (!clip) {
+        return;
+      }
+
+      const trackId = action.payload.trackId || clip.trackId;
+      const hasTrack = state.project.playlistTracks.some(function (track) {
+        return track.id === trackId;
+      });
+      if (!hasTrack) {
+        return;
+      }
+
+      const clipLength = Math.max(1, Math.round(Number(clip.barLength || 1)));
+      const maxStartByTimeline = Math.max(1, 128 - clipLength + 1);
+      const requestedBarStart = Math.round(Number(action.payload.barStart || 1));
+      const desiredStart = Math.max(
+        1,
+        Math.min(maxStartByTimeline, requestedBarStart),
+      );
+
+      const clipsOnTargetTrack = state.project.playlistClips.filter(function (item) {
+        return item.trackId === trackId && item.id !== clip.id;
+      });
+
+      const isSlotFree = function (start) {
+        const end = start + clipLength;
+
+        return clipsOnTargetTrack.every(function (item) {
+          const otherStart = Math.max(1, Math.round(Number(item.barStart || 1)));
+          const otherLength = Math.max(1, Math.round(Number(item.barLength || 1)));
+          const otherEnd = otherStart + otherLength;
+          return otherEnd <= start || otherStart >= end;
+        });
+      };
+
+      let resolvedStart = desiredStart;
+      if (!isSlotFree(resolvedStart)) {
+        const moveDirection = Math.sign(desiredStart - clip.barStart);
+        let foundStart = null;
+
+        for (let delta = 1; delta <= maxStartByTimeline; delta += 1) {
+          const left = desiredStart - delta;
+          const right = desiredStart + delta;
+          const canLeft = left >= 1 && isSlotFree(left);
+          const canRight = right <= maxStartByTimeline && isSlotFree(right);
+
+          if (!canLeft && !canRight) {
+            continue;
+          }
+
+          if (canLeft && canRight) {
+            foundStart = moveDirection >= 0 ? right : left;
+          } else {
+            foundStart = canRight ? right : left;
+          }
+          break;
+        }
+
+        if (foundStart === null) {
+          return;
+        }
+
+        resolvedStart = foundStart;
+      }
+
+      clip.trackId = trackId;
+      clip.barStart = resolvedStart;
+
+      const trackOrderById = state.project.playlistTracks.reduce(function (
+        acc,
+        track,
+        index,
+      ) {
+        acc[track.id] = index;
+        return acc;
+      }, {});
+
+      state.project.playlistClips.sort(function (a, b) {
+        const trackDelta =
+          (trackOrderById[a.trackId] ?? 999) - (trackOrderById[b.trackId] ?? 999);
+        if (trackDelta !== 0) {
+          return trackDelta;
+        }
+
+        return a.barStart - b.barStart;
+      });
+    },
+
     setActiveChannel(state, action) {
       const channelId = action.payload;
       const exists = state.project.channels.some(function (channel) {
@@ -1034,6 +1159,8 @@ export const {
   renamePattern,
   addPlaylistPatternClip,
   removePlaylistClip,
+  setPlaylistClipLength,
+  setPlaylistClipPlacement,
   setActiveChannel,
   togglePianoNote,
   setPianoNoteLength,
