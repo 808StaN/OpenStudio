@@ -13,10 +13,18 @@ import {
   toggleStep,
 } from "../store";
 import {
+  C5_PITCH,
   PIANO_PITCH_MAX,
   PIANO_PITCH_MIN,
   getChannelMergedNotes,
 } from "../utils/patternNotes";
+
+function isMelodyShapeNote(note) {
+  const pitch = Math.round(Number(note.pitch || C5_PITCH));
+  const length = Number(note.length || 1);
+
+  return pitch !== C5_PITCH || Math.abs(length - 1) > 0.0001;
+}
 
 export function ChannelRackWindow() {
   const dispatch = useDispatch();
@@ -142,6 +150,14 @@ export function ChannelRackWindow() {
               return Boolean(rawRow[i]);
             });
             const notes = getChannelMergedNotes(activePattern, channel.id);
+            const pianoNotes = activePattern?.pianoPreview?.[channel.id] || [];
+            const shouldAutoShowMelodyInSequencer = pianoNotes.some(
+              isMelodyShapeNote,
+            );
+            const showPianoPreview =
+              channelRackMode === "melody" ||
+              (channelRackMode === "sequencer" &&
+                shouldAutoShowMelodyInSequencer);
 
             return (
               <article
@@ -284,12 +300,50 @@ export function ChannelRackWindow() {
                 <div
                   className={
                     "rack-input " +
-                    (channelRackMode === "sequencer"
-                      ? "rack-input-steps"
-                      : "rack-input-piano")
+                    (showPianoPreview ? "rack-input-piano" : "rack-input-steps")
                   }
                 >
-                  {channelRackMode === "sequencer" ? (
+                  {showPianoPreview ? (
+                    <button
+                      className="piano-preview"
+                      onClick={function () {
+                        dispatch(setActiveChannel(channel.id));
+                        dispatch(openWindow("pianoRoll"));
+                      }}
+                    >
+                      {notes.map(function (note) {
+                        const left = (note.start / patternLength) * 100;
+                        const width = (note.length / patternLength) * 100;
+                        const clampedPitch = Math.max(
+                          PIANO_PITCH_MIN,
+                          Math.min(
+                            PIANO_PITCH_MAX,
+                            note.pitch || PIANO_PITCH_MIN,
+                          ),
+                        );
+                        const pitchRange = Math.max(
+                          1,
+                          PIANO_PITCH_MAX - PIANO_PITCH_MIN,
+                        );
+                        const pitchRatio =
+                          (PIANO_PITCH_MAX - clampedPitch) / pitchRange;
+                        const top = 8 + pitchRatio * 84;
+
+                        return (
+                          <span
+                            key={note.id}
+                            className="mini-note"
+                            style={{
+                              left: left + "%",
+                              width: width + "%",
+                              top: top + "%",
+                            }}
+                          />
+                        );
+                      })}
+                      <span className="piano-hint">Open Piano Roll</span>
+                    </button>
+                  ) : (
                     <div
                       className="step-grid"
                       style={{
@@ -341,46 +395,6 @@ export function ChannelRackWindow() {
                         );
                       })}
                     </div>
-                  ) : (
-                    <button
-                      className="piano-preview"
-                      onClick={function () {
-                        dispatch(setActiveChannel(channel.id));
-                        dispatch(openWindow("pianoRoll"));
-                      }}
-                    >
-                      {notes.map(function (note) {
-                        const left = (note.start / patternLength) * 100;
-                        const width = (note.length / patternLength) * 100;
-                        const clampedPitch = Math.max(
-                          PIANO_PITCH_MIN,
-                          Math.min(
-                            PIANO_PITCH_MAX,
-                            note.pitch || PIANO_PITCH_MIN,
-                          ),
-                        );
-                        const pitchRange = Math.max(
-                          1,
-                          PIANO_PITCH_MAX - PIANO_PITCH_MIN,
-                        );
-                        const pitchRatio =
-                          (PIANO_PITCH_MAX - clampedPitch) / pitchRange;
-                        const top = 8 + pitchRatio * 84;
-
-                        return (
-                          <span
-                            key={note.id}
-                            className="mini-note"
-                            style={{
-                              left: left + "%",
-                              width: width + "%",
-                              top: top + "%",
-                            }}
-                          />
-                        );
-                      })}
-                      <span className="piano-hint">Open Piano Roll</span>
-                    </button>
                   )}
                 </div>
               </article>
