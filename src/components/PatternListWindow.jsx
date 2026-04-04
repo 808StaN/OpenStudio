@@ -495,7 +495,9 @@ export function PatternListWindow() {
                   return;
                 }
 
-                const draggedPatternIds = selectedPatternIds.includes(pattern.id)
+                const draggedPatternIds = selectedPatternIds.includes(
+                  pattern.id,
+                )
                   ? orderedSelectedPatternIds
                   : [pattern.id];
 
