@@ -78,6 +78,41 @@
   filter: brightness(1.04);
 }
 
+.playlist-length-control {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  margin-left: 4px;
+  color: #9eb0ca;
+  font-size: 11px;
+}
+
+.playlist-length-input {
+  width: 58px;
+  height: 22px;
+  border-radius: 5px;
+  border: 1px solid #5d6a84;
+  background: linear-gradient(180deg, #1f2c41 0%, #141f30 100%);
+  color: #e6efff;
+  font-size: 11px;
+  text-align: center;
+  padding: 0 4px;
+  appearance: textfield;
+  -moz-appearance: textfield;
+}
+
+.playlist-length-input::-webkit-outer-spin-button,
+.playlist-length-input::-webkit-inner-spin-button {
+  -webkit-appearance: none;
+  margin: 0;
+}
+
+.playlist-length-input:focus {
+  outline: none;
+  border-color: #82d4ff;
+  box-shadow: 0 0 0 1px rgba(130, 212, 255, 0.35);
+}
+
 .playlist-header {
   display: grid;
   border-bottom: 1px solid #3f4758;

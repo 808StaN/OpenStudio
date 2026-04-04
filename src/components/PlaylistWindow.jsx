@@ -11,7 +11,9 @@ import {
 import { getPatternDragSession } from "../utils/patternDragSession";
 import { C5_PITCH } from "../utils/patternNotes";
 
-const BAR_COUNT = 16;
+const DEFAULT_PLAYLIST_BARS = 16;
+const MIN_PLAYLIST_BARS = 4;
+const MAX_PLAYLIST_BARS = 512;
 const BASE_BAR_WIDTH = 56;
 const PLAYLIST_ZOOM_X = 3;
 const INITIAL_BAR_WIDTH = Math.round(BASE_BAR_WIDTH * PLAYLIST_ZOOM_X);
@@ -211,6 +213,9 @@ export function PlaylistWindow() {
   const playlistBodyRef = useRef(null);
   const playlistHeaderRef = useRef(null);
   const [barWidth, setBarWidth] = useState(INITIAL_BAR_WIDTH);
+  const [playlistBarCount, setPlaylistBarCount] = useState(
+    DEFAULT_PLAYLIST_BARS,
+  );
   const [snapKey, setSnapKey] = useState("bar");
   const [isSnapMenuOpen, setIsSnapMenuOpen] = useState(false);
   const [dropPreview, setDropPreview] = useState(null);
@@ -261,7 +266,7 @@ export function PlaylistWindow() {
     return acc;
   }, {});
 
-  const timelineWidth = BAR_COUNT * barWidth;
+  const timelineWidth = playlistBarCount * barWidth;
   const activeSnap =
     SNAP_OPTIONS.find(function (option) {
       return option.key === snapKey;
@@ -414,6 +419,17 @@ export function PlaylistWindow() {
     });
   };
 
+  const onPlaylistLengthChange = function (event) {
+    const parsed = Number(event.target.value);
+    if (!Number.isFinite(parsed)) {
+      return;
+    }
+
+    setPlaylistBarCount(
+      clamp(Math.round(parsed), MIN_PLAYLIST_BARS, MAX_PLAYLIST_BARS),
+    );
+  };
+
   const startResize = function (event, clip, trackId) {
     if (event.button !== 0) {
       return;
@@ -428,10 +444,10 @@ export function PlaylistWindow() {
     }
 
     const rect = trackElement.getBoundingClientRect();
-    const barWidthPx = rect.width / BAR_COUNT;
+    const barWidthPx = rect.width / playlistBarCount;
     const startClientX = event.clientX;
     const initialLength = Math.max(1, Math.round(Number(clip.barLength || 1)));
-    const maxTrackLength = Math.max(1, BAR_COUNT - clip.barStart + 1);
+    const maxTrackLength = Math.max(1, playlistBarCount - clip.barStart + 1);
 
     const onMouseMove = function (moveEvent) {
       const deltaPx = moveEvent.clientX - startClientX;
@@ -504,11 +520,11 @@ export function PlaylistWindow() {
       const targetTrackId =
         targetGrid.getAttribute("data-track-id") || fallbackTrackId;
       const rect = targetGrid.getBoundingClientRect();
-      const barWidthPx = rect.width / BAR_COUNT;
+      const barWidthPx = rect.width / playlistBarCount;
       const deltaBars = Math.round(
         (moveEvent.clientX - startClientX) / Math.max(1, barWidthPx),
       );
-      const maxBarStart = Math.max(1, BAR_COUNT - clipLength + 1);
+      const maxBarStart = Math.max(1, playlistBarCount - clipLength + 1);
       const barStart = clamp(startBar + deltaBars, 1, maxBarStart);
 
       dispatch(
@@ -585,12 +601,18 @@ export function PlaylistWindow() {
   };
 
   const getDraggedPatternIdsWithFallback = function (event) {
+    const idsFromSession = normalizePatternIds(getPatternDragSession());
     const idsFromDataTransfer = getDraggedPatternIds(event);
+
+    if (idsFromSession.length > 1) {
+      return idsFromSession;
+    }
+
     if (idsFromDataTransfer.length > 0) {
       return idsFromDataTransfer;
     }
 
-    return normalizePatternIds(getPatternDragSession());
+    return idsFromSession;
   };
 
   const resolvePatternIdsForPlacement = function (candidateIds) {
@@ -614,9 +636,9 @@ export function PlaylistWindow() {
   const resolveBarStartFromPointer = function (event, trackElement) {
     const rect = trackElement.getBoundingClientRect();
     const x = clamp(event.clientX - rect.left, 0, rect.width);
-    const rawBarStart = (x / Math.max(1, rect.width)) * BAR_COUNT + 1;
+    const rawBarStart = (x / Math.max(1, rect.width)) * playlistBarCount + 1;
     const snappedBarStart = quantizeBySnap(rawBarStart, snapBarSize);
-    return clamp(snappedBarStart, 1, BAR_COUNT);
+    return clamp(snappedBarStart, 1, playlistBarCount);
   };
 
   const buildDropPlacements = function (trackId, startBar, patternIds) {
@@ -632,7 +654,7 @@ export function PlaylistWindow() {
       return [];
     }
 
-    const barStart = clamp(startBar, 1, BAR_COUNT);
+    const barStart = clamp(startBar, 1, playlistBarCount);
 
     return resolvedPatternIds
       .map(function (patternId, offset) {
@@ -720,7 +742,7 @@ export function PlaylistWindow() {
         event.preventDefault();
         placePatternsOnTrack(
           targetTrackId,
-          clamp(lastHoverPlacement?.barStart ?? 1, 1, BAR_COUNT),
+          clamp(lastHoverPlacement?.barStart ?? 1, 1, playlistBarCount),
           patternIds,
         );
       };
@@ -801,6 +823,19 @@ export function PlaylistWindow() {
         >
           + Track
         </button>
+
+        <label className="playlist-length-control">
+          <span>Length</span>
+          <input
+            className="playlist-length-input"
+            type="number"
+            min={MIN_PLAYLIST_BARS}
+            max={MAX_PLAYLIST_BARS}
+            step="1"
+            value={playlistBarCount}
+            onChange={onPlaylistLengthChange}
+          />
+        </label>
       </div>
 
       <div className="playlist-header-shell">
@@ -809,12 +844,12 @@ export function PlaylistWindow() {
           className="playlist-header"
           style={{
             gridTemplateColumns:
-              "92px repeat(" + BAR_COUNT + ", " + barWidth + "px)",
+              "92px repeat(" + playlistBarCount + ", " + barWidth + "px)",
             width: 92 + timelineWidth,
           }}
         >
           <div className="bar-label empty" />
-          {Array.from({ length: BAR_COUNT }).map(function (_, index) {
+          {Array.from({ length: playlistBarCount }).map(function (_, index) {
             return (
               <div className="bar-cell" key={index}>
                 {index + 1}
@@ -852,9 +887,9 @@ export function PlaylistWindow() {
             const rect = event.currentTarget.getBoundingClientRect();
             const x = clamp(event.clientX - rect.left, 0, rect.width);
             const barStart = clamp(
-              Math.floor((x / rect.width) * BAR_COUNT) + 1,
+              Math.floor((x / rect.width) * playlistBarCount) + 1,
               1,
-              BAR_COUNT,
+              playlistBarCount,
             );
             setLastHoverPlacement({
               trackId: track.id,
@@ -1026,7 +1061,7 @@ export function PlaylistWindow() {
                     MIN_CLIP_BAR_LENGTH,
                     Math.max(
                       MIN_CLIP_BAR_LENGTH,
-                      BAR_COUNT - placement.barStart + 1,
+                      playlistBarCount - placement.barStart + 1,
                     ),
                   );
 
@@ -1039,11 +1074,11 @@ export function PlaylistWindow() {
                       style={{
                         left:
                           "calc(" +
-                          ((placement.barStart - 1) / BAR_COUNT) * 100 +
+                          ((placement.barStart - 1) / playlistBarCount) * 100 +
                           "% + 0.5px)",
                         width:
                           "calc(" +
-                          (previewBarLength / BAR_COUNT) * 100 +
+                          (previewBarLength / playlistBarCount) * 100 +
                           "% - 1px)",
                         borderColor: withAlpha(previewColor, 0.95),
                         backgroundColor: withAlpha(previewColor, 0.22),
@@ -1083,11 +1118,11 @@ export function PlaylistWindow() {
                             withAlpha(clipColor, 0.24),
                         left:
                           "calc(" +
-                          ((clip.barStart - 1) / BAR_COUNT) * 100 +
+                          ((clip.barStart - 1) / playlistBarCount) * 100 +
                           "% + 0.5px)",
                         width:
                           "calc(" +
-                          (clip.barLength / BAR_COUNT) * 100 +
+                          (clip.barLength / playlistBarCount) * 100 +
                           "% - 1px)",
                       }}
                       onMouseDown={function (event) {

@@ -72,6 +72,7 @@ function makeChannelId() {
 }
 
 const MIN_CLIP_BAR_LENGTH = 1 / 16;
+const MAX_PLAYLIST_BARS = 512;
 
 function normalizeBarValue(raw, minValue, maxValue) {
   const normalized = Math.round(Number(raw || 0) * 16) / 16;
@@ -795,7 +796,11 @@ const dawSlice = createSlice({
         return;
       }
 
-      const barStart = normalizeBarValue(action.payload.barStart || 1, 1, 128);
+      const barStart = normalizeBarValue(
+        action.payload.barStart || 1,
+        1,
+        MAX_PLAYLIST_BARS,
+      );
 
       const patternBarLength = Math.max(
         1,
@@ -814,7 +819,11 @@ const dawSlice = createSlice({
             return true;
           }
 
-          const start = normalizeBarValue(clip.barStart || 1, 1, 128);
+          const start = normalizeBarValue(
+            clip.barStart || 1,
+            1,
+            MAX_PLAYLIST_BARS,
+          );
           const length = normalizeBarValue(
             clip.barLength || 1,
             MIN_CLIP_BAR_LENGTH,
@@ -907,10 +916,14 @@ const dawSlice = createSlice({
         ? Math.max(MIN_CLIP_BAR_LENGTH, nextClip.barStart - clip.barStart)
         : 64;
 
-      const currentStart = normalizeBarValue(clip.barStart || 1, 1, 128);
+      const currentStart = normalizeBarValue(
+        clip.barStart || 1,
+        1,
+        MAX_PLAYLIST_BARS,
+      );
       const maxLengthByTimeline = Math.max(
         MIN_CLIP_BAR_LENGTH,
-        128 - currentStart + 1,
+        MAX_PLAYLIST_BARS - currentStart + 1,
       );
       const requestedLength = normalizeBarValue(
         action.payload.barLength || 1,
@@ -946,7 +959,10 @@ const dawSlice = createSlice({
         MIN_CLIP_BAR_LENGTH,
         64,
       );
-      const maxStartByTimeline = Math.max(1, 128 - clipLength + 1);
+      const maxStartByTimeline = Math.max(
+        1,
+        MAX_PLAYLIST_BARS - clipLength + 1,
+      );
       const desiredStart = normalizeBarValue(
         action.payload.barStart || 1,
         1,
@@ -963,7 +979,11 @@ const dawSlice = createSlice({
         const end = start + clipLength;
 
         return clipsOnTargetTrack.every(function (item) {
-          const otherStart = normalizeBarValue(item.barStart || 1, 1, 128);
+          const otherStart = normalizeBarValue(
+            item.barStart || 1,
+            1,
+            MAX_PLAYLIST_BARS,
+          );
           const otherLength = normalizeBarValue(
             item.barLength || 1,
             MIN_CLIP_BAR_LENGTH,
