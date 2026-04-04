@@ -877,11 +877,15 @@ export function PianoRollWindow() {
       0,
       Math.min(patternLength - 1, Math.floor(x / stepWidth)),
     );
-    const rawStart = clamp(x / stepWidth, 0, patternLength - minNoteLength);
+    const rawStart = clamp(
+      x / stepWidth,
+      0,
+      patternLength - MIN_FREE_LENGTH,
+    );
     const snappedStart = clamp(
       quantizeBySnap(rawStart, snapStepSize),
       0,
-      patternLength - minNoteLength,
+      patternLength - MIN_FREE_LENGTH,
     );
     const rowIndex = Math.max(
       0,
@@ -894,22 +898,20 @@ export function PianoRollWindow() {
 
     const customNotes = activePattern.pianoPreview?.[activeChannel.id] || [];
     const hasCustomNote = customNotes.some(function (note) {
-      return (
-        isNearlyEqual(note.start || 0, snappedStart) && note.pitch === pitch
-      );
+      return isNearlyEqual(note.start || 0, snappedStart) && note.pitch === pitch;
     });
 
     const maxNewLength = Math.max(
       MIN_FREE_LENGTH,
       patternLength - snappedStart,
     );
-    const minNewLength = Math.min(minNoteLength, maxNewLength);
+    const minNewLength = Math.min(MIN_FREE_LENGTH, maxNewLength);
     const lastTouchedLength = Math.max(
       MIN_FREE_LENGTH,
       Number(lastTouchedLengthRef.current || minNoteLength),
     );
     const nextCreatedLength = clamp(
-      quantizeBySnap(lastTouchedLength, snapStepSize),
+      lastTouchedLength,
       minNewLength,
       maxNewLength,
     );
@@ -1256,12 +1258,9 @@ export function PianoRollWindow() {
           MIN_FREE_LENGTH,
           patternLength - activeSession.start,
         );
-        const minLen = Math.min(minNoteLength, maxLen);
+        const minLen = Math.min(MIN_FREE_LENGTH, maxLen);
         const nextLength = clamp(
-          quantizeBySnap(
-            activeSession.originLength + deltaStepsRaw,
-            snapStepSize,
-          ),
+          activeSession.originLength + deltaStepsRaw,
           minLen,
           maxLen,
         );
