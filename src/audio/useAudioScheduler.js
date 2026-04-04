@@ -746,9 +746,15 @@ export function useAudioScheduler() {
 
         let maxSongStep = 16;
         clips.forEach(function (clip) {
-          const barStart = Math.max(1, Math.round(Number(clip.barStart || 1)));
-          const barLength = Math.max(1, Math.round(Number(clip.barLength || 1)));
-          const clipEndStep = (barStart - 1 + barLength) * 16;
+          const clipStartStep = Math.max(
+            0,
+            Math.round((Number(clip.barStart || 1) - 1) * 16),
+          );
+          const clipLengthSteps = Math.max(
+            1,
+            Math.round(Number(clip.barLength || 1) * 16),
+          );
+          const clipEndStep = clipStartStep + clipLengthSteps;
           maxSongStep = Math.max(maxSongStep, clipEndStep);
         });
 
@@ -773,8 +779,14 @@ export function useAudioScheduler() {
             return;
           }
 
-          const clipStartStep = Math.max(0, (Math.round(Number(clip.barStart || 1)) - 1) * 16);
-          const clipLengthSteps = Math.max(1, Math.round(Number(clip.barLength || 1)) * 16);
+          const clipStartStep = Math.max(
+            0,
+            Math.round((Number(clip.barStart || 1) - 1) * 16),
+          );
+          const clipLengthSteps = Math.max(
+            1,
+            Math.round(Number(clip.barLength || 1) * 16),
+          );
           const relativeStep = songStep - clipStartStep;
 
           if (relativeStep < 0 || relativeStep >= clipLengthSteps) {

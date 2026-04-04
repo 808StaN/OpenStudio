@@ -1,4 +1,4 @@
-import { memo, useMemo, useRef } from "react";
+import { memo, useEffect, useMemo, useRef, useState } from "react";
 import { useDispatch, useSelector } from "react-redux";
 import {
   addPlaylistPatternClip,
@@ -15,8 +15,31 @@ const PLAYLIST_ZOOM_X = 1.5;
 const BAR_WIDTH = Math.round(BASE_BAR_WIDTH * PLAYLIST_ZOOM_X);
 const DEFAULT_PATTERN_COLOR = "#4bef9f";
 
+const SNAP_OPTIONS = [
+  { key: "none", label: "(none)", stepSize: null },
+  { key: "1-6-step", label: "1/6 step", stepSize: 1 / 6 },
+  { key: "1-4-step", label: "1/4 step", stepSize: 1 / 4 },
+  { key: "1-3-step", label: "1/3 step", stepSize: 1 / 3 },
+  { key: "1-2-step", label: "1/2 step", stepSize: 1 / 2 },
+  { key: "step", label: "Step", stepSize: 1 },
+  { key: "1-6-beat", label: "1/6 beat", stepSize: 2 / 3 },
+  { key: "1-4-beat", label: "1/4 beat", stepSize: 1 },
+  { key: "1-3-beat", label: "1/3 beat", stepSize: 4 / 3 },
+  { key: "1-2-beat", label: "1/2 beat", stepSize: 2 },
+  { key: "beat", label: "Beat", stepSize: 4 },
+  { key: "bar", label: "Bar", stepSize: 16 },
+];
+
 function clamp(value, min, max) {
   return Math.max(min, Math.min(max, value));
+}
+
+function quantizeBySnap(value, snapSize) {
+  if (!snapSize) {
+    return value;
+  }
+
+  return Math.round(value / snapSize) * snapSize;
 }
 
 function hexToRgb(hexColor) {
@@ -155,6 +178,9 @@ const ClipPreviewNotes = memo(function ClipPreviewNotes(props) {
 export function PlaylistWindow() {
   const dispatch = useDispatch();
   const previewCacheRef = useRef(new Map());
+  const snapMenuRef = useRef(null);
+  const [snapKey, setSnapKey] = useState("bar");
+  const [isSnapMenuOpen, setIsSnapMenuOpen] = useState(false);
 
   const activePatternId = useSelector(function (state) {
     return state.daw.project.activePatternId;
@@ -198,6 +224,43 @@ export function PlaylistWindow() {
   }, {});
 
   const timelineWidth = BAR_COUNT * BAR_WIDTH;
+  const activeSnap =
+    SNAP_OPTIONS.find(function (option) {
+      return option.key === snapKey;
+    }) || SNAP_OPTIONS[11];
+  const snapLineWidth = activeSnap.stepSize
+    ? Math.max(1, (activeSnap.stepSize / 16) * BAR_WIDTH)
+    : 0;
+  const snapLineOpacity = activeSnap.stepSize ? 0.09 : 0;
+  const snapBarSize = activeSnap.stepSize
+    ? Math.max(1 / 16, activeSnap.stepSize / 16)
+    : null;
+
+  useEffect(
+    function () {
+      if (!isSnapMenuOpen) {
+        return;
+      }
+
+      const onPointerDown = function (event) {
+        const root = snapMenuRef.current;
+        if (!root) {
+          return;
+        }
+
+        if (!root.contains(event.target)) {
+          setIsSnapMenuOpen(false);
+        }
+      };
+
+      window.addEventListener("mousedown", onPointerDown);
+
+      return function () {
+        window.removeEventListener("mousedown", onPointerDown);
+      };
+    },
+    [isSnapMenuOpen],
+  );
 
   const startResize = function (event, clip, trackId) {
     if (event.button !== 0) {
@@ -220,8 +283,10 @@ export function PlaylistWindow() {
 
     const onMouseMove = function (moveEvent) {
       const deltaPx = moveEvent.clientX - startClientX;
-      const deltaBars = Math.round(deltaPx / Math.max(1, barWidthPx));
-      const nextLength = clamp(initialLength + deltaBars, 1, maxTrackLength);
+      const deltaBarsRaw = deltaPx / Math.max(1, barWidthPx);
+      const nextRawLength = initialLength + deltaBarsRaw;
+      const snappedLength = quantizeBySnap(nextRawLength, snapBarSize);
+      const nextLength = clamp(snappedLength, 1, maxTrackLength);
 
       dispatch(
         setPlaylistClipLength({
@@ -312,8 +377,47 @@ export function PlaylistWindow() {
       className="playlist-shell"
       style={{
         "--playlist-bar-width": BAR_WIDTH + "px",
+        "--playlist-snap-width": snapLineWidth + "px",
+        "--playlist-snap-opacity": String(snapLineOpacity),
       }}
     >
+      <div className="playlist-toolbar">
+        <div className="playlist-snap-menu" ref={snapMenuRef}>
+          <button
+            type="button"
+            className="playlist-snap-trigger"
+            onClick={function () {
+              setIsSnapMenuOpen(function (value) {
+                return !value;
+              });
+            }}
+          >
+            Snap: {activeSnap.label}
+          </button>
+
+          {isSnapMenuOpen ? (
+            <div className="playlist-snap-dropdown">
+              {SNAP_OPTIONS.map(function (option) {
+                return (
+                  <label key={option.key} className="playlist-snap-option">
+                    <input
+                      type="radio"
+                      name="playlist-snap"
+                      checked={snapKey === option.key}
+                      onChange={function () {
+                        setSnapKey(option.key);
+                        setIsSnapMenuOpen(false);
+                      }}
+                    />
+                    <span>{option.label}</span>
+                  </label>
+                );
+              })}
+            </div>
+          ) : null}
+        </div>
+      </div>
+
       <div
         className="playlist-header"
         style={{

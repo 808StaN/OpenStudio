@@ -40,6 +40,11 @@ function makePatternStepGrid(channels, lengthSteps) {
   }, {});
 }
 
+function normalizeBarValue(raw, minValue, maxValue) {
+  const normalized = Math.round(Number(raw || 0) * 16) / 16;
+  return Math.max(minValue, Math.min(maxValue, normalized));
+}
+
 const DEFAULT_PATTERN_COLOR = "#4bef9f";
 
 function getSafePatternColor(color) {
@@ -602,14 +607,14 @@ const dawSlice = createSlice({
         return;
       }
 
-      const requestedBarStart = Math.round(Number(action.payload.barStart || 1));
-      const barStart = Math.max(1, Math.min(128, requestedBarStart));
+      const barStart = normalizeBarValue(action.payload.barStart || 1, 1, 128);
 
       const patternBarLength = Math.max(1, Math.ceil((pattern.lengthSteps || 16) / 16));
-      const requestedBarLength = Math.round(
-        Number(action.payload.barLength || patternBarLength),
+      const barLength = normalizeBarValue(
+        action.payload.barLength || patternBarLength,
+        1,
+        64,
       );
-      const barLength = Math.max(1, Math.min(64, requestedBarLength));
       const newClipEnd = barStart + barLength;
 
       state.project.playlistClips = state.project.playlistClips.filter(function (clip) {
@@ -617,8 +622,8 @@ const dawSlice = createSlice({
           return true;
         }
 
-        const start = Math.round(Number(clip.barStart || 1));
-        const length = Math.max(1, Math.round(Number(clip.barLength || 1)));
+        const start = normalizeBarValue(clip.barStart || 1, 1, 128);
+        const length = normalizeBarValue(clip.barLength || 1, 1, 64);
         const end = start + length;
 
         return end <= barStart || start >= newClipEnd;
@@ -688,12 +693,14 @@ const dawSlice = createSlice({
         ? Math.max(1, nextClip.barStart - clip.barStart)
         : 64;
 
-      const maxLengthByTimeline = Math.max(1, 128 - clip.barStart + 1);
-      const requestedLength = Math.round(Number(action.payload.barLength || 1));
+      const currentStart = normalizeBarValue(clip.barStart || 1, 1, 128);
+      const maxLengthByTimeline = Math.max(1, 128 - currentStart + 1);
+      const requestedLength = normalizeBarValue(action.payload.barLength || 1, 1, 64);
 
-      clip.barLength = Math.max(
+      clip.barLength = normalizeBarValue(
+        requestedLength,
         1,
-        Math.min(maxLengthByNextClip, maxLengthByTimeline, requestedLength),
+        Math.min(maxLengthByNextClip, maxLengthByTimeline),
       );
     },
 
@@ -713,12 +720,12 @@ const dawSlice = createSlice({
         return;
       }
 
-      const clipLength = Math.max(1, Math.round(Number(clip.barLength || 1)));
+      const clipLength = normalizeBarValue(clip.barLength || 1, 1, 64);
       const maxStartByTimeline = Math.max(1, 128 - clipLength + 1);
-      const requestedBarStart = Math.round(Number(action.payload.barStart || 1));
-      const desiredStart = Math.max(
+      const desiredStart = normalizeBarValue(
+        action.payload.barStart || 1,
         1,
-        Math.min(maxStartByTimeline, requestedBarStart),
+        maxStartByTimeline,
       );
 
       const clipsOnTargetTrack = state.project.playlistClips.filter(function (item) {
@@ -729,8 +736,8 @@ const dawSlice = createSlice({
         const end = start + clipLength;
 
         return clipsOnTargetTrack.every(function (item) {
-          const otherStart = Math.max(1, Math.round(Number(item.barStart || 1)));
-          const otherLength = Math.max(1, Math.round(Number(item.barLength || 1)));
+          const otherStart = normalizeBarValue(item.barStart || 1, 1, 128);
+          const otherLength = normalizeBarValue(item.barLength || 1, 1, 64);
           const otherEnd = otherStart + otherLength;
           return otherEnd <= start || otherStart >= end;
         });
