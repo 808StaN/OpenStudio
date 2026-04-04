@@ -1139,18 +1139,28 @@ export function PianoRollWindow() {
         event.preventDefault();
 
         const direction = event.key === "ArrowUp" ? 1 : -1;
+        const moveByOctave = event.ctrlKey && !event.metaKey;
+        const moveBySemitone = event.shiftKey;
+        const fixedStep = moveByOctave ? 12 : moveBySemitone ? 1 : 0;
         const moved = selectedNotes.map(function (note) {
           return ensureNoteIsPiano(note);
         });
 
         moved.forEach(function (note) {
-          const nextPitch = moveByScaleStep(
-            note.pitch,
-            direction,
-            scalePitchClasses,
-            PITCH_MIN,
-            PITCH_MAX,
-          );
+          const nextPitch =
+            fixedStep > 0
+              ? clamp(
+                  note.pitch + direction * fixedStep,
+                  PITCH_MIN,
+                  PITCH_MAX,
+                )
+              : moveByScaleStep(
+                  note.pitch,
+                  direction,
+                  scalePitchClasses,
+                  PITCH_MIN,
+                  PITCH_MAX,
+                );
 
           if (nextPitch === note.pitch) {
             return;
@@ -1906,7 +1916,7 @@ export function PianoRollWindow() {
         <small>
           {editMode === "add"
             ? "LMB add. LMB drag note to move, right edge to resize. RMB delete."
-            : "Drag to select. Move selected with mouse. Ctrl+C/X/V, Delete, Arrow Up/Down."}{" "}
+            : "Drag to select. Move selected with mouse. Ctrl+C/X/V, Delete, Arrow Up/Down (scale), Shift+Arrow +/-1, Ctrl+Arrow +/-12."}{" "}
           Wheel: up/down, Ctrl+Wheel: zoom.
         </small>
       </header>
