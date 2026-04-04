@@ -1,4 +1,5 @@
 .playlist-shell {
+  --playlist-side-inset: 8px;
   width: 100%;
   height: 100%;
   border: 1px solid #3b4352;
@@ -13,6 +14,7 @@
   display: grid;
   border-bottom: 1px solid #3f4758;
   width: max-content;
+  padding-left: var(--playlist-side-inset);
 }
 
 .bar-label.empty {
@@ -27,12 +29,15 @@
   color: #98a7be;
   font-family: var(--font-mono);
   font-size: 12px;
-  border-left: 1px solid #2f3746;
+}
+
+.bar-cell + .bar-cell {
+  box-shadow: inset 1px 0 0 #2f3746;
 }
 
 .playlist-body {
   overflow: auto;
-  padding: 8px;
+  padding: 8px var(--playlist-side-inset);
   display: flex;
   flex-direction: column;
   gap: 7px;
@@ -65,7 +70,7 @@
       rgba(113, 129, 153, 0.35) 0,
       rgba(113, 129, 153, 0.35) 1px,
       transparent 1px,
-      transparent 6.25%
+      transparent var(--playlist-bar-width, 84px)
     ),
     linear-gradient(180deg, #121928 0%, #0d131f 100%);
   cursor: cell;
@@ -74,10 +79,10 @@
 
 .clip {
   position: absolute;
-  top: 6px;
-  bottom: 6px;
+  top: 4px;
+  bottom: 4px;
   border-radius: 4px;
-  border: 1px solid rgba(168, 183, 207, 0.45);
+  border: 1px solid rgba(75, 239, 159, 0.9);
   color: #dce8f8;
   font-size: 12px;
   background: linear-gradient(
@@ -85,9 +90,6 @@
     rgba(170, 182, 199, 0.24) 0%,
     rgba(128, 138, 155, 0.18) 100%
   );
-  box-shadow:
-    inset 0 1px 0 rgba(255, 255, 255, 0.2),
-    0 0 8px rgba(70, 80, 102, 0.22);
   display: flex;
   align-items: center;
   justify-content: center;
@@ -148,9 +150,5 @@
 }
 
 .clip.is-active {
-  border-color: #f9f46e;
-  box-shadow:
-    inset 0 1px 0 rgba(255, 255, 255, 0.45),
-    0 0 0 1px rgba(250, 243, 107, 0.65),
-    0 0 10px rgba(250, 243, 107, 0.32);
+  transform: translateY(-0.5px);
 }

@@ -12,9 +12,28 @@ const BAR_COUNT = 16;
 const BASE_BAR_WIDTH = 56;
 const PLAYLIST_ZOOM_X = 1.5;
 const BAR_WIDTH = Math.round(BASE_BAR_WIDTH * PLAYLIST_ZOOM_X);
+const DEFAULT_PATTERN_COLOR = "#4bef9f";
 
 function clamp(value, min, max) {
   return Math.max(min, Math.min(max, value));
+}
+
+function hexToRgb(hexColor) {
+  const safe = String(hexColor || "").trim().replace("#", "");
+  if (!/^[0-9a-fA-F]{6}$/.test(safe)) {
+    return { r: 75, g: 239, b: 159 };
+  }
+
+  return {
+    r: Number.parseInt(safe.slice(0, 2), 16),
+    g: Number.parseInt(safe.slice(2, 4), 16),
+    b: Number.parseInt(safe.slice(4, 6), 16),
+  };
+}
+
+function withAlpha(hexColor, alpha) {
+  const rgb = hexToRgb(hexColor);
+  return "rgba(" + rgb.r + ", " + rgb.g + ", " + rgb.b + ", " + alpha + ")";
 }
 
 function getPatternPreviewNotes(pattern) {
@@ -206,7 +225,12 @@ export function PlaylistWindow() {
   };
 
   return (
-    <section className="playlist-shell">
+    <section
+      className="playlist-shell"
+      style={{
+        "--playlist-bar-width": BAR_WIDTH + "px",
+      }}
+    >
       <div
         className="playlist-header"
         style={{
@@ -278,6 +302,7 @@ export function PlaylistWindow() {
               >
                 {clipsOnTrack.map(function (clip) {
                   const pattern = patternsById[clip.patternId];
+                  const clipColor = pattern?.color || DEFAULT_PATTERN_COLOR;
                   const isActivePattern = activePatternId === clip.patternId;
                   const patternLength = Math.max(1, pattern?.lengthSteps || 16);
                   const clipLengthSteps = Math.max(
@@ -347,8 +372,22 @@ export function PlaylistWindow() {
                       key={clip.id}
                       className={"clip" + (isActivePattern ? " is-active" : "")}
                       style={{
-                        left: ((clip.barStart - 1) / BAR_COUNT) * 100 + "%",
-                        width: (clip.barLength / BAR_COUNT) * 100 + "%",
+                        borderColor: withAlpha(clipColor, 0.9),
+                        boxShadow: isActivePattern
+                          ? "inset 0 0 0 1px " +
+                            withAlpha(clipColor, 0.8) +
+                            ", inset 0 1px 0 rgba(255, 255, 255, 0.32), 0 0 10px " +
+                            withAlpha(clipColor, 0.34)
+                          : "inset 0 1px 0 rgba(255, 255, 255, 0.2), 0 0 8px " +
+                            withAlpha(clipColor, 0.24),
+                        left:
+                          "calc(" +
+                          ((clip.barStart - 1) / BAR_COUNT) * 100 +
+                          "% + 0.5px)",
+                        width:
+                          "calc(" +
+                          (clip.barLength / BAR_COUNT) * 100 +
+                          "% - 1px)",
                       }}
                       onMouseDown={function (event) {
                         startMove(event, clip);

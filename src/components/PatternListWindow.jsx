@@ -1,5 +1,12 @@
 import { useDispatch, useSelector } from "react-redux";
-import { createPattern, renamePattern, setActivePattern } from "../store";
+import {
+  createPattern,
+  renamePattern,
+  setActivePattern,
+  setPatternColor,
+} from "../store";
+
+const DEFAULT_PATTERN_COLOR = "#4bef9f";
 
 export function PatternListWindow() {
   const dispatch = useDispatch();
@@ -73,6 +80,25 @@ export function PatternListWindow() {
                     );
                   }}
                 />
+
+                <label className="pattern-list-color-label" title="Pattern color">
+                  <input
+                    type="color"
+                    className="pattern-list-color"
+                    value={pattern.color || DEFAULT_PATTERN_COLOR}
+                    onClick={function (event) {
+                      event.stopPropagation();
+                    }}
+                    onChange={function (event) {
+                      dispatch(
+                        setPatternColor({
+                          patternId: pattern.id,
+                          color: event.target.value,
+                        }),
+                      );
+                    }}
+                  />
+                </label>
               </div>
 
               <div className="pattern-list-meta">

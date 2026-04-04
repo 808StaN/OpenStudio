@@ -40,6 +40,17 @@ function makePatternStepGrid(channels, lengthSteps) {
   }, {});
 }
 
+const DEFAULT_PATTERN_COLOR = "#4bef9f";
+
+function getSafePatternColor(color) {
+  const normalized = String(color || "").trim();
+  if (/^#[0-9a-fA-F]{6}$/.test(normalized)) {
+    return normalized.toLowerCase();
+  }
+
+  return DEFAULT_PATTERN_COLOR;
+}
+
 function makeEmptyPattern(options) {
   const safeLength = Math.max(
     4,
@@ -49,6 +60,7 @@ function makeEmptyPattern(options) {
   return {
     id: options.id,
     name: options.name,
+    color: getSafePatternColor(options.color),
     lengthSteps: safeLength,
     stepGrid: makePatternStepGrid(options.channels || [], safeLength),
     pianoPreview: {},
@@ -555,6 +567,17 @@ const dawSlice = createSlice({
       }
 
       pattern.name = nextName.slice(0, 40);
+    },
+
+    setPatternColor(state, action) {
+      const pattern = state.project.patterns.find(function (item) {
+        return item.id === action.payload.patternId;
+      });
+      if (!pattern) {
+        return;
+      }
+
+      pattern.color = getSafePatternColor(action.payload.color);
     },
 
     addPlaylistPatternClip(state, action) {
@@ -1157,6 +1180,7 @@ export const {
   setActivePattern,
   createPattern,
   renamePattern,
+  setPatternColor,
   addPlaylistPatternClip,
   removePlaylistClip,
   setPlaylistClipLength,

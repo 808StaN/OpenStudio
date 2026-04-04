@@ -56,8 +56,38 @@
 
 .pattern-list-row-top {
   display: grid;
-  grid-template-columns: 70px minmax(0, 1fr);
+  grid-template-columns: 70px minmax(0, 1fr) 32px;
   gap: 8px;
+}
+
+.pattern-list-color-label {
+  width: 32px;
+  height: 28px;
+  border-radius: 6px;
+  border: 1px solid #61708d;
+  background: linear-gradient(180deg, #151f2f 0%, #101827 100%);
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+}
+
+.pattern-list-color {
+  width: 22px;
+  height: 22px;
+  border: 0;
+  padding: 0;
+  background: transparent;
+  cursor: pointer;
+}
+
+.pattern-list-color::-webkit-color-swatch-wrapper {
+  padding: 0;
+}
+
+.pattern-list-color::-webkit-color-swatch {
+  border: 1px solid rgba(255, 255, 255, 0.3);
+  border-radius: 4px;
 }
 
 .pattern-list-select {
