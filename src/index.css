@@ -1,0 +1,43 @@
+@import url("https://fonts.googleapis.com/css2?family=Rajdhani:wght@400;500;600;700&family=Share+Tech+Mono&display=swap");
+
+:root {
+  --bg-a: #0a0e13;
+  --bg-b: #121721;
+  --panel-edge: #3f434b;
+  --text-main: #d7dce4;
+  --text-soft: #9aa3b4;
+  --accent-green: #1de071;
+  --accent-orange: #ff9b30;
+  --accent-cyan: #2bc8ff;
+  --font-main: "Rajdhani", "Segoe UI", sans-serif;
+  --font-mono: "Share Tech Mono", Consolas, monospace;
+}
+
+* {
+  box-sizing: border-box;
+}
+
+html,
+body,
+#root {
+  width: 100%;
+  min-height: 100%;
+  margin: 0;
+}
+
+body {
+  font-family: var(--font-main);
+  color: var(--text-main);
+  background: radial-gradient(
+    circle at 14% 10%,
+    #1a2433 0%,
+    var(--bg-b) 36%,
+    var(--bg-a) 100%
+  );
+  text-rendering: geometricPrecision;
+}
+
+button,
+input {
+  font-family: inherit;
+}

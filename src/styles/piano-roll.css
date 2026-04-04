@@ -1,0 +1,360 @@
+.piano-roll-shell {
+  width: 100%;
+  height: 100%;
+  border: 1px solid #3f485a;
+  border-radius: 8px;
+  background: linear-gradient(180deg, #1b2735 0%, #101825 100%);
+  display: grid;
+  grid-template-rows: auto 1fr;
+  overflow: hidden;
+  user-select: none;
+}
+
+.piano-roll-toolbar {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  row-gap: 4px;
+  gap: 8px;
+  min-height: 34px;
+  padding: 4px 10px;
+  border-bottom: 1px solid #46516a;
+  background: linear-gradient(180deg, #2e3a4d 0%, #1f2b3a 100%);
+  color: #d7e3f6;
+  font-size: 12px;
+  min-width: 0;
+  user-select: none;
+}
+
+.piano-roll-toolbar select {
+  height: 24px;
+  border-radius: 5px;
+  border: 1px solid #5d6a84;
+  background: #162131;
+  color: #e6efff;
+  padding: 0 8px;
+  min-width: 0;
+}
+
+.snap-menu {
+  position: relative;
+}
+
+.edit-mode-toggle {
+  display: inline-flex;
+  border: 1px solid #5d6a84;
+  border-radius: 6px;
+  overflow: hidden;
+}
+
+.edit-mode-toggle button {
+  height: 24px;
+  border: 0;
+  min-width: 74px;
+  padding: 0 8px;
+  background: linear-gradient(180deg, #223146 0%, #162131 100%);
+  color: #c7d6ef;
+  font-size: 11px;
+  cursor: pointer;
+}
+
+.edit-mode-toggle button + button {
+  border-left: 1px solid #5d6a84;
+}
+
+.edit-mode-toggle button.is-active {
+  color: #0f2316;
+  background: linear-gradient(180deg, #7dffb7 0%, #2edb74 100%);
+}
+
+.scale-controls {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  color: #a7bbd5;
+  min-width: 0;
+}
+
+.scale-controls span {
+  font-size: 11px;
+  letter-spacing: 0.2px;
+}
+
+.scale-select {
+  height: 24px;
+  border-radius: 5px;
+  border: 1px solid #5d6a84;
+  background: #162131;
+  color: #e6efff;
+  padding: 0 6px;
+  font-size: 11px;
+  min-width: 58px;
+}
+
+.snap-trigger {
+  height: 24px;
+  border-radius: 5px;
+  border: 1px solid #5d6a84;
+  background: linear-gradient(180deg, #223146 0%, #162131 100%);
+  color: #e6efff;
+  padding: 0 9px;
+  font-size: 11px;
+  cursor: pointer;
+  max-width: 150px;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.snap-dropdown {
+  position: absolute;
+  top: calc(100% + 4px);
+  left: 0;
+  min-width: 132px;
+  max-height: 260px;
+  overflow: auto;
+  border: 1px solid #5d6a84;
+  border-radius: 6px;
+  background: #c4ccd6;
+  color: #101722;
+  box-shadow: 0 8px 18px rgba(0, 0, 0, 0.35);
+  padding: 6px 0;
+  z-index: 10;
+}
+
+.snap-option {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 12px;
+  padding: 2px 8px;
+  cursor: pointer;
+}
+
+.snap-option input {
+  margin: 0;
+}
+
+.piano-roll-toolbar small {
+  flex: 1 1 100%;
+  min-width: 0;
+  margin-left: 0;
+  color: #a2b4d2;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.piano-roll-body {
+  min-height: 0;
+  display: grid;
+  grid-template-columns: 70px 1fr;
+  overflow: hidden;
+}
+
+.piano-keys {
+  border-right: 1px solid #2a374a;
+  background: linear-gradient(180deg, #1b2533 0%, #121a25 100%);
+  overflow-y: auto;
+  overflow-x: hidden;
+  scrollbar-width: none;
+  user-select: none;
+}
+
+.piano-keys::-webkit-scrollbar {
+  width: 0;
+  height: 0;
+}
+
+.piano-keys-header {
+  height: 28px;
+  border-bottom: 1px solid #2f3a4d;
+  background: linear-gradient(180deg, #314052 0%, #273548 100%);
+}
+
+.piano-key-row {
+  border-bottom: 1px solid rgba(24, 34, 48, 0.65);
+  background: #c9ced8;
+  color: #3d4452;
+  font-family: var(--font-mono);
+  font-size: 11px;
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  padding-right: 5px;
+}
+
+.piano-key-row.sharp {
+  background: #525e72;
+  color: #dce8ff;
+}
+
+.piano-key-row.marker {
+  box-shadow: inset 3px 0 0 #8fd39e;
+  font-weight: 600;
+}
+
+.piano-grid-wrap {
+  overflow: auto;
+  background: #33495a;
+  user-select: none;
+}
+
+.piano-grid-header {
+  position: sticky;
+  top: 0;
+  z-index: 3;
+  height: 28px;
+  display: flex;
+  align-items: center;
+  border-bottom: 1px solid #2b3a4f;
+  background: linear-gradient(180deg, #27364a 0%, #1e2b3d 100%);
+}
+
+.piano-bar-cell {
+  border-right: 1px solid #2b3a4f;
+  color: #8ca8c9;
+  font-family: var(--font-mono);
+  font-size: 11px;
+  display: flex;
+  align-items: center;
+  justify-content: flex-start;
+  box-sizing: border-box;
+  padding-left: 4px;
+}
+
+.piano-grid {
+  position: relative;
+  --step-width: 24px;
+  --bar-width: 96px;
+  --row-height: 20px;
+  --snap-width: 24px;
+  --snap-opacity: 0;
+  background:
+    repeating-linear-gradient(
+      to right,
+      rgba(122, 152, 176, var(--snap-opacity)) 0,
+      rgba(122, 152, 176, var(--snap-opacity)) 1px,
+      transparent 1px,
+      transparent var(--snap-width)
+    ),
+    repeating-linear-gradient(
+      to bottom,
+      rgba(36, 56, 71, 0.52) 0,
+      rgba(36, 56, 71, 0.52) 1px,
+      transparent 1px,
+      transparent var(--row-height)
+    ),
+    #33495a;
+}
+
+.piano-major-line {
+  position: absolute;
+  top: 0;
+  bottom: 0;
+  width: 1px;
+  background: rgba(20, 33, 45, 0.9);
+  pointer-events: none;
+  z-index: 1;
+}
+
+.piano-selection-box {
+  position: absolute;
+  border: 1px solid rgba(136, 218, 178, 0.88);
+  background: rgba(76, 180, 130, 0.14);
+  pointer-events: none;
+  z-index: 5;
+}
+
+.piano-playhead-line {
+  position: absolute;
+  top: 0;
+  bottom: 0;
+  left: 0;
+  width: 2px;
+  background: linear-gradient(180deg, #d8f67a 0%, #7ce74a 100%);
+  box-shadow: 0 0 8px rgba(164, 238, 96, 0.45);
+  pointer-events: none;
+  z-index: 4;
+  will-change: transform;
+}
+
+.piano-scale-row {
+  position: absolute;
+  left: 0;
+  right: 0;
+  pointer-events: none;
+  background: rgba(20, 33, 45, 0.36);
+  z-index: 0;
+}
+
+.piano-note {
+  position: absolute;
+  border-radius: 3px;
+  border: 1px solid transparent;
+  cursor: grab;
+  box-sizing: border-box;
+  z-index: 2;
+}
+
+.piano-note.is-selected {
+  border-color: #7d141a;
+  box-shadow:
+    0 0 0 1px rgba(255, 206, 206, 0.55),
+    0 0 9px rgba(255, 82, 82, 0.5);
+}
+
+.piano-note.from-step.is-selected,
+.piano-note.from-piano.is-selected {
+  background: linear-gradient(180deg, #ff8588 0%, #d72e36 100%);
+  border-color: #7d141a;
+}
+
+.piano-note.is-selected .piano-note-label {
+  color: #fff0f0;
+  text-shadow: 0 1px 0 rgba(53, 10, 12, 0.6);
+}
+
+.piano-note:active {
+  cursor: grabbing;
+}
+
+.piano-note::after {
+  content: "";
+  position: absolute;
+  top: 2px;
+  bottom: 2px;
+  right: 2px;
+  width: 6px;
+  border-radius: 2px;
+  background: rgba(255, 255, 255, 0.35);
+  cursor: ew-resize;
+}
+
+.piano-note-label {
+  position: absolute;
+  left: 3px;
+  top: 50%;
+  transform: translateY(-50%);
+  color: #0b4a1f;
+  font-family: var(--font-mono);
+  font-size: 10px;
+  font-weight: 700;
+  line-height: 1;
+  pointer-events: none;
+  user-select: none;
+  text-transform: uppercase;
+  text-shadow: 0 1px 0 rgba(255, 255, 255, 0.22);
+}
+
+.piano-note.from-step {
+  background: linear-gradient(180deg, #7dffb7 0%, #2edb74 100%);
+  border-color: #0f6a33;
+  box-shadow: 0 0 7px rgba(46, 219, 116, 0.45);
+}
+
+.piano-note.from-piano {
+  background: linear-gradient(180deg, #7dffb7 0%, #2edb74 100%);
+  border-color: #0f6a33;
+  box-shadow: 0 0 7px rgba(46, 219, 116, 0.45);
+}

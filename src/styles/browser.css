@@ -1,0 +1,146 @@
+.browser-shell {
+  width: 268px;
+  min-width: 240px;
+  border-right: 1px solid #3d424c;
+  background: linear-gradient(180deg, #171f2d 0%, #0f1621 100%);
+  box-shadow: inset -1px 0 0 rgba(255, 255, 255, 0.05);
+  display: grid;
+  grid-template-rows: auto auto 1fr;
+}
+
+.browser-tabs {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 7px;
+  padding: 8px;
+}
+
+.browser-tabs button {
+  height: 30px;
+  border-radius: 6px;
+  border: 1px solid #4a4f58;
+  color: #9ca8ba;
+  background: linear-gradient(180deg, #2f3745 0%, #1e2431 100%);
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  cursor: pointer;
+}
+
+.browser-tabs button.is-active {
+  color: #08140f;
+  background: linear-gradient(180deg, #53f6a0 0%, #25c86e 100%);
+  box-shadow:
+    inset 0 1px 0 rgba(255, 255, 255, 0.4),
+    0 0 9px rgba(39, 232, 122, 0.26);
+}
+
+.browser-tree {
+  overflow: auto;
+  padding: 2px 8px 10px;
+}
+
+.browser-actions {
+  padding: 0 8px 6px;
+}
+
+.browser-rescan {
+  width: 100%;
+  height: 28px;
+  border-radius: 6px;
+  border: 1px solid #4f5f78;
+  color: #d8e7ff;
+  background: linear-gradient(180deg, #334767 0%, #22324d 100%);
+  box-shadow:
+    inset 0 1px 0 rgba(255, 255, 255, 0.13),
+    0 1px 2px rgba(0, 0, 0, 0.35);
+  cursor: pointer;
+  font-size: 12px;
+}
+
+.browser-rescan:hover {
+  filter: brightness(1.08);
+}
+
+.browser-hint {
+  border: 1px dashed #4f5e74;
+  border-radius: 6px;
+  padding: 8px;
+  margin: 8px 0 10px;
+  color: #9bb0cd;
+  background: rgba(41, 58, 85, 0.35);
+  font-size: 12px;
+  line-height: 1.4;
+}
+
+.tree-group {
+  margin-bottom: 3px;
+}
+
+.tree-folder {
+  width: 100%;
+  height: 24px;
+  display: flex;
+  align-items: center;
+  border: 0;
+  border-radius: 5px;
+  text-align: left;
+  color: #d3daea;
+  background: transparent;
+  cursor: pointer;
+  font-weight: 600;
+  letter-spacing: 0.2px;
+}
+
+.tree-folder:hover {
+  background: rgba(255, 255, 255, 0.05);
+}
+
+.plugin-folder {
+  cursor: default;
+}
+
+.plugin-folder:hover {
+  background: transparent;
+}
+
+.caret {
+  display: inline-block;
+  width: 16px;
+  color: #8ca4c4;
+}
+
+.tree-children {
+  margin-top: 1px;
+}
+
+.tree-list {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+}
+
+.tree-item {
+  list-style: none;
+  margin-left: 16px;
+  padding: 3px 6px;
+  border-radius: 5px;
+  color: #9aa7bc;
+  cursor: pointer;
+  font-family: var(--font-mono);
+  font-size: 12px;
+}
+
+.tree-item:active {
+  cursor: grabbing;
+}
+
+.plugin-item {
+  cursor: default;
+}
+
+.tree-item:hover {
+  color: #dbe4f4;
+  background: rgba(255, 255, 255, 0.07);
+}

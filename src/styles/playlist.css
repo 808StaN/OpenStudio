@@ -1,0 +1,89 @@
+.playlist-shell {
+  width: 100%;
+  height: 100%;
+  border: 1px solid #3b4352;
+  border-radius: 8px;
+  background: linear-gradient(180deg, #141b29 0%, #0b111b 100%);
+  display: grid;
+  grid-template-rows: 34px 1fr;
+  overflow: hidden;
+}
+
+.playlist-header {
+  display: grid;
+  grid-template-columns: 92px repeat(16, minmax(0, 1fr));
+  border-bottom: 1px solid #3f4758;
+}
+
+.bar-label.empty {
+  border-right: 1px solid #3f4758;
+}
+
+.bar-cell {
+  height: 34px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: #98a7be;
+  font-family: var(--font-mono);
+  font-size: 12px;
+  border-left: 1px solid #2f3746;
+}
+
+.playlist-body {
+  overflow: auto;
+  padding: 8px;
+  display: flex;
+  flex-direction: column;
+  gap: 7px;
+}
+
+.playlist-track {
+  display: grid;
+  grid-template-columns: 92px 1fr;
+  min-height: 38px;
+}
+
+.track-name {
+  display: flex;
+  align-items: center;
+  color: #b2bfd2;
+  border: 1px solid #3f4758;
+  border-right: 0;
+  border-radius: 5px 0 0 5px;
+  background: linear-gradient(180deg, #2d3544 0%, #1d2431 100%);
+  padding-left: 8px;
+  font-size: 13px;
+}
+
+.track-grid {
+  position: relative;
+  border: 1px solid #3f4758;
+  border-radius: 0 5px 5px 0;
+  background:
+    repeating-linear-gradient(
+      to right,
+      rgba(113, 129, 153, 0.35) 0,
+      rgba(113, 129, 153, 0.35) 1px,
+      transparent 1px,
+      transparent 6.25%
+    ),
+    linear-gradient(180deg, #121928 0%, #0d131f 100%);
+}
+
+.clip {
+  position: absolute;
+  top: 4px;
+  bottom: 4px;
+  border-radius: 4px;
+  border: 1px solid #ff8e35;
+  color: #1c1308;
+  font-size: 12px;
+  background: linear-gradient(180deg, #ffc983 0%, #ff9a31 100%);
+  box-shadow:
+    inset 0 1px 0 rgba(255, 255, 255, 0.45),
+    0 0 8px rgba(255, 163, 74, 0.4);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}

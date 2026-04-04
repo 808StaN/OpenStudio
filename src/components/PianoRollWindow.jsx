@@ -1,0 +1,1621 @@
+import { useEffect, useMemo, useRef, useState } from "react";
+import { useDispatch, useSelector } from "react-redux";
+import {
+  setActiveChannel,
+  movePianoNote,
+  setPianoNoteLength,
+  togglePianoNote,
+  toggleStep,
+} from "../store";
+import {
+  C5_PITCH,
+  PIANO_PITCH_MAX,
+  PIANO_PITCH_MIN,
+  getChannelMergedNotes,
+} from "../utils/patternNotes";
+
+const PITCH_MIN = PIANO_PITCH_MIN;
+const PITCH_MAX = PIANO_PITCH_MAX;
+const DEFAULT_ROW_HEIGHT = 20;
+const DEFAULT_STEP_WIDTH = 24;
+const MIN_STEP_WIDTH = 10;
+const MAX_STEP_WIDTH = 72;
+const GRID_HEADER_HEIGHT = 28;
+const STEPS_PER_BEAT = 4;
+const STEPS_PER_BAR = STEPS_PER_BEAT * 4;
+const MIN_FREE_LENGTH = 1 / 12;
+const SNAP_EPSILON = 0.0001;
+const MARQUEE_MIN_DRAG = 4;
+
+const SNAP_OPTIONS = [
+  { key: "none", label: "(none)", stepSize: null },
+  { key: "1-6-step", label: "1/6 step", stepSize: 1 / 6 },
+  { key: "1-4-step", label: "1/4 step", stepSize: 1 / 4 },
+  { key: "1-3-step", label: "1/3 step", stepSize: 1 / 3 },
+  { key: "1-2-step", label: "1/2 step", stepSize: 1 / 2 },
+  { key: "step", label: "Step", stepSize: 1 },
+  { key: "1-6-beat", label: "1/6 beat", stepSize: 2 / 3 },
+  { key: "1-4-beat", label: "1/4 beat", stepSize: 1 },
+  { key: "1-3-beat", label: "1/3 beat", stepSize: 4 / 3 },
+  { key: "1-2-beat", label: "1/2 beat", stepSize: 2 },
+  { key: "beat", label: "Beat", stepSize: 4 },
+  { key: "bar", label: "Bar", stepSize: 16 },
+];
+
+const SCALE_ROOTS = [
+  "C",
+  "C#",
+  "D",
+  "D#",
+  "E",
+  "F",
+  "F#",
+  "G",
+  "G#",
+  "A",
+  "A#",
+  "B",
+];
+
+const SCALE_TYPES = [
+  {
+    key: "minor",
+    label: "Minor",
+    intervals: [0, 2, 3, 5, 7, 8, 10],
+  },
+  {
+    key: "major",
+    label: "Major",
+    intervals: [0, 2, 4, 5, 7, 9, 11],
+  },
+];
+
+const PITCH_CLASS_NAMES = [
+  "C",
+  "C#",
+  "D",
+  "D#",
+  "E",
+  "F",
+  "F#",
+  "G",
+  "G#",
+  "A",
+  "A#",
+  "B",
+];
+
+function clamp(value, min, max) {
+  return Math.max(min, Math.min(max, value));
+}
+
+function quantizeBySnap(value, snapSize) {
+  if (!snapSize) {
+    return Math.round(value * 1000) / 1000;
+  }
+
+  return Math.round(value / snapSize) * snapSize;
+}
+
+function isNearlyEqual(left, right) {
+  return Math.abs(left - right) <= SNAP_EPSILON;
+}
+
+function getNoteName(pitch) {
+  const name = PITCH_CLASS_NAMES[pitch % 12];
+  const octave = Math.floor(pitch / 12) - 1;
+  return name + octave;
+}
+
+function getPitchClassName(pitch) {
+  return PITCH_CLASS_NAMES[toPitchClass(pitch)];
+}
+
+function toPitchClass(pitch) {
+  return ((pitch % 12) + 12) % 12;
+}
+
+function makeGeneratedNoteId(prefix) {
+  return (
+    prefix +
+    "-" +
+    Date.now().toString(36) +
+    "-" +
+    Math.random().toString(36).slice(2, 7)
+  );
+}
+
+function getNoteSelectionId(note) {
+  if (note.source === "step") {
+    return "step:" + note.start;
+  }
+  return "piano:" + note.id;
+}
+
+function moveByScaleStep(pitch, direction, pitchClassSet, minPitch, maxPitch) {
+  let probe = pitch;
+  for (let attempt = 0; attempt < 24; attempt += 1) {
+    probe += direction;
+    if (probe < minPitch || probe > maxPitch) {
+      break;
+    }
+    if (pitchClassSet.has(toPitchClass(probe))) {
+      return probe;
+    }
+  }
+
+  return clamp(pitch + direction, minPitch, maxPitch);
+}
+
+let sharedPianoClipboard = {
+  sourcePatternId: null,
+  sourceChannelId: null,
+  entries: [],
+  pasteCountInSource: 0,
+};
+
+export function PianoRollWindow() {
+  const dispatch = useDispatch();
+
+  const activePatternId = useSelector(function (state) {
+    return state.daw.project.activePatternId;
+  });
+  const activePattern = useSelector(function (state) {
+    return state.daw.project.patterns.find(function (item) {
+      return item.id === activePatternId;
+    });
+  });
+  const channels = useSelector(function (state) {
+    return state.daw.project.channels;
+  });
+  const activeChannelId = useSelector(function (state) {
+    return state.daw.project.activeChannelId;
+  });
+  const bpm = useSelector(function (state) {
+    return state.daw.transport.bpm;
+  });
+  const isPlaying = useSelector(function (state) {
+    return state.daw.transport.isPlaying;
+  });
+  const currentStep16 = useSelector(function (state) {
+    return state.daw.transport.currentStep16;
+  });
+
+  const activeChannel =
+    channels.find(function (channel) {
+      return channel.id === activeChannelId;
+    }) || channels[0];
+
+  const patternLength = Math.max(4, activePattern?.lengthSteps || 16);
+  const pianoNotes = getChannelMergedNotes(activePattern, activeChannel?.id);
+  const resizeSessionRef = useRef(null);
+  const gridWrapRef = useRef(null);
+  const keysRef = useRef(null);
+  const playheadRef = useRef(null);
+  const playheadStepRef = useRef(0);
+  const playheadStepTimestampRef = useRef(0);
+  const lastTouchedLengthRef = useRef(1);
+  const isSyncingScrollRef = useRef(false);
+  const initializedViewportRef = useRef(false);
+  const snapMenuRef = useRef(null);
+  const dragSelectionRef = useRef(null);
+  const rowHeight = DEFAULT_ROW_HEIGHT;
+  const [stepWidth, setStepWidth] = useState(DEFAULT_STEP_WIDTH);
+  const [snapKey, setSnapKey] = useState("1-2-beat");
+  const [isSnapMenuOpen, setIsSnapMenuOpen] = useState(false);
+  const [editMode, setEditMode] = useState("add");
+  const [selectedNoteIds, setSelectedNoteIds] = useState([]);
+  const [selectionBox, setSelectionBox] = useState(null);
+  const [scaleRoot, setScaleRoot] = useState("C");
+  const [scaleType, setScaleType] = useState("minor");
+
+  const activeSnap =
+    SNAP_OPTIONS.find(function (option) {
+      return option.key === snapKey;
+    }) || SNAP_OPTIONS[9];
+  const snapStepSize = activeSnap.stepSize;
+  const minNoteLength = snapStepSize || MIN_FREE_LENGTH;
+  const snapLineWidth = Math.max(1, (snapStepSize || 1) * stepWidth);
+  const snapLineOpacity = snapStepSize ? 0.12 : 0;
+  const scaleRootClass = SCALE_ROOTS.indexOf(scaleRoot);
+  const activeScale =
+    SCALE_TYPES.find(function (item) {
+      return item.key === scaleType;
+    }) || SCALE_TYPES[0];
+  const scalePitchClasses = useMemo(
+    function () {
+      return new Set(
+        activeScale.intervals.map(function (interval) {
+          return (scaleRootClass + interval + 12) % 12;
+        }),
+      );
+    },
+    [activeScale, scaleRootClass],
+  );
+
+  const pitchRows = useMemo(function () {
+    const rows = [];
+    for (let pitch = PITCH_MAX; pitch >= PITCH_MIN; pitch -= 1) {
+      rows.push(pitch);
+    }
+    return rows;
+  }, []);
+
+  const selectedNoteIdSet = useMemo(
+    function () {
+      return new Set(selectedNoteIds);
+    },
+    [selectedNoteIds],
+  );
+
+  const selectedNotes = useMemo(
+    function () {
+      return pianoNotes.filter(function (note) {
+        return selectedNoteIdSet.has(getNoteSelectionId(note));
+      });
+    },
+    [pianoNotes, selectedNoteIdSet],
+  );
+
+  const gridWidth = patternLength * stepWidth;
+  const gridHeight = pitchRows.length * rowHeight;
+  const totalBars = Math.max(1, Math.ceil(patternLength / STEPS_PER_BAR));
+  const playheadStep =
+    ((currentStep16 % patternLength) + patternLength) % patternLength;
+
+  useEffect(
+    function () {
+      if (playheadStepRef.current === playheadStep) {
+        return;
+      }
+
+      playheadStepRef.current = playheadStep;
+      playheadStepTimestampRef.current = performance.now();
+    },
+    [playheadStep],
+  );
+
+  useEffect(
+    function () {
+      const playheadElement = playheadRef.current;
+      if (!playheadElement) {
+        return;
+      }
+
+      const setPlayheadPosition = function (positionPx) {
+        playheadElement.style.transform = "translateX(" + positionPx + "px)";
+      };
+
+      const currentBaseStep =
+        ((playheadStepRef.current % patternLength) + patternLength) %
+        patternLength;
+
+      if (!isPlaying) {
+        setPlayheadPosition(currentBaseStep * stepWidth);
+        return;
+      }
+
+      if (playheadStepTimestampRef.current <= 0) {
+        playheadStepTimestampRef.current = performance.now();
+      }
+
+      let rafId = 0;
+      const stepDurationMs = (60 / Math.max(1, bpm) / 4) * 1000;
+
+      const tick = function () {
+        const elapsed = performance.now() - playheadStepTimestampRef.current;
+        const progress = clamp(elapsed / stepDurationMs, 0, 0.999);
+        const baseStep =
+          ((playheadStepRef.current % patternLength) + patternLength) %
+          patternLength;
+        setPlayheadPosition((baseStep + progress) * stepWidth);
+        rafId = requestAnimationFrame(tick);
+      };
+
+      tick();
+
+      return function () {
+        cancelAnimationFrame(rafId);
+      };
+    },
+    [isPlaying, bpm, patternLength, stepWidth],
+  );
+
+  useEffect(
+    function () {
+      if (initializedViewportRef.current) {
+        return;
+      }
+
+      const viewport = gridWrapRef.current;
+      if (!viewport) {
+        return;
+      }
+
+      const c5RowIndex = Math.max(0, PITCH_MAX - C5_PITCH);
+      const targetScrollTop = Math.max(
+        0,
+        c5RowIndex * rowHeight -
+          viewport.clientHeight * 0.45 +
+          GRID_HEADER_HEIGHT,
+      );
+      viewport.scrollTop = targetScrollTop;
+
+      if (keysRef.current) {
+        keysRef.current.scrollTop = targetScrollTop;
+      }
+
+      initializedViewportRef.current = true;
+    },
+    [rowHeight],
+  );
+
+  useEffect(function () {
+    const viewport = gridWrapRef.current;
+    const keys = keysRef.current;
+
+    const preventBrowserZoom = function (event) {
+      if (!event.ctrlKey) {
+        return;
+      }
+      event.preventDefault();
+    };
+
+    const options = { passive: false };
+
+    if (viewport) {
+      viewport.addEventListener("wheel", preventBrowserZoom, options);
+    }
+    if (keys) {
+      keys.addEventListener("wheel", preventBrowserZoom, options);
+    }
+
+    return function () {
+      if (viewport) {
+        viewport.removeEventListener("wheel", preventBrowserZoom, options);
+      }
+      if (keys) {
+        keys.removeEventListener("wheel", preventBrowserZoom, options);
+      }
+    };
+  }, []);
+
+  useEffect(
+    function () {
+      if (!isSnapMenuOpen) {
+        return;
+      }
+
+      const onPointerDown = function (event) {
+        const root = snapMenuRef.current;
+        if (!root) {
+          return;
+        }
+        if (!root.contains(event.target)) {
+          setIsSnapMenuOpen(false);
+        }
+      };
+
+      window.addEventListener("mousedown", onPointerDown);
+
+      return function () {
+        window.removeEventListener("mousedown", onPointerDown);
+      };
+    },
+    [isSnapMenuOpen],
+  );
+
+  const onGridWrapScroll = function (event) {
+    if (!keysRef.current || isSyncingScrollRef.current) {
+      return;
+    }
+    isSyncingScrollRef.current = true;
+    keysRef.current.scrollTop = event.currentTarget.scrollTop;
+    isSyncingScrollRef.current = false;
+  };
+
+  const onKeysScroll = function (event) {
+    if (!gridWrapRef.current || isSyncingScrollRef.current) {
+      return;
+    }
+    isSyncingScrollRef.current = true;
+    gridWrapRef.current.scrollTop = event.currentTarget.scrollTop;
+    isSyncingScrollRef.current = false;
+  };
+
+  const onGridWheel = function (event) {
+    const viewport = gridWrapRef.current;
+    if (!viewport) {
+      return;
+    }
+
+    if (!event.ctrlKey) {
+      return;
+    }
+
+    const rect = viewport.getBoundingClientRect();
+    const pointerX = clamp(event.clientX - rect.left, 0, viewport.clientWidth);
+
+    event.preventDefault();
+    const previousWidth = stepWidth;
+    const nextWidth = clamp(
+      previousWidth + (event.deltaY < 0 ? 2 : -2),
+      MIN_STEP_WIDTH,
+      MAX_STEP_WIDTH,
+    );
+
+    if (nextWidth === previousWidth) {
+      return;
+    }
+
+    const worldX = viewport.scrollLeft + pointerX;
+    const stepPosition = worldX / previousWidth;
+
+    setStepWidth(nextWidth);
+
+    requestAnimationFrame(function () {
+      viewport.scrollLeft = Math.max(0, stepPosition * nextWidth - pointerX);
+      if (keysRef.current) {
+        keysRef.current.scrollTop = viewport.scrollTop;
+      }
+    });
+  };
+
+  const getGridPointerFromEvent = function (event) {
+    const viewport = gridWrapRef.current;
+    if (!viewport) {
+      return null;
+    }
+
+    const rect = viewport.getBoundingClientRect();
+    const x = event.clientX - rect.left + viewport.scrollLeft;
+    const y =
+      event.clientY - rect.top + viewport.scrollTop - GRID_HEADER_HEIGHT;
+
+    return {
+      x,
+      y,
+      viewport,
+    };
+  };
+
+  const removeNote = function (note) {
+    if (!activeChannel) {
+      return;
+    }
+
+    if (note.source === "step") {
+      dispatch(
+        toggleStep({
+          patternId: activePatternId,
+          channelId: activeChannel.id,
+          stepIndex: Math.round(note.start),
+        }),
+      );
+      return;
+    }
+
+    dispatch(
+      togglePianoNote({
+        patternId: activePatternId,
+        channelId: activeChannel.id,
+        start: note.start,
+        pitch: note.pitch,
+        length: note.length,
+      }),
+    );
+  };
+
+  const ensureNoteIsPiano = function (note) {
+    if (!activeChannel) {
+      return note;
+    }
+
+    if (note.source !== "step") {
+      return note;
+    }
+
+    dispatch(
+      toggleStep({
+        patternId: activePatternId,
+        channelId: activeChannel.id,
+        stepIndex: Math.round(note.start),
+      }),
+    );
+
+    const generatedId = makeGeneratedNoteId("conv");
+    dispatch(
+      togglePianoNote({
+        patternId: activePatternId,
+        channelId: activeChannel.id,
+        id: generatedId,
+        start: note.start,
+        pitch: note.pitch,
+        length: note.length,
+      }),
+    );
+
+    return {
+      ...note,
+      source: "piano",
+      id: generatedId,
+    };
+  };
+
+  const copySelectedNotes = function () {
+    if (!selectedNotes.length) {
+      return;
+    }
+
+    sharedPianoClipboard = {
+      sourcePatternId: activePatternId,
+      sourceChannelId: activeChannel?.id || null,
+      pasteCountInSource: 0,
+      entries: selectedNotes.map(function (note) {
+        return {
+          start: note.start,
+          pitch: note.pitch,
+          length: note.length,
+        };
+      }),
+    };
+  };
+
+  const deleteSelectedNotes = function () {
+    if (!selectedNotes.length) {
+      return;
+    }
+
+    selectedNotes.forEach(function (note) {
+      removeNote(note);
+    });
+    setSelectedNoteIds([]);
+  };
+
+  const cutSelectedNotes = function () {
+    if (!selectedNotes.length) {
+      return;
+    }
+    copySelectedNotes();
+    deleteSelectedNotes();
+  };
+
+  const pasteClipboardNotes = function () {
+    if (
+      !activePattern ||
+      !activeChannel ||
+      !sharedPianoClipboard.entries ||
+      sharedPianoClipboard.entries.length === 0
+    ) {
+      return;
+    }
+
+    const isSamePianoRollContext =
+      sharedPianoClipboard.sourcePatternId === activePatternId &&
+      sharedPianoClipboard.sourceChannelId === activeChannel.id;
+
+    if (isSamePianoRollContext) {
+      sharedPianoClipboard.pasteCountInSource += 1;
+    }
+
+    const pasteShift = isSamePianoRollContext
+      ? sharedPianoClipboard.pasteCountInSource
+      : 0;
+    const channelNotes = activePattern.pianoPreview?.[activeChannel.id] || [];
+    const occupied = new Set(
+      channelNotes.map(function (note) {
+        return Math.round((note.start || 0) * 1000) + ":" + note.pitch;
+      }),
+    );
+
+    const nextSelection = [];
+
+    sharedPianoClipboard.entries.forEach(function (entry) {
+      const start = clamp(
+        entry.start + pasteShift,
+        0,
+        patternLength - MIN_FREE_LENGTH,
+      );
+      const maxLen = Math.max(MIN_FREE_LENGTH, patternLength - start);
+      const length = clamp(entry.length, MIN_FREE_LENGTH, maxLen);
+      const pitch = clamp(entry.pitch, PITCH_MIN, PITCH_MAX);
+      const key = Math.round(start * 1000) + ":" + pitch;
+
+      if (occupied.has(key)) {
+        return;
+      }
+
+      occupied.add(key);
+      const newId = makeGeneratedNoteId("paste");
+      dispatch(
+        togglePianoNote({
+          patternId: activePatternId,
+          channelId: activeChannel.id,
+          id: newId,
+          start,
+          pitch,
+          length,
+        }),
+      );
+      nextSelection.push("piano:" + newId);
+    });
+
+    if (nextSelection.length > 0) {
+      setSelectedNoteIds(nextSelection);
+      setEditMode("select");
+    }
+  };
+
+  /* eslint-disable react-hooks/exhaustive-deps */
+  useEffect(
+    function () {
+      if (editMode !== "select") {
+        return;
+      }
+
+      const onKeyDown = function (event) {
+        const target = event.target;
+        if (
+          target instanceof HTMLElement &&
+          (target.isContentEditable ||
+            target.closest("input, textarea, [contenteditable='true']"))
+        ) {
+          return;
+        }
+
+        const hasSelection = selectedNotes.length > 0;
+        const key = event.key.toLowerCase();
+        const ctrlOrMeta = event.ctrlKey || event.metaKey;
+
+        if (ctrlOrMeta && key === "c") {
+          event.preventDefault();
+          copySelectedNotes();
+          return;
+        }
+
+        if (ctrlOrMeta && key === "x") {
+          event.preventDefault();
+          cutSelectedNotes();
+          return;
+        }
+
+        if (ctrlOrMeta && key === "v") {
+          event.preventDefault();
+          pasteClipboardNotes();
+          return;
+        }
+
+        if (event.key === "Delete" || event.key === "Backspace") {
+          if (!hasSelection) {
+            return;
+          }
+          event.preventDefault();
+          deleteSelectedNotes();
+          return;
+        }
+
+        if (event.key !== "ArrowUp" && event.key !== "ArrowDown") {
+          return;
+        }
+
+        if (!hasSelection || !activeChannel) {
+          return;
+        }
+
+        event.preventDefault();
+
+        const direction = event.key === "ArrowUp" ? 1 : -1;
+        const moved = selectedNotes.map(function (note) {
+          return ensureNoteIsPiano(note);
+        });
+
+        moved.forEach(function (note) {
+          const nextPitch = moveByScaleStep(
+            note.pitch,
+            direction,
+            scalePitchClasses,
+            PITCH_MIN,
+            PITCH_MAX,
+          );
+
+          if (nextPitch === note.pitch) {
+            return;
+          }
+
+          dispatch(
+            movePianoNote({
+              patternId: activePatternId,
+              channelId: activeChannel.id,
+              noteId: note.id,
+              start: note.start,
+              pitch: note.pitch,
+              nextStart: note.start,
+              nextPitch,
+            }),
+          );
+
+          note.pitch = nextPitch;
+        });
+
+        setSelectedNoteIds(
+          moved.map(function (note) {
+            return "piano:" + note.id;
+          }),
+        );
+      };
+
+      window.addEventListener("keydown", onKeyDown);
+
+      return function () {
+        window.removeEventListener("keydown", onKeyDown);
+      };
+    },
+    [
+      activeChannel,
+      activePattern,
+      activePatternId,
+      dispatch,
+      editMode,
+      patternLength,
+      playheadStep,
+      scalePitchClasses,
+      selectedNotes,
+      snapStepSize,
+    ],
+  );
+  /* eslint-enable react-hooks/exhaustive-deps */
+
+  const onGridMouseDown = function (event) {
+    if (!activeChannel || !activePattern) {
+      return;
+    }
+
+    if (event.button !== 0 && event.button !== 2) {
+      return;
+    }
+
+    const pointer = getGridPointerFromEvent(event);
+    if (!pointer) {
+      return;
+    }
+
+    const x = pointer.x;
+    const y = pointer.y;
+
+    if (y < 0) {
+      return;
+    }
+
+    if (editMode === "select") {
+      if (event.button !== 0) {
+        return;
+      }
+
+      event.preventDefault();
+
+      const startX = clamp(x, 0, gridWidth);
+      const startY = clamp(y, 0, gridHeight);
+      setSelectionBox({
+        startX,
+        startY,
+        endX: startX,
+        endY: startY,
+      });
+
+      const onMouseMove = function (moveEvent) {
+        const movePointer = getGridPointerFromEvent(moveEvent);
+        if (!movePointer) {
+          return;
+        }
+
+        setSelectionBox(function (current) {
+          if (!current) {
+            return current;
+          }
+
+          return {
+            ...current,
+            endX: clamp(movePointer.x, 0, gridWidth),
+            endY: clamp(movePointer.y, 0, gridHeight),
+          };
+        });
+      };
+
+      const onMouseUp = function (upEvent) {
+        window.removeEventListener("mousemove", onMouseMove);
+        window.removeEventListener("mouseup", onMouseUp);
+
+        const upPointer = getGridPointerFromEvent(upEvent) || {
+          x: startX,
+          y: startY,
+        };
+
+        const endX = clamp(upPointer.x, 0, gridWidth);
+        const endY = clamp(upPointer.y, 0, gridHeight);
+        const minX = Math.min(startX, endX);
+        const maxX = Math.max(startX, endX);
+        const minY = Math.min(startY, endY);
+        const maxY = Math.max(startY, endY);
+        const wasClick =
+          Math.abs(maxX - minX) < MARQUEE_MIN_DRAG &&
+          Math.abs(maxY - minY) < MARQUEE_MIN_DRAG;
+
+        if (wasClick) {
+          setSelectedNoteIds([]);
+          setSelectionBox(null);
+          return;
+        }
+
+        const nextSelection = pianoNotes
+          .filter(function (note) {
+            const noteLeft = note.start * stepWidth + 1;
+            const noteTop = (PITCH_MAX - note.pitch) * rowHeight + 2;
+            const noteWidth = Math.max(8, note.length * stepWidth - 2);
+            const noteHeight = Math.max(6, rowHeight - 4);
+            const noteRight = noteLeft + noteWidth;
+            const noteBottom = noteTop + noteHeight;
+
+            const intersectsHorizontally =
+              noteRight >= minX && noteLeft <= maxX;
+            const intersectsVertically = noteBottom >= minY && noteTop <= maxY;
+            return intersectsHorizontally && intersectsVertically;
+          })
+          .map(function (note) {
+            return getNoteSelectionId(note);
+          });
+
+        setSelectedNoteIds(nextSelection);
+        setSelectionBox(null);
+      };
+
+      window.addEventListener("mousemove", onMouseMove);
+      window.addEventListener("mouseup", onMouseUp);
+      return;
+    }
+
+    const stepIndex = Math.max(
+      0,
+      Math.min(patternLength - 1, Math.floor(x / stepWidth)),
+    );
+    const rawStart = clamp(x / stepWidth, 0, patternLength - minNoteLength);
+    const snappedStart = clamp(
+      quantizeBySnap(rawStart, snapStepSize),
+      0,
+      patternLength - minNoteLength,
+    );
+    const rowIndex = Math.max(
+      0,
+      Math.min(pitchRows.length - 1, Math.floor(y / rowHeight)),
+    );
+    const pitch = PITCH_MAX - rowIndex;
+
+    const stepRow = activePattern.stepGrid?.[activeChannel.id] || [];
+    const stepIsOn = Boolean(stepRow[stepIndex]);
+
+    const customNotes = activePattern.pianoPreview?.[activeChannel.id] || [];
+    const hasCustomNote = customNotes.some(function (note) {
+      return (
+        isNearlyEqual(note.start || 0, snappedStart) && note.pitch === pitch
+      );
+    });
+
+    const maxNewLength = Math.max(
+      MIN_FREE_LENGTH,
+      patternLength - snappedStart,
+    );
+    const minNewLength = Math.min(minNoteLength, maxNewLength);
+    const lastTouchedLength = Math.max(
+      MIN_FREE_LENGTH,
+      Number(lastTouchedLengthRef.current || minNoteLength),
+    );
+    const nextCreatedLength = clamp(
+      quantizeBySnap(lastTouchedLength, snapStepSize),
+      minNewLength,
+      maxNewLength,
+    );
+    const snappedStartIsStep = isNearlyEqual(snappedStart, stepIndex);
+    const shouldUseStepCell =
+      snappedStartIsStep && isNearlyEqual(nextCreatedLength, 1);
+
+    if (pitch === C5_PITCH) {
+      if (event.button === 0) {
+        if (shouldUseStepCell) {
+          if (!stepIsOn) {
+            dispatch(
+              toggleStep({
+                patternId: activePatternId,
+                channelId: activeChannel.id,
+                stepIndex,
+              }),
+            );
+          }
+          return;
+        }
+
+        if (!hasCustomNote) {
+          if (stepIsOn && snappedStartIsStep) {
+            dispatch(
+              toggleStep({
+                patternId: activePatternId,
+                channelId: activeChannel.id,
+                stepIndex,
+              }),
+            );
+          }
+
+          lastTouchedLengthRef.current = nextCreatedLength;
+          dispatch(
+            togglePianoNote({
+              patternId: activePatternId,
+              channelId: activeChannel.id,
+              start: snappedStart,
+              pitch,
+              length: nextCreatedLength,
+            }),
+          );
+        }
+        return;
+      }
+
+      if (event.button === 2) {
+        event.preventDefault();
+
+        if (hasCustomNote) {
+          dispatch(
+            togglePianoNote({
+              patternId: activePatternId,
+              channelId: activeChannel.id,
+              start: snappedStart,
+              pitch,
+              length: minNoteLength,
+            }),
+          );
+          return;
+        }
+
+        if (stepIsOn) {
+          dispatch(
+            toggleStep({
+              patternId: activePatternId,
+              channelId: activeChannel.id,
+              stepIndex,
+            }),
+          );
+        }
+      }
+
+      return;
+    }
+
+    if (event.button === 0 && !hasCustomNote) {
+      lastTouchedLengthRef.current = nextCreatedLength;
+      dispatch(
+        togglePianoNote({
+          patternId: activePatternId,
+          channelId: activeChannel.id,
+          start: snappedStart,
+          pitch,
+          length: nextCreatedLength,
+        }),
+      );
+    }
+
+    if (event.button === 2 && hasCustomNote) {
+      event.preventDefault();
+      dispatch(
+        togglePianoNote({
+          patternId: activePatternId,
+          channelId: activeChannel.id,
+          start: snappedStart,
+          pitch,
+          length: minNoteLength,
+        }),
+      );
+    }
+  };
+
+  const onNoteMouseDown = function (event, note) {
+    event.stopPropagation();
+    event.preventDefault();
+
+    if (Number(note.length) > 0) {
+      lastTouchedLengthRef.current = Number(note.length);
+    }
+
+    if (editMode === "select") {
+      if (!activeChannel) {
+        return;
+      }
+
+      const noteSelectionId = getNoteSelectionId(note);
+
+      if (event.button === 2) {
+        if (
+          selectedNoteIdSet.has(noteSelectionId) &&
+          selectedNotes.length > 1
+        ) {
+          deleteSelectedNotes();
+          return;
+        }
+
+        removeNote(note);
+        setSelectedNoteIds(function (current) {
+          return current.filter(function (item) {
+            return item !== noteSelectionId;
+          });
+        });
+        return;
+      }
+
+      if (event.button !== 0) {
+        return;
+      }
+
+      const activeSelectionIds = selectedNoteIdSet.has(noteSelectionId)
+        ? selectedNoteIds
+        : [noteSelectionId];
+
+      let notesToMove = pianoNotes.filter(function (item) {
+        return activeSelectionIds.includes(getNoteSelectionId(item));
+      });
+
+      notesToMove = notesToMove.map(function (item) {
+        return ensureNoteIsPiano(item);
+      });
+
+      const dragIds = notesToMove.map(function (item) {
+        return "piano:" + item.id;
+      });
+      setSelectedNoteIds(dragIds);
+
+      const session = {
+        originX: event.clientX,
+        originY: event.clientY,
+        notes: notesToMove.map(function (item) {
+          return {
+            id: item.id,
+            start: item.start,
+            pitch: item.pitch,
+            length: item.length,
+            originStart: item.start,
+            originPitch: item.pitch,
+          };
+        }),
+      };
+
+      dragSelectionRef.current = session;
+
+      const onMouseMove = function (moveEvent) {
+        const dragSession = dragSelectionRef.current;
+        if (!dragSession) {
+          return;
+        }
+
+        const deltaStepsRaw =
+          (moveEvent.clientX - dragSession.originX) / stepWidth;
+        const deltaRows = Math.round(
+          (moveEvent.clientY - dragSession.originY) / rowHeight,
+        );
+
+        dragSession.notes.forEach(function (item) {
+          const maxStart = Math.max(0, patternLength - item.length);
+          const nextStart = clamp(
+            quantizeBySnap(item.originStart + deltaStepsRaw, snapStepSize),
+            0,
+            maxStart,
+          );
+          const nextPitch = Math.max(
+            PITCH_MIN,
+            Math.min(PITCH_MAX, item.originPitch - deltaRows),
+          );
+
+          if (nextStart === item.start && nextPitch === item.pitch) {
+            return;
+          }
+
+          dispatch(
+            movePianoNote({
+              patternId: activePatternId,
+              channelId: activeChannel.id,
+              noteId: item.id,
+              start: item.start,
+              pitch: item.pitch,
+              nextStart,
+              nextPitch,
+            }),
+          );
+
+          item.start = nextStart;
+          item.pitch = nextPitch;
+        });
+      };
+
+      const onMouseUp = function () {
+        const dragSession = dragSelectionRef.current;
+        dragSelectionRef.current = null;
+
+        window.removeEventListener("mousemove", onMouseMove);
+        window.removeEventListener("mouseup", onMouseUp);
+
+        if (!dragSession) {
+          return;
+        }
+
+        setSelectedNoteIds(
+          dragSession.notes.map(function (item) {
+            return "piano:" + item.id;
+          }),
+        );
+      };
+
+      window.addEventListener("mousemove", onMouseMove);
+      window.addEventListener("mouseup", onMouseUp);
+      return;
+    }
+
+    if (event.button === 2) {
+      if (!activeChannel) {
+        return;
+      }
+
+      if (note.source === "step") {
+        dispatch(
+          toggleStep({
+            patternId: activePatternId,
+            channelId: activeChannel.id,
+            stepIndex: note.start,
+          }),
+        );
+        return;
+      }
+
+      dispatch(
+        togglePianoNote({
+          patternId: activePatternId,
+          channelId: activeChannel.id,
+          start: note.start,
+          pitch: note.pitch,
+          length: note.length,
+        }),
+      );
+      return;
+    }
+
+    if (event.button !== 0) {
+      return;
+    }
+
+    if (!activeChannel) {
+      return;
+    }
+
+    const noteRect = event.currentTarget.getBoundingClientRect();
+    const clickedNearRightEdge = noteRect.right - event.clientX <= 8;
+
+    const session = {
+      patternId: activePatternId,
+      channelId: activeChannel.id,
+      source: note.source,
+      mode: clickedNearRightEdge ? "resize" : "move",
+      start: note.start,
+      pitch: note.pitch,
+      length: note.length,
+      originStart: note.start,
+      originPitch: note.pitch,
+      originLength: note.length,
+      originX: event.clientX,
+      originY: event.clientY,
+      convertedStep: false,
+    };
+
+    resizeSessionRef.current = session;
+
+    const ensureStepConverted = function () {
+      const activeSession = resizeSessionRef.current;
+      if (!activeSession) {
+        return;
+      }
+
+      if (activeSession.source !== "step" || activeSession.convertedStep) {
+        return;
+      }
+
+      dispatch(
+        toggleStep({
+          patternId: activeSession.patternId,
+          channelId: activeSession.channelId,
+          stepIndex: activeSession.start,
+        }),
+      );
+
+      dispatch(
+        togglePianoNote({
+          patternId: activeSession.patternId,
+          channelId: activeSession.channelId,
+          start: activeSession.start,
+          pitch: activeSession.pitch,
+          length: activeSession.length,
+        }),
+      );
+
+      activeSession.source = "piano";
+      activeSession.convertedStep = true;
+    };
+
+    const onMouseMove = function (moveEvent) {
+      const activeSession = resizeSessionRef.current;
+      if (!activeSession) {
+        return;
+      }
+
+      const deltaStepsRaw =
+        (moveEvent.clientX - activeSession.originX) / stepWidth;
+
+      if (activeSession.mode === "resize") {
+        const maxLen = Math.max(
+          MIN_FREE_LENGTH,
+          patternLength - activeSession.start,
+        );
+        const minLen = Math.min(minNoteLength, maxLen);
+        const nextLength = clamp(
+          quantizeBySnap(
+            activeSession.originLength + deltaStepsRaw,
+            snapStepSize,
+          ),
+          minLen,
+          maxLen,
+        );
+
+        if (activeSession.source === "step") {
+          if (nextLength <= 1) {
+            return;
+          }
+          ensureStepConverted();
+        }
+
+        if (Math.abs(nextLength - activeSession.length) <= SNAP_EPSILON) {
+          return;
+        }
+
+        dispatch(
+          setPianoNoteLength({
+            patternId: activeSession.patternId,
+            channelId: activeSession.channelId,
+            noteId: note.id,
+            start: activeSession.start,
+            pitch: activeSession.pitch,
+            length: nextLength,
+          }),
+        );
+
+        activeSession.length = nextLength;
+        lastTouchedLengthRef.current = nextLength;
+        return;
+      }
+
+      const deltaRows = Math.round(
+        (moveEvent.clientY - activeSession.originY) / rowHeight,
+      );
+      const maxStart = Math.max(0, patternLength - activeSession.length);
+      const nextStart = clamp(
+        quantizeBySnap(activeSession.originStart + deltaStepsRaw, snapStepSize),
+        0,
+        maxStart,
+      );
+      const nextPitch = Math.max(
+        PITCH_MIN,
+        Math.min(PITCH_MAX, activeSession.originPitch - deltaRows),
+      );
+
+      if (
+        nextStart === activeSession.start &&
+        nextPitch === activeSession.pitch
+      ) {
+        return;
+      }
+
+      ensureStepConverted();
+
+      dispatch(
+        movePianoNote({
+          patternId: activeSession.patternId,
+          channelId: activeSession.channelId,
+          noteId: note.id,
+          start: activeSession.start,
+          pitch: activeSession.pitch,
+          nextStart,
+          nextPitch,
+        }),
+      );
+
+      activeSession.start = nextStart;
+      activeSession.pitch = nextPitch;
+    };
+
+    const onMouseUp = function () {
+      resizeSessionRef.current = null;
+      window.removeEventListener("mousemove", onMouseMove);
+      window.removeEventListener("mouseup", onMouseUp);
+    };
+
+    window.addEventListener("mousemove", onMouseMove);
+    window.addEventListener("mouseup", onMouseUp);
+  };
+
+  return (
+    <section className="piano-roll-shell">
+      <header className="piano-roll-toolbar">
+        <span>Channel:</span>
+        <select
+          value={activeChannel?.id || ""}
+          onChange={function (event) {
+            dispatch(setActiveChannel(event.target.value));
+          }}
+        >
+          {channels.map(function (channel) {
+            return (
+              <option key={channel.id} value={channel.id}>
+                {channel.name}
+              </option>
+            );
+          })}
+        </select>
+        <div className="edit-mode-toggle">
+          <button
+            type="button"
+            className={editMode === "add" ? "is-active" : ""}
+            onClick={function () {
+              setEditMode("add");
+              setSelectedNoteIds([]);
+            }}
+          >
+            Add Notes
+          </button>
+          <button
+            type="button"
+            className={editMode === "select" ? "is-active" : ""}
+            onClick={function () {
+              setEditMode("select");
+            }}
+          >
+            Select
+          </button>
+        </div>
+        <div className="snap-menu" ref={snapMenuRef}>
+          <button
+            type="button"
+            className="snap-trigger"
+            onClick={function () {
+              setIsSnapMenuOpen(function (value) {
+                return !value;
+              });
+            }}
+          >
+            Snap: {activeSnap.label}
+          </button>
+          {isSnapMenuOpen ? (
+            <div className="snap-dropdown">
+              {SNAP_OPTIONS.map(function (option) {
+                return (
+                  <label key={option.key} className="snap-option">
+                    <input
+                      type="radio"
+                      name="piano-roll-snap"
+                      checked={snapKey === option.key}
+                      onChange={function () {
+                        setSnapKey(option.key);
+                        setIsSnapMenuOpen(false);
+                      }}
+                    />
+                    <span>{option.label}</span>
+                  </label>
+                );
+              })}
+            </div>
+          ) : null}
+        </div>
+        <div className="scale-controls">
+          <span>Scale:</span>
+          <select
+            className="scale-select"
+            value={scaleRoot}
+            onChange={function (event) {
+              setScaleRoot(event.target.value);
+            }}
+          >
+            {SCALE_ROOTS.map(function (noteName) {
+              return (
+                <option key={noteName} value={noteName}>
+                  {noteName}
+                </option>
+              );
+            })}
+          </select>
+          <select
+            className="scale-select"
+            value={scaleType}
+            onChange={function (event) {
+              setScaleType(event.target.value);
+            }}
+          >
+            {SCALE_TYPES.map(function (item) {
+              return (
+                <option key={item.key} value={item.key}>
+                  {item.label}
+                </option>
+              );
+            })}
+          </select>
+        </div>
+        <small>
+          {editMode === "add"
+            ? "LMB add. LMB drag note to move, right edge to resize. RMB delete."
+            : "Drag to select. Move selected with mouse. Ctrl+C/X/V, Delete, Arrow Up/Down."}{" "}
+          Wheel: up/down, Ctrl+Wheel: zoom.
+        </small>
+      </header>
+
+      <div className="piano-roll-body">
+        <aside
+          className="piano-keys"
+          ref={keysRef}
+          onWheel={onGridWheel}
+          onScroll={onKeysScroll}
+          style={{ height: "100%" }}
+        >
+          <div className="piano-keys-header" />
+          {pitchRows.map(function (pitch) {
+            const noteName = getNoteName(pitch);
+            const isSharp = noteName.includes("#");
+            const isC = noteName.startsWith("C");
+
+            return (
+              <div
+                key={pitch}
+                className={
+                  "piano-key-row" +
+                  (isSharp ? " sharp" : "") +
+                  (isC ? " marker" : "")
+                }
+                style={{ height: rowHeight }}
+              >
+                <span>{noteName}</span>
+              </div>
+            );
+          })}
+        </aside>
+
+        <div
+          className="piano-grid-wrap"
+          ref={gridWrapRef}
+          onWheel={onGridWheel}
+          onScroll={onGridWrapScroll}
+          onContextMenu={function (event) {
+            event.preventDefault();
+          }}
+        >
+          <div className="piano-grid-header" style={{ width: gridWidth }}>
+            {Array.from({ length: totalBars }).map(function (_, barIndex) {
+              const barStart = barIndex * STEPS_PER_BAR;
+              const barSteps = Math.min(
+                STEPS_PER_BAR,
+                patternLength - barStart,
+              );
+              return (
+                <div
+                  key={barIndex}
+                  className="piano-bar-cell"
+                  style={{ width: barSteps * stepWidth }}
+                >
+                  {barIndex + 1}
+                </div>
+              );
+            })}
+          </div>
+
+          <div
+            className="piano-grid"
+            style={{
+              width: gridWidth,
+              height: gridHeight,
+              "--step-width": stepWidth + "px",
+              "--bar-width": stepWidth * 4 + "px",
+              "--row-height": rowHeight + "px",
+              "--snap-width": snapLineWidth + "px",
+              "--snap-opacity": String(snapLineOpacity),
+            }}
+            onMouseDown={onGridMouseDown}
+            onContextMenu={function (event) {
+              event.preventDefault();
+            }}
+          >
+            {selectionBox ? (
+              <span
+                className="piano-selection-box"
+                style={{
+                  left: Math.min(selectionBox.startX, selectionBox.endX),
+                  top: Math.min(selectionBox.startY, selectionBox.endY),
+                  width: Math.abs(selectionBox.endX - selectionBox.startX),
+                  height: Math.abs(selectionBox.endY - selectionBox.startY),
+                }}
+              />
+            ) : null}
+
+            {isPlaying ? (
+              <span ref={playheadRef} className="piano-playhead-line" />
+            ) : null}
+
+            {Array.from({ length: Math.max(0, totalBars - 1) }).map(
+              function (_, index) {
+                const boundaryStep = (index + 1) * STEPS_PER_BAR;
+                if (boundaryStep >= patternLength) {
+                  return null;
+                }
+
+                return (
+                  <span
+                    key={"major-line-" + boundaryStep}
+                    className="piano-major-line"
+                    style={{ left: boundaryStep * stepWidth }}
+                  />
+                );
+              },
+            )}
+
+            {pitchRows.map(function (pitch, rowIndex) {
+              if (scalePitchClasses.has(toPitchClass(pitch))) {
+                return null;
+              }
+
+              return (
+                <span
+                  key={"scale-row-" + pitch}
+                  className="piano-scale-row"
+                  style={{
+                    top: rowIndex * rowHeight,
+                    height: rowHeight,
+                  }}
+                />
+              );
+            })}
+
+            {pianoNotes.map(function (note) {
+              const top = (PITCH_MAX - note.pitch) * rowHeight + 2;
+              const left = note.start * stepWidth + 1;
+              const width = Math.max(8, note.length * stepWidth - 2);
+
+              return (
+                <span
+                  key={note.id}
+                  className={
+                    "piano-note" +
+                    (note.source === "step" ? " from-step" : " from-piano") +
+                    (selectedNoteIdSet.has(getNoteSelectionId(note))
+                      ? " is-selected"
+                      : "")
+                  }
+                  onMouseDown={function (event) {
+                    onNoteMouseDown(event, note);
+                  }}
+                  onContextMenu={function (event) {
+                    event.preventDefault();
+                  }}
+                  style={{
+                    top,
+                    left,
+                    width,
+                    height: Math.max(6, rowHeight - 4),
+                  }}
+                >
+                  <span className="piano-note-label">
+                    {getPitchClassName(note.pitch)}
+                  </span>
+                </span>
+              );
+            })}
+          </div>
+        </div>
+      </div>
+    </section>
+  );
+}
