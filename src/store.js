@@ -2,6 +2,7 @@ import { configureStore, createAction, createSlice } from "@reduxjs/toolkit";
 
 const FX_SLOT_EFFECT_NONE = "none";
 const FX_SLOT_EFFECT_GRAPHIC_EQ = "graphic-eq";
+const DEFAULT_INSERT_SPECTRUM_BINS = 112;
 const GRAPHIC_EQ_DEFAULT_POINT_FREQUENCIES = [
   50, 100, 250, 500, 1000, 3000, 8000,
 ];
@@ -71,6 +72,12 @@ function makeGraphicEqParams() {
       },
     ),
   };
+}
+
+function makeInsertSpectrum() {
+  return Array.from({ length: DEFAULT_INSERT_SPECTRUM_BINS }).map(function () {
+    return 0;
+  });
 }
 
 function getSafeGraphicEqParams(raw) {
@@ -536,6 +543,7 @@ const initialState = {
         stereoSeparation: 0,
         fader: 1,
         meter: 0,
+        meterSpectrum: makeInsertSpectrum(),
         routesTo: [],
         fxSlots: makeFxSlots(),
       },
@@ -548,6 +556,7 @@ const initialState = {
         stereoSeparation: 0,
         fader: 1,
         meter: 0,
+        meterSpectrum: makeInsertSpectrum(),
         routesTo: ["master"],
         fxSlots: makeFxSlots(),
       },
@@ -560,6 +569,7 @@ const initialState = {
         stereoSeparation: -0.02,
         fader: 1,
         meter: 0,
+        meterSpectrum: makeInsertSpectrum(),
         routesTo: ["master"],
         fxSlots: makeFxSlots(),
       },
@@ -572,6 +582,7 @@ const initialState = {
         stereoSeparation: 0.04,
         fader: 1,
         meter: 0,
+        meterSpectrum: makeInsertSpectrum(),
         routesTo: ["master"],
         fxSlots: makeFxSlots(),
       },
@@ -584,6 +595,7 @@ const initialState = {
         stereoSeparation: 0,
         fader: 1,
         meter: 0,
+        meterSpectrum: makeInsertSpectrum(),
         routesTo: ["master"],
         fxSlots: makeFxSlots(),
       },
@@ -1693,6 +1705,7 @@ const dawSlice = createSlice({
         stereoSeparation: 0,
         fader: 1,
         meter: 0,
+        meterSpectrum: makeInsertSpectrum(),
         routesTo: ["master"],
         fxSlots: makeFxSlots(),
       });
@@ -1904,6 +1917,21 @@ const dawSlice = createSlice({
         return;
       }
       insert.meter = Math.max(0, Math.min(1, action.payload.meter));
+
+      if (Array.isArray(action.payload.spectrum)) {
+        const nextSpectrum = action.payload.spectrum
+          .slice(0, 256)
+          .map(function (value) {
+            const numeric = Number(value || 0);
+            return Math.max(0, Math.min(1, numeric));
+          });
+
+        if (nextSpectrum.length > 0) {
+          insert.meterSpectrum = nextSpectrum;
+        }
+      } else if (!Array.isArray(insert.meterSpectrum)) {
+        insert.meterSpectrum = makeInsertSpectrum();
+      }
     },
   },
 });

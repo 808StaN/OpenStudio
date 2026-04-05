@@ -26,6 +26,9 @@ const MIXER_METER_PEAK_GAIN = 1.9;
 const MIXER_METER_NOISE_GATE = 0.0016;
 const MIXER_METER_RESPONSE_CURVE = 0.5;
 const MIXER_METER_DECAY = 0.9;
+const EQ_SPECTRUM_BINS = 112;
+const EQ_SPECTRUM_MIN_FREQ = 20;
+const EQ_SPECTRUM_MAX_FREQ = 20000;
 const FX_EFFECT_GRAPHIC_EQ = "graphic-eq";
 const GRAPHIC_EQ_DEFAULT_POINT_FREQUENCIES = [
   50, 100, 250, 500, 1000, 3000, 8000,
@@ -394,6 +397,65 @@ function safeDisconnect(node) {
   }
 }
 
+function buildEqSpectrumFromAnalyserData(analyser, frequencyData) {
+  if (!analyser || !frequencyData || frequencyData.length === 0) {
+    return null;
+  }
+
+  const nyquist = Math.max(1, analyser.context.sampleRate * 0.5);
+  const maxSourceIndex = frequencyData.length - 1;
+
+  const rawBins = Array.from({ length: EQ_SPECTRUM_BINS }).map(function (_, index) {
+    const t = EQ_SPECTRUM_BINS > 1 ? index / (EQ_SPECTRUM_BINS - 1) : 0;
+    const targetFrequency =
+      EQ_SPECTRUM_MIN_FREQ *
+      Math.pow(EQ_SPECTRUM_MAX_FREQ / EQ_SPECTRUM_MIN_FREQ, t);
+    const sourcePosition = Math.max(
+      0,
+      Math.min(
+        maxSourceIndex,
+        (targetFrequency / nyquist) * maxSourceIndex,
+      ),
+    );
+
+    const baseIndex = Math.floor(sourcePosition);
+    const blend = sourcePosition - baseIndex;
+
+    const left = frequencyData[baseIndex] || 0;
+    const right = frequencyData[Math.min(maxSourceIndex, baseIndex + 1)] || 0;
+    const interpolated = left + (right - left) * blend;
+
+    const averagingRadius = targetFrequency < 200 ? 3 : targetFrequency < 1200 ? 2 : 1;
+    let weightedSum = 0;
+    let weightTotal = 0;
+    for (let offset = -averagingRadius; offset <= averagingRadius; offset += 1) {
+      const sampleIndex = Math.max(
+        0,
+        Math.min(maxSourceIndex, baseIndex + offset),
+      );
+      const sampleValue = frequencyData[sampleIndex] || 0;
+      const weight = averagingRadius + 1 - Math.abs(offset);
+      weightedSum += sampleValue * weight;
+      weightTotal += weight;
+    }
+
+    const averaged = weightTotal > 0 ? weightedSum / weightTotal : interpolated;
+    const combined = interpolated * 0.65 + averaged * 0.35;
+
+    const normalized = clamp(combined / 255, 0, 1);
+    return Math.pow(normalized, 1.03);
+  });
+
+  // Mild temporal smoothing between neighboring visual bins for a cleaner fill.
+  const smoothedBins = rawBins.map(function (value, index) {
+    const prev = rawBins[Math.max(0, index - 1)] || value;
+    const next = rawBins[Math.min(rawBins.length - 1, index + 1)] || value;
+    return clamp(value * 0.58 + prev * 0.21 + next * 0.21, 0, 1);
+  });
+
+  return smoothedBins;
+}
+
 export function useAudioScheduler() {
   const dispatch = useDispatch();
   const transport = useSelector(function (state) {
@@ -443,6 +505,12 @@ export function useAudioScheduler() {
       };
     });
   }, areMixerSettingsEqual);
+  const selectedInsertId = useSelector(function (state) {
+    return state.daw.mixer.selectedInsertId;
+  });
+  const fxEditorTarget = useSelector(function (state) {
+    return state.daw.ui.fxEditorTarget;
+  });
 
   const audioCtxRef = useRef(null);
   const rafIdRef = useRef(null);
@@ -467,6 +535,19 @@ export function useAudioScheduler() {
   const mixerGraphRef = useRef(null);
   const lastMeterDispatchAtRef = useRef(0);
   const lastMeterLevelsRef = useRef(new Map());
+  const lastMeterSpectrumRef = useRef(new Map());
+  const spectrumTargetInsertIdRef = useRef(
+    String(fxEditorTarget?.insertId || selectedInsertId || ""),
+  );
+
+  useEffect(
+    function () {
+      spectrumTargetInsertIdRef.current = String(
+        fxEditorTarget?.insertId || selectedInsertId || "",
+      );
+    },
+    [fxEditorTarget?.insertId, selectedInsertId],
+  );
 
   const ensureContext = useCallback(function () {
     if (!audioCtxRef.current) {
@@ -632,8 +713,10 @@ export function useAudioScheduler() {
         const outputGain = audioCtx.createGain();
         const analyser = audioCtx.createAnalyser();
 
-        analyser.fftSize = 256;
-        analyser.smoothingTimeConstant = 0.72;
+        analyser.fftSize = 2048;
+        analyser.minDecibels = -96;
+        analyser.maxDecibels = -12;
+        analyser.smoothingTimeConstant = 0.58;
 
         inputGain.connect(splitter);
 
@@ -684,6 +767,7 @@ export function useAudioScheduler() {
           outputGain,
           analyser,
           meterData: new Uint8Array(analyser.fftSize),
+          spectrumData: new Uint8Array(analyser.frequencyBinCount),
           meterLevel: 0,
         });
       });
@@ -986,6 +1070,11 @@ export function useAudioScheduler() {
 
       const resetMeters = function () {
         lastMeterDispatchAtRef.current = 0;
+        const silentSpectrum = Array.from({ length: EQ_SPECTRUM_BINS }).map(
+          function () {
+            return 0;
+          },
+        );
 
         const graph = mixerGraphRef.current;
         if (graph) {
@@ -999,11 +1088,13 @@ export function useAudioScheduler() {
             setInsertMeter({
               insertId: insert.id,
               meter: 0,
+              spectrum: silentSpectrum,
             }),
           );
         });
 
         lastMeterLevelsRef.current.clear();
+        lastMeterSpectrumRef.current.clear();
       };
 
       const updateMixerMeters = function (now) {
@@ -1048,16 +1139,64 @@ export function useAudioScheduler() {
           );
 
           const prevMeter = lastMeterLevelsRef.current.get(insertId);
-          if (
+          const isSpectrumTarget =
+            insertId === spectrumTargetInsertIdRef.current;
+          let nextSpectrum = null;
+          let spectrumChanged = false;
+
+          if (isSpectrumTarget && node.spectrumData) {
+            node.analyser.getByteFrequencyData(node.spectrumData);
+            nextSpectrum = buildEqSpectrumFromAnalyserData(
+              node.analyser,
+              node.spectrumData,
+            );
+
+            if (nextSpectrum) {
+              const prevSpectrum = lastMeterSpectrumRef.current.get(insertId);
+              if (
+                !Array.isArray(prevSpectrum) ||
+                prevSpectrum.length !== nextSpectrum.length
+              ) {
+                spectrumChanged = true;
+              } else {
+                for (
+                  let spectrumIndex = 0;
+                  spectrumIndex < nextSpectrum.length;
+                  spectrumIndex += 1
+                ) {
+                  if (
+                    Math.abs(
+                      nextSpectrum[spectrumIndex] - prevSpectrum[spectrumIndex],
+                    ) > 0.028
+                  ) {
+                    spectrumChanged = true;
+                    break;
+                  }
+                }
+              }
+            }
+          }
+
+          const meterChanged =
             prevMeter === undefined ||
             Math.abs(prevMeter - node.meterLevel) > 0.018 ||
-            (node.meterLevel < 0.01 && prevMeter >= 0.01)
+            (node.meterLevel < 0.01 && prevMeter >= 0.01);
+
+          if (
+            meterChanged ||
+            spectrumChanged
           ) {
             lastMeterLevelsRef.current.set(insertId, node.meterLevel);
+            if (isSpectrumTarget && nextSpectrum) {
+              lastMeterSpectrumRef.current.set(insertId, nextSpectrum);
+            }
+
             dispatch(
               setInsertMeter({
                 insertId,
                 meter: node.meterLevel,
+                spectrum:
+                  isSpectrumTarget && nextSpectrum ? nextSpectrum : undefined,
               }),
             );
           }

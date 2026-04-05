@@ -80,7 +80,9 @@ export function MixerWindow() {
       }
 
       const stillLoaded = fxSlots.some(function (slot) {
-        return slot.id === armedFxClearSlotId && slot.effectType !== FX_EFFECT_NONE;
+        return (
+          slot.id === armedFxClearSlotId && slot.effectType !== FX_EFFECT_NONE
+        );
       });
 
       if (!stillLoaded) {
@@ -542,7 +544,8 @@ export function MixerWindow() {
                   <button
                     type="button"
                     className={
-                      "fx-clear" + (armedFxClearSlotId === slot.id ? " is-armed" : "")
+                      "fx-clear" +
+                      (armedFxClearSlotId === slot.id ? " is-armed" : "")
                     }
                     title={
                       armedFxClearSlotId === slot.id

@@ -303,6 +303,81 @@ function buildGraphicEqPath(params, width, height) {
     .join(" ");
 }
 
+function buildSpectrumPaths(spectrum, width, height) {
+  const values = Array.isArray(spectrum)
+    ? spectrum.filter(function (value) {
+        return Number.isFinite(Number(value));
+      })
+    : [];
+  if (values.length < 2) {
+    return {
+      linePath: "",
+      fillPath: "",
+    };
+  }
+
+  const leftPad = GRAPH_PADDING.left;
+  const rightPad = GRAPH_PADDING.right;
+  const topPad = GRAPH_PADDING.top;
+  const bottomPad = GRAPH_PADDING.bottom;
+  const innerW = Math.max(1, width - leftPad - rightPad);
+  const innerH = Math.max(1, height - topPad - bottomPad);
+  const floorY = topPad + innerH;
+
+  const points = values.map(function (rawValue, index) {
+    const t = values.length > 1 ? index / (values.length - 1) : 0;
+    const x = leftPad + t * innerW;
+    const level = clamp(Number(rawValue || 0), 0, 1);
+    const shaped = Math.pow(level, 0.66);
+    const y = topPad + (1 - shaped) * innerH;
+    return {
+      x,
+      y,
+    };
+  });
+
+  const maxLevel = values.reduce(function (maxValue, current) {
+    return Math.max(maxValue, Number(current || 0));
+  }, 0);
+  if (maxLevel < 0.01) {
+    return {
+      linePath: "",
+      fillPath: "",
+    };
+  }
+
+  const linePath = points
+    .map(function (point, index) {
+      const prefix = index === 0 ? "M" : "L";
+      return prefix + " " + point.x.toFixed(2) + " " + point.y.toFixed(2);
+    })
+    .join(" ");
+
+  const first = points[0];
+  const last = points[points.length - 1];
+  const fillPathSegments = [
+    "M " + first.x.toFixed(2) + " " + floorY.toFixed(2),
+    "L " + first.x.toFixed(2) + " " + first.y.toFixed(2),
+  ];
+
+  for (let index = 1; index < points.length; index += 1) {
+    const point = points[index];
+    fillPathSegments.push("L " + point.x.toFixed(2) + " " + point.y.toFixed(2));
+  }
+
+  fillPathSegments.push(
+    "L " + last.x.toFixed(2) + " " + floorY.toFixed(2),
+    "Z",
+  );
+
+  const fillPath = fillPathSegments.join(" ");
+
+  return {
+    linePath,
+    fillPath,
+  };
+}
+
 export function FxPluginWindow() {
   const dispatch = useDispatch();
   const graphRef = useRef(null);
@@ -458,6 +533,19 @@ export function FxPluginWindow() {
       return buildGraphicEqPath(eqParams, GRAPH_WIDTH, GRAPH_HEIGHT);
     },
     [eqParams],
+  );
+
+  const spectrumPaths = useMemo(
+    function () {
+      return buildSpectrumPaths(
+        Array.isArray(activeInsert?.meterSpectrum)
+          ? activeInsert.meterSpectrum
+          : null,
+        GRAPH_WIDTH,
+        GRAPH_HEIGHT,
+      );
+    },
+    [activeInsert?.meterSpectrum],
   );
 
   const pointCoordinates = useMemo(
@@ -781,10 +869,7 @@ export function FxPluginWindow() {
                   y1={y}
                   x2={GRAPH_WIDTH - graphRight}
                   y2={y}
-                  className={
-                    "fx-proq-grid-line" +
-                    (Math.abs(dbValue) < 0.001 ? " is-zero" : "")
-                  }
+                  className="fx-proq-grid-line"
                 />
               );
             })}
@@ -820,6 +905,14 @@ export function FxPluginWindow() {
                 </text>
               );
             })}
+
+            {spectrumPaths.fillPath ? (
+              <path d={spectrumPaths.fillPath} className="fx-proq-spectrum-fill" />
+            ) : null}
+
+            {spectrumPaths.linePath ? (
+              <path d={spectrumPaths.linePath} className="fx-proq-spectrum-line" />
+            ) : null}
 
             <path d={eqCurvePath} className="fx-proq-curve" />
 

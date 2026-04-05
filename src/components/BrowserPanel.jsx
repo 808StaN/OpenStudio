@@ -483,10 +483,7 @@ export function BrowserPanel() {
                             draggable
                             onDragStart={function (event) {
                               const payloadText = JSON.stringify(payload);
-                              event.dataTransfer.setData(
-                                mimeType,
-                                payloadText,
-                              );
+                              event.dataTransfer.setData(mimeType, payloadText);
                               event.dataTransfer.setData(
                                 "text/plain",
                                 payloadText,

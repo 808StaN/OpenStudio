@@ -590,15 +590,22 @@
   stroke-width: 1;
 }
 
-.fx-proq-grid-line.is-zero {
-  stroke: rgba(255, 203, 91, 0.55);
-}
-
 .fx-proq-frequency-label {
   fill: #8fa3c6;
   font-size: 8px;
   letter-spacing: 0.2px;
   pointer-events: none;
+}
+
+.fx-proq-spectrum-fill {
+  fill: rgba(74, 170, 255, 0.27);
+}
+
+.fx-proq-spectrum-line {
+  fill: none;
+  stroke: rgba(121, 198, 255, 0.7);
+  stroke-width: 1.15;
+  filter: drop-shadow(0 0 3px rgba(75, 168, 255, 0.35));
 }
 
 .fx-proq-curve {
