@@ -1,5 +1,6 @@
 import {
   Circle,
+  Download,
   Grid2X2,
   ListMusic,
   Music2,
@@ -172,6 +173,15 @@ export function TopToolbar() {
         >
           <SlidersHorizontal size={14} />
           Mixer
+        </button>
+        <button
+          className="transport-btn small"
+          onClick={function () {
+            dispatch(openWindow("renderExport"));
+          }}
+        >
+          <Download size={14} />
+          Render
         </button>
       </div>
     </header>

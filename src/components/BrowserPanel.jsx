@@ -40,6 +40,31 @@ const browserData = {
   ],
 };
 
+function toSafeSampleUrl(rawPath) {
+  const input = String(rawPath || "").trim();
+  if (!input) {
+    return "";
+  }
+
+  const hashIndex = input.indexOf("#");
+  const pathWithoutHash = hashIndex >= 0 ? input.slice(0, hashIndex) : input;
+  const parts = pathWithoutHash.split("/");
+
+  const encoded = parts.map(function (part, index) {
+    if (index === 0 && part === "") {
+      return "";
+    }
+
+    try {
+      return encodeURIComponent(decodeURIComponent(part));
+    } catch {
+      return encodeURIComponent(part);
+    }
+  });
+
+  return encoded.join("/");
+}
+
 export function BrowserPanel() {
   const dispatch = useDispatch();
   const [drumkitGroups, setDrumkitGroups] = useState([]);
@@ -70,38 +95,39 @@ export function BrowserPanel() {
   };
 
   const getPreviewBuffer = async function (samplePath) {
-    if (!samplePath) {
+    const safeSamplePath = toSafeSampleUrl(samplePath);
+    if (!safeSamplePath) {
       return null;
     }
 
-    const cachedBuffer = previewBufferCacheRef.current.get(samplePath);
+    const cachedBuffer = previewBufferCacheRef.current.get(safeSamplePath);
     if (cachedBuffer) {
       return cachedBuffer;
     }
 
-    const pendingBuffer = previewBufferPromiseRef.current.get(samplePath);
+    const pendingBuffer = previewBufferPromiseRef.current.get(safeSamplePath);
     if (pendingBuffer) {
       return pendingBuffer;
     }
 
     const loadPromise = (async function () {
       const context = ensurePreviewContext();
-      const response = await fetch(samplePath);
+      const response = await fetch(safeSamplePath);
       if (!response.ok) {
         throw new Error("Cannot load sample");
       }
       const arrayBuffer = await response.arrayBuffer();
       const audioBuffer = await context.decodeAudioData(arrayBuffer.slice(0));
-      previewBufferCacheRef.current.set(samplePath, audioBuffer);
+      previewBufferCacheRef.current.set(safeSamplePath, audioBuffer);
       return audioBuffer;
     })();
 
-    previewBufferPromiseRef.current.set(samplePath, loadPromise);
+    previewBufferPromiseRef.current.set(safeSamplePath, loadPromise);
 
     try {
       return await loadPromise;
     } finally {
-      previewBufferPromiseRef.current.delete(samplePath);
+      previewBufferPromiseRef.current.delete(safeSamplePath);
     }
   };
 
@@ -363,15 +389,19 @@ export function BrowserPanel() {
                         void playSamplePreview(sampleItem.path);
                       }}
                       onDragStart={function (event) {
+                        const payload = JSON.stringify({
+                          tab: "drumkits",
+                          folder: node.path,
+                          file: sampleItem.name,
+                          samplePath: sampleItem.path,
+                        });
+
+                        event.dataTransfer.effectAllowed = "copy";
                         event.dataTransfer.setData(
                           "application/x-daw-sample",
-                          JSON.stringify({
-                            tab: "drumkits",
-                            folder: node.path,
-                            file: sampleItem.name,
-                            samplePath: sampleItem.path,
-                          }),
+                          payload,
                         );
+                        event.dataTransfer.setData("text/plain", payload);
                       }}
                     >
                       {sampleItem.name}

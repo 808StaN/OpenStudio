@@ -309,6 +309,30 @@
   pointer-events: none;
 }
 
+.clip-audio-preview {
+  position: absolute;
+  inset: 2px 0 2px 0;
+  border-radius: 3px;
+  pointer-events: none;
+  opacity: 0.96;
+  overflow: hidden;
+  background: linear-gradient(
+    180deg,
+    rgba(74, 126, 182, 0.34) 0%,
+    rgba(34, 71, 116, 0.18) 100%
+  );
+}
+
+.clip-wave-bar {
+  position: absolute;
+  bottom: 2%;
+  transform: translateX(-50%);
+  border-radius: 2px;
+  min-width: 1px;
+  background: linear-gradient(180deg, #c9e8ff 0%, #73bcff 100%);
+  box-shadow: 0 0 4px rgba(125, 194, 255, 0.32);
+}
+
 .clip-mini-note {
   position: absolute;
   height: 4px;
@@ -352,4 +376,12 @@
 
 .clip.is-active {
   transform: translateY(-0.5px);
+}
+
+.clip.is-audio {
+  background: linear-gradient(
+    180deg,
+    rgba(169, 205, 242, 0.22) 0%,
+    rgba(98, 146, 201, 0.16) 100%
+  );
 }

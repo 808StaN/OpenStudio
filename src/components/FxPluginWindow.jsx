@@ -907,11 +907,17 @@ export function FxPluginWindow() {
             })}
 
             {spectrumPaths.fillPath ? (
-              <path d={spectrumPaths.fillPath} className="fx-proq-spectrum-fill" />
+              <path
+                d={spectrumPaths.fillPath}
+                className="fx-proq-spectrum-fill"
+              />
             ) : null}
 
             {spectrumPaths.linePath ? (
-              <path d={spectrumPaths.linePath} className="fx-proq-spectrum-line" />
+              <path
+                d={spectrumPaths.linePath}
+                className="fx-proq-spectrum-line"
+              />
             ) : null}
 
             <path d={eqCurvePath} className="fx-proq-curve" />

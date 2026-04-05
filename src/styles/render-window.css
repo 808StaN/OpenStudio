@@ -1,0 +1,112 @@
+.render-window-shell {
+  height: 100%;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  padding: 4px;
+}
+
+.render-window-row {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.render-window-label {
+  color: #b9c7dc;
+  font-size: 12px;
+  letter-spacing: 0.2px;
+}
+
+.render-window-input,
+.render-window-select {
+  height: 32px;
+  border-radius: 7px;
+  border: 1px solid #3a4558;
+  background: linear-gradient(180deg, #1f2a39 0%, #131a24 100%);
+  color: #edf3ff;
+  padding: 0 10px;
+}
+
+.render-window-select {
+  padding-right: 36px;
+  appearance: none;
+  -webkit-appearance: none;
+  -moz-appearance: none;
+  color-scheme: dark;
+  background-image:
+    linear-gradient(180deg, #1f2a39 0%, #131a24 100%),
+    linear-gradient(45deg, transparent 50%, #9fb1cb 50%),
+    linear-gradient(135deg, #9fb1cb 50%, transparent 50%);
+  background-position:
+    0 0,
+    calc(100% - 16px) 13px,
+    calc(100% - 11px) 13px;
+  background-size:
+    100% 100%,
+    5px 5px,
+    5px 5px;
+  background-repeat: no-repeat;
+}
+
+.render-window-select:hover,
+.render-window-input:hover {
+  border-color: #4a5a71;
+}
+
+.render-window-select:focus,
+.render-window-input:focus {
+  outline: none;
+  border-color: #6d87b0;
+  box-shadow:
+    0 0 0 1px rgba(139, 168, 212, 0.35),
+    inset 0 1px 0 rgba(255, 255, 255, 0.05);
+}
+
+.render-window-select option {
+  color: #e5eefc;
+  background-color: #1b2432;
+}
+
+.render-window-select option:checked {
+  color: #ffffff;
+  background-color: #365da2;
+}
+
+.render-window-select option:hover {
+  background-color: #2f4f85;
+}
+
+.render-window-actions {
+  margin-top: 4px;
+}
+
+.render-window-button {
+  height: 34px;
+  width: 100%;
+  border: 1px solid #506180;
+  border-radius: 8px;
+  color: #f7fbff;
+  letter-spacing: 0.25px;
+  background: linear-gradient(180deg, #4f6ea0 0%, #29446f 100%);
+  cursor: pointer;
+}
+
+.render-window-button:disabled {
+  opacity: 0.55;
+  cursor: not-allowed;
+}
+
+.render-window-status,
+.render-window-error {
+  margin: 2px 0 0;
+  font-size: 12px;
+}
+
+.render-window-status {
+  color: #9ed8b4;
+}
+
+.render-window-error {
+  color: #ff9aa5;
+}

@@ -360,11 +360,12 @@ const initialState = {
       playlist: {
         open: true,
         z: 3,
-        x: 300,
-        y: 86,
+        x: 0,
+        y: 0,
         width: 960,
         height: 360,
         isMaximized: false,
+        startMaximized: true,
         restoreRect: null,
       },
       channelRack: {
@@ -373,7 +374,7 @@ const initialState = {
         x: 350,
         y: 466,
         width: 800,
-        height: 290,
+        height: 320,
         isMaximized: false,
         restoreRect: null,
       },
@@ -388,7 +389,7 @@ const initialState = {
         restoreRect: null,
       },
       mixer: {
-        open: true,
+        open: false,
         z: 6,
         x: 1170,
         y: 90,
@@ -424,6 +425,16 @@ const initialState = {
         y: 140,
         width: 360,
         height: 440,
+        isMaximized: false,
+        restoreRect: null,
+      },
+      renderExport: {
+        open: false,
+        z: 10,
+        x: 880,
+        y: 120,
+        width: 420,
+        height: 340,
         isMaximized: false,
         restoreRect: null,
       },
@@ -514,22 +525,7 @@ const initialState = {
       }),
     ],
     playlistTracks: makePlaylistTracks(10),
-    playlistClips: [
-      {
-        id: "clip-1",
-        patternId: "pat-1",
-        trackId: "trk-1",
-        barStart: 1,
-        barLength: 2,
-      },
-      {
-        id: "clip-2",
-        patternId: "pat-1",
-        trackId: "trk-2",
-        barStart: 5,
-        barLength: 2,
-      },
-    ],
+    playlistClips: [],
   },
   mixer: {
     selectedInsertId: "insert-1",
@@ -1076,6 +1072,7 @@ const dawSlice = createSlice({
           Date.now().toString(36) +
           "-" +
           Math.random().toString(36).slice(2, 6),
+        clipType: "pattern",
         patternId,
         trackId,
         barStart,
@@ -1101,6 +1098,223 @@ const dawSlice = createSlice({
 
         return a.barStart - b.barStart;
       });
+    },
+
+    addPlaylistAudioClip(state, action) {
+      const trackId = action.payload.trackId;
+      const hasTrack = state.project.playlistTracks.some(function (track) {
+        return track.id === trackId;
+      });
+      if (!hasTrack) {
+        return;
+      }
+
+      const samplePath = String(action.payload.samplePath || "").trim();
+      if (!samplePath) {
+        return;
+      }
+
+      const clipName =
+        String(action.payload.clipName || "").trim() ||
+        samplePath.split("/").pop() ||
+        "Audio";
+
+      const barStart = normalizeBarValue(
+        action.payload.barStart || 1,
+        1,
+        MAX_PLAYLIST_BARS,
+      );
+      const barLength = normalizeBarValue(
+        action.payload.barLength || 2,
+        MIN_CLIP_BAR_LENGTH,
+        64,
+      );
+      const newClipEnd = barStart + barLength;
+
+      state.project.playlistClips = state.project.playlistClips.filter(
+        function (clip) {
+          if (clip.trackId !== trackId) {
+            return true;
+          }
+
+          const start = normalizeBarValue(
+            clip.barStart || 1,
+            1,
+            MAX_PLAYLIST_BARS,
+          );
+          const length = normalizeBarValue(
+            clip.barLength || 1,
+            MIN_CLIP_BAR_LENGTH,
+            64,
+          );
+          const end = start + length;
+
+          return end <= barStart || start >= newClipEnd;
+        },
+      );
+
+      state.project.playlistClips.push({
+        id:
+          "clip-" +
+          Date.now().toString(36) +
+          "-" +
+          Math.random().toString(36).slice(2, 6),
+        clipType: "audio",
+        samplePath,
+        audioName: clipName,
+        trackId,
+        barStart,
+        barLength,
+      });
+
+      const trackOrderById = state.project.playlistTracks.reduce(function (
+        acc,
+        track,
+        index,
+      ) {
+        acc[track.id] = index;
+        return acc;
+      }, {});
+
+      state.project.playlistClips.sort(function (a, b) {
+        const trackDelta =
+          (trackOrderById[a.trackId] ?? 999) -
+          (trackOrderById[b.trackId] ?? 999);
+        if (trackDelta !== 0) {
+          return trackDelta;
+        }
+
+        return a.barStart - b.barStart;
+      });
+    },
+
+    addPlaylistSampleAsChannel(state, action) {
+      const trackId = String(action.payload.trackId || "").trim();
+      const hasTrack = state.project.playlistTracks.some(function (track) {
+        return track.id === trackId;
+      });
+      if (!hasTrack) {
+        return;
+      }
+
+      const sampleRef = String(action.payload.samplePath || "").trim();
+      if (!sampleRef) {
+        return;
+      }
+
+      const barStart = normalizeBarValue(
+        action.payload.barStart || 1,
+        1,
+        MAX_PLAYLIST_BARS,
+      );
+      const barLength = normalizeBarValue(
+        action.payload.barLength || 2,
+        MIN_CLIP_BAR_LENGTH,
+        64,
+      );
+      const newClipEnd = barStart + barLength;
+
+      const rawSampleName =
+        String(action.payload.clipName || "").trim() ||
+        sampleRef.split("/").pop() ||
+        "Sample";
+      const decodedName = (function () {
+        try {
+          return decodeURIComponent(rawSampleName);
+        } catch {
+          return rawSampleName;
+        }
+      })();
+      const channelName = decodedName.replace(/\.[^.]+$/, "").slice(0, 14);
+
+      const newChannelId = makeChannelId();
+      const preferredInsert = state.mixer.inserts.find(function (insert) {
+        return insert.id === "insert-1";
+      });
+      const firstInsert = state.mixer.inserts.find(function (insert) {
+        return !insert.isMaster;
+      });
+
+      state.project.channels.push({
+        id: newChannelId,
+        name: channelName || "Sample",
+        sampleRef,
+        pluginRef: "",
+        sampleSettings: makeSampleSettings(),
+        muted: false,
+        solo: false,
+        volume: 0.75,
+        pan: 0,
+        inputMode: "steps",
+        mixerInsertId: preferredInsert?.id || firstInsert?.id || "insert-1",
+      });
+
+      state.project.patterns.forEach(function (pattern) {
+        if (!pattern.stepGrid) {
+          pattern.stepGrid = {};
+        }
+
+        const length = Math.max(1, pattern.lengthSteps || 16);
+        pattern.stepGrid[newChannelId] = makeStepRow(length, []);
+      });
+
+      state.project.playlistClips = state.project.playlistClips.filter(
+        function (clip) {
+          if (clip.trackId !== trackId) {
+            return true;
+          }
+
+          const start = normalizeBarValue(
+            clip.barStart || 1,
+            1,
+            MAX_PLAYLIST_BARS,
+          );
+          const length = normalizeBarValue(
+            clip.barLength || 1,
+            MIN_CLIP_BAR_LENGTH,
+            64,
+          );
+          const end = start + length;
+          return end <= barStart || start >= newClipEnd;
+        },
+      );
+
+      state.project.playlistClips.push({
+        id:
+          "clip-" +
+          Date.now().toString(36) +
+          "-" +
+          Math.random().toString(36).slice(2, 6),
+        clipType: "audio",
+        samplePath: sampleRef,
+        audioName: decodedName,
+        channelId: newChannelId,
+        trackId,
+        barStart,
+        barLength,
+      });
+
+      const trackOrderById = state.project.playlistTracks.reduce(function (
+        acc,
+        track,
+        index,
+      ) {
+        acc[track.id] = index;
+        return acc;
+      }, {});
+
+      state.project.playlistClips.sort(function (a, b) {
+        const trackDelta =
+          (trackOrderById[a.trackId] ?? 999) -
+          (trackOrderById[b.trackId] ?? 999);
+        if (trackDelta !== 0) {
+          return trackDelta;
+        }
+
+        return a.barStart - b.barStart;
+      });
+
+      state.project.activeChannelId = newChannelId;
     },
 
     addPlaylistTrack(state) {
@@ -2010,6 +2224,8 @@ export const {
   renamePattern,
   setPatternColor,
   addPlaylistPatternClip,
+  addPlaylistAudioClip,
+  addPlaylistSampleAsChannel,
   addPlaylistTrack,
   removePlaylistClip,
   setPlaylistClipLength,

@@ -188,6 +188,14 @@
   padding: 8px;
 }
 
+.window-modal-backdrop {
+  position: fixed;
+  inset: 0;
+  background: rgba(7, 10, 16, 0.38);
+  backdrop-filter: blur(4px);
+  -webkit-backdrop-filter: blur(4px);
+}
+
 .piano-placeholder {
   width: 100%;
   height: 100%;

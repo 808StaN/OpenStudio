@@ -75,6 +75,31 @@ function clamp(value, min, max) {
   return Math.max(min, Math.min(max, value));
 }
 
+function toSafeSampleUrl(rawPath) {
+  const input = String(rawPath || "").trim();
+  if (!input) {
+    return "";
+  }
+
+  const hashIndex = input.indexOf("#");
+  const pathWithoutHash = hashIndex >= 0 ? input.slice(0, hashIndex) : input;
+  const parts = pathWithoutHash.split("/");
+
+  const encoded = parts.map(function (part, index) {
+    if (index === 0 && part === "") {
+      return "";
+    }
+
+    try {
+      return encodeURIComponent(decodeURIComponent(part));
+    } catch {
+      return encodeURIComponent(part);
+    }
+  });
+
+  return encoded.join("/");
+}
+
 function getSafeGraphicEqParams(raw) {
   const requestedPoints = Array.isArray(raw?.points) ? raw.points : [];
   const legacyBands = Array.isArray(raw?.bands) ? raw.bands : [];
@@ -405,46 +430,51 @@ function buildEqSpectrumFromAnalyserData(analyser, frequencyData) {
   const nyquist = Math.max(1, analyser.context.sampleRate * 0.5);
   const maxSourceIndex = frequencyData.length - 1;
 
-  const rawBins = Array.from({ length: EQ_SPECTRUM_BINS }).map(function (_, index) {
-    const t = EQ_SPECTRUM_BINS > 1 ? index / (EQ_SPECTRUM_BINS - 1) : 0;
-    const targetFrequency =
-      EQ_SPECTRUM_MIN_FREQ *
-      Math.pow(EQ_SPECTRUM_MAX_FREQ / EQ_SPECTRUM_MIN_FREQ, t);
-    const sourcePosition = Math.max(
-      0,
-      Math.min(
-        maxSourceIndex,
-        (targetFrequency / nyquist) * maxSourceIndex,
-      ),
-    );
-
-    const baseIndex = Math.floor(sourcePosition);
-    const blend = sourcePosition - baseIndex;
-
-    const left = frequencyData[baseIndex] || 0;
-    const right = frequencyData[Math.min(maxSourceIndex, baseIndex + 1)] || 0;
-    const interpolated = left + (right - left) * blend;
-
-    const averagingRadius = targetFrequency < 200 ? 3 : targetFrequency < 1200 ? 2 : 1;
-    let weightedSum = 0;
-    let weightTotal = 0;
-    for (let offset = -averagingRadius; offset <= averagingRadius; offset += 1) {
-      const sampleIndex = Math.max(
+  const rawBins = Array.from({ length: EQ_SPECTRUM_BINS }).map(
+    function (_, index) {
+      const t = EQ_SPECTRUM_BINS > 1 ? index / (EQ_SPECTRUM_BINS - 1) : 0;
+      const targetFrequency =
+        EQ_SPECTRUM_MIN_FREQ *
+        Math.pow(EQ_SPECTRUM_MAX_FREQ / EQ_SPECTRUM_MIN_FREQ, t);
+      const sourcePosition = Math.max(
         0,
-        Math.min(maxSourceIndex, baseIndex + offset),
+        Math.min(maxSourceIndex, (targetFrequency / nyquist) * maxSourceIndex),
       );
-      const sampleValue = frequencyData[sampleIndex] || 0;
-      const weight = averagingRadius + 1 - Math.abs(offset);
-      weightedSum += sampleValue * weight;
-      weightTotal += weight;
-    }
 
-    const averaged = weightTotal > 0 ? weightedSum / weightTotal : interpolated;
-    const combined = interpolated * 0.65 + averaged * 0.35;
+      const baseIndex = Math.floor(sourcePosition);
+      const blend = sourcePosition - baseIndex;
 
-    const normalized = clamp(combined / 255, 0, 1);
-    return Math.pow(normalized, 1.03);
-  });
+      const left = frequencyData[baseIndex] || 0;
+      const right = frequencyData[Math.min(maxSourceIndex, baseIndex + 1)] || 0;
+      const interpolated = left + (right - left) * blend;
+
+      const averagingRadius =
+        targetFrequency < 200 ? 3 : targetFrequency < 1200 ? 2 : 1;
+      let weightedSum = 0;
+      let weightTotal = 0;
+      for (
+        let offset = -averagingRadius;
+        offset <= averagingRadius;
+        offset += 1
+      ) {
+        const sampleIndex = Math.max(
+          0,
+          Math.min(maxSourceIndex, baseIndex + offset),
+        );
+        const sampleValue = frequencyData[sampleIndex] || 0;
+        const weight = averagingRadius + 1 - Math.abs(offset);
+        weightedSum += sampleValue * weight;
+        weightTotal += weight;
+      }
+
+      const averaged =
+        weightTotal > 0 ? weightedSum / weightTotal : interpolated;
+      const combined = interpolated * 0.65 + averaged * 0.35;
+
+      const normalized = clamp(combined / 255, 0, 1);
+      return Math.pow(normalized, 1.03);
+    },
+  );
 
   // Mild temporal smoothing between neighboring visual bins for a cleaner fill.
   const smoothedBins = rawBins.map(function (value, index) {
@@ -531,6 +561,7 @@ export function useAudioScheduler() {
   const patternsRef = useRef(patterns);
   const playlistClipsRef = useRef(playlistClips);
   const transportModeRef = useRef(transport.mode);
+  const scheduledAudioClipStartRef = useRef(new Map());
   const mixerSettingsRef = useRef(mixerSettings);
   const mixerGraphRef = useRef(null);
   const lastMeterDispatchAtRef = useRef(0);
@@ -605,7 +636,8 @@ export function useAudioScheduler() {
   );
 
   const loadSampleBuffer = useCallback(
-    async function (sampleUrl) {
+    async function (sampleRef) {
+      const sampleUrl = toSafeSampleUrl(sampleRef);
       if (!sampleUrl) {
         return null;
       }
@@ -967,7 +999,8 @@ export function useAudioScheduler() {
       );
 
       sampleRefs.forEach(function (sampleRef) {
-        if (!sampleBufferCacheRef.current.has(sampleRef)) {
+        const safeSampleUrl = toSafeSampleUrl(sampleRef);
+        if (!sampleBufferCacheRef.current.has(safeSampleUrl)) {
           void loadSampleBuffer(sampleRef);
         }
       });
@@ -1182,10 +1215,7 @@ export function useAudioScheduler() {
             Math.abs(prevMeter - node.meterLevel) > 0.018 ||
             (node.meterLevel < 0.01 && prevMeter >= 0.01);
 
-          if (
-            meterChanged ||
-            spectrumChanged
-          ) {
+          if (meterChanged || spectrumChanged) {
             lastMeterLevelsRef.current.set(insertId, node.meterLevel);
             if (isSpectrumTarget && nextSpectrum) {
               lastMeterSpectrumRef.current.set(insertId, nextSpectrum);
@@ -1366,6 +1396,76 @@ export function useAudioScheduler() {
           ),
         );
         source.stop(sampleStopAt + 0.005);
+      };
+
+      const schedulePlaylistAudioClip = function (
+        sampleBuffer,
+        time,
+        outputNode,
+        clipLengthSteps,
+        clipOffsetSteps,
+        channel,
+      ) {
+        if (!sampleBuffer) {
+          return;
+        }
+
+        const source = audioCtx.createBufferSource();
+        const gain = audioCtx.createGain();
+        const panner = audioCtx.createStereoPanner();
+
+        const offsetSec = Math.max(0, Number(clipOffsetSteps || 0) * sixteenth);
+        const clipDurationSec = Math.max(
+          0.01,
+          Math.max(
+            0,
+            Number(clipLengthSteps || 1) - Number(clipOffsetSteps || 0),
+          ) * sixteenth,
+        );
+        const remainingSampleDuration = Math.max(
+          0,
+          Number(sampleBuffer.duration || 0) - offsetSec,
+        );
+        const playDuration = Math.max(
+          0,
+          Math.min(remainingSampleDuration, clipDurationSec),
+        );
+        if (playDuration <= 0) {
+          return;
+        }
+
+        const fadeOutAt = time + Math.max(0, playDuration - 0.012);
+        const clipGain = clamp(Number(channel?.volume ?? 0.75) * 0.36, 0.04, 1);
+        const clipPan = clamp(Number(channel?.pan ?? 0), -1, 1);
+
+        source.buffer = sampleBuffer;
+        gain.gain.setValueAtTime(clipGain, time);
+        gain.gain.setValueAtTime(clipGain, fadeOutAt);
+        gain.gain.linearRampToValueAtTime(0.0001, time + playDuration);
+        panner.pan.setValueAtTime(clipPan, time);
+
+        source.connect(gain);
+        gain.connect(panner);
+        panner.connect(outputNode);
+
+        const voiceChannelId = channel?.id || "__playlist-audio__";
+        const channelVoices =
+          activeSampleVoicesRef.current.get(voiceChannelId) || new Set();
+        if (!activeSampleVoicesRef.current.has(voiceChannelId)) {
+          activeSampleVoicesRef.current.set(voiceChannelId, channelVoices);
+        }
+
+        const voice = { source, gain };
+        channelVoices.add(voice);
+        source.onended = function () {
+          channelVoices.delete(voice);
+          if (channelVoices.size === 0) {
+            activeSampleVoicesRef.current.delete(voiceChannelId);
+          }
+        };
+
+        source.start(time, offsetSec, playDuration);
+        source.stop(time + playDuration + 0.005);
       };
 
       const schedulePluginInstrument = function (
@@ -1569,12 +1669,13 @@ export function useAudioScheduler() {
           }
 
           const sampleRef = channel.sampleRef;
+          const safeSampleRef = toSafeSampleUrl(sampleRef);
           const pluginRef = String(channel.pluginRef || "");
           const plugin = getPluginInstrument(pluginRef);
           const hasPluginInstrument = Boolean(plugin && plugin.soundfont);
           const channelSettings = getSafeSampleSettings(channel.sampleSettings);
 
-          if (!sampleRef && !hasPluginInstrument) {
+          if (!safeSampleRef && !hasPluginInstrument) {
             return;
           }
 
@@ -1598,7 +1699,8 @@ export function useAudioScheduler() {
               return;
             }
 
-            const sampleBuffer = sampleBufferCacheRef.current.get(sampleRef);
+            const sampleBuffer =
+              sampleBufferCacheRef.current.get(safeSampleRef);
             if (sampleBuffer) {
               scheduleSample(
                 sampleBuffer,
@@ -1613,8 +1715,8 @@ export function useAudioScheduler() {
               return;
             }
 
-            if (!sampleLoadFailedRef.current.has(sampleRef)) {
-              void loadSampleBuffer(sampleRef);
+            if (!sampleLoadFailedRef.current.has(safeSampleRef)) {
+              void loadSampleBuffer(safeSampleRef);
             }
           };
 
@@ -1651,10 +1753,15 @@ export function useAudioScheduler() {
         return maxSongStep;
       };
 
-      const scheduleSongStep = function (songStep, noteTime) {
+      const scheduleSongStep = function (
+        songStep,
+        absoluteSongStep,
+        songLengthSteps,
+        noteTime,
+      ) {
         const allPatterns = patternsRef.current || [];
         const clips = playlistClipsRef.current || [];
-        if (allPatterns.length === 0 || clips.length === 0) {
+        if (clips.length === 0) {
           return;
         }
 
@@ -1664,11 +1771,13 @@ export function useAudioScheduler() {
         }, {});
 
         clips.forEach(function (clip) {
-          const pattern = patternsById[clip.patternId];
-          if (!pattern) {
-            return;
-          }
+          const clipType = String(clip.clipType || "pattern").toLowerCase();
+          const isAudioClip =
+            clipType === "audio" ||
+            (String(clip.samplePath || "").trim().length > 0 &&
+              String(clip.channelId || "").trim().length > 0);
 
+          const pattern = patternsById[clip.patternId];
           const clipStartStep = Math.max(
             0,
             Math.round((Number(clip.barStart || 1) - 1) * 16),
@@ -1680,6 +1789,59 @@ export function useAudioScheduler() {
           const relativeStep = songStep - clipStartStep;
 
           if (relativeStep < 0 || relativeStep >= clipLengthSteps) {
+            return;
+          }
+
+          if (isAudioClip) {
+            const cycleIndex = Math.floor(absoluteSongStep / songLengthSteps);
+            const absoluteClipStartStep =
+              cycleIndex * songLengthSteps + clipStartStep;
+            const alreadyScheduledAt = scheduledAudioClipStartRef.current.get(
+              clip.id,
+            );
+            if (alreadyScheduledAt === absoluteClipStartStep) {
+              return;
+            }
+
+            const clipChannel = (channelsRef.current || []).find(function (ch) {
+              return ch.id === clip.channelId;
+            });
+            const samplePath = toSafeSampleUrl(
+              clip.samplePath || clipChannel?.sampleRef,
+            );
+            if (!samplePath) {
+              return;
+            }
+
+            const graph = mixerGraphRef.current;
+            const outputNode = clipChannel
+              ? getInsertInputNodeForChannel(clipChannel)
+              : graph?.inserts?.get("master")?.inputGain ||
+                audioCtx.destination;
+            const audioClipBuffer =
+              sampleBufferCacheRef.current.get(samplePath);
+
+            if (audioClipBuffer) {
+              schedulePlaylistAudioClip(
+                audioClipBuffer,
+                noteTime,
+                outputNode,
+                clipLengthSteps,
+                relativeStep,
+                clipChannel,
+              );
+              scheduledAudioClipStartRef.current.set(
+                clip.id,
+                absoluteClipStartStep,
+              );
+            } else if (!sampleLoadFailedRef.current.has(samplePath)) {
+              void loadSampleBuffer(samplePath);
+            }
+
+            return;
+          }
+
+          if (!pattern) {
             return;
           }
 
@@ -1695,6 +1857,7 @@ export function useAudioScheduler() {
       nextNoteTimeRef.current = audioCtx.currentTime + 0.02;
       startedAtRef.current = nextNoteTimeRef.current;
       stepRef.current = 0;
+      scheduledAudioClipStartRef.current.clear();
 
       const tick = function () {
         const now = audioCtx.currentTime;
@@ -1707,7 +1870,12 @@ export function useAudioScheduler() {
           if (transportMode === "song") {
             const songLength = Math.max(1, getSongLengthInSteps());
             const currentSongStep = stepRef.current % songLength;
-            scheduleSongStep(currentSongStep, nextNoteTimeRef.current);
+            scheduleSongStep(
+              currentSongStep,
+              stepRef.current,
+              songLength,
+              nextNoteTimeRef.current,
+            );
           } else {
             const patternLength = Math.max(
               1,

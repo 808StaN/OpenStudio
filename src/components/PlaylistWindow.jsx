@@ -2,8 +2,11 @@ import { memo, useEffect, useMemo, useRef, useState } from "react";
 import { useDispatch, useSelector } from "react-redux";
 import {
   addPlaylistPatternClip,
+  addPlaylistSampleAsChannel,
   addPlaylistTrack,
+  openWindow,
   removePlaylistClip,
+  setActiveChannel,
   setActivePattern,
   setPlaylistClipPlacement,
   setPlaylistClipLength,
@@ -22,9 +25,14 @@ const MAX_BAR_WIDTH = 320;
 const DEFAULT_PATTERN_COLOR = "#4bef9f";
 const MIN_CLIP_BAR_LENGTH = 1 / 16;
 const PATTERN_DRAG_MIME = "application/x-daw-pattern";
+const SAMPLE_DRAG_MIME = "application/x-daw-sample";
 const MIDI_PITCH_MIN = 0;
 const MIDI_PITCH_MAX = 127;
 const PLAYLIST_PLAYHEAD_STEP_PHASE_COMPENSATION = 1;
+const AUDIO_CLIP_FALLBACK_BAR_LENGTH = 2;
+const AUDIO_WAVEFORM_BINS = 88;
+const AUDIO_WAVEFORM_STEP_SECONDS = 0.02;
+const AUDIO_WAVEFORM_MAX_BARS = 520;
 
 const SNAP_OPTIONS = [
   { key: "none", label: "(none)", stepSize: null },
@@ -71,6 +79,62 @@ function hexToRgb(hexColor) {
 function withAlpha(hexColor, alpha) {
   const rgb = hexToRgb(hexColor);
   return "rgba(" + rgb.r + ", " + rgb.g + ", " + rgb.b + ", " + alpha + ")";
+}
+
+function toSafeSampleUrl(rawPath) {
+  const input = String(rawPath || "").trim();
+  if (!input) {
+    return "";
+  }
+
+  const hashIndex = input.indexOf("#");
+  const pathWithoutHash = hashIndex >= 0 ? input.slice(0, hashIndex) : input;
+  const parts = pathWithoutHash.split("/");
+
+  const encoded = parts.map(function (part, index) {
+    if (index === 0 && part === "") {
+      return "";
+    }
+
+    try {
+      return encodeURIComponent(decodeURIComponent(part));
+    } catch {
+      return encodeURIComponent(part);
+    }
+  });
+
+  return encoded.join("/");
+}
+
+function buildWaveformPeaks(audioBuffer, bins) {
+  const peaks = [];
+  const sampleCount = Math.max(1, Number(audioBuffer?.length || 0));
+  const channels = Math.max(1, Number(audioBuffer?.numberOfChannels || 1));
+  const bucketCount = Math.max(
+    12,
+    Math.round(Number(bins || AUDIO_WAVEFORM_BINS)),
+  );
+  const bucketSize = Math.max(1, Math.floor(sampleCount / bucketCount));
+
+  for (let bucketIndex = 0; bucketIndex < bucketCount; bucketIndex += 1) {
+    const start = bucketIndex * bucketSize;
+    const end = Math.min(sampleCount, start + bucketSize);
+    let peak = 0;
+
+    for (let ch = 0; ch < channels; ch += 1) {
+      const channelData = audioBuffer.getChannelData(ch);
+      for (let i = start; i < end; i += 1) {
+        const value = Math.abs(channelData[i] || 0);
+        if (value > peak) {
+          peak = value;
+        }
+      }
+    }
+
+    peaks.push(Math.max(0.04, Math.min(1, peak)));
+  }
+
+  return peaks;
 }
 
 function getPatternPreviewNotes(pattern) {
@@ -214,6 +278,9 @@ export function PlaylistWindow() {
   const playlistBodyRef = useRef(null);
   const playlistHeaderRef = useRef(null);
   const playheadRef = useRef(null);
+  const audioDecodeContextRef = useRef(null);
+  const audioAnalysisCacheRef = useRef(new Map());
+  const audioAnalysisPromiseRef = useRef(new Map());
   const playheadStepRef = useRef(0);
   const playheadStepTimestampRef = useRef(0);
   const [barWidth, setBarWidth] = useState(INITIAL_BAR_WIDTH);
@@ -225,6 +292,7 @@ export function PlaylistWindow() {
   const [dropPreview, setDropPreview] = useState(null);
   const [isPointerOverPlaylist, setIsPointerOverPlaylist] = useState(false);
   const [lastHoverPlacement, setLastHoverPlacement] = useState(null);
+  const [, setWaveformTick] = useState(0);
 
   const activePatternId = useSelector(function (state) {
     return state.daw.project.activePatternId;
@@ -253,6 +321,63 @@ export function PlaylistWindow() {
   const transportMode = useSelector(function (state) {
     return state.daw.transport.mode;
   });
+
+  const ensureAudioDecodeContext = function () {
+    if (!audioDecodeContextRef.current) {
+      audioDecodeContextRef.current = new AudioContext();
+    }
+
+    return audioDecodeContextRef.current;
+  };
+
+  const getAudioAnalysis = async function (samplePath) {
+    const safePath = toSafeSampleUrl(samplePath);
+    if (!safePath) {
+      return null;
+    }
+
+    const cached = audioAnalysisCacheRef.current.get(safePath);
+    if (cached) {
+      return cached;
+    }
+
+    const pending = audioAnalysisPromiseRef.current.get(safePath);
+    if (pending) {
+      return pending;
+    }
+
+    const request = (async function () {
+      const audioCtx = ensureAudioDecodeContext();
+      if (audioCtx.state === "suspended") {
+        await audioCtx.resume();
+      }
+
+      const response = await fetch(safePath);
+      if (!response.ok) {
+        throw new Error("Cannot load audio clip");
+      }
+
+      const data = await response.arrayBuffer();
+      const buffer = await audioCtx.decodeAudioData(data.slice(0));
+      const analysis = {
+        durationSec: Math.max(0.01, Number(buffer.duration || 0.01)),
+        waveformPeaks: buildWaveformPeaks(buffer, AUDIO_WAVEFORM_BINS),
+      };
+
+      audioAnalysisCacheRef.current.set(safePath, analysis);
+      return analysis;
+    })();
+
+    audioAnalysisPromiseRef.current.set(safePath, request);
+
+    try {
+      return await request;
+    } catch {
+      return null;
+    } finally {
+      audioAnalysisPromiseRef.current.delete(safePath);
+    }
+  };
 
   const patternsById = patterns.reduce(function (acc, pattern) {
     acc[pattern.id] = pattern;
@@ -593,7 +718,9 @@ export function PlaylistWindow() {
 
     event.preventDefault();
     event.stopPropagation();
-    dispatch(setActivePattern(clip.patternId));
+    if (clip.clipType !== "audio" && clip.patternId) {
+      dispatch(setActivePattern(clip.patternId));
+    }
 
     const startClientX = event.clientX;
     const startBar = Math.max(1, Math.round(Number(clip.barStart || 1)));
@@ -730,11 +857,42 @@ export function PlaylistWindow() {
 
   const hasDraggedPatternData = function (event) {
     const types = Array.from(event.dataTransfer?.types || []);
-    return (
-      types.includes(PATTERN_DRAG_MIME) ||
-      types.includes("text/plain") ||
-      types.includes("Text")
-    );
+    if (types.includes(PATTERN_DRAG_MIME)) {
+      return true;
+    }
+
+    return normalizePatternIds(getPatternDragSession()).length > 0;
+  };
+
+  const getDraggedSamplePayload = function (event) {
+    const rawPayloads = [
+      String(event.dataTransfer?.getData(SAMPLE_DRAG_MIME) || ""),
+      String(event.dataTransfer?.getData("text/plain") || ""),
+    ].filter(Boolean);
+
+    for (let index = 0; index < rawPayloads.length; index += 1) {
+      try {
+        const payload = JSON.parse(rawPayloads[index]);
+        const samplePath = String(payload.samplePath || "").trim();
+        if (!samplePath) {
+          continue;
+        }
+
+        return {
+          samplePath,
+          clipName: String(payload.file || "").trim() || "Audio",
+        };
+      } catch {
+        continue;
+      }
+    }
+
+    return null;
+  };
+
+  const hasDraggedSampleData = function (event) {
+    const types = Array.from(event.dataTransfer?.types || []);
+    return types.includes(SAMPLE_DRAG_MIME);
   };
 
   const resolveBarStartFromPointer = function (event, trackElement) {
@@ -796,6 +954,75 @@ export function PlaylistWindow() {
 
     dispatch(setActivePattern(placements[placements.length - 1].patternId));
   };
+
+  const placeAudioClipOnTrack = function (trackId, startBar, samplePayload) {
+    if (!trackId || !samplePayload?.samplePath) {
+      return;
+    }
+
+    void (async function () {
+      const analysis = await getAudioAnalysis(samplePayload.samplePath);
+      const secondsPerBar = (60 / Math.max(1, bpm)) * 4;
+      const resolvedBars = analysis
+        ? analysis.durationSec / Math.max(0.001, secondsPerBar)
+        : AUDIO_CLIP_FALLBACK_BAR_LENGTH;
+
+      dispatch(
+        addPlaylistSampleAsChannel({
+          trackId,
+          barStart: clamp(startBar, 1, playlistBarCount),
+          barLength: clamp(resolvedBars, MIN_CLIP_BAR_LENGTH, 64),
+          samplePath: toSafeSampleUrl(samplePayload.samplePath),
+          clipName: samplePayload.clipName,
+        }),
+      );
+    })();
+  };
+
+  useEffect(
+    function () {
+      const audioClips = clips.filter(function (clip) {
+        return String(clip.clipType || "pattern").toLowerCase() === "audio";
+      });
+
+      if (audioClips.length === 0) {
+        return;
+      }
+
+      let isCanceled = false;
+
+      const warmup = async function () {
+        await Promise.all(
+          audioClips.map(async function (clip) {
+            const samplePath = String(clip.samplePath || "").trim();
+            if (!samplePath) {
+              return;
+            }
+
+            const safePath = toSafeSampleUrl(samplePath);
+            if (audioAnalysisCacheRef.current.has(safePath)) {
+              return;
+            }
+
+            await getAudioAnalysis(safePath);
+          }),
+        );
+
+        if (!isCanceled) {
+          setWaveformTick(function (value) {
+            return value + 1;
+          });
+        }
+      };
+
+      void warmup();
+
+      return function () {
+        isCanceled = true;
+      };
+    },
+    [clips, bpm],
+  );
 
   useEffect(
     function () {
@@ -1018,45 +1245,83 @@ export function PlaylistWindow() {
           };
 
           const onTrackGridDragOver = function (event) {
-            if (!hasDraggedPatternData(event)) {
+            const acceptsSample = hasDraggedSampleData(event);
+            const draggedSample = acceptsSample
+              ? getDraggedSamplePayload(event)
+              : null;
+            const acceptsPattern = hasDraggedPatternData(event);
+
+            if (!acceptsSample && !acceptsPattern) {
               return;
             }
 
             event.preventDefault();
             event.dataTransfer.dropEffect = "copy";
 
-            const patternIds = resolvePatternIdsForPlacement(
-              getDraggedPatternIdsWithFallback(event),
-            );
-            if (patternIds.length === 0) {
-              return;
-            }
-
             const barStart = resolveBarStartFromPointer(
               event,
               event.currentTarget,
             );
-            const placements = buildDropPlacements(
-              track.id,
-              barStart,
-              patternIds,
-            );
+
+            const placements = draggedSample
+              ? [
+                  {
+                    clipType: "audio",
+                    trackId: track.id,
+                    barStart,
+                    barLength: 2,
+                    clipName: draggedSample.clipName,
+                    samplePath: draggedSample.samplePath,
+                  },
+                ]
+              : acceptsSample
+                ? [
+                    {
+                      clipType: "audio",
+                      trackId: track.id,
+                      barStart,
+                      barLength: 2,
+                      clipName: "Audio",
+                      samplePath: "",
+                    },
+                  ]
+                : buildDropPlacements(
+                    track.id,
+                    barStart,
+                    normalizePatternIds(
+                      getDraggedPatternIdsWithFallback(event),
+                    ),
+                  ).map(function (placement) {
+                    return {
+                      ...placement,
+                      clipType: "pattern",
+                    };
+                  });
+
             if (placements.length === 0) {
               return;
             }
 
             setDropPreview(function (prev) {
-              const samePatternList =
+              const samePlacements =
                 prev &&
-                prev.patternIds.length === patternIds.length &&
-                prev.patternIds.every(function (id, index) {
-                  return id === patternIds[index];
+                prev.placements.length === placements.length &&
+                prev.placements.every(function (item, index) {
+                  const next = placements[index];
+                  return (
+                    item.trackId === next.trackId &&
+                    item.barStart === next.barStart &&
+                    item.barLength === next.barLength &&
+                    item.clipType === next.clipType &&
+                    item.patternId === next.patternId &&
+                    item.samplePath === next.samplePath
+                  );
                 });
 
               if (
                 prev &&
                 prev.trackId === track.id &&
-                samePatternList &&
+                samePlacements &&
                 Math.abs(prev.barStart - barStart) <= 0.0001
               ) {
                 return prev;
@@ -1064,7 +1329,6 @@ export function PlaylistWindow() {
 
               return {
                 trackId: track.id,
-                patternIds,
                 barStart,
                 placements,
               };
@@ -1116,23 +1380,41 @@ export function PlaylistWindow() {
           };
 
           const onTrackGridDrop = function (event) {
-            if (!hasDraggedPatternData(event)) {
+            const acceptsSample = hasDraggedSampleData(event);
+            const draggedSample = acceptsSample
+              ? getDraggedSamplePayload(event)
+              : null;
+            const acceptsPattern = hasDraggedPatternData(event);
+
+            if (!acceptsSample && !acceptsPattern) {
               return;
             }
 
             event.preventDefault();
-            const patternIds = resolvePatternIdsForPlacement(
-              getDraggedPatternIdsWithFallback(event),
-            );
-            if (patternIds.length === 0) {
-              return;
-            }
 
             const barStart = resolveBarStartFromPointer(
               event,
               event.currentTarget,
             );
-            placePatternsOnTrack(track.id, barStart, patternIds);
+
+            if (acceptsSample) {
+              if (!draggedSample) {
+                setDropPreview(null);
+                return;
+              }
+
+              placeAudioClipOnTrack(track.id, barStart, draggedSample);
+            } else {
+              const patternIds = normalizePatternIds(
+                getDraggedPatternIdsWithFallback(event),
+              );
+              if (patternIds.length === 0) {
+                return;
+              }
+
+              placePatternsOnTrack(track.id, barStart, patternIds);
+            }
+
             setDropPreview(null);
           };
 
@@ -1167,7 +1449,9 @@ export function PlaylistWindow() {
                 {dropPlacementsOnTrack.map(function (placement) {
                   const previewPattern = patternsById[placement.patternId];
                   const previewColor =
-                    previewPattern?.color || DEFAULT_PATTERN_COLOR;
+                    placement.clipType === "audio"
+                      ? "#69b5ff"
+                      : previewPattern?.color || DEFAULT_PATTERN_COLOR;
                   const previewBarLength = clamp(
                     placement.barLength,
                     MIN_CLIP_BAR_LENGTH,
@@ -1204,9 +1488,25 @@ export function PlaylistWindow() {
                   );
                 })}
                 {clipsOnTrack.map(function (clip) {
-                  const pattern = patternsById[clip.patternId];
-                  const clipColor = pattern?.color || DEFAULT_PATTERN_COLOR;
-                  const isActivePattern = activePatternId === clip.patternId;
+                  const isAudioClip = clip.clipType === "audio";
+                  const pattern = isAudioClip
+                    ? null
+                    : patternsById[clip.patternId];
+                  const audioAnalysis = isAudioClip
+                    ? audioAnalysisCacheRef.current.get(
+                        toSafeSampleUrl(clip.samplePath),
+                      )
+                    : null;
+                  const waveformPeaks = Array.isArray(
+                    audioAnalysis?.waveformPeaks,
+                  )
+                    ? audioAnalysis.waveformPeaks
+                    : [];
+                  const clipColor = isAudioClip
+                    ? "#69b5ff"
+                    : pattern?.color || DEFAULT_PATTERN_COLOR;
+                  const isActivePattern =
+                    !isAudioClip && activePatternId === clip.patternId;
                   const patternLength = Math.max(1, pattern?.lengthSteps || 16);
                   const clipLengthSteps = Math.max(
                     1,
@@ -1214,11 +1514,39 @@ export function PlaylistWindow() {
                   );
                   const previewNotes =
                     previewNotesByPatternId[clip.patternId] || [];
+                  const secondsPerBar = (60 / Math.max(1, bpm)) * 4;
+                  const clipDurationSec = Math.max(
+                    0.01,
+                    Number(clip.barLength || 1) * secondsPerBar,
+                  );
+                  const sourceDurationSec = Math.max(
+                    0.01,
+                    Number(audioAnalysis?.durationSec || 0.01),
+                  );
+                  const visibleDurationSec = Math.min(
+                    sourceDurationSec,
+                    clipDurationSec,
+                  );
+                  const waveformBarCount = isAudioClip
+                    ? Math.max(
+                        1,
+                        Math.min(
+                          AUDIO_WAVEFORM_MAX_BARS,
+                          Math.floor(
+                            visibleDurationSec / AUDIO_WAVEFORM_STEP_SECONDS,
+                          ),
+                        ),
+                      )
+                    : 0;
 
                   return (
                     <div
                       key={clip.id}
-                      className={"clip" + (isActivePattern ? " is-active" : "")}
+                      className={
+                        "clip" +
+                        (isActivePattern ? " is-active" : "") +
+                        (isAudioClip ? " is-audio" : "")
+                      }
                       style={{
                         borderColor: withAlpha(clipColor, 0.9),
                         boxShadow: isActivePattern
@@ -1245,21 +1573,102 @@ export function PlaylistWindow() {
                         event.stopPropagation();
                         dispatch(removePlaylistClip(clip.id));
                       }}
+                      onDoubleClick={function (event) {
+                        if (event.target.closest(".clip-resize-handle")) {
+                          return;
+                        }
+
+                        event.preventDefault();
+                        event.stopPropagation();
+
+                        if (isAudioClip) {
+                          if (!clip.channelId) {
+                            return;
+                          }
+
+                          dispatch(setActiveChannel(clip.channelId));
+                          dispatch(openWindow("sampleSettings"));
+                          return;
+                        }
+
+                        if (!clip.patternId) {
+                          return;
+                        }
+
+                        dispatch(setActivePattern(clip.patternId));
+                        dispatch(openWindow("channelRack"));
+                      }}
                     >
-                      <ClipPreviewNotes
-                        clipId={clip.id}
-                        previewNotes={previewNotes}
-                        clipLengthSteps={clipLengthSteps}
-                        patternLength={patternLength}
-                      />
+                      {isAudioClip ? (
+                        <div className="clip-audio-preview">
+                          {Array.from({ length: waveformBarCount }).map(
+                            function (_, index) {
+                              const timeSec =
+                                (index / Math.max(1, waveformBarCount)) *
+                                visibleDurationSec;
+                              const sourceRatio =
+                                sourceDurationSec > 0
+                                  ? timeSec / sourceDurationSec
+                                  : 0;
+                              const sourceIndex = Math.max(
+                                0,
+                                Math.min(
+                                  waveformPeaks.length - 1,
+                                  Math.floor(
+                                    sourceRatio * waveformPeaks.length,
+                                  ),
+                                ),
+                              );
+                              const peak = waveformPeaks[sourceIndex] || 0.04;
+
+                              return (
+                                <span
+                                  key={clip.id + "-wave-" + index}
+                                  className="clip-wave-bar"
+                                  style={{
+                                    left:
+                                      (timeSec /
+                                        Math.max(0.0001, clipDurationSec)) *
+                                        100 +
+                                      "%",
+                                    width:
+                                      (AUDIO_WAVEFORM_STEP_SECONDS /
+                                        Math.max(0.0001, clipDurationSec)) *
+                                        100 +
+                                      "%",
+                                    height: clamp(peak * 96, 6, 96) + "%",
+                                  }}
+                                />
+                              );
+                            },
+                          )}
+                        </div>
+                      ) : (
+                        <ClipPreviewNotes
+                          clipId={clip.id}
+                          previewNotes={previewNotes}
+                          clipLengthSteps={clipLengthSteps}
+                          patternLength={patternLength}
+                        />
+                      )}
                       <span className="clip-label">
-                        {pattern?.name || "Pattern"}
+                        {isAudioClip
+                          ? clip.audioName || "Audio"
+                          : pattern?.name || "Pattern"}
                       </span>
                       <button
                         type="button"
                         className="clip-resize-handle"
-                        title="Resize pattern clip"
-                        aria-label="Resize pattern clip"
+                        title={
+                          isAudioClip
+                            ? "Resize audio clip"
+                            : "Resize pattern clip"
+                        }
+                        aria-label={
+                          isAudioClip
+                            ? "Resize audio clip"
+                            : "Resize pattern clip"
+                        }
                         onMouseDown={function (event) {
                           startResize(event, clip, track.id);
                         }}

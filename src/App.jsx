@@ -1,4 +1,4 @@
-import { useEffect } from "react";
+import { useEffect, useRef } from "react";
 import { useDispatch, useSelector } from "react-redux";
 import { useAudioScheduler } from "./audio/useAudioScheduler";
 import { BrowserPanel } from "./components/BrowserPanel";
@@ -9,9 +9,10 @@ import { MixerWindow } from "./components/MixerWindow";
 import { PatternListWindow } from "./components/PatternListWindow";
 import { PianoRollWindow } from "./components/PianoRollWindow";
 import { PlaylistWindow } from "./components/PlaylistWindow";
+import { RenderWindow } from "./components/RenderWindow";
 import { SampleSettingsWindow } from "./components/SampleSettingsWindow";
 import { TopToolbar } from "./components/TopToolbar";
-import { setPlaying, undoLastChange } from "./store";
+import { setPlaying, undoLastChange, toggleWindowMaximize } from "./store";
 import "./styles/app-shell.css";
 import "./styles/browser.css";
 import "./styles/channel-rack.css";
@@ -19,6 +20,7 @@ import "./styles/piano-roll.css";
 import "./styles/playlist.css";
 import "./styles/mixer.css";
 import "./styles/pattern-list.css";
+import "./styles/render-window.css";
 
 function shouldIgnoreSpaceShortcut(target) {
   if (!(target instanceof HTMLElement)) {
@@ -129,6 +131,38 @@ function App() {
 
   useAudioScheduler();
 
+  const initialMaxAppliedRef = useRef(false);
+
+  useEffect(
+    function () {
+      if (initialMaxAppliedRef.current) {
+        return;
+      }
+
+      initialMaxAppliedRef.current = true;
+
+      Object.keys(windows).forEach(function (winId) {
+        const w = windows[winId];
+        if (!w || !w.open || !w.startMaximized) {
+          return;
+        }
+
+        if (w.isMaximized) {
+          // already maximized in state, skip toggling
+          return;
+        }
+
+        const workspace = document.querySelector(".workspace-surface");
+        const viewport = workspace
+          ? { width: workspace.clientWidth, height: workspace.clientHeight }
+          : { width: window.innerWidth, height: window.innerHeight };
+
+        dispatch(toggleWindowMaximize({ id: winId, viewport }));
+      });
+    },
+    [dispatch, windows],
+  );
+
   useEffect(
     function () {
       const onKeyDown = function (event) {
@@ -200,6 +234,7 @@ function App() {
             title="Channel Rack"
             minWidth={620}
             minHeight={250}
+            centerOnOpen
           >
             <ChannelRackWindow />
           </FloatingWindow>
@@ -247,6 +282,20 @@ function App() {
             minHeight={320}
           >
             <PatternListWindow />
+          </FloatingWindow>
+
+          <FloatingWindow
+            id="renderExport"
+            title="Render"
+            minWidth={460}
+            minHeight={340}
+            modal
+            centerOnOpen
+            disableDrag
+            disableResize
+            hideMaximize
+          >
+            <RenderWindow />
           </FloatingWindow>
         </main>
       </div>
