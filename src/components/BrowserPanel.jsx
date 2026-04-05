@@ -45,6 +45,14 @@ export function BrowserPanel() {
   const [drumkitGroups, setDrumkitGroups] = useState([]);
   const [manifestStatus, setManifestStatus] = useState("loading");
   const [expandedByParent, setExpandedByParent] = useState({});
+  const [pluginExpandedByFolder, setPluginExpandedByFolder] = useState(
+    function () {
+      return browserData.plugins.reduce(function (acc, group) {
+        acc[group.folder] = false;
+        return acc;
+      }, {});
+    },
+  );
   const previewAudioContextRef = useRef(null);
   const previewSourceRef = useRef(null);
   const previewBufferCacheRef = useRef(new Map());
@@ -257,6 +265,15 @@ export function BrowserPanel() {
     });
   };
 
+  const togglePluginFolder = function (folderName) {
+    setPluginExpandedByFolder(function (previousState) {
+      return {
+        ...previousState,
+        [folderName]: !previousState[folderName],
+      };
+    });
+  };
+
   const loadManifest = useCallback(async function () {
     setManifestStatus("loading");
     try {
@@ -416,58 +433,72 @@ export function BrowserPanel() {
 
         {browserTab === "plugins"
           ? browserData.plugins.map(function (group) {
+              const isOpen = Boolean(pluginExpandedByFolder[group.folder]);
               return (
                 <section className="tree-group" key={group.folder}>
-                  <div className="tree-folder plugin-folder">
-                    <span className="caret">v</span>
+                  <button
+                    className="tree-folder plugin-folder"
+                    onClick={function () {
+                      togglePluginFolder(group.folder);
+                    }}
+                  >
+                    <span className="caret">{isOpen ? "v" : ">"}</span>
                     {group.folder}
-                  </div>
-                  <ul className="tree-list">
-                    {group.items.map(function (item) {
-                      const isInstrument = group.type === "instrument";
-                      const key = isInstrument
-                        ? group.folder + "-" + item.pluginRef
-                        : group.folder + "-" + item.effectType;
-                      const payload = isInstrument
-                        ? {
-                            tab: "plugins",
-                            type: "instrument",
-                            pluginRef: item.pluginRef,
-                            pluginName: item.name,
-                          }
-                        : {
-                            tab: "plugins",
-                            type: "effect",
-                            effectType: item.effectType,
-                            effectName: item.name,
-                          };
-                      const mimeType = isInstrument
-                        ? "application/x-daw-plugin"
-                        : "application/x-daw-effect";
+                  </button>
 
-                      return (
-                        <li
-                          key={key}
-                          className={
-                            "tree-item plugin-item" +
-                            (isInstrument ? " instrument-item" : " effect-item")
-                          }
-                          title={item.description}
-                          draggable
-                          onDragStart={function (event) {
-                            const payloadText = JSON.stringify(payload);
-                            event.dataTransfer.setData(
-                              mimeType,
-                              payloadText,
-                            );
-                            event.dataTransfer.setData("text/plain", payloadText);
-                          }}
-                        >
-                          {item.name}
-                        </li>
-                      );
-                    })}
-                  </ul>
+                  {isOpen ? (
+                    <ul className="tree-list">
+                      {group.items.map(function (item) {
+                        const isInstrument = group.type === "instrument";
+                        const key = isInstrument
+                          ? group.folder + "-" + item.pluginRef
+                          : group.folder + "-" + item.effectType;
+                        const payload = isInstrument
+                          ? {
+                              tab: "plugins",
+                              type: "instrument",
+                              pluginRef: item.pluginRef,
+                              pluginName: item.name,
+                            }
+                          : {
+                              tab: "plugins",
+                              type: "effect",
+                              effectType: item.effectType,
+                              effectName: item.name,
+                            };
+                        const mimeType = isInstrument
+                          ? "application/x-daw-plugin"
+                          : "application/x-daw-effect";
+
+                        return (
+                          <li
+                            key={key}
+                            className={
+                              "tree-item plugin-item" +
+                              (isInstrument
+                                ? " instrument-item"
+                                : " effect-item")
+                            }
+                            title={item.description}
+                            draggable
+                            onDragStart={function (event) {
+                              const payloadText = JSON.stringify(payload);
+                              event.dataTransfer.setData(
+                                mimeType,
+                                payloadText,
+                              );
+                              event.dataTransfer.setData(
+                                "text/plain",
+                                payloadText,
+                              );
+                            }}
+                          >
+                            {item.name}
+                          </li>
+                        );
+                      })}
+                    </ul>
+                  ) : null}
                 </section>
               );
             })

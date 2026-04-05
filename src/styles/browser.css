@@ -98,11 +98,11 @@
 }
 
 .plugin-folder {
-  cursor: default;
+  cursor: pointer;
 }
 
 .plugin-folder:hover {
-  background: transparent;
+  background: rgba(255, 255, 255, 0.05);
 }
 
 .caret {

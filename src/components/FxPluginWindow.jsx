@@ -1,9 +1,15 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useDispatch, useSelector } from "react-redux";
-import { setFxSlotGraphicEqPoint } from "../store";
+import {
+  setFxSlotEffectType,
+  setFxSlotGraphicEqPoint,
+  toggleFxSlot,
+} from "../store";
 
 const FX_EFFECT_GRAPHIC_EQ = "graphic-eq";
-const GRAPHIC_EQ_DEFAULT_POINT_FREQUENCIES = [50, 100, 250, 500, 1000, 3000, 8000];
+const GRAPHIC_EQ_DEFAULT_POINT_FREQUENCIES = [
+  50, 100, 250, 500, 1000, 3000, 8000,
+];
 const GRAPHIC_EQ_BAND_TYPES = [
   { value: "peaking", label: "Bell" },
   { value: "lowshelf", label: "Low Shelf" },
@@ -17,7 +23,9 @@ const GRAPH_MIN_FREQ = 20;
 const GRAPH_MAX_FREQ = 20000;
 const GRAPH_MAX_DB = 18;
 const GRAPH_GRID_ROWS_PER_SIDE = 4;
-const GRAPH_FREQUENCY_GUIDES = [20, 50, 100, 200, 500, 1000, 2000, 5000, 10000, 20000];
+const GRAPH_FREQUENCY_GUIDES = [
+  20, 50, 100, 200, 500, 1000, 2000, 5000, 10000, 20000,
+];
 const WHEEL_SHAPE_STEP_PERCENT = 2;
 const PEAKING_Q_MIN = 0.35;
 const PEAKING_Q_MAX = 8;
@@ -47,7 +55,9 @@ function getDefaultEqBandType(index) {
 }
 
 function sanitizeEqBandType(raw, fallback) {
-  const requested = String(raw || "").trim().toLowerCase();
+  const requested = String(raw || "")
+    .trim()
+    .toLowerCase();
   if (
     GRAPHIC_EQ_BAND_TYPES.some(function (item) {
       return item.value === requested;
@@ -56,7 +66,9 @@ function sanitizeEqBandType(raw, fallback) {
     return requested;
   }
 
-  const safeFallback = String(fallback || "").trim().toLowerCase();
+  const safeFallback = String(fallback || "")
+    .trim()
+    .toLowerCase();
   if (
     GRAPHIC_EQ_BAND_TYPES.some(function (item) {
       return item.value === safeFallback;
@@ -146,8 +158,7 @@ function getPointShapePercent(point) {
 
   if (bandType === "peaking") {
     const clampedQ = clamp(q, PEAKING_Q_MIN, PEAKING_Q_MAX);
-    const t =
-      (PEAKING_Q_MAX - clampedQ) / (PEAKING_Q_MAX - PEAKING_Q_MIN);
+    const t = (PEAKING_Q_MAX - clampedQ) / (PEAKING_Q_MAX - PEAKING_Q_MIN);
     return Math.round(clamp(t, 0, 1) * 100);
   }
 
@@ -184,28 +195,30 @@ function getSafeGraphicEqParams(raw) {
   const requestedPoints = Array.isArray(raw?.points) ? raw.points : [];
   const legacyBands = Array.isArray(raw?.bands) ? raw.bands : [];
   return {
-    points: GRAPHIC_EQ_DEFAULT_POINT_FREQUENCIES.map(function (defaultFreq, index) {
-      return {
-        frequencyHz: clamp(
-          Number(requestedPoints[index]?.frequencyHz || defaultFreq),
-          GRAPH_MIN_FREQ,
-          GRAPH_MAX_FREQ,
-        ),
-        gainDb: clamp(
-          Number(
-            requestedPoints[index]?.gainDb ??
-              (Number.isFinite(legacyBands[index]) ? legacyBands[index] : 0),
+    points: GRAPHIC_EQ_DEFAULT_POINT_FREQUENCIES.map(
+      function (defaultFreq, index) {
+        return {
+          frequencyHz: clamp(
+            Number(requestedPoints[index]?.frequencyHz || defaultFreq),
+            GRAPH_MIN_FREQ,
+            GRAPH_MAX_FREQ,
           ),
-          -GRAPH_MAX_DB,
-          GRAPH_MAX_DB,
-        ),
-        q: clamp(Number(requestedPoints[index]?.q || 1.2), 0.25, 8),
-        bandType: sanitizeEqBandType(
-          requestedPoints[index]?.bandType,
-          getDefaultEqBandType(index),
-        ),
-      };
-    }),
+          gainDb: clamp(
+            Number(
+              requestedPoints[index]?.gainDb ??
+                (Number.isFinite(legacyBands[index]) ? legacyBands[index] : 0),
+            ),
+            -GRAPH_MAX_DB,
+            GRAPH_MAX_DB,
+          ),
+          q: clamp(Number(requestedPoints[index]?.q || 1.2), 0.25, 8),
+          bandType: sanitizeEqBandType(
+            requestedPoints[index]?.bandType,
+            getDefaultEqBandType(index),
+          ),
+        };
+      },
+    ),
   };
 }
 
@@ -251,14 +264,14 @@ function buildGraphicEqPath(params, width, height) {
         influence = 1 / (1 + Math.exp((logCenter - logFrequency) * slope));
       } else if (point.bandType === "lowpass") {
         const slope = clamp(qFactor, 0.3, 6) * 2.4;
-        const attenuation = GRAPH_MAX_DB /
-          (1 + Math.exp(-(logFrequency - logCenter) * slope));
+        const attenuation =
+          GRAPH_MAX_DB / (1 + Math.exp(-(logFrequency - logCenter) * slope));
         db -= attenuation;
         return;
       } else if (point.bandType === "highpass") {
         const slope = clamp(qFactor, 0.3, 6) * 2.4;
-        const attenuation = GRAPH_MAX_DB /
-          (1 + Math.exp(-(logCenter - logFrequency) * slope));
+        const attenuation =
+          GRAPH_MAX_DB / (1 + Math.exp(-(logCenter - logFrequency) * slope));
         db -= attenuation;
         return;
       }
@@ -270,14 +283,17 @@ function buildGraphicEqPath(params, width, height) {
   };
 
   const sampleCount = 120;
-  const points = Array.from({ length: sampleCount + 1 }).map(function (_, index) {
-    const t = index / sampleCount;
-    const freq = GRAPH_MIN_FREQ * Math.pow(GRAPH_MAX_FREQ / GRAPH_MIN_FREQ, t);
-    return {
-      x: toX(freq),
-      y: toY(evaluateDb(freq)),
-    };
-  });
+  const points = Array.from({ length: sampleCount + 1 }).map(
+    function (_, index) {
+      const t = index / sampleCount;
+      const freq =
+        GRAPH_MIN_FREQ * Math.pow(GRAPH_MAX_FREQ / GRAPH_MIN_FREQ, t);
+      return {
+        x: toX(freq),
+        y: toY(evaluateDb(freq)),
+      };
+    },
+  );
 
   return points
     .map(function (point, index) {
@@ -294,6 +310,7 @@ export function FxPluginWindow() {
   const [draggingPointIndex, setDraggingPointIndex] = useState(null);
   const [editingField, setEditingField] = useState(null);
   const [editingValue, setEditingValue] = useState("");
+  const [isEmptyDropTarget, setIsEmptyDropTarget] = useState(false);
 
   const inserts = useSelector(function (state) {
     return state.daw.mixer.inserts;
@@ -315,7 +332,9 @@ export function FxPluginWindow() {
     inserts[0] ||
     null;
 
-  const fxSlots = Array.isArray(activeInsert?.fxSlots) ? activeInsert.fxSlots : [];
+  const fxSlots = Array.isArray(activeInsert?.fxSlots)
+    ? activeInsert.fxSlots
+    : [];
   const activeSlot =
     fxSlots.find(function (slot) {
       return slot.id === fxEditorTarget?.slotId;
@@ -323,30 +342,124 @@ export function FxPluginWindow() {
     fxSlots[0] ||
     null;
 
-  if (!activeInsert || !activeSlot) {
-    return (
-      <section className="fx-plugin-panel fx-window-panel">
-        <div className="fx-empty-slot">
-          <p>Brak wybranego slotu FX.</p>
-          <p>Kliknij slot w Mixerze, aby otworzyc edytor efektu.</p>
-        </div>
-      </section>
-    );
-  }
+  const readEffectPayloadFromDataTransfer = function (dataTransfer) {
+    if (!dataTransfer) {
+      return null;
+    }
 
-  if (activeSlot.effectType !== FX_EFFECT_GRAPHIC_EQ) {
-    return (
-      <section className="fx-plugin-panel fx-window-panel">
-        <div className="fx-empty-slot">
-          <p>Ten slot jest pusty.</p>
-          <p>Przeciagnij efekt z Browser/Plugins/Effects na slot w Mixerze.</p>
-        </div>
-      </section>
-    );
-  }
+    const parsePayload = function (raw) {
+      if (!raw) {
+        return null;
+      }
 
-  const eqParams = getSafeGraphicEqParams(activeSlot.params);
-  const eqCurvePath = buildGraphicEqPath(eqParams, GRAPH_WIDTH, GRAPH_HEIGHT);
+      try {
+        const payload = JSON.parse(raw);
+        if (
+          payload &&
+          payload.type === "effect" &&
+          payload.effectType === FX_EFFECT_GRAPHIC_EQ
+        ) {
+          return payload;
+        }
+      } catch {
+        return null;
+      }
+
+      return null;
+    };
+
+    return (
+      parsePayload(dataTransfer.getData("application/x-daw-effect")) ||
+      parsePayload(dataTransfer.getData("text/plain"))
+    );
+  };
+
+  const onEmptySlotDragOver = function (event) {
+    const types = Array.from(event.dataTransfer?.types || []);
+    const supportsEffectPayload =
+      types.includes("application/x-daw-effect") ||
+      types.includes("text/plain");
+
+    if (!supportsEffectPayload) {
+      return;
+    }
+
+    event.preventDefault();
+    event.stopPropagation();
+    event.dataTransfer.dropEffect = "copy";
+    if (!isEmptyDropTarget) {
+      setIsEmptyDropTarget(true);
+    }
+  };
+
+  const onEmptySlotDragLeave = function (event) {
+    event.stopPropagation();
+
+    const related = event.relatedTarget;
+    const currentTarget = event.currentTarget;
+    if (
+      related &&
+      currentTarget &&
+      typeof currentTarget.contains === "function" &&
+      currentTarget.contains(related)
+    ) {
+      return;
+    }
+
+    if (isEmptyDropTarget) {
+      setIsEmptyDropTarget(false);
+    }
+  };
+
+  const onEmptySlotDrop = function (event) {
+    event.preventDefault();
+    event.stopPropagation();
+    setIsEmptyDropTarget(false);
+
+    if (!activeInsert || !activeSlot) {
+      return;
+    }
+
+    const payload = readEffectPayloadFromDataTransfer(event.dataTransfer);
+    if (!payload) {
+      return;
+    }
+
+    dispatch(
+      setFxSlotEffectType({
+        insertId: activeInsert.id,
+        slotId: activeSlot.id,
+        effectType: payload.effectType,
+      }),
+    );
+
+    if (!(activeSlot.effectType === payload.effectType && activeSlot.enabled)) {
+      dispatch(
+        toggleFxSlot({
+          insertId: activeInsert.id,
+          slotId: activeSlot.id,
+        }),
+      );
+    }
+  };
+
+  const activeInsertId = activeInsert?.id || "";
+  const activeSlotId = activeSlot?.id || "";
+
+  const eqParams = useMemo(
+    function () {
+      return getSafeGraphicEqParams(activeSlot?.params);
+    },
+    [activeSlot?.params],
+  );
+
+  const eqCurvePath = useMemo(
+    function () {
+      return buildGraphicEqPath(eqParams, GRAPH_WIDTH, GRAPH_HEIGHT);
+    },
+    [eqParams],
+  );
+
   const pointCoordinates = useMemo(
     function () {
       const leftPad = GRAPH_PADDING.left;
@@ -358,8 +471,10 @@ export function FxPluginWindow() {
 
       return eqParams.points.map(function (point) {
         const xRatio =
-          Math.log(clamp(point.frequencyHz, GRAPH_MIN_FREQ, GRAPH_MAX_FREQ) / GRAPH_MIN_FREQ) /
-          Math.log(GRAPH_MAX_FREQ / GRAPH_MIN_FREQ);
+          Math.log(
+            clamp(point.frequencyHz, GRAPH_MIN_FREQ, GRAPH_MAX_FREQ) /
+              GRAPH_MIN_FREQ,
+          ) / Math.log(GRAPH_MAX_FREQ / GRAPH_MIN_FREQ);
         const yRatio =
           (clamp(point.gainDb, -GRAPH_MAX_DB, GRAPH_MAX_DB) + GRAPH_MAX_DB) /
           (GRAPH_MAX_DB * 2);
@@ -375,7 +490,7 @@ export function FxPluginWindow() {
 
   const updatePointFromClient = useCallback(
     function (clientX, clientY, pointIndex) {
-      if (!graphRef.current) {
+      if (!graphRef.current || !activeInsertId || !activeSlotId) {
         return;
       }
 
@@ -394,8 +509,16 @@ export function FxPluginWindow() {
       const normalizedX = (clientX - rect.left) / rect.width;
       const normalizedY = (clientY - rect.top) / rect.height;
 
-      const graphX = clamp(normalizedX * GRAPH_WIDTH, leftPad, GRAPH_WIDTH - rightPad);
-      const graphY = clamp(normalizedY * GRAPH_HEIGHT, topPad, GRAPH_HEIGHT - bottomPad);
+      const graphX = clamp(
+        normalizedX * GRAPH_WIDTH,
+        leftPad,
+        GRAPH_WIDTH - rightPad,
+      );
+      const graphY = clamp(
+        normalizedY * GRAPH_HEIGHT,
+        topPad,
+        GRAPH_HEIGHT - bottomPad,
+      );
 
       const freqRatio = (graphX - leftPad) / innerW;
       const gainRatio = 1 - (graphY - topPad) / innerH;
@@ -413,15 +536,15 @@ export function FxPluginWindow() {
 
       dispatch(
         setFxSlotGraphicEqPoint({
-          insertId: activeInsert.id,
-          slotId: activeSlot.id,
+          insertId: activeInsertId,
+          slotId: activeSlotId,
           pointIndex,
           frequencyHz,
           gainDb,
         }),
       );
     },
-    [activeInsert.id, activeSlot.id, dispatch],
+    [activeInsertId, activeSlotId, dispatch],
   );
 
   useEffect(
@@ -431,11 +554,7 @@ export function FxPluginWindow() {
       }
 
       const onMouseMove = function (event) {
-        updatePointFromClient(
-          event.clientX,
-          event.clientY,
-          draggingPointIndex,
-        );
+        updatePointFromClient(event.clientX, event.clientY, draggingPointIndex);
       };
 
       const onMouseUp = function () {
@@ -452,6 +571,35 @@ export function FxPluginWindow() {
     },
     [draggingPointIndex, updatePointFromClient],
   );
+
+  if (!activeInsert || !activeSlot) {
+    return (
+      <section className="fx-plugin-panel fx-window-panel">
+        <div className="fx-empty-slot">
+          <p>No FX slot selected.</p>
+          <p>Click a slot in the Mixer to open the effect editor.</p>
+        </div>
+      </section>
+    );
+  }
+
+  if (activeSlot.effectType !== FX_EFFECT_GRAPHIC_EQ) {
+    return (
+      <section className="fx-plugin-panel fx-window-panel">
+        <div
+          className={
+            "fx-empty-slot" + (isEmptyDropTarget ? " is-drop-target" : "")
+          }
+          onDragOver={onEmptySlotDragOver}
+          onDragLeave={onEmptySlotDragLeave}
+          onDrop={onEmptySlotDrop}
+        >
+          <p>This slot is empty.</p>
+          <p>Drag an effect from Browser/Plugins/Effects and drop it here.</p>
+        </div>
+      </section>
+    );
+  }
 
   const graphLeft = GRAPH_PADDING.left;
   const graphRight = GRAPH_PADDING.right;
@@ -496,10 +644,14 @@ export function FxPluginWindow() {
     );
     const nextQ = getQFromShapePercent(point.bandType, nextPercent);
 
+    if (!activeInsertId || !activeSlotId) {
+      return;
+    }
+
     dispatch(
       setFxSlotGraphicEqPoint({
-        insertId: activeInsert.id,
-        slotId: activeSlot.id,
+        insertId: activeInsertId,
+        slotId: activeSlotId,
         pointIndex,
         q: nextQ,
       }),
@@ -537,13 +689,18 @@ export function FxPluginWindow() {
       return;
     }
 
+    if (!activeInsertId || !activeSlotId) {
+      cancelInlineEdit();
+      return;
+    }
+
     if (editingField.field === "frequency") {
       const nextFrequencyHz = parseFrequencyInput(editingValue);
       if (nextFrequencyHz !== null) {
         dispatch(
           setFxSlotGraphicEqPoint({
-            insertId: activeInsert.id,
-            slotId: activeSlot.id,
+            insertId: activeInsertId,
+            slotId: activeSlotId,
             pointIndex: editingField.pointIndex,
             frequencyHz: nextFrequencyHz,
           }),
@@ -554,8 +711,8 @@ export function FxPluginWindow() {
       if (nextGainDb !== null) {
         dispatch(
           setFxSlotGraphicEqPoint({
-            insertId: activeInsert.id,
-            slotId: activeSlot.id,
+            insertId: activeInsertId,
+            slotId: activeSlotId,
             pointIndex: editingField.pointIndex,
             gainDb: nextGainDb,
           }),
@@ -566,8 +723,8 @@ export function FxPluginWindow() {
       if (nextPercent !== null) {
         dispatch(
           setFxSlotGraphicEqPoint({
-            insertId: activeInsert.id,
-            slotId: activeSlot.id,
+            insertId: activeInsertId,
+            slotId: activeSlotId,
             pointIndex: editingField.pointIndex,
             q: getQFromShapePercent(point.bandType, nextPercent),
           }),
@@ -615,7 +772,8 @@ export function FxPluginWindow() {
             {dbGridValues.map(function (dbValue) {
               const y =
                 graphTop +
-                (1 - (dbValue + GRAPH_MAX_DB) / (GRAPH_MAX_DB * 2)) * graphInnerHeight;
+                (1 - (dbValue + GRAPH_MAX_DB) / (GRAPH_MAX_DB * 2)) *
+                  graphInnerHeight;
               return (
                 <line
                   key={"db-" + dbValue}
@@ -633,17 +791,17 @@ export function FxPluginWindow() {
 
             {GRAPH_FREQUENCY_GUIDES.map(function (frequencyHz) {
               const x = getFrequencyGridX(frequencyHz);
-                return (
-                  <line
-                    key={"freq-" + frequencyHz}
-                    x1={x}
-                    y1={graphTop}
-                    x2={x}
-                    y2={GRAPH_HEIGHT - graphBottom}
-                    className="fx-proq-grid-line"
-                  />
-                );
-              })}
+              return (
+                <line
+                  key={"freq-" + frequencyHz}
+                  x1={x}
+                  y1={graphTop}
+                  x2={x}
+                  y2={GRAPH_HEIGHT - graphBottom}
+                  className="fx-proq-grid-line"
+                />
+              );
+            })}
 
             {GRAPH_FREQUENCY_GUIDES.map(function (frequencyHz, markerIndex) {
               const x = getFrequencyGridX(frequencyHz);
@@ -673,7 +831,13 @@ export function FxPluginWindow() {
                     "fx-proq-point" +
                     (draggingPointIndex === index ? " is-active" : "")
                   }
-                  transform={"translate(" + point.x.toFixed(2) + " " + point.y.toFixed(2) + ")"}
+                  transform={
+                    "translate(" +
+                    point.x.toFixed(2) +
+                    " " +
+                    point.y.toFixed(2) +
+                    ")"
+                  }
                   onWheel={function (event) {
                     adjustPointShapeByWheel(event, index);
                   }}
@@ -685,7 +849,11 @@ export function FxPluginWindow() {
                 >
                   <circle r="10" className="fx-proq-point-core" />
                   <circle r="13" className="fx-proq-point-ring" />
-                  <text className="fx-proq-point-index" textAnchor="middle" dy="4">
+                  <text
+                    className="fx-proq-point-index"
+                    textAnchor="middle"
+                    dy="4"
+                  >
                     {index + 1}
                   </text>
                 </g>
@@ -734,7 +902,8 @@ export function FxPluginWindow() {
                     {toFrequencyLabel(point.frequencyHz)}
                   </strong>
                 )}
-                {editingField?.pointIndex === index && editingField.field === "gain" ? (
+                {editingField?.pointIndex === index &&
+                editingField.field === "gain" ? (
                   <input
                     className="fx-proq-inline-input"
                     value={editingValue}
@@ -759,7 +928,8 @@ export function FxPluginWindow() {
                     {toDbLabel(point.gainDb)}
                   </em>
                 )}
-                {editingField?.pointIndex === index && editingField.field === "shape" ? (
+                {editingField?.pointIndex === index &&
+                editingField.field === "shape" ? (
                   <input
                     className="fx-proq-inline-input"
                     value={editingValue}
@@ -790,8 +960,8 @@ export function FxPluginWindow() {
                   onChange={function (event) {
                     dispatch(
                       setFxSlotGraphicEqPoint({
-                        insertId: activeInsert.id,
-                        slotId: activeSlot.id,
+                        insertId: activeInsertId,
+                        slotId: activeSlotId,
                         pointIndex: index,
                         bandType: event.target.value,
                       }),

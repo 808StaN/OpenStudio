@@ -15,10 +15,11 @@ import {
 } from "../store";
 
 const FX_EFFECT_GRAPHIC_EQ = "graphic-eq";
+const FX_EFFECT_NONE = "none";
 
 function getFxSlotName(slot, fallbackIndex) {
   if (slot?.effectType === FX_EFFECT_GRAPHIC_EQ) {
-    return "Parametric EQ 2";
+    return "Graphic EQ";
   }
   return String(slot?.name || "").trim() || "Slot " + (fallbackIndex + 1);
 }
@@ -28,6 +29,7 @@ export function MixerWindow() {
   const [valueReadout, setValueReadout] = useState("");
   const [selectedFxSlotId, setSelectedFxSlotId] = useState(null);
   const [dropTargetSlotId, setDropTargetSlotId] = useState(null);
+  const [armedFxClearSlotId, setArmedFxClearSlotId] = useState(null);
   const clearReadoutTimeoutRef = useRef(null);
 
   const inserts = useSelector(function (state) {
@@ -47,7 +49,9 @@ export function MixerWindow() {
   const selectedFxSlot =
     fxSlots.find(function (slot) {
       return slot.id === selectedFxSlotId;
-    }) || fxSlots[0] || null;
+    }) ||
+    fxSlots[0] ||
+    null;
 
   useEffect(
     function () {
@@ -67,6 +71,23 @@ export function MixerWindow() {
       }
     },
     [fxSlots, selectedFxSlotId],
+  );
+
+  useEffect(
+    function () {
+      if (!armedFxClearSlotId) {
+        return;
+      }
+
+      const stillLoaded = fxSlots.some(function (slot) {
+        return slot.id === armedFxClearSlotId && slot.effectType !== FX_EFFECT_NONE;
+      });
+
+      if (!stillLoaded) {
+        setArmedFxClearSlotId(null);
+      }
+    },
+    [fxSlots, armedFxClearSlotId],
   );
 
   const getTrackLabel = function (insert) {
@@ -242,6 +263,7 @@ export function MixerWindow() {
   const onFxSlotDrop = function (event, slot) {
     event.preventDefault();
     setDropTargetSlotId(null);
+    setArmedFxClearSlotId(null);
 
     const payload = readEffectPayloadFromDataTransfer(event.dataTransfer);
     if (!payload) {
@@ -273,7 +295,7 @@ export function MixerWindow() {
     showValueReadout(
       getTrackLabel(selectedInsert) +
         " loaded " +
-        (payload.effectName || "Parametric EQ 2") +
+        (payload.effectName || "Graphic EQ") +
         " on " +
         getFxSlotName(slot, Math.max(0, slotIndex)),
     );
@@ -445,6 +467,7 @@ export function MixerWindow() {
         <div className="fx-list">
           {fxSlots.map(function (slot, slotIndex) {
             const slotName = getFxSlotName(slot, slotIndex);
+            const hasLoadedEffect = slot.effectType !== FX_EFFECT_NONE;
             return (
               <div
                 className={
@@ -454,6 +477,9 @@ export function MixerWindow() {
                 }
                 key={slot.id}
                 onClick={function () {
+                  if (armedFxClearSlotId) {
+                    setArmedFxClearSlotId(null);
+                  }
                   setSelectedFxSlotId(slot.id);
                   openFxEditorForSlot(slot.id);
                 }}
@@ -471,10 +497,23 @@ export function MixerWindow() {
                   className={
                     "fx-power" +
                     (slot.enabled ? " is-on" : "") +
-                    (slot.effectType === FX_EFFECT_GRAPHIC_EQ ? "" : " is-disabled")
+                    (slot.effectType === FX_EFFECT_GRAPHIC_EQ
+                      ? ""
+                      : " is-disabled")
+                  }
+                  title={
+                    slot.effectType === FX_EFFECT_GRAPHIC_EQ
+                      ? slot.enabled
+                        ? "Bypass FX"
+                        : "Enable FX"
+                      : "Empty slot"
                   }
                   onClick={function (event) {
                     event.stopPropagation();
+
+                    if (armedFxClearSlotId) {
+                      setArmedFxClearSlotId(null);
+                    }
 
                     if (slot.effectType !== FX_EFFECT_GRAPHIC_EQ) {
                       return;
@@ -496,10 +535,49 @@ export function MixerWindow() {
                     );
                   }}
                 >
-                  <Power size={11} />
+                  <Power size={12} />
                 </button>
                 <span className="fx-name">{slotName}</span>
-                <ChevronRight size={14} className="fx-arrow" />
+                {hasLoadedEffect ? (
+                  <button
+                    type="button"
+                    className={
+                      "fx-clear" + (armedFxClearSlotId === slot.id ? " is-armed" : "")
+                    }
+                    title={
+                      armedFxClearSlotId === slot.id
+                        ? "Click again to confirm removal"
+                        : "Remove effect"
+                    }
+                    onClick={function (event) {
+                      event.stopPropagation();
+
+                      if (armedFxClearSlotId !== slot.id) {
+                        setArmedFxClearSlotId(slot.id);
+                        showValueReadout("Click X again to remove " + slotName);
+                        return;
+                      }
+
+                      setArmedFxClearSlotId(null);
+
+                      dispatch(
+                        setFxSlotEffectType({
+                          insertId: selectedInsert.id,
+                          slotId: slot.id,
+                          effectType: FX_EFFECT_NONE,
+                        }),
+                      );
+
+                      showValueReadout(
+                        getTrackLabel(selectedInsert) + " cleared " + slotName,
+                      );
+                    }}
+                  >
+                    <span className="fx-clear-glyph">X</span>
+                  </button>
+                ) : (
+                  <ChevronRight size={14} className="fx-arrow" />
+                )}
               </div>
             );
           })}

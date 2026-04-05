@@ -93,7 +93,7 @@ function getFxWindowTitle(activeInsert, activeSlot) {
 
   const effectLabel =
     activeSlot.effectType === "graphic-eq"
-      ? "Parametric EQ 2"
+      ? "Graphic EQ"
       : String(activeSlot.name || "FX Plugin").trim() || "FX Plugin";
 
   if (activeInsert.isMaster) {

@@ -27,7 +27,9 @@ const MIXER_METER_NOISE_GATE = 0.0016;
 const MIXER_METER_RESPONSE_CURVE = 0.5;
 const MIXER_METER_DECAY = 0.9;
 const FX_EFFECT_GRAPHIC_EQ = "graphic-eq";
-const GRAPHIC_EQ_DEFAULT_POINT_FREQUENCIES = [50, 100, 250, 500, 1000, 3000, 8000];
+const GRAPHIC_EQ_DEFAULT_POINT_FREQUENCIES = [
+  50, 100, 250, 500, 1000, 3000, 8000,
+];
 const GRAPHIC_EQ_BAND_TYPES = [
   "peaking",
   "lowshelf",
@@ -49,12 +51,16 @@ function getDefaultEqBandType(index) {
 }
 
 function sanitizeEqBandType(raw, fallback) {
-  const requested = String(raw || "").trim().toLowerCase();
+  const requested = String(raw || "")
+    .trim()
+    .toLowerCase();
   if (GRAPHIC_EQ_BAND_TYPES.includes(requested)) {
     return requested;
   }
 
-  const safeFallback = String(fallback || "").trim().toLowerCase();
+  const safeFallback = String(fallback || "")
+    .trim()
+    .toLowerCase();
   if (GRAPHIC_EQ_BAND_TYPES.includes(safeFallback)) {
     return safeFallback;
   }
@@ -70,30 +76,32 @@ function getSafeGraphicEqParams(raw) {
   const requestedPoints = Array.isArray(raw?.points) ? raw.points : [];
   const legacyBands = Array.isArray(raw?.bands) ? raw.bands : [];
   return {
-    points: GRAPHIC_EQ_DEFAULT_POINT_FREQUENCIES.map(function (defaultFreq, index) {
-      const requestedPoint = requestedPoints[index];
-      const legacyGain = legacyBands[index];
-      return {
-        frequencyHz: clamp(
-          Number(requestedPoint?.frequencyHz || defaultFreq),
-          20,
-          20000,
-        ),
-        gainDb: clamp(
-          Number(
-            requestedPoint?.gainDb ??
-              (Number.isFinite(legacyGain) ? legacyGain : 0),
+    points: GRAPHIC_EQ_DEFAULT_POINT_FREQUENCIES.map(
+      function (defaultFreq, index) {
+        const requestedPoint = requestedPoints[index];
+        const legacyGain = legacyBands[index];
+        return {
+          frequencyHz: clamp(
+            Number(requestedPoint?.frequencyHz || defaultFreq),
+            20,
+            20000,
           ),
-          -18,
-          18,
-        ),
-        q: clamp(Number(requestedPoint?.q || 1.2), 0.25, 8),
-        bandType: sanitizeEqBandType(
-          requestedPoint?.bandType,
-          getDefaultEqBandType(index),
-        ),
-      };
-    }),
+          gainDb: clamp(
+            Number(
+              requestedPoint?.gainDb ??
+                (Number.isFinite(legacyGain) ? legacyGain : 0),
+            ),
+            -18,
+            18,
+          ),
+          q: clamp(Number(requestedPoint?.q || 1.2), 0.25, 8),
+          bandType: sanitizeEqBandType(
+            requestedPoint?.bandType,
+            getDefaultEqBandType(index),
+          ),
+        };
+      },
+    ),
   };
 }
 
@@ -112,7 +120,9 @@ function getCombinedGraphicEqState(insert) {
 
   return {
     enabled: true,
-    params: getSafeGraphicEqParams(enabledSlots[enabledSlots.length - 1]?.params),
+    params: getSafeGraphicEqParams(
+      enabledSlots[enabledSlots.length - 1]?.params,
+    ),
   };
 }
 
@@ -609,14 +619,16 @@ export function useAudioScheduler() {
         const fxWetGain = audioCtx.createGain();
         const eqInput = audioCtx.createGain();
         const eqLowCut = audioCtx.createBiquadFilter();
-        const eqBands = GRAPHIC_EQ_DEFAULT_POINT_FREQUENCIES.map(function (frequencyHz, index) {
-          const band = audioCtx.createBiquadFilter();
-          band.type = getDefaultEqBandType(index);
-          band.frequency.value = frequencyHz;
-          band.Q.value = 1.08;
-          band.gain.value = 0;
-          return band;
-        });
+        const eqBands = GRAPHIC_EQ_DEFAULT_POINT_FREQUENCIES.map(
+          function (frequencyHz, index) {
+            const band = audioCtx.createBiquadFilter();
+            band.type = getDefaultEqBandType(index);
+            band.frequency.value = frequencyHz;
+            band.Q.value = 1.08;
+            band.gain.value = 0;
+            return band;
+          },
+        );
         const outputGain = audioCtx.createGain();
         const analyser = audioCtx.createAnalyser();
 
@@ -774,10 +786,7 @@ export function useAudioScheduler() {
             point.bandType,
             getDefaultEqBandType(index),
           );
-          bandNode.frequency.setValueAtTime(
-            point.frequencyHz,
-            now,
-          );
+          bandNode.frequency.setValueAtTime(point.frequencyHz, now);
           bandNode.Q.setValueAtTime(point.q, now);
           smoothTo(bandNode.gain, eqEnabled ? point.gainDb : 0, now);
         });

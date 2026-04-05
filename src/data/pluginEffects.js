@@ -1,7 +1,7 @@
 export const PLUGIN_EFFECTS = [
   {
     effectType: "graphic-eq",
-    name: "Parametric EQ 2",
+    name: "Graphic EQ",
     description: "7-point draggable parametric equalizer",
   },
 ];

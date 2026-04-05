@@ -2,7 +2,9 @@ import { configureStore, createAction, createSlice } from "@reduxjs/toolkit";
 
 const FX_SLOT_EFFECT_NONE = "none";
 const FX_SLOT_EFFECT_GRAPHIC_EQ = "graphic-eq";
-const GRAPHIC_EQ_DEFAULT_POINT_FREQUENCIES = [50, 100, 250, 500, 1000, 3000, 8000];
+const GRAPHIC_EQ_DEFAULT_POINT_FREQUENCIES = [
+  50, 100, 250, 500, 1000, 3000, 8000,
+];
 const GRAPHIC_EQ_BAND_TYPES = [
   "peaking",
   "lowshelf",
@@ -24,12 +26,16 @@ function getDefaultEqBandType(index) {
 }
 
 function sanitizeEqBandType(raw, fallback) {
-  const requested = String(raw || "").trim().toLowerCase();
+  const requested = String(raw || "")
+    .trim()
+    .toLowerCase();
   if (GRAPHIC_EQ_BAND_TYPES.includes(requested)) {
     return requested;
   }
 
-  const safeFallback = String(fallback || "").trim().toLowerCase();
+  const safeFallback = String(fallback || "")
+    .trim()
+    .toLowerCase();
   if (GRAPHIC_EQ_BAND_TYPES.includes(safeFallback)) {
     return safeFallback;
   }
@@ -54,14 +60,16 @@ function clampEqQ(raw) {
 
 function makeGraphicEqParams() {
   return {
-    points: GRAPHIC_EQ_DEFAULT_POINT_FREQUENCIES.map(function (frequencyHz, index) {
-      return {
-        frequencyHz,
-        gainDb: 0,
-        q: 1.2,
-        bandType: getDefaultEqBandType(index),
-      };
-    }),
+    points: GRAPHIC_EQ_DEFAULT_POINT_FREQUENCIES.map(
+      function (frequencyHz, index) {
+        return {
+          frequencyHz,
+          gainDb: 0,
+          q: 1.2,
+          bandType: getDefaultEqBandType(index),
+        };
+      },
+    ),
   };
 }
 
@@ -97,14 +105,16 @@ function getFxSlotDefaultName(index) {
 }
 
 function normalizeFxSlot(slot, index) {
-  const rawEffectType = String(slot?.effectType || "").trim().toLowerCase();
+  const rawEffectType = String(slot?.effectType || "")
+    .trim()
+    .toLowerCase();
   const effectType =
     rawEffectType === FX_SLOT_EFFECT_GRAPHIC_EQ
       ? FX_SLOT_EFFECT_GRAPHIC_EQ
       : FX_SLOT_EFFECT_NONE;
   const defaultName =
     effectType === FX_SLOT_EFFECT_GRAPHIC_EQ
-      ? "Parametric EQ 2"
+      ? "Graphic EQ"
       : getFxSlotDefaultName(index);
 
   return {
@@ -122,7 +132,9 @@ function normalizeFxSlot(slot, index) {
 
 function ensureInsertFxSlots(insert) {
   const nextSlots = Array.from({ length: 10 }).map(function (_, index) {
-    const existing = Array.isArray(insert?.fxSlots) ? insert.fxSlots[index] : null;
+    const existing = Array.isArray(insert?.fxSlots)
+      ? insert.fxSlots[index]
+      : null;
 
     if (existing) {
       return normalizeFxSlot(existing, index);
@@ -1777,7 +1789,7 @@ const dawSlice = createSlice({
 
       if (requestedType === FX_SLOT_EFFECT_GRAPHIC_EQ) {
         slot.effectType = FX_SLOT_EFFECT_GRAPHIC_EQ;
-        slot.name = "Parametric EQ 2";
+        slot.name = "Graphic EQ";
         slot.params = getSafeGraphicEqParams(slot.params);
         return;
       }
