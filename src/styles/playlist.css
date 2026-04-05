@@ -4,7 +4,7 @@
   height: 100%;
   border: 1px solid #3b4352;
   border-radius: 8px;
-  background: linear-gradient(180deg, #141b29 0%, #0b111b 100%);
+  background: #121928;
   display: grid;
   grid-template-rows: 30px 34px 1fr;
   overflow: hidden;
@@ -119,14 +119,20 @@
   width: max-content;
   padding-left: var(--playlist-side-inset);
   will-change: transform;
+  background: #121928;
 }
 
 .playlist-header-shell {
   overflow: hidden;
+  background: #121928;
+  box-shadow: none;
 }
 
 .bar-label.empty {
-  border-right: 1px solid #3f4758;
+  border: 0;
+  border-radius: 0;
+  background: #121928;
+  box-shadow: none;
 }
 
 .bar-cell {
@@ -134,23 +140,60 @@
   display: flex;
   align-items: center;
   justify-content: center;
-  color: #98a7be;
+  color: #b5c4dd;
   font-family: var(--font-mono);
   font-size: 12px;
+  background: linear-gradient(180deg, #2a3750 0%, #1a2538 100%);
+  border-top: 1px solid #3f4758;
+  border-bottom: 1px solid #3f4758;
+  text-shadow: 0 1px 0 rgba(0, 0, 0, 0.4);
+}
+
+.bar-label.empty + .bar-cell {
+  border-left: 2px solid #3f4758;
 }
 
 .bar-cell + .bar-cell {
-  box-shadow: inset 1px 0 0 #2f3746;
+  box-shadow: inset 1px 0 0 #3a4862;
+}
+
+.bar-cell:last-child {
+  border-right: 1px solid #3f4758;
+  border-radius: 0 5px 0 0;
 }
 
 .playlist-body {
+  position: relative;
   overflow: auto;
-  padding: 8px var(--playlist-side-inset);
+  padding: 0 var(--playlist-side-inset) 8px;
   display: flex;
   flex-direction: column;
   gap: 7px;
+  background: #121928;
   scrollbar-width: thin;
   scrollbar-color: #7f8ca2 #202838;
+}
+
+.playlist-playhead-layer {
+  position: absolute;
+  top: 0;
+  bottom: 0;
+  left: 92px;
+  pointer-events: none;
+  z-index: 6;
+}
+
+.playlist-playhead-line {
+  position: absolute;
+  top: 0;
+  bottom: 0;
+  left: 0;
+  width: 2px;
+  background: linear-gradient(180deg, #d8f67a 0%, #7ce74a 100%);
+  box-shadow: 0 0 8px rgba(164, 238, 96, 0.45);
+  pointer-events: none;
+  z-index: 6;
+  will-change: transform;
 }
 
 .playlist-body::-webkit-scrollbar {

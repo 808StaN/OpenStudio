@@ -24,6 +24,7 @@ const MIN_CLIP_BAR_LENGTH = 1 / 16;
 const PATTERN_DRAG_MIME = "application/x-daw-pattern";
 const MIDI_PITCH_MIN = 0;
 const MIDI_PITCH_MAX = 127;
+const PLAYLIST_PLAYHEAD_STEP_PHASE_COMPENSATION = 1;
 
 const SNAP_OPTIONS = [
   { key: "none", label: "(none)", stepSize: null },
@@ -212,6 +213,9 @@ export function PlaylistWindow() {
   const playlistShellRef = useRef(null);
   const playlistBodyRef = useRef(null);
   const playlistHeaderRef = useRef(null);
+  const playheadRef = useRef(null);
+  const playheadStepRef = useRef(0);
+  const playheadStepTimestampRef = useRef(0);
   const [barWidth, setBarWidth] = useState(INITIAL_BAR_WIDTH);
   const [playlistBarCount, setPlaylistBarCount] = useState(
     DEFAULT_PLAYLIST_BARS,
@@ -236,6 +240,18 @@ export function PlaylistWindow() {
   });
   const clipboardPatternIds = useSelector(function (state) {
     return state.daw.ui.patternClipboardIds;
+  });
+  const isPlaying = useSelector(function (state) {
+    return state.daw.transport.isPlaying;
+  });
+  const currentStep16 = useSelector(function (state) {
+    return state.daw.transport.currentStep16;
+  });
+  const bpm = useSelector(function (state) {
+    return state.daw.transport.bpm;
+  });
+  const transportMode = useSelector(function (state) {
+    return state.daw.transport.mode;
   });
 
   const patternsById = patterns.reduce(function (acc, pattern) {
@@ -267,6 +283,35 @@ export function PlaylistWindow() {
   }, {});
 
   const timelineWidth = playlistBarCount * barWidth;
+  const activePatternLengthSteps = Math.max(
+    1,
+    patternsById[activePatternId]?.lengthSteps || 16,
+  );
+  const songLengthSteps = Math.max(
+    activePatternLengthSteps,
+    clips.reduce(function (maxSongStep, clip) {
+      const clipStartStep = Math.max(
+        0,
+        Math.round((Number(clip.barStart || 1) - 1) * 16),
+      );
+      const clipLengthSteps = Math.max(
+        1,
+        Math.round(Number(clip.barLength || 1) * 16),
+      );
+      return Math.max(maxSongStep, clipStartStep + clipLengthSteps);
+    }, 16),
+  );
+  const playheadCycleSteps =
+    transportMode === "song" ? songLengthSteps : activePatternLengthSteps;
+  const timelineSteps = Math.max(1, playheadCycleSteps);
+  const normalizedPlayheadStep =
+    ((currentStep16 % timelineSteps) + timelineSteps) % timelineSteps;
+  const playheadStep = isPlaying
+    ? (normalizedPlayheadStep +
+        PLAYLIST_PLAYHEAD_STEP_PHASE_COMPENSATION +
+        timelineSteps) %
+      timelineSteps
+    : normalizedPlayheadStep;
   const activeSnap =
     SNAP_OPTIONS.find(function (option) {
       return option.key === snapKey;
@@ -278,6 +323,65 @@ export function PlaylistWindow() {
   const snapBarSize = activeSnap.stepSize
     ? Math.max(1 / 16, activeSnap.stepSize / 16)
     : null;
+
+  useEffect(
+    function () {
+      if (playheadStepRef.current === playheadStep) {
+        return;
+      }
+
+      playheadStepRef.current = playheadStep;
+      playheadStepTimestampRef.current = performance.now();
+    },
+    [playheadStep],
+  );
+
+  useEffect(
+    function () {
+      const playheadElement = playheadRef.current;
+      if (!playheadElement) {
+        return;
+      }
+
+      const setPlayheadPosition = function (positionPx) {
+        playheadElement.style.transform = "translateX(" + positionPx + "px)";
+      };
+
+      const currentBaseStep =
+        ((playheadStepRef.current % timelineSteps) + timelineSteps) %
+        timelineSteps;
+
+      if (!isPlaying) {
+        setPlayheadPosition((currentBaseStep / 16) * barWidth);
+        return;
+      }
+
+      if (playheadStepTimestampRef.current <= 0) {
+        playheadStepTimestampRef.current = performance.now();
+      }
+
+      let rafId = 0;
+      const stepDurationMs = (60 / Math.max(1, bpm) / 4) * 1000;
+
+      const tick = function () {
+        const elapsed = performance.now() - playheadStepTimestampRef.current;
+        const progress = clamp(elapsed / stepDurationMs, 0, 0.999);
+        const baseStep =
+          ((playheadStepRef.current % timelineSteps) + timelineSteps) %
+          timelineSteps;
+        const positionInBars = (baseStep + progress) / 16;
+        setPlayheadPosition(positionInBars * barWidth);
+        rafId = requestAnimationFrame(tick);
+      };
+
+      tick();
+
+      return function () {
+        cancelAnimationFrame(rafId);
+      };
+    },
+    [isPlaying, bpm, timelineSteps, barWidth],
+  );
 
   useEffect(
     function () {
@@ -865,6 +969,14 @@ export function PlaylistWindow() {
         onScroll={onPlaylistBodyScroll}
         onWheel={onPlaylistBodyWheel}
       >
+        {isPlaying ? (
+          <div
+            className="playlist-playhead-layer"
+            style={{ width: timelineWidth + "px" }}
+          >
+            <span ref={playheadRef} className="playlist-playhead-line" />
+          </div>
+        ) : null}
         {tracks.map(function (track) {
           const clipsOnTrack = clips.filter(function (clip) {
             return clip.trackId === track.id;
