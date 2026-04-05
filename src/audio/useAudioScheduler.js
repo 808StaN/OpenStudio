@@ -20,6 +20,12 @@ const defaultSampleSettings = {
 };
 
 const DEFAULT_SAMPLE_MIDI_PITCH = 72;
+const PLUGIN_INSTRUMENT_GAIN_BOOST = 1.5;
+const MIXER_METER_RMS_GAIN = 4.2;
+const MIXER_METER_PEAK_GAIN = 1.9;
+const MIXER_METER_NOISE_GATE = 0.0016;
+const MIXER_METER_RESPONSE_CURVE = 0.5;
+const MIXER_METER_DECAY = 0.9;
 const FX_EFFECT_GRAPHIC_EQ = "graphic-eq";
 const GRAPHIC_EQ_DEFAULT_POINT_FREQUENCIES = [50, 100, 250, 500, 1000, 3000, 8000];
 const GRAPHIC_EQ_BAND_TYPES = [
@@ -331,6 +337,41 @@ function toMixerGraphSignature(settings) {
     .join("|");
 }
 
+function getPluginInstrumentCacheKey(pluginRef, channelId) {
+  const safePluginRef = String(pluginRef || "").trim();
+  const safeChannelId = String(channelId || "").trim();
+  if (!safeChannelId) {
+    return safePluginRef;
+  }
+
+  return safePluginRef + "::" + safeChannelId;
+}
+
+function routeInstrumentOutputToNode(instrument, destinationNode) {
+  if (!instrument || !destinationNode) {
+    return;
+  }
+
+  const candidateNodes = [instrument, instrument.output].filter(Boolean);
+  for (let index = 0; index < candidateNodes.length; index += 1) {
+    const node = candidateNodes[index];
+    if (
+      typeof node.connect !== "function" ||
+      typeof node.disconnect !== "function"
+    ) {
+      continue;
+    }
+
+    try {
+      node.disconnect();
+      node.connect(destinationNode);
+      return;
+    } catch {
+      continue;
+    }
+  }
+}
+
 function safeDisconnect(node) {
   if (!node) {
     return;
@@ -425,15 +466,16 @@ export function useAudioScheduler() {
   }, []);
 
   const loadPluginInstrument = useCallback(
-    async function (pluginRef) {
+    async function (pluginRef, channelId, destinationNode) {
       const plugin = getPluginInstrument(pluginRef);
       if (!plugin || !plugin.soundfont) {
         return null;
       }
 
-      const key = plugin.pluginRef;
+      const key = getPluginInstrumentCacheKey(plugin.pluginRef, channelId);
       const cached = pluginInstrumentRef.current.get(key);
       if (cached) {
+        routeInstrumentOutputToNode(cached, destinationNode);
         return cached;
       }
 
@@ -447,10 +489,12 @@ export function useAudioScheduler() {
       }
 
       const audioCtx = ensureContext();
+      const defaultDestination = destinationNode || audioCtx.destination;
       const request = Soundfont.instrument(audioCtx, plugin.soundfont, {
-        destination: audioCtx.destination,
+        destination: defaultDestination,
       })
         .then(function (instrument) {
+          routeInstrumentOutputToNode(instrument, destinationNode);
           pluginInstrumentRef.current.set(key, instrument);
           pluginInstrumentFailedRef.current.delete(key);
           return instrument;
@@ -840,37 +884,39 @@ export function useAudioScheduler() {
 
   useEffect(
     function () {
-      const pluginRefs = Array.from(
-        new Set(
-          channels
-            .map(function (channel) {
-              return String(channel.pluginRef || "").trim();
-            })
-            .filter(Boolean),
-        ),
-      );
-
-      if (pluginRefs.length === 0) {
+      if (channels.length === 0) {
         return;
       }
 
-      pluginRefs.forEach(function (pluginRef) {
+      ensureMixerGraph();
+
+      channels.forEach(function (channel) {
+        const pluginRef = String(channel.pluginRef || "").trim();
+        if (!pluginRef) {
+          return;
+        }
+
         if (!getPluginInstrument(pluginRef)) {
           return;
         }
 
-        if (pluginInstrumentRef.current.has(pluginRef)) {
+        const key = getPluginInstrumentCacheKey(pluginRef, channel.id);
+
+        if (pluginInstrumentFailedRef.current.has(key)) {
           return;
         }
 
-        if (pluginInstrumentFailedRef.current.has(pluginRef)) {
-          return;
-        }
+        const outputNode = getInsertInputNodeForChannel(channel);
 
-        void loadPluginInstrument(pluginRef);
+        void loadPluginInstrument(pluginRef, channel.id, outputNode);
       });
     },
-    [channels, loadPluginInstrument],
+    [
+      channels,
+      ensureMixerGraph,
+      getInsertInputNodeForChannel,
+      loadPluginInstrument,
+    ],
   );
 
   useEffect(
@@ -966,14 +1012,31 @@ export function useAudioScheduler() {
           node.analyser.getByteTimeDomainData(node.meterData);
 
           let squareSum = 0;
+          let peak = 0;
           for (let i = 0; i < node.meterData.length; i += 1) {
             const centered = (node.meterData[i] - 128) / 128;
             squareSum += centered * centered;
+
+            const absolute = Math.abs(centered);
+            if (absolute > peak) {
+              peak = absolute;
+            }
           }
 
           const rms = Math.sqrt(squareSum / node.meterData.length);
-          const instantMeter = Math.min(1, rms * 3.3);
-          node.meterLevel = Math.max(instantMeter, node.meterLevel * 0.86);
+          const blended = Math.max(
+            rms * MIXER_METER_RMS_GAIN,
+            peak * MIXER_METER_PEAK_GAIN,
+          );
+          const gated = blended < MIXER_METER_NOISE_GATE ? 0 : blended;
+          const instantMeter = Math.min(
+            1,
+            Math.pow(gated, MIXER_METER_RESPONSE_CURVE),
+          );
+          node.meterLevel = Math.max(
+            instantMeter,
+            node.meterLevel * MIXER_METER_DECAY,
+          );
 
           const prevMeter = lastMeterLevelsRef.current.get(insertId);
           if (
@@ -1168,14 +1231,17 @@ export function useAudioScheduler() {
         noteLengthSteps,
         channelSettings,
       ) {
-        const key = String(pluginRef || "").trim();
+        const rawPluginRef = String(pluginRef || "").trim();
+        const key = getPluginInstrumentCacheKey(rawPluginRef, channel.id);
         const instrument = pluginInstrumentRef.current.get(key);
         if (!instrument) {
           if (!pluginInstrumentFailedRef.current.has(key)) {
-            void loadPluginInstrument(key);
+            void loadPluginInstrument(rawPluginRef, channel.id, outputNode);
           }
           return;
         }
+
+        routeInstrumentOutputToNode(instrument, outputNode);
 
         const safeMidiPitch = Number.isFinite(midiPitch)
           ? midiPitch
@@ -1199,11 +1265,46 @@ export function useAudioScheduler() {
           0.1,
           Number(noteLengthSteps || 1) * sixteenth * 0.95 + releaseSec,
         );
-        const noteGain = Math.max(0.03, gainAmount * 2.2);
+        const noteGain = Math.max(
+          0.03,
+          gainAmount * 2.2 * PLUGIN_INSTRUMENT_GAIN_BOOST,
+        );
 
         if (channelSettings.monoMode) {
           stopActiveChannelSynthVoices(channel.id, time);
         }
+
+        const routeVoiceToOutput = function (voice, destinationNode) {
+          if (!voice || !destinationNode) {
+            return;
+          }
+
+          const candidateNodes = [
+            voice,
+            voice.output,
+            voice.gain,
+            voice.gainNode,
+            voice.node,
+          ].filter(Boolean);
+
+          for (let index = 0; index < candidateNodes.length; index += 1) {
+            const node = candidateNodes[index];
+            if (
+              typeof node.connect !== "function" ||
+              typeof node.disconnect !== "function"
+            ) {
+              continue;
+            }
+
+            try {
+              node.disconnect();
+              node.connect(destinationNode);
+              return;
+            } catch {
+              continue;
+            }
+          }
+        };
 
         const voiceNode = instrument.play(transposedPitch, time, {
           duration: noteDuration,
@@ -1213,6 +1314,10 @@ export function useAudioScheduler() {
           pan: Math.max(-1, Math.min(1, panValue)),
           destination: outputNode,
         });
+
+        // Some soundfont implementations keep using their default destination.
+        // Re-route the returned voice node explicitly to ensure mixer insert routing.
+        routeVoiceToOutput(voiceNode, outputNode);
 
         if (!voiceNode || typeof voiceNode.stop !== "function") {
           return;
