@@ -11,7 +11,7 @@ import { PianoRollWindow } from "./components/PianoRollWindow";
 import { PlaylistWindow } from "./components/PlaylistWindow";
 import { SampleSettingsWindow } from "./components/SampleSettingsWindow";
 import { TopToolbar } from "./components/TopToolbar";
-import { setPlaying, setTransportMode, undoLastChange } from "./store";
+import { setPlaying, undoLastChange } from "./store";
 import "./styles/app-shell.css";
 import "./styles/browser.css";
 import "./styles/channel-rack.css";
@@ -19,22 +19,6 @@ import "./styles/piano-roll.css";
 import "./styles/playlist.css";
 import "./styles/mixer.css";
 import "./styles/pattern-list.css";
-
-function getActiveWindowId(windows) {
-  const openWindows = Object.entries(windows).filter(function (_entry) {
-    return _entry[1].open;
-  });
-
-  if (openWindows.length === 0) {
-    return null;
-  }
-
-  openWindows.sort(function (a, b) {
-    return b[1].z - a[1].z;
-  });
-
-  return openWindows[0][0];
-}
 
 function shouldIgnoreSpaceShortcut(target) {
   if (!(target instanceof HTMLElement)) {
@@ -176,13 +160,6 @@ function App() {
         if (isPlaying) {
           dispatch(setPlaying(false));
           return;
-        }
-
-        const activeWindowId = getActiveWindowId(windows);
-        if (activeWindowId === "playlist") {
-          dispatch(setTransportMode("song"));
-        } else if (activeWindowId === "channelRack") {
-          dispatch(setTransportMode("pattern"));
         }
 
         dispatch(setPlaying(true));

@@ -636,6 +636,17 @@ function shouldTrackUndoForAction(action) {
   return true;
 }
 
+function syncTransportModeWithWindow(state, windowId) {
+  if (windowId === "channelRack") {
+    state.transport.mode = "pattern";
+    return;
+  }
+
+  if (windowId === "playlist") {
+    state.transport.mode = "song";
+  }
+}
+
 const dawSlice = createSlice({
   name: "daw",
   initialState,
@@ -663,16 +674,28 @@ const dawSlice = createSlice({
     },
 
     openWindow(state, action) {
+      const windowId = String(action.payload || "");
+      if (!windowId || !state.ui.windows[windowId]) {
+        return;
+      }
+
       state.ui.nextZ += 1;
-      state.ui.windows[action.payload].open = true;
-      state.ui.windows[action.payload].z = state.ui.nextZ;
+      state.ui.windows[windowId].open = true;
+      state.ui.windows[windowId].z = state.ui.nextZ;
+      syncTransportModeWithWindow(state, windowId);
     },
     closeWindow(state, action) {
       state.ui.windows[action.payload].open = false;
     },
     bringWindowToFront(state, action) {
+      const windowId = String(action.payload || "");
+      if (!windowId || !state.ui.windows[windowId]) {
+        return;
+      }
+
       state.ui.nextZ += 1;
-      state.ui.windows[action.payload].z = state.ui.nextZ;
+      state.ui.windows[windowId].z = state.ui.nextZ;
+      syncTransportModeWithWindow(state, windowId);
     },
     setWindowRect(state, action) {
       const win = state.ui.windows[action.payload.id];

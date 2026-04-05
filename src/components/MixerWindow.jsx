@@ -92,23 +92,23 @@ export function MixerWindow() {
     [fxSlots, armedFxClearSlotId],
   );
 
-  const getTrackLabel = function (insert) {
+  const getInsertLabel = function (insert) {
     if (insert.isMaster) {
       return insert.name || "Master";
     }
 
     const sourceName = String(insert.name || "");
-    const renamed = sourceName.replace(/^insert\b/i, "Track");
+    const renamed = sourceName.replace(/^insert\b/i, "Insert");
     if (renamed && renamed !== sourceName) {
       return renamed;
     }
 
     const numericSuffix = String(insert.id || "").match(/insert-(\d+)/i)?.[1];
     if (numericSuffix) {
-      return "Track " + numericSuffix;
+      return "Insert " + numericSuffix;
     }
 
-    return sourceName || "Track";
+    return sourceName || "Insert";
   };
 
   useEffect(function () {
@@ -145,7 +145,7 @@ export function MixerWindow() {
 
   const resetPan = function (insert) {
     const nextValue = 0;
-    const trackLabel = getTrackLabel(insert);
+    const trackLabel = getInsertLabel(insert);
     dispatch(
       setInsertPan({
         insertId: insert.id,
@@ -159,7 +159,7 @@ export function MixerWindow() {
 
   const resetStereo = function (insert) {
     const nextValue = 0;
-    const trackLabel = getTrackLabel(insert);
+    const trackLabel = getInsertLabel(insert);
     dispatch(
       setInsertStereo({
         insertId: insert.id,
@@ -173,7 +173,7 @@ export function MixerWindow() {
 
   const resetVolume = function (insert) {
     const nextValue = 1;
-    const trackLabel = getTrackLabel(insert);
+    const trackLabel = getInsertLabel(insert);
     dispatch(
       setInsertFader({
         insertId: insert.id,
@@ -295,7 +295,7 @@ export function MixerWindow() {
 
     setSelectedFxSlotId(slot.id);
     showValueReadout(
-      getTrackLabel(selectedInsert) +
+      getInsertLabel(selectedInsert) +
         " loaded " +
         (payload.effectName || "Graphic EQ") +
         " on " +
@@ -324,7 +324,7 @@ export function MixerWindow() {
                   onClick={function (event) {
                     event.stopPropagation();
                     const nextValue = !insert.active;
-                    const trackLabel = getTrackLabel(insert);
+                    const trackLabel = getInsertLabel(insert);
                     dispatch(
                       setInsertActive({
                         insertId: insert.id,
@@ -336,7 +336,7 @@ export function MixerWindow() {
                     );
                   }}
                 />
-                <div className="track-title">{getTrackLabel(insert)}</div>
+                <div className="track-title">{getInsertLabel(insert)}</div>
               </div>
 
               <div className="knob-group">
@@ -355,7 +355,7 @@ export function MixerWindow() {
                     }}
                     onChange={function (event) {
                       const nextValue = Number(event.target.value);
-                      const trackLabel = getTrackLabel(insert);
+                      const trackLabel = getInsertLabel(insert);
                       dispatch(
                         setInsertPan({
                           insertId: insert.id,
@@ -386,7 +386,7 @@ export function MixerWindow() {
                     }}
                     onChange={function (event) {
                       const nextValue = Number(event.target.value);
-                      const trackLabel = getTrackLabel(insert);
+                      const trackLabel = getInsertLabel(insert);
                       dispatch(
                         setInsertStereo({
                           insertId: insert.id,
@@ -418,7 +418,7 @@ export function MixerWindow() {
                     }}
                     onChange={function (event) {
                       const nextValue = Number(event.target.value);
-                      const trackLabel = getTrackLabel(insert);
+                      const trackLabel = getInsertLabel(insert);
                       dispatch(
                         setInsertFader({
                           insertId: insert.id,
@@ -462,7 +462,7 @@ export function MixerWindow() {
               dispatch(addMixerTrack());
             }}
           >
-            + Track
+            + Insert
           </button>
         </div>
 
@@ -529,7 +529,7 @@ export function MixerWindow() {
                     );
 
                     showValueReadout(
-                      getTrackLabel(selectedInsert) +
+                      getInsertLabel(selectedInsert) +
                         " " +
                         slotName +
                         ": " +
@@ -572,7 +572,7 @@ export function MixerWindow() {
                       );
 
                       showValueReadout(
-                        getTrackLabel(selectedInsert) + " cleared " + slotName,
+                        getInsertLabel(selectedInsert) + " cleared " + slotName,
                       );
                     }}
                   >

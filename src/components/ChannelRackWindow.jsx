@@ -145,18 +145,18 @@ export function ChannelRackWindow() {
     [isPlaying, bpm, patternLength],
   );
 
-  const getInsertTrackLabel = function (insert, index) {
-    const fromName = String(insert.name || "").replace(/^insert\b/i, "Track");
+  const getInsertLabel = function (insert, index) {
+    const fromName = String(insert.name || "").replace(/^insert\b/i, "Insert");
     if (fromName && fromName !== insert.name) {
       return fromName;
     }
 
     const numericSuffix = String(insert.id || "").match(/insert-(\d+)/i)?.[1];
     if (numericSuffix) {
-      return "Track " + numericSuffix;
+      return "Insert " + numericSuffix;
     }
 
-    return "Track " + (index + 1);
+    return "Insert " + (index + 1);
   };
 
   return (
@@ -454,7 +454,7 @@ export function ChannelRackWindow() {
                   <label className="channel-insert">
                     <select
                       className="channel-insert-select"
-                      aria-label="Track assignment"
+                      aria-label="Insert assignment"
                       value={channel.mixerInsertId || ""}
                       onChange={function (event) {
                         dispatch(
@@ -468,7 +468,7 @@ export function ChannelRackWindow() {
                       {mixerInserts.map(function (insert, index) {
                         return (
                           <option key={insert.id} value={insert.id}>
-                            {getInsertTrackLabel(insert, index)}
+                            {getInsertLabel(insert, index)}
                           </option>
                         );
                       })}

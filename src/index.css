@@ -41,3 +41,12 @@ button,
 input {
   font-family: inherit;
 }
+
+button:focus,
+button:focus-visible {
+  outline: none;
+}
+
+button::-moz-focus-inner {
+  border: 0;
+}
