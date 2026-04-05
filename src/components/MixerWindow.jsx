@@ -15,11 +15,19 @@ import {
 } from "../store";
 
 const FX_EFFECT_GRAPHIC_EQ = "graphic-eq";
+const FX_EFFECT_REVERB = "reverb";
 const FX_EFFECT_NONE = "none";
+
+function isSupportedEffectType(effectType) {
+  return effectType === FX_EFFECT_GRAPHIC_EQ || effectType === FX_EFFECT_REVERB;
+}
 
 function getFxSlotName(slot, fallbackIndex) {
   if (slot?.effectType === FX_EFFECT_GRAPHIC_EQ) {
     return "Graphic EQ";
+  }
+  if (slot?.effectType === FX_EFFECT_REVERB) {
+    return "Reverb";
   }
   return String(slot?.name || "").trim() || "Slot " + (fallbackIndex + 1);
 }
@@ -212,7 +220,7 @@ export function MixerWindow() {
         if (
           payload &&
           payload.type === "effect" &&
-          payload.effectType === FX_EFFECT_GRAPHIC_EQ
+          isSupportedEffectType(payload.effectType)
         ) {
           return payload;
         }
@@ -499,12 +507,12 @@ export function MixerWindow() {
                   className={
                     "fx-power" +
                     (slot.enabled ? " is-on" : "") +
-                    (slot.effectType === FX_EFFECT_GRAPHIC_EQ
+                    (isSupportedEffectType(slot.effectType)
                       ? ""
                       : " is-disabled")
                   }
                   title={
-                    slot.effectType === FX_EFFECT_GRAPHIC_EQ
+                    isSupportedEffectType(slot.effectType)
                       ? slot.enabled
                         ? "Bypass FX"
                         : "Enable FX"
@@ -517,7 +525,7 @@ export function MixerWindow() {
                       setArmedFxClearSlotId(null);
                     }
 
-                    if (slot.effectType !== FX_EFFECT_GRAPHIC_EQ) {
+                    if (!isSupportedEffectType(slot.effectType)) {
                       return;
                     }
 

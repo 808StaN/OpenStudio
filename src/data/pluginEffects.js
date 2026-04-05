@@ -4,6 +4,11 @@ export const PLUGIN_EFFECTS = [
     name: "Graphic EQ",
     description: "7-point draggable parametric equalizer",
   },
+  {
+    effectType: "reverb",
+    name: "Reverb",
+    description: "Algorithmic stereo reverb with freeze and modulation",
+  },
 ];
 
 const effectByType = PLUGIN_EFFECTS.reduce(function (acc, effect) {

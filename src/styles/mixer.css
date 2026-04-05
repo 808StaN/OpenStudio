@@ -833,6 +833,103 @@
   background: linear-gradient(180deg, #f7f8fa 0%, #9ea7b5 100%);
 }
 
+.fx-reverb-shell {
+  display: grid;
+  gap: 10px;
+}
+
+.fx-reverb-grid {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 10px;
+}
+
+.fx-reverb-control {
+  border: 1px solid #3f4a5e;
+  border-radius: 10px;
+  background: linear-gradient(180deg, #151c2b 0%, #0c111c 100%);
+  padding: 8px;
+  display: grid;
+  gap: 6px;
+  justify-items: center;
+}
+
+.fx-reverb-control span {
+  color: #9ca9be;
+  font-size: 10px;
+  font-weight: 600;
+}
+
+.fx-reverb-control.is-active {
+  border-color: #f9b739;
+  box-shadow:
+    inset 0 1px 0 rgba(255, 255, 255, 0.08),
+    0 0 0 1px rgba(249, 183, 57, 0.3),
+    0 0 10px rgba(249, 183, 57, 0.22);
+}
+
+.fx-reverb-control strong {
+  color: #d7e5ff;
+  font-size: 10px;
+  font-weight: 700;
+}
+
+.fx-reverb-knob {
+  position: relative;
+  width: 58px;
+  height: 58px;
+  border: 0;
+  border-radius: 50%;
+  padding: 0;
+  background: transparent;
+  cursor: ns-resize;
+}
+
+.fx-reverb-knob-face {
+  position: absolute;
+  inset: 0;
+  border-radius: 50%;
+  border: 2px solid #5d6f8d;
+  box-shadow:
+    inset 0 2px 8px rgba(0, 0, 0, 0.65),
+    0 1px 0 rgba(255, 255, 255, 0.08);
+}
+
+.fx-reverb-knob-face::after {
+  content: "";
+  position: absolute;
+  inset: 9px;
+  border-radius: 50%;
+  background: radial-gradient(circle at 35% 30%, #3d4c66 0%, #222f46 58%, #151d2b 100%);
+}
+
+.fx-reverb-value {
+  min-height: 20px;
+  width: 100%;
+  border: 1px solid transparent;
+  border-radius: 4px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  user-select: none;
+  cursor: text;
+}
+
+.fx-reverb-inline-input {
+  width: 100%;
+  height: 20px;
+  box-sizing: border-box;
+  border: 1px solid #6e8cc7;
+  border-radius: 4px;
+  background: linear-gradient(180deg, #1c273a 0%, #121a28 100%);
+  color: #dff0ff;
+  font-size: 10px;
+  font-weight: 600;
+  text-align: center;
+  padding: 0 4px;
+  outline: none;
+}
+
 @media (max-width: 1100px) {
   .mixer-root {
     grid-template-columns: 1fr;
@@ -843,6 +940,10 @@
   }
 
   .fx-proq-readouts {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  .fx-reverb-grid {
     grid-template-columns: repeat(2, minmax(0, 1fr));
   }
 }

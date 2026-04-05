@@ -2,6 +2,7 @@ import { configureStore, createAction, createSlice } from "@reduxjs/toolkit";
 
 const FX_SLOT_EFFECT_NONE = "none";
 const FX_SLOT_EFFECT_GRAPHIC_EQ = "graphic-eq";
+const FX_SLOT_EFFECT_REVERB = "reverb";
 const DEFAULT_INSERT_SPECTRUM_BINS = 112;
 const GRAPHIC_EQ_DEFAULT_POINT_FREQUENCIES = [
   50, 100, 250, 500, 1000, 3000, 8000,
@@ -74,6 +75,68 @@ function makeGraphicEqParams() {
   };
 }
 
+function clampReverb01(raw, fallback) {
+  const value = Number(raw);
+  if (!Number.isFinite(value)) {
+    return fallback;
+  }
+  return Math.max(0, Math.min(1, value));
+}
+
+function clampReverbInRange(raw, min, max, fallback) {
+  const value = Number(raw);
+  if (!Number.isFinite(value)) {
+    return fallback;
+  }
+  return Math.max(min, Math.min(max, value));
+}
+
+function makeReverbParams() {
+  return {
+    decayTime: 2.8,
+    preDelayMs: 24,
+    size: 0.62,
+    damping: 0.45,
+    hiCutHz: 9000,
+    loCutHz: 130,
+    earlyReflections: 0.38,
+    diffusion: 0.72,
+    modulationDepth: 0.22,
+    modulationRateHz: 0.35,
+    width: 0.9,
+    dryWet: 0.34,
+    freeze: false,
+  };
+}
+
+function getSafeReverbParams(raw) {
+  const base = {
+    ...makeReverbParams(),
+    ...(raw || {}),
+  };
+
+  return {
+    decayTime: clampReverbInRange(base.decayTime, 0.2, 20, 2.8),
+    preDelayMs: clampReverbInRange(base.preDelayMs, 0, 250, 24),
+    size: clampReverb01(base.size, 0.62),
+    damping: clampReverb01(base.damping, 0.45),
+    hiCutHz: clampReverbInRange(base.hiCutHz, 1200, 18000, 9000),
+    loCutHz: clampReverbInRange(base.loCutHz, 20, 1200, 130),
+    earlyReflections: clampReverb01(base.earlyReflections, 0.38),
+    diffusion: clampReverb01(base.diffusion, 0.72),
+    modulationDepth: clampReverb01(base.modulationDepth, 0.22),
+    modulationRateHz: clampReverbInRange(
+      base.modulationRateHz,
+      0,
+      8,
+      0.35,
+    ),
+    width: clampReverb01(base.width, 0.9),
+    dryWet: clampReverb01(base.dryWet, 0.34),
+    freeze: Boolean(base.freeze),
+  };
+}
+
 function makeInsertSpectrum() {
   return Array.from({ length: DEFAULT_INSERT_SPECTRUM_BINS }).map(function () {
     return 0;
@@ -118,10 +181,14 @@ function normalizeFxSlot(slot, index) {
   const effectType =
     rawEffectType === FX_SLOT_EFFECT_GRAPHIC_EQ
       ? FX_SLOT_EFFECT_GRAPHIC_EQ
+      : rawEffectType === FX_SLOT_EFFECT_REVERB
+        ? FX_SLOT_EFFECT_REVERB
       : FX_SLOT_EFFECT_NONE;
   const defaultName =
     effectType === FX_SLOT_EFFECT_GRAPHIC_EQ
       ? "Graphic EQ"
+      : effectType === FX_SLOT_EFFECT_REVERB
+        ? "Reverb"
       : getFxSlotDefaultName(index);
 
   return {
@@ -133,6 +200,8 @@ function normalizeFxSlot(slot, index) {
     params:
       effectType === FX_SLOT_EFFECT_GRAPHIC_EQ
         ? getSafeGraphicEqParams(slot?.params)
+        : effectType === FX_SLOT_EFFECT_REVERB
+          ? getSafeReverbParams(slot?.params)
         : null,
   };
 }
@@ -2044,6 +2113,13 @@ const dawSlice = createSlice({
         return;
       }
 
+      if (requestedType === FX_SLOT_EFFECT_REVERB) {
+        slot.effectType = FX_SLOT_EFFECT_REVERB;
+        slot.name = "Reverb";
+        slot.params = getSafeReverbParams(slot.params);
+        return;
+      }
+
       slot.effectType = FX_SLOT_EFFECT_NONE;
       slot.enabled = false;
       slot.name = getFxSlotDefaultName(slotIndex);
@@ -2143,6 +2219,71 @@ const dawSlice = createSlice({
           action.payload.bandType,
           point.bandType,
         );
+      }
+    },
+
+    setFxSlotReverbParam(state, action) {
+      const insert = state.mixer.inserts.find(function (item) {
+        return item.id === action.payload.insertId;
+      });
+      if (!insert) {
+        return;
+      }
+
+      ensureInsertFxSlots(insert);
+
+      const slot = insert.fxSlots.find(function (item) {
+        return item.id === action.payload.slotId;
+      });
+      if (!slot || slot.effectType !== FX_SLOT_EFFECT_REVERB) {
+        return;
+      }
+
+      slot.params = getSafeReverbParams(slot.params);
+
+      const param = String(action.payload.param || "").trim();
+      const value = action.payload.value;
+
+      if (param === "freeze") {
+        slot.params.freeze = Boolean(value);
+        return;
+      }
+
+      if (param === "decayTime") {
+        slot.params.decayTime = clampReverbInRange(value, 0.2, 20, 2.8);
+        return;
+      }
+
+      if (param === "preDelayMs") {
+        slot.params.preDelayMs = clampReverbInRange(value, 0, 250, 24);
+        return;
+      }
+
+      if (param === "hiCutHz") {
+        slot.params.hiCutHz = clampReverbInRange(value, 1200, 18000, 9000);
+        return;
+      }
+
+      if (param === "loCutHz") {
+        slot.params.loCutHz = clampReverbInRange(value, 20, 1200, 130);
+        return;
+      }
+
+      if (param === "modulationRateHz") {
+        slot.params.modulationRateHz = clampReverbInRange(value, 0, 8, 0.35);
+        return;
+      }
+
+      if (
+        param === "size" ||
+        param === "damping" ||
+        param === "earlyReflections" ||
+        param === "diffusion" ||
+        param === "modulationDepth" ||
+        param === "width" ||
+        param === "dryWet"
+      ) {
+        slot.params[param] = clampReverb01(value, slot.params[param]);
       }
     },
 
@@ -2255,6 +2396,7 @@ export const {
   setFxSlotGraphicEqBandGain,
   setFxSlotGraphicEqLowCut,
   setFxSlotGraphicEqPoint,
+  setFxSlotReverbParam,
   setInsertMeter,
 } = dawSlice.actions;
 

@@ -30,6 +30,7 @@ const EQ_SPECTRUM_BINS = 112;
 const EQ_SPECTRUM_MIN_FREQ = 20;
 const EQ_SPECTRUM_MAX_FREQ = 20000;
 const FX_EFFECT_GRAPHIC_EQ = "graphic-eq";
+const FX_EFFECT_REVERB = "reverb";
 const GRAPHIC_EQ_DEFAULT_POINT_FREQUENCIES = [
   50, 100, 250, 500, 1000, 3000, 8000,
 ];
@@ -133,24 +134,74 @@ function getSafeGraphicEqParams(raw) {
   };
 }
 
-function getCombinedGraphicEqState(insert) {
+function getSafeReverbParams(raw) {
+  const base = {
+    decayTime: 2.8,
+    preDelayMs: 24,
+    size: 0.62,
+    damping: 0.45,
+    hiCutHz: 9000,
+    loCutHz: 130,
+    earlyReflections: 0.38,
+    diffusion: 0.72,
+    modulationDepth: 0.22,
+    modulationRateHz: 0.35,
+    width: 0.9,
+    dryWet: 0.34,
+    freeze: false,
+    ...(raw || {}),
+  };
+
+  return {
+    decayTime: clamp(Number(base.decayTime ?? 2.8), 0.2, 20),
+    preDelayMs: clamp(Number(base.preDelayMs ?? 24), 0, 250),
+    size: clamp(Number(base.size ?? 0.62), 0, 1),
+    damping: clamp(Number(base.damping ?? 0.45), 0, 1),
+    hiCutHz: clamp(Number(base.hiCutHz ?? 9000), 1200, 18000),
+    loCutHz: clamp(Number(base.loCutHz ?? 130), 20, 1200),
+    earlyReflections: clamp(Number(base.earlyReflections ?? 0.38), 0, 1),
+    diffusion: clamp(Number(base.diffusion ?? 0.72), 0, 1),
+    modulationDepth: clamp(Number(base.modulationDepth ?? 0.22), 0, 1),
+    modulationRateHz: clamp(Number(base.modulationRateHz ?? 0.35), 0, 8),
+    width: clamp(Number(base.width ?? 0.9), 0, 1),
+    dryWet: clamp(Number(base.dryWet ?? 0.34), 0, 1),
+    freeze: Boolean(base.freeze),
+  };
+}
+
+function getActiveFxState(insert) {
   const fxSlots = Array.isArray(insert?.fxSlots) ? insert.fxSlots : [];
   const enabledSlots = fxSlots.filter(function (slot) {
-    return Boolean(slot?.enabled) && slot?.effectType === FX_EFFECT_GRAPHIC_EQ;
+    return Boolean(slot?.enabled);
   });
 
   if (enabledSlots.length === 0) {
     return {
-      enabled: false,
-      params: getSafeGraphicEqParams(null),
+      effectType: "none",
+      params: null,
+    };
+  }
+
+  const activeSlot = enabledSlots[enabledSlots.length - 1];
+  const effectType = String(activeSlot?.effectType || "none");
+
+  if (effectType === FX_EFFECT_GRAPHIC_EQ) {
+    return {
+      effectType,
+      params: getSafeGraphicEqParams(activeSlot?.params),
+    };
+  }
+
+  if (effectType === FX_EFFECT_REVERB) {
+    return {
+      effectType,
+      params: getSafeReverbParams(activeSlot?.params),
     };
   }
 
   return {
-    enabled: true,
-    params: getSafeGraphicEqParams(
-      enabledSlots[enabledSlots.length - 1]?.params,
-    ),
+    effectType: "none",
+    params: null,
   };
 }
 
@@ -328,20 +379,46 @@ function areMixerSettingsEqual(prev, next) {
 
       const aParams = aSlot.params || {};
       const bParams = bSlot.params || {};
-      const aPoints = aParams.points || [];
-      const bPoints = bParams.points || [];
-      if (aPoints.length !== bPoints.length) {
-        return false;
+      if (aSlot.effectType === FX_EFFECT_GRAPHIC_EQ) {
+        const aPoints = aParams.points || [];
+        const bPoints = bParams.points || [];
+        if (aPoints.length !== bPoints.length) {
+          return false;
+        }
+
+        for (
+          let pointIndex = 0;
+          pointIndex < aPoints.length;
+          pointIndex += 1
+        ) {
+          const aPoint = aPoints[pointIndex] || {};
+          const bPoint = bPoints[pointIndex] || {};
+          if (
+            aPoint.frequencyHz !== bPoint.frequencyHz ||
+            aPoint.gainDb !== bPoint.gainDb ||
+            aPoint.q !== bPoint.q ||
+            aPoint.bandType !== bPoint.bandType
+          ) {
+            return false;
+          }
+        }
       }
 
-      for (let pointIndex = 0; pointIndex < aPoints.length; pointIndex += 1) {
-        const aPoint = aPoints[pointIndex] || {};
-        const bPoint = bPoints[pointIndex] || {};
+      if (aSlot.effectType === FX_EFFECT_REVERB) {
         if (
-          aPoint.frequencyHz !== bPoint.frequencyHz ||
-          aPoint.gainDb !== bPoint.gainDb ||
-          aPoint.q !== bPoint.q ||
-          aPoint.bandType !== bPoint.bandType
+          aParams.decayTime !== bParams.decayTime ||
+          aParams.preDelayMs !== bParams.preDelayMs ||
+          aParams.size !== bParams.size ||
+          aParams.damping !== bParams.damping ||
+          aParams.hiCutHz !== bParams.hiCutHz ||
+          aParams.loCutHz !== bParams.loCutHz ||
+          aParams.earlyReflections !== bParams.earlyReflections ||
+          aParams.diffusion !== bParams.diffusion ||
+          aParams.modulationDepth !== bParams.modulationDepth ||
+          aParams.modulationRateHz !== bParams.modulationRateHz ||
+          aParams.width !== bParams.width ||
+          aParams.dryWet !== bParams.dryWet ||
+          aParams.freeze !== bParams.freeze
         ) {
           return false;
         }
@@ -528,6 +605,8 @@ export function useAudioScheduler() {
               params:
                 effectType === FX_EFFECT_GRAPHIC_EQ
                   ? getSafeGraphicEqParams(slot.params)
+                  : effectType === FX_EFFECT_REVERB
+                    ? getSafeReverbParams(slot.params)
                   : null,
             };
           },
@@ -712,6 +791,37 @@ export function useAudioScheduler() {
               safeDisconnect(band);
             });
           }
+          safeDisconnect(node.reverbInput);
+          safeDisconnect(node.reverbPreDelay);
+          safeDisconnect(node.reverbLoCut);
+          safeDisconnect(node.reverbHiCut);
+          safeDisconnect(node.reverbEarlyGain);
+          safeDisconnect(node.reverbLateInput);
+          safeDisconnect(node.reverbLateLeftDelay);
+          safeDisconnect(node.reverbLateRightDelay);
+          safeDisconnect(node.reverbLeftFeedback);
+          safeDisconnect(node.reverbRightFeedback);
+          safeDisconnect(node.reverbLeftDamping);
+          safeDisconnect(node.reverbRightDamping);
+          safeDisconnect(node.reverbWidthSplitter);
+          safeDisconnect(node.reverbLeftToLeft);
+          safeDisconnect(node.reverbRightToLeft);
+          safeDisconnect(node.reverbLeftToRight);
+          safeDisconnect(node.reverbRightToRight);
+          safeDisconnect(node.reverbWidthMerger);
+          if (Array.isArray(node.reverbEarlyTaps)) {
+            node.reverbEarlyTaps.forEach(function (tap) {
+              safeDisconnect(tap.delay);
+              safeDisconnect(tap.gain);
+            });
+          }
+          if (Array.isArray(node.reverbModulators)) {
+            node.reverbModulators.forEach(function (mod) {
+              safeDisconnect(mod.lfo);
+              safeDisconnect(mod.depth);
+            });
+          }
+          safeDisconnect(node.reverbWetGain);
           safeDisconnect(node.outputGain);
           safeDisconnect(node.analyser);
         });
@@ -742,6 +852,24 @@ export function useAudioScheduler() {
             return band;
           },
         );
+        const reverbInput = audioCtx.createGain();
+        const reverbPreDelay = audioCtx.createDelay(0.5);
+        const reverbLoCut = audioCtx.createBiquadFilter();
+        const reverbHiCut = audioCtx.createBiquadFilter();
+        const reverbEarlyGain = audioCtx.createGain();
+        const reverbLateInput = audioCtx.createGain();
+        const reverbLateLeftDelay = audioCtx.createDelay(1.25);
+        const reverbLateRightDelay = audioCtx.createDelay(1.25);
+        const reverbLeftFeedback = audioCtx.createGain();
+        const reverbRightFeedback = audioCtx.createGain();
+        const reverbLeftDamping = audioCtx.createBiquadFilter();
+        const reverbRightDamping = audioCtx.createBiquadFilter();
+        const reverbLeftToLeft = audioCtx.createGain();
+        const reverbRightToLeft = audioCtx.createGain();
+        const reverbLeftToRight = audioCtx.createGain();
+        const reverbRightToRight = audioCtx.createGain();
+        const reverbWidthMerger = audioCtx.createChannelMerger(2);
+        const reverbWetGain = audioCtx.createGain();
         const outputGain = audioCtx.createGain();
         const analyser = audioCtx.createAnalyser();
 
@@ -765,6 +893,7 @@ export function useAudioScheduler() {
         merger.connect(panner);
         panner.connect(fxDryGain);
         panner.connect(eqInput);
+        panner.connect(reverbInput);
 
         eqLowCut.type = "highpass";
         eqLowCut.frequency.value = 20;
@@ -777,6 +906,78 @@ export function useAudioScheduler() {
           eqTail = band;
         });
         eqTail.connect(fxWetGain);
+
+        reverbInput.connect(reverbPreDelay);
+        reverbLoCut.type = "highpass";
+        reverbHiCut.type = "lowpass";
+        reverbPreDelay.connect(reverbLoCut);
+        reverbLoCut.connect(reverbHiCut);
+
+        const earlyTapTimes = [0.011, 0.019, 0.031, 0.043];
+        const earlyTapGains = [0.5, 0.36, 0.26, 0.2];
+        const reverbEarlyTaps = earlyTapTimes.map(function (timeSeconds, idx) {
+          const delay = audioCtx.createDelay(0.25);
+          const gain = audioCtx.createGain();
+          delay.delayTime.value = timeSeconds;
+          gain.gain.value = earlyTapGains[idx] || 0.2;
+          reverbHiCut.connect(delay);
+          delay.connect(gain);
+          gain.connect(reverbEarlyGain);
+          return {
+            delay,
+            gain,
+            baseTime: timeSeconds,
+          };
+        });
+        reverbEarlyGain.connect(reverbWetGain);
+
+        reverbHiCut.connect(reverbLateInput);
+        reverbLateInput.connect(reverbLateLeftDelay);
+        reverbLateInput.connect(reverbLateRightDelay);
+
+        reverbLateLeftDelay.connect(reverbLeftDamping);
+        reverbLateRightDelay.connect(reverbRightDamping);
+
+        reverbLeftDamping.type = "lowpass";
+        reverbRightDamping.type = "lowpass";
+
+        reverbLeftDamping.connect(reverbLeftFeedback);
+        reverbRightDamping.connect(reverbRightFeedback);
+
+        // Keep a cross-feedback matrix to avoid doubling loop gain.
+        reverbLeftFeedback.connect(reverbLateRightDelay);
+        reverbRightFeedback.connect(reverbLateLeftDelay);
+
+        reverbLeftDamping.connect(reverbLeftToLeft);
+        reverbLeftDamping.connect(reverbLeftToRight);
+        reverbRightDamping.connect(reverbRightToLeft);
+        reverbRightDamping.connect(reverbRightToRight);
+
+        reverbLeftToLeft.connect(reverbWidthMerger, 0, 0);
+        reverbRightToLeft.connect(reverbWidthMerger, 0, 0);
+        reverbLeftToRight.connect(reverbWidthMerger, 0, 1);
+        reverbRightToRight.connect(reverbWidthMerger, 0, 1);
+
+        reverbWidthMerger.connect(reverbWetGain);
+        reverbWetGain.connect(fxWetGain);
+
+        const reverbModulators = [
+          reverbLateLeftDelay,
+          reverbLateRightDelay,
+        ].map(function (targetDelay, index) {
+          const lfo = audioCtx.createOscillator();
+          const depth = audioCtx.createGain();
+          lfo.type = "sine";
+          lfo.frequency.value = 0.35 + index * 0.09;
+          depth.gain.value = 0;
+          lfo.connect(depth);
+          depth.connect(targetDelay.delayTime);
+          lfo.start();
+          return {
+            lfo,
+            depth,
+          };
+        });
 
         fxDryGain.connect(outputGain);
         fxWetGain.connect(outputGain);
@@ -796,6 +997,26 @@ export function useAudioScheduler() {
           eqInput,
           eqLowCut,
           eqBands,
+          reverbInput,
+          reverbPreDelay,
+          reverbLoCut,
+          reverbHiCut,
+          reverbEarlyGain,
+          reverbEarlyTaps,
+          reverbLateInput,
+          reverbLateLeftDelay,
+          reverbLateRightDelay,
+          reverbLeftFeedback,
+          reverbRightFeedback,
+          reverbLeftDamping,
+          reverbRightDamping,
+          reverbLeftToLeft,
+          reverbRightToLeft,
+          reverbLeftToRight,
+          reverbRightToRight,
+          reverbWidthMerger,
+          reverbModulators,
+          reverbWetGain,
           outputGain,
           analyser,
           meterData: new Uint8Array(analyser.fftSize),
@@ -870,9 +1091,15 @@ export function useAudioScheduler() {
         -1,
         Math.min(1, insert.stereoSeparation),
       );
-      const eqState = getCombinedGraphicEqState(insert);
-      const eqEnabled = eqState.enabled;
-      const eqParams = eqState.params;
+      const activeFx = getActiveFxState(insert);
+      const eqEnabled = activeFx.effectType === FX_EFFECT_GRAPHIC_EQ;
+      const reverbEnabled = activeFx.effectType === FX_EFFECT_REVERB;
+      const eqParams = eqEnabled
+        ? activeFx.params
+        : getSafeGraphicEqParams(null);
+      const reverbParams = reverbEnabled
+        ? activeFx.params
+        : getSafeReverbParams(null);
 
       const width = 1 - targetSeparation;
       const directGain = 0.5 * (1 + width);
@@ -885,8 +1112,19 @@ export function useAudioScheduler() {
 
       node.panner.pan.setValueAtTime(targetPan, now);
 
-      smoothTo(node.fxDryGain.gain, eqEnabled ? 0 : 1, now);
-      smoothTo(node.fxWetGain.gain, eqEnabled ? 1 : 0, now);
+      const dryMix = reverbEnabled
+        ? clamp(1 - reverbParams.dryWet, 0, 1)
+        : eqEnabled
+          ? 0
+          : 1;
+      const wetMix = reverbEnabled
+        ? clamp(reverbParams.dryWet, 0, 1)
+        : eqEnabled
+          ? 1
+          : 0;
+
+      smoothTo(node.fxDryGain.gain, dryMix, now);
+      smoothTo(node.fxWetGain.gain, wetMix, now);
       smoothTo(node.eqLowCut.frequency, 20, now);
       node.eqLowCut.Q.setValueAtTime(0.707, now);
 
@@ -905,6 +1143,108 @@ export function useAudioScheduler() {
           bandNode.frequency.setValueAtTime(point.frequencyHz, now);
           bandNode.Q.setValueAtTime(point.q, now);
           smoothTo(bandNode.gain, eqEnabled ? point.gainDb : 0, now);
+        });
+      }
+
+      const reverbSize = reverbEnabled
+        ? clamp(reverbParams.size, 0, 1)
+        : 0.62;
+      const reverbDiffusion = reverbEnabled
+        ? clamp(reverbParams.diffusion, 0, 1)
+        : 0.72;
+      const reverbDamping = reverbEnabled
+        ? clamp(reverbParams.damping, 0, 1)
+        : 0.45;
+      const reverbDecay = reverbEnabled
+        ? clamp(reverbParams.decayTime, 0.2, 20)
+        : 2.8;
+      const isFreeze = reverbEnabled && Boolean(reverbParams.freeze);
+
+      const preDelaySec =
+        (reverbEnabled ? clamp(reverbParams.preDelayMs, 0, 250) : 24) / 1000;
+      const hiCutHz = reverbEnabled
+        ? clamp(reverbParams.hiCutHz, 1200, 18000)
+        : 9000;
+      const loCutHz = reverbEnabled
+        ? clamp(reverbParams.loCutHz, 20, 1200)
+        : 130;
+      const earlyMix = reverbEnabled
+        ? clamp(reverbParams.earlyReflections, 0, 1)
+        : 0.38;
+      const widthValue = reverbEnabled
+        ? clamp(reverbParams.width, 0, 1)
+        : 0.9;
+      const modDepth = reverbEnabled
+        ? clamp(reverbParams.modulationDepth, 0, 1)
+        : 0.22;
+      const modRate = reverbEnabled
+        ? clamp(reverbParams.modulationRateHz, 0, 8)
+        : 0.35;
+
+      const leftBaseDelay =
+        0.029 + reverbSize * 0.053 + reverbDiffusion * 0.011;
+      const rightBaseDelay =
+        0.037 + reverbSize * 0.061 + reverbDiffusion * 0.013;
+      const feedbackBase = isFreeze
+        ? 0.988
+        : clamp(
+            0.24 +
+              reverbDecay / 34 +
+              reverbSize * 0.14 +
+              reverbDiffusion * 0.1,
+            0.2,
+            0.82,
+          );
+      const earlyLevel = isFreeze ? 0 : earlyMix;
+      const reverbInputLevel = isFreeze ? 0 : 1;
+      const dampFreq = Math.max(900, hiCutHz * (1 - reverbDamping * 0.55));
+      const directWidth = 0.5 * (1 + widthValue);
+      const crossWidth = 0.5 * (1 - widthValue);
+
+      node.reverbInput.gain.setValueAtTime(reverbInputLevel, now);
+      node.reverbPreDelay.delayTime.setValueAtTime(preDelaySec, now);
+      node.reverbLoCut.frequency.setValueAtTime(loCutHz, now);
+      node.reverbLoCut.Q.setValueAtTime(0.707, now);
+      node.reverbHiCut.frequency.setValueAtTime(hiCutHz, now);
+      node.reverbHiCut.Q.setValueAtTime(0.62, now);
+
+      node.reverbLateLeftDelay.delayTime.setValueAtTime(leftBaseDelay, now);
+      node.reverbLateRightDelay.delayTime.setValueAtTime(rightBaseDelay, now);
+      smoothTo(node.reverbLeftFeedback.gain, feedbackBase, now);
+      smoothTo(node.reverbRightFeedback.gain, feedbackBase * 0.985, now);
+      node.reverbLeftDamping.frequency.setValueAtTime(dampFreq, now);
+      node.reverbRightDamping.frequency.setValueAtTime(dampFreq * 0.96, now);
+      node.reverbLeftDamping.Q.setValueAtTime(0.68, now);
+      node.reverbRightDamping.Q.setValueAtTime(0.68, now);
+      node.reverbEarlyGain.gain.setValueAtTime(earlyLevel, now);
+
+      if (Array.isArray(node.reverbEarlyTaps)) {
+        node.reverbEarlyTaps.forEach(function (tap, tapIndex) {
+          const spread = reverbSize * 0.018 + reverbDiffusion * 0.011;
+          const base = Number(tap.baseTime || 0.012);
+          tap.delay.delayTime.setValueAtTime(base + spread, now);
+          const tapBaseGain = [0.5, 0.36, 0.26, 0.2][tapIndex] || 0.2;
+          tap.gain.gain.setValueAtTime(tapBaseGain * earlyLevel, now);
+        });
+      }
+
+      node.reverbLeftToLeft.gain.setValueAtTime(directWidth, now);
+      node.reverbRightToRight.gain.setValueAtTime(directWidth, now);
+      node.reverbRightToLeft.gain.setValueAtTime(crossWidth, now);
+      node.reverbLeftToRight.gain.setValueAtTime(crossWidth, now);
+
+      smoothTo(node.reverbWetGain.gain, reverbEnabled ? 1 : 0, now);
+
+      if (Array.isArray(node.reverbModulators)) {
+        node.reverbModulators.forEach(function (modNode, index) {
+          modNode.lfo.frequency.setValueAtTime(
+            modRate * (index === 0 ? 1 : 1.17),
+            now,
+          );
+          modNode.depth.gain.setValueAtTime(
+            (0.0004 + modDepth * 0.0032) * (index === 0 ? 1 : -1),
+            now,
+          );
         });
       }
 

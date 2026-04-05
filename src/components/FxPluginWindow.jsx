@@ -3,10 +3,12 @@ import { useDispatch, useSelector } from "react-redux";
 import {
   setFxSlotEffectType,
   setFxSlotGraphicEqPoint,
+  setFxSlotReverbParam,
   toggleFxSlot,
 } from "../store";
 
 const FX_EFFECT_GRAPHIC_EQ = "graphic-eq";
+const FX_EFFECT_REVERB = "reverb";
 const GRAPHIC_EQ_DEFAULT_POINT_FREQUENCIES = [
   50, 100, 250, 500, 1000, 3000, 8000,
 ];
@@ -37,6 +39,10 @@ const GRAPH_PADDING = {
   top: 10,
   bottom: 26,
 };
+
+function isSupportedEffectType(effectType) {
+  return effectType === FX_EFFECT_GRAPHIC_EQ || effectType === FX_EFFECT_REVERB;
+}
 
 function clamp(value, min, max) {
   return Math.max(min, Math.min(max, value));
@@ -222,6 +228,80 @@ function getSafeGraphicEqParams(raw) {
   };
 }
 
+function getSafeReverbParams(raw) {
+  const base = {
+    decayTime: 2.8,
+    preDelayMs: 24,
+    size: 0.62,
+    damping: 0.45,
+    hiCutHz: 9000,
+    loCutHz: 130,
+    earlyReflections: 0.38,
+    diffusion: 0.72,
+    modulationDepth: 0.22,
+    modulationRateHz: 0.35,
+    width: 0.9,
+    dryWet: 0.34,
+    freeze: false,
+    ...(raw || {}),
+  };
+
+  return {
+    decayTime: clamp(Number(base.decayTime ?? 2.8), 0.2, 20),
+    preDelayMs: clamp(Number(base.preDelayMs ?? 24), 0, 250),
+    size: clamp(Number(base.size ?? 0.62), 0, 1),
+    damping: clamp(Number(base.damping ?? 0.45), 0, 1),
+    hiCutHz: clamp(Number(base.hiCutHz ?? 9000), 1200, 18000),
+    loCutHz: clamp(Number(base.loCutHz ?? 130), 20, 1200),
+    earlyReflections: clamp(Number(base.earlyReflections ?? 0.38), 0, 1),
+    diffusion: clamp(Number(base.diffusion ?? 0.72), 0, 1),
+    modulationDepth: clamp(Number(base.modulationDepth ?? 0.22), 0, 1),
+    modulationRateHz: clamp(Number(base.modulationRateHz ?? 0.35), 0, 8),
+    width: clamp(Number(base.width ?? 0.9), 0, 1),
+    dryWet: clamp(Number(base.dryWet ?? 0.34), 0, 1),
+    freeze: Boolean(base.freeze),
+  };
+}
+
+function formatPercent(value) {
+  return Math.round(Number(value || 0) * 100) + "%";
+}
+
+function formatMs(value) {
+  return Math.round(Number(value || 0)) + " ms";
+}
+
+function formatSeconds(value) {
+  return Number(value || 0).toFixed(2).replace(/\.00$/, "") + " s";
+}
+
+function roundToStep(value, step) {
+  const safeStep = Math.max(0.000001, Number(step || 0.01));
+  return Math.round(Number(value || 0) / safeStep) * safeStep;
+}
+
+function parseNumericInput(raw) {
+  if (raw === null || raw === undefined) {
+    return null;
+  }
+
+  const normalized = String(raw)
+    .trim()
+    .replace(/,/g, ".")
+    .replace(/[^0-9+\-.]/g, "");
+
+  if (!normalized) {
+    return null;
+  }
+
+  const numeric = Number(normalized);
+  if (!Number.isFinite(numeric)) {
+    return null;
+  }
+
+  return numeric;
+}
+
 function buildGraphicEqPath(params, width, height) {
   const safeParams = getSafeGraphicEqParams(params);
   const leftPad = GRAPH_PADDING.left;
@@ -382,9 +462,13 @@ export function FxPluginWindow() {
   const dispatch = useDispatch();
   const graphRef = useRef(null);
   const cancelInlineEditRef = useRef(false);
+  const reverbDragRef = useRef(null);
   const [draggingPointIndex, setDraggingPointIndex] = useState(null);
   const [editingField, setEditingField] = useState(null);
   const [editingValue, setEditingValue] = useState("");
+  const [draggingReverbParam, setDraggingReverbParam] = useState("");
+  const [editingReverbParam, setEditingReverbParam] = useState("");
+  const [editingReverbText, setEditingReverbText] = useState("");
   const [isEmptyDropTarget, setIsEmptyDropTarget] = useState(false);
 
   const inserts = useSelector(function (state) {
@@ -432,7 +516,7 @@ export function FxPluginWindow() {
         if (
           payload &&
           payload.type === "effect" &&
-          payload.effectType === FX_EFFECT_GRAPHIC_EQ
+          isSupportedEffectType(payload.effectType)
         ) {
           return payload;
         }
@@ -520,6 +604,13 @@ export function FxPluginWindow() {
 
   const activeInsertId = activeInsert?.id || "";
   const activeSlotId = activeSlot?.id || "";
+
+  const reverbParams = useMemo(
+    function () {
+      return getSafeReverbParams(activeSlot?.params);
+    },
+    [activeSlot?.params],
+  );
 
   const eqParams = useMemo(
     function () {
@@ -660,12 +751,319 @@ export function FxPluginWindow() {
     [draggingPointIndex, updatePointFromClient],
   );
 
+  const setReverbValue = function (param, value) {
+    if (!activeInsertId || !activeSlotId) {
+      return;
+    }
+
+    dispatch(
+      setFxSlotReverbParam({
+        insertId: activeInsertId,
+        slotId: activeSlotId,
+        param,
+        value,
+      }),
+    );
+  };
+
+  const reverbControls = [
+    {
+      param: "decayTime",
+      label: "Decay",
+      min: 0.2,
+      max: 20,
+      step: 0.01,
+      defaultValue: 2.8,
+      format: formatSeconds,
+    },
+    {
+      param: "preDelayMs",
+      label: "PreDelay",
+      min: 0,
+      max: 250,
+      step: 1,
+      defaultValue: 24,
+      format: formatMs,
+    },
+    {
+      param: "size",
+      label: "Size",
+      min: 0,
+      max: 1,
+      step: 0.01,
+      defaultValue: 0.62,
+      format: formatPercent,
+    },
+    {
+      param: "damping",
+      label: "Damping",
+      min: 0,
+      max: 1,
+      step: 0.01,
+      defaultValue: 0.45,
+      format: formatPercent,
+    },
+    {
+      param: "hiCutHz",
+      label: "HiCut",
+      min: 1200,
+      max: 18000,
+      step: 10,
+      defaultValue: 9000,
+      format: function (value) {
+        return Math.round(Number(value || 0)) + " Hz";
+      },
+    },
+    {
+      param: "loCutHz",
+      label: "LoCut",
+      min: 20,
+      max: 1200,
+      step: 1,
+      defaultValue: 130,
+      format: function (value) {
+        return Math.round(Number(value || 0)) + " Hz";
+      },
+    },
+    {
+      param: "earlyReflections",
+      label: "Early",
+      min: 0,
+      max: 1,
+      step: 0.01,
+      defaultValue: 0.38,
+      format: formatPercent,
+    },
+    {
+      param: "diffusion",
+      label: "Diffusion",
+      min: 0,
+      max: 1,
+      step: 0.01,
+      defaultValue: 0.72,
+      format: formatPercent,
+    },
+    {
+      param: "modulationDepth",
+      label: "Mod Depth",
+      min: 0,
+      max: 1,
+      step: 0.01,
+      defaultValue: 0.22,
+      format: formatPercent,
+    },
+    {
+      param: "modulationRateHz",
+      label: "Mod Rate",
+      min: 0,
+      max: 8,
+      step: 0.01,
+      defaultValue: 0.35,
+      format: function (value) {
+        return Number(value || 0).toFixed(2) + " Hz";
+      },
+    },
+    {
+      param: "width",
+      label: "Width",
+      min: 0,
+      max: 1,
+      step: 0.01,
+      defaultValue: 0.9,
+      format: formatPercent,
+    },
+    {
+      param: "dryWet",
+      label: "Mix",
+      min: 0,
+      max: 1,
+      step: 0.01,
+      defaultValue: 0.34,
+      format: formatPercent,
+    },
+  ];
+
+  const beginReverbDrag = function (event, control) {
+    event.preventDefault();
+
+    const startValue = Number(reverbParams[control.param] || 0);
+    reverbDragRef.current = {
+      param: control.param,
+      startY: event.clientY,
+      startValue,
+      control,
+    };
+    setDraggingReverbParam(control.param);
+  };
+
+  const adjustReverbValue = function (control, rawValue) {
+    const clampedValue = clamp(rawValue, control.min, control.max);
+    const stepped = roundToStep(clampedValue, control.step);
+    setReverbValue(control.param, stepped);
+  };
+
+  const onReverbWheel = function (event, control) {
+    event.preventDefault();
+    const direction = event.deltaY < 0 ? 1 : -1;
+    const current = Number(reverbParams[control.param] || 0);
+    const wheelFactor = event.shiftKey ? 0.4 : 2;
+    adjustReverbValue(control, current + direction * control.step * wheelFactor);
+  };
+
+  const resetReverbControl = function (control) {
+    adjustReverbValue(control, Number(control.defaultValue));
+  };
+
+  const beginReverbEdit = function (control) {
+    const raw = Number(reverbParams[control.param] || 0);
+    setEditingReverbParam(control.param);
+    setEditingReverbText(String(roundToStep(raw, control.step)));
+  };
+
+  const commitReverbEdit = function (control) {
+    const parsed = parseNumericInput(editingReverbText);
+    if (parsed !== null) {
+      adjustReverbValue(control, parsed);
+    }
+    setEditingReverbParam("");
+    setEditingReverbText("");
+  };
+
+  useEffect(
+    function () {
+      if (!draggingReverbParam || !reverbDragRef.current) {
+        return;
+      }
+
+      const onMouseMove = function (event) {
+        const drag = reverbDragRef.current;
+        if (!drag) {
+          return;
+        }
+
+        const range = drag.control.max - drag.control.min;
+        const delta = drag.startY - event.clientY;
+        const valuePerPixel = range / (event.shiftKey ? 700 : 160);
+        adjustReverbValue(drag.control, drag.startValue + delta * valuePerPixel);
+      };
+
+      const onMouseUp = function () {
+        reverbDragRef.current = null;
+        setDraggingReverbParam("");
+      };
+
+      window.addEventListener("mousemove", onMouseMove);
+      window.addEventListener("mouseup", onMouseUp);
+
+      return function () {
+        window.removeEventListener("mousemove", onMouseMove);
+        window.removeEventListener("mouseup", onMouseUp);
+      };
+    },
+    [draggingReverbParam],
+  );
+
   if (!activeInsert || !activeSlot) {
     return (
       <section className="fx-plugin-panel fx-window-panel">
         <div className="fx-empty-slot">
           <p>No FX slot selected.</p>
           <p>Click a slot in the Mixer to open the effect editor.</p>
+        </div>
+      </section>
+    );
+  }
+
+  if (activeSlot.effectType === FX_EFFECT_REVERB) {
+    return (
+      <section className="fx-plugin-panel fx-window-panel">
+        <div className="fx-reverb-shell">
+          <div className="fx-reverb-grid">
+            {reverbControls.map(function (control) {
+              const value = Number(reverbParams[control.param] || 0);
+              const ratio =
+                control.max > control.min
+                  ? (value - control.min) / (control.max - control.min)
+                  : 0;
+              const clampedRatio = clamp(ratio, 0, 1);
+
+              return (
+                <div
+                  key={control.param}
+                  className={
+                    "fx-reverb-control" +
+                    (draggingReverbParam === control.param ? " is-active" : "")
+                  }
+                >
+                  <span>{control.label}</span>
+
+                  <button
+                    type="button"
+                    className="fx-reverb-knob"
+                    onMouseDown={function (event) {
+                      beginReverbDrag(event, control);
+                    }}
+                    onWheel={function (event) {
+                      onReverbWheel(event, control);
+                    }}
+                    onDoubleClick={function (event) {
+                      event.preventDefault();
+                      resetReverbControl(control);
+                    }}
+                    aria-label={control.label}
+                    title="Drag to change, Shift for precision, double click to reset"
+                  >
+                    <span
+                      className="fx-reverb-knob-face"
+                      style={{
+                        background:
+                          "conic-gradient(from -135deg, #ff9730 " +
+                          Math.round(clampedRatio * 100) +
+                          "%, #2a3344 " +
+                          Math.round(clampedRatio * 100) +
+                          "%)",
+                      }}
+                    />
+                  </button>
+
+                  {editingReverbParam === control.param ? (
+                    <input
+                      className="fx-reverb-inline-input"
+                      value={editingReverbText}
+                      onChange={function (event) {
+                        setEditingReverbText(event.target.value);
+                      }}
+                      onBlur={function () {
+                        commitReverbEdit(control);
+                      }}
+                      onKeyDown={function (event) {
+                        if (event.key === "Enter") {
+                          event.preventDefault();
+                          commitReverbEdit(control);
+                        }
+                        if (event.key === "Escape") {
+                          event.preventDefault();
+                          setEditingReverbParam("");
+                          setEditingReverbText("");
+                        }
+                      }}
+                      autoFocus
+                    />
+                  ) : (
+                    <strong
+                      className="fx-reverb-value"
+                      onDoubleClick={function () {
+                        beginReverbEdit(control);
+                      }}
+                      title="Double click to type value"
+                    >
+                      {control.format(value)}
+                    </strong>
+                  )}
+                </div>
+              );
+            })}
+          </div>
         </div>
       </section>
     );
