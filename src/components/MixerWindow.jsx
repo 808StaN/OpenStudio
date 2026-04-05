@@ -3,7 +3,10 @@ import { useEffect, useRef, useState } from "react";
 import { useDispatch, useSelector } from "react-redux";
 import {
   addMixerTrack,
+  openWindow,
   selectInsert,
+  setFxEditorTarget,
+  setFxSlotEffectType,
   setInsertActive,
   setInsertFader,
   setInsertPan,
@@ -11,9 +14,20 @@ import {
   toggleFxSlot,
 } from "../store";
 
+const FX_EFFECT_GRAPHIC_EQ = "graphic-eq";
+
+function getFxSlotName(slot, fallbackIndex) {
+  if (slot?.effectType === FX_EFFECT_GRAPHIC_EQ) {
+    return "Parametric EQ 2";
+  }
+  return String(slot?.name || "").trim() || "Slot " + (fallbackIndex + 1);
+}
+
 export function MixerWindow() {
   const dispatch = useDispatch();
   const [valueReadout, setValueReadout] = useState("");
+  const [selectedFxSlotId, setSelectedFxSlotId] = useState(null);
+  const [dropTargetSlotId, setDropTargetSlotId] = useState(null);
   const clearReadoutTimeoutRef = useRef(null);
 
   const inserts = useSelector(function (state) {
@@ -27,6 +41,33 @@ export function MixerWindow() {
     inserts.find(function (item) {
       return item.id === selectedInsertId;
     }) || inserts[0];
+  const fxSlots = Array.isArray(selectedInsert?.fxSlots)
+    ? selectedInsert.fxSlots
+    : [];
+  const selectedFxSlot =
+    fxSlots.find(function (slot) {
+      return slot.id === selectedFxSlotId;
+    }) || fxSlots[0] || null;
+
+  useEffect(
+    function () {
+      if (fxSlots.length === 0) {
+        if (selectedFxSlotId !== null) {
+          setSelectedFxSlotId(null);
+        }
+        return;
+      }
+
+      const exists = fxSlots.some(function (slot) {
+        return slot.id === selectedFxSlotId;
+      });
+
+      if (!exists) {
+        setSelectedFxSlotId(fxSlots[0].id);
+      }
+    },
+    [fxSlots, selectedFxSlotId],
+  );
 
   const getTrackLabel = function (insert) {
     if (insert.isMaster) {
@@ -117,6 +158,125 @@ export function MixerWindow() {
       }),
     );
     showValueReadout(trackLabel + " Volume: " + formatPercentValue(nextValue));
+  };
+
+  const openFxEditorForSlot = function (slotId) {
+    if (!selectedInsert || !slotId) {
+      return;
+    }
+
+    dispatch(
+      setFxEditorTarget({
+        insertId: selectedInsert.id,
+        slotId,
+      }),
+    );
+    dispatch(openWindow("fxPlugin"));
+  };
+
+  const readEffectPayloadFromDataTransfer = function (dataTransfer) {
+    if (!dataTransfer) {
+      return null;
+    }
+
+    const parsePayload = function (raw) {
+      if (!raw) {
+        return null;
+      }
+
+      try {
+        const payload = JSON.parse(raw);
+        if (
+          payload &&
+          payload.type === "effect" &&
+          payload.effectType === FX_EFFECT_GRAPHIC_EQ
+        ) {
+          return payload;
+        }
+      } catch {
+        return null;
+      }
+
+      return null;
+    };
+
+    return (
+      parsePayload(dataTransfer.getData("application/x-daw-effect")) ||
+      parsePayload(dataTransfer.getData("text/plain"))
+    );
+  };
+
+  const onFxSlotDragOver = function (event, slot) {
+    const types = Array.from(event.dataTransfer?.types || []);
+    const supportsEffectPayload =
+      types.includes("application/x-daw-effect") ||
+      types.includes("text/plain");
+
+    if (!supportsEffectPayload) {
+      return;
+    }
+
+    event.preventDefault();
+    event.dataTransfer.dropEffect = "copy";
+
+    if (dropTargetSlotId !== slot.id) {
+      setDropTargetSlotId(slot.id);
+    }
+  };
+
+  const onFxSlotDragLeave = function (event, slot) {
+    const related = event.relatedTarget;
+    if (
+      related instanceof Node &&
+      event.currentTarget instanceof Node &&
+      event.currentTarget.contains(related)
+    ) {
+      return;
+    }
+
+    if (dropTargetSlotId === slot.id) {
+      setDropTargetSlotId(null);
+    }
+  };
+
+  const onFxSlotDrop = function (event, slot) {
+    event.preventDefault();
+    setDropTargetSlotId(null);
+
+    const payload = readEffectPayloadFromDataTransfer(event.dataTransfer);
+    if (!payload) {
+      return;
+    }
+
+    dispatch(
+      setFxSlotEffectType({
+        insertId: selectedInsert.id,
+        slotId: slot.id,
+        effectType: payload.effectType,
+      }),
+    );
+
+    if (!(slot.effectType === payload.effectType && slot.enabled)) {
+      dispatch(
+        toggleFxSlot({
+          insertId: selectedInsert.id,
+          slotId: slot.id,
+        }),
+      );
+    }
+
+    const slotIndex = fxSlots.findIndex(function (item) {
+      return item.id === slot.id;
+    });
+
+    setSelectedFxSlotId(slot.id);
+    showValueReadout(
+      getTrackLabel(selectedInsert) +
+        " loaded " +
+        (payload.effectName || "Parametric EQ 2") +
+        " on " +
+        getFxSlotName(slot, Math.max(0, slotIndex)),
+    );
   };
 
   return (
@@ -283,23 +443,62 @@ export function MixerWindow() {
         </div>
 
         <div className="fx-list">
-          {selectedInsert.fxSlots.map(function (slot) {
+          {fxSlots.map(function (slot, slotIndex) {
+            const slotName = getFxSlotName(slot, slotIndex);
             return (
-              <div className="fx-row" key={slot.id}>
+              <div
+                className={
+                  "fx-row" +
+                  (slot.id === selectedFxSlot?.id ? " is-selected" : "") +
+                  (slot.id === dropTargetSlotId ? " is-drop-target" : "")
+                }
+                key={slot.id}
+                onClick={function () {
+                  setSelectedFxSlotId(slot.id);
+                  openFxEditorForSlot(slot.id);
+                }}
+                onDragOver={function (event) {
+                  onFxSlotDragOver(event, slot);
+                }}
+                onDragLeave={function (event) {
+                  onFxSlotDragLeave(event, slot);
+                }}
+                onDrop={function (event) {
+                  onFxSlotDrop(event, slot);
+                }}
+              >
                 <button
-                  className={"fx-power" + (slot.enabled ? " is-on" : "")}
-                  onClick={function () {
+                  className={
+                    "fx-power" +
+                    (slot.enabled ? " is-on" : "") +
+                    (slot.effectType === FX_EFFECT_GRAPHIC_EQ ? "" : " is-disabled")
+                  }
+                  onClick={function (event) {
+                    event.stopPropagation();
+
+                    if (slot.effectType !== FX_EFFECT_GRAPHIC_EQ) {
+                      return;
+                    }
+
                     dispatch(
                       toggleFxSlot({
                         insertId: selectedInsert.id,
                         slotId: slot.id,
                       }),
                     );
+
+                    showValueReadout(
+                      getTrackLabel(selectedInsert) +
+                        " " +
+                        slotName +
+                        ": " +
+                        (!slot.enabled ? "ON" : "OFF"),
+                    );
                   }}
                 >
                   <Power size={11} />
                 </button>
-                <span className="fx-name">{slot.name}</span>
+                <span className="fx-name">{slotName}</span>
                 <ChevronRight size={14} className="fx-arrow" />
               </div>
             );

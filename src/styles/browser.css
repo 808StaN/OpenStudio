@@ -141,6 +141,10 @@
   color: #9fe7be;
 }
 
+.plugin-item.effect-item {
+  color: #ffd894;
+}
+
 .plugin-item:active {
   cursor: grabbing;
 }

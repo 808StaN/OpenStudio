@@ -1,6 +1,7 @@
 import { FolderOpen, Package2 } from "lucide-react";
 import { useCallback, useEffect, useRef, useState } from "react";
 import { useDispatch, useSelector } from "react-redux";
+import { PLUGIN_EFFECTS } from "../data/pluginEffects";
 import { PLUGIN_INSTRUMENTS } from "../data/pluginInstruments";
 import { setBrowserTab } from "../store";
 
@@ -8,7 +9,13 @@ const browserData = {
   plugins: [
     {
       folder: "Instruments",
+      type: "instrument",
       items: PLUGIN_INSTRUMENTS,
+    },
+    {
+      folder: "Effects",
+      type: "effect",
+      items: PLUGIN_EFFECTS,
     },
   ],
   drumkits: [
@@ -417,21 +424,43 @@ export function BrowserPanel() {
                   </div>
                   <ul className="tree-list">
                     {group.items.map(function (item) {
+                      const isInstrument = group.type === "instrument";
+                      const key = isInstrument
+                        ? group.folder + "-" + item.pluginRef
+                        : group.folder + "-" + item.effectType;
+                      const payload = isInstrument
+                        ? {
+                            tab: "plugins",
+                            type: "instrument",
+                            pluginRef: item.pluginRef,
+                            pluginName: item.name,
+                          }
+                        : {
+                            tab: "plugins",
+                            type: "effect",
+                            effectType: item.effectType,
+                            effectName: item.name,
+                          };
+                      const mimeType = isInstrument
+                        ? "application/x-daw-plugin"
+                        : "application/x-daw-effect";
+
                       return (
                         <li
-                          key={group.folder + "-" + item.pluginRef}
-                          className="tree-item plugin-item"
+                          key={key}
+                          className={
+                            "tree-item plugin-item" +
+                            (isInstrument ? " instrument-item" : " effect-item")
+                          }
                           title={item.description}
                           draggable
                           onDragStart={function (event) {
+                            const payloadText = JSON.stringify(payload);
                             event.dataTransfer.setData(
-                              "application/x-daw-plugin",
-                              JSON.stringify({
-                                tab: "plugins",
-                                pluginRef: item.pluginRef,
-                                pluginName: item.name,
-                              }),
+                              mimeType,
+                              payloadText,
                             );
+                            event.dataTransfer.setData("text/plain", payloadText);
                           }}
                         >
                           {item.name}

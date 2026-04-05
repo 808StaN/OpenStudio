@@ -1,11 +1,153 @@
 import { configureStore, createAction, createSlice } from "@reduxjs/toolkit";
 
-const makeFxSlots = function () {
-  return Array.from({ length: 10 }).map(function (_, i) {
+const FX_SLOT_EFFECT_NONE = "none";
+const FX_SLOT_EFFECT_GRAPHIC_EQ = "graphic-eq";
+const GRAPHIC_EQ_DEFAULT_POINT_FREQUENCIES = [50, 100, 250, 500, 1000, 3000, 8000];
+const GRAPHIC_EQ_BAND_TYPES = [
+  "peaking",
+  "lowshelf",
+  "highshelf",
+  "lowpass",
+  "highpass",
+];
+
+function getDefaultEqBandType(index) {
+  if (index === 0) {
+    return "lowshelf";
+  }
+
+  if (index === GRAPHIC_EQ_DEFAULT_POINT_FREQUENCIES.length - 1) {
+    return "highshelf";
+  }
+
+  return "peaking";
+}
+
+function sanitizeEqBandType(raw, fallback) {
+  const requested = String(raw || "").trim().toLowerCase();
+  if (GRAPHIC_EQ_BAND_TYPES.includes(requested)) {
+    return requested;
+  }
+
+  const safeFallback = String(fallback || "").trim().toLowerCase();
+  if (GRAPHIC_EQ_BAND_TYPES.includes(safeFallback)) {
+    return safeFallback;
+  }
+
+  return "peaking";
+}
+
+function clampEqBandGainDb(raw) {
+  const value = Number(raw || 0);
+  return Math.max(-18, Math.min(18, value));
+}
+
+function clampEqFrequencyHz(raw) {
+  const value = Number(raw || 20);
+  return Math.max(20, Math.min(20000, value));
+}
+
+function clampEqQ(raw) {
+  const value = Number(raw || 1.2);
+  return Math.max(0.25, Math.min(8, value));
+}
+
+function makeGraphicEqParams() {
+  return {
+    points: GRAPHIC_EQ_DEFAULT_POINT_FREQUENCIES.map(function (frequencyHz, index) {
+      return {
+        frequencyHz,
+        gainDb: 0,
+        q: 1.2,
+        bandType: getDefaultEqBandType(index),
+      };
+    }),
+  };
+}
+
+function getSafeGraphicEqParams(raw) {
+  const defaultParams = makeGraphicEqParams();
+  const requestedPoints = Array.isArray(raw?.points) ? raw.points : [];
+  const legacyBands = Array.isArray(raw?.bands) ? raw.bands : [];
+
+  return {
+    points: defaultParams.points.map(function (defaultPoint, index) {
+      const requestedPoint = requestedPoints[index];
+      const hasLegacyGain = index < legacyBands.length;
+
+      return {
+        frequencyHz: clampEqFrequencyHz(
+          requestedPoint?.frequencyHz ?? defaultPoint.frequencyHz,
+        ),
+        gainDb: clampEqBandGainDb(
+          requestedPoint?.gainDb ?? (hasLegacyGain ? legacyBands[index] : 0),
+        ),
+        q: clampEqQ(requestedPoint?.q ?? defaultPoint.q),
+        bandType: sanitizeEqBandType(
+          requestedPoint?.bandType,
+          defaultPoint.bandType,
+        ),
+      };
+    }),
+  };
+}
+
+function getFxSlotDefaultName(index) {
+  return "Slot " + (index + 1);
+}
+
+function normalizeFxSlot(slot, index) {
+  const rawEffectType = String(slot?.effectType || "").trim().toLowerCase();
+  const effectType =
+    rawEffectType === FX_SLOT_EFFECT_GRAPHIC_EQ
+      ? FX_SLOT_EFFECT_GRAPHIC_EQ
+      : FX_SLOT_EFFECT_NONE;
+  const defaultName =
+    effectType === FX_SLOT_EFFECT_GRAPHIC_EQ
+      ? "Parametric EQ 2"
+      : getFxSlotDefaultName(index);
+
+  return {
+    id: slot?.id || "slot-" + (index + 1),
+    name: String(slot?.name || "").trim() || defaultName,
+    enabled:
+      effectType === FX_SLOT_EFFECT_NONE ? false : Boolean(slot?.enabled),
+    effectType,
+    params:
+      effectType === FX_SLOT_EFFECT_GRAPHIC_EQ
+        ? getSafeGraphicEqParams(slot?.params)
+        : null,
+  };
+}
+
+function ensureInsertFxSlots(insert) {
+  const nextSlots = Array.from({ length: 10 }).map(function (_, index) {
+    const existing = Array.isArray(insert?.fxSlots) ? insert.fxSlots[index] : null;
+
+    if (existing) {
+      return normalizeFxSlot(existing, index);
+    }
+
     return {
-      id: "slot-" + (i + 1),
-      name: "Slot " + (i + 1),
+      id: "slot-" + (index + 1),
+      name: getFxSlotDefaultName(index),
       enabled: false,
+      effectType: FX_SLOT_EFFECT_NONE,
+      params: null,
+    };
+  });
+
+  insert.fxSlots = nextSlots;
+}
+
+const makeFxSlots = function () {
+  return Array.from({ length: 10 }).map(function (_, index) {
+    return {
+      id: "slot-" + (index + 1),
+      name: getFxSlotDefaultName(index),
+      enabled: false,
+      effectType: FX_SLOT_EFFECT_NONE,
+      params: null,
     };
   });
 };
@@ -182,6 +324,10 @@ const initialState = {
     browserTab: "drumkits",
     channelRackMode: "sequencer",
     patternClipboardIds: [],
+    fxEditorTarget: {
+      insertId: "insert-1",
+      slotId: "slot-1",
+    },
     browserCollapsedFolders: {
       Drumkits: false,
       Plugins: false,
@@ -229,6 +375,16 @@ const initialState = {
         y: 90,
         width: 650,
         height: 450,
+        isMaximized: false,
+        restoreRect: null,
+      },
+      fxPlugin: {
+        open: false,
+        z: 9,
+        x: 980,
+        y: 150,
+        width: 540,
+        height: 460,
         isMaximized: false,
         restoreRect: null,
       },
@@ -568,6 +724,38 @@ const dawSlice = createSlice({
         });
 
       state.ui.patternClipboardIds = sanitized;
+    },
+
+    setFxEditorTarget(state, action) {
+      const insertId = String(action.payload?.insertId || "").trim();
+      const slotId = String(action.payload?.slotId || "").trim();
+
+      if (!insertId || !slotId) {
+        return;
+      }
+
+      const insert = state.mixer.inserts.find(function (item) {
+        return item.id === insertId;
+      });
+      if (!insert) {
+        return;
+      }
+
+      const hasSlot = Array.isArray(insert.fxSlots)
+        ? insert.fxSlots.some(function (slot) {
+            return slot.id === slotId;
+          })
+        : false;
+
+      if (!hasSlot) {
+        return;
+      }
+
+      state.ui.fxEditorTarget = {
+        insertId,
+        slotId,
+      };
+      state.mixer.selectedInsertId = insertId;
     },
 
     setChannelRackMode(state, action) {
@@ -1547,13 +1735,153 @@ const dawSlice = createSlice({
       if (!insert) {
         return;
       }
+
+      ensureInsertFxSlots(insert);
+
       const slot = insert.fxSlots.find(function (item) {
         return item.id === action.payload.slotId;
       });
       if (!slot) {
         return;
       }
+
+      if (slot.effectType === FX_SLOT_EFFECT_NONE) {
+        slot.enabled = false;
+        return;
+      }
+
       slot.enabled = !slot.enabled;
+    },
+
+    setFxSlotEffectType(state, action) {
+      const insert = state.mixer.inserts.find(function (item) {
+        return item.id === action.payload.insertId;
+      });
+      if (!insert) {
+        return;
+      }
+
+      ensureInsertFxSlots(insert);
+
+      const slotIndex = insert.fxSlots.findIndex(function (item) {
+        return item.id === action.payload.slotId;
+      });
+      if (slotIndex < 0) {
+        return;
+      }
+
+      const slot = insert.fxSlots[slotIndex];
+      const requestedType = String(action.payload.effectType || "")
+        .trim()
+        .toLowerCase();
+
+      if (requestedType === FX_SLOT_EFFECT_GRAPHIC_EQ) {
+        slot.effectType = FX_SLOT_EFFECT_GRAPHIC_EQ;
+        slot.name = "Parametric EQ 2";
+        slot.params = getSafeGraphicEqParams(slot.params);
+        return;
+      }
+
+      slot.effectType = FX_SLOT_EFFECT_NONE;
+      slot.enabled = false;
+      slot.name = getFxSlotDefaultName(slotIndex);
+      slot.params = null;
+    },
+
+    setFxSlotGraphicEqBandGain(state, action) {
+      const insert = state.mixer.inserts.find(function (item) {
+        return item.id === action.payload.insertId;
+      });
+      if (!insert) {
+        return;
+      }
+
+      ensureInsertFxSlots(insert);
+
+      const slot = insert.fxSlots.find(function (item) {
+        return item.id === action.payload.slotId;
+      });
+      if (!slot || slot.effectType !== FX_SLOT_EFFECT_GRAPHIC_EQ) {
+        return;
+      }
+
+      slot.params = getSafeGraphicEqParams(slot.params);
+      const bandIndex = Math.max(
+        0,
+        Math.min(
+          GRAPHIC_EQ_DEFAULT_POINT_FREQUENCIES.length - 1,
+          Number(action.payload.bandIndex || 0),
+        ),
+      );
+      slot.params.points[bandIndex].gainDb = clampEqBandGainDb(
+        action.payload.gainDb,
+      );
+    },
+
+    setFxSlotGraphicEqLowCut(state, action) {
+      const insert = state.mixer.inserts.find(function (item) {
+        return item.id === action.payload.insertId;
+      });
+      if (!insert) {
+        return;
+      }
+
+      ensureInsertFxSlots(insert);
+
+      const slot = insert.fxSlots.find(function (item) {
+        return item.id === action.payload.slotId;
+      });
+      if (!slot || slot.effectType !== FX_SLOT_EFFECT_GRAPHIC_EQ) {
+        return;
+      }
+
+      slot.params = getSafeGraphicEqParams(slot.params);
+      const pointIndex = 0;
+      slot.params.points[pointIndex].frequencyHz = clampEqFrequencyHz(
+        action.payload.frequencyHz,
+      );
+    },
+
+    setFxSlotGraphicEqPoint(state, action) {
+      const insert = state.mixer.inserts.find(function (item) {
+        return item.id === action.payload.insertId;
+      });
+      if (!insert) {
+        return;
+      }
+
+      ensureInsertFxSlots(insert);
+
+      const slot = insert.fxSlots.find(function (item) {
+        return item.id === action.payload.slotId;
+      });
+      if (!slot || slot.effectType !== FX_SLOT_EFFECT_GRAPHIC_EQ) {
+        return;
+      }
+
+      slot.params = getSafeGraphicEqParams(slot.params);
+
+      const pointIndex = Math.max(
+        0,
+        Math.min(
+          GRAPHIC_EQ_DEFAULT_POINT_FREQUENCIES.length - 1,
+          Number(action.payload.pointIndex || 0),
+        ),
+      );
+
+      const point = slot.params.points[pointIndex];
+      point.frequencyHz = clampEqFrequencyHz(
+        action.payload.frequencyHz ?? point.frequencyHz,
+      );
+      point.gainDb = clampEqBandGainDb(action.payload.gainDb ?? point.gainDb);
+      point.q = clampEqQ(action.payload.q ?? point.q);
+
+      if (Object.hasOwn(action.payload, "bandType")) {
+        point.bandType = sanitizeEqBandType(
+          action.payload.bandType,
+          point.bandType,
+        );
+      }
     },
 
     setInsertMeter(state, action) {
@@ -1608,6 +1936,7 @@ export const {
   toggleWindowMaximize,
   setBrowserTab,
   setPatternClipboard,
+  setFxEditorTarget,
   setChannelRackMode,
   toggleBrowserFolder,
   toggleStep,
@@ -1643,6 +1972,10 @@ export const {
   setInsertStereo,
   setInsertFader,
   toggleFxSlot,
+  setFxSlotEffectType,
+  setFxSlotGraphicEqBandGain,
+  setFxSlotGraphicEqLowCut,
+  setFxSlotGraphicEqPoint,
   setInsertMeter,
 } = dawSlice.actions;
 

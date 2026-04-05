@@ -1149,11 +1149,7 @@ export function PianoRollWindow() {
         moved.forEach(function (note) {
           const nextPitch =
             fixedStep > 0
-              ? clamp(
-                  note.pitch + direction * fixedStep,
-                  PITCH_MIN,
-                  PITCH_MAX,
-                )
+              ? clamp(note.pitch + direction * fixedStep, PITCH_MIN, PITCH_MAX)
               : moveByScaleStep(
                   note.pitch,
                   direction,

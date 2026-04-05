@@ -20,6 +20,95 @@ const defaultSampleSettings = {
 };
 
 const DEFAULT_SAMPLE_MIDI_PITCH = 72;
+const FX_EFFECT_GRAPHIC_EQ = "graphic-eq";
+const GRAPHIC_EQ_DEFAULT_POINT_FREQUENCIES = [50, 100, 250, 500, 1000, 3000, 8000];
+const GRAPHIC_EQ_BAND_TYPES = [
+  "peaking",
+  "lowshelf",
+  "highshelf",
+  "lowpass",
+  "highpass",
+];
+
+function getDefaultEqBandType(index) {
+  if (index === 0) {
+    return "lowshelf";
+  }
+
+  if (index === GRAPHIC_EQ_DEFAULT_POINT_FREQUENCIES.length - 1) {
+    return "highshelf";
+  }
+
+  return "peaking";
+}
+
+function sanitizeEqBandType(raw, fallback) {
+  const requested = String(raw || "").trim().toLowerCase();
+  if (GRAPHIC_EQ_BAND_TYPES.includes(requested)) {
+    return requested;
+  }
+
+  const safeFallback = String(fallback || "").trim().toLowerCase();
+  if (GRAPHIC_EQ_BAND_TYPES.includes(safeFallback)) {
+    return safeFallback;
+  }
+
+  return "peaking";
+}
+
+function clamp(value, min, max) {
+  return Math.max(min, Math.min(max, value));
+}
+
+function getSafeGraphicEqParams(raw) {
+  const requestedPoints = Array.isArray(raw?.points) ? raw.points : [];
+  const legacyBands = Array.isArray(raw?.bands) ? raw.bands : [];
+  return {
+    points: GRAPHIC_EQ_DEFAULT_POINT_FREQUENCIES.map(function (defaultFreq, index) {
+      const requestedPoint = requestedPoints[index];
+      const legacyGain = legacyBands[index];
+      return {
+        frequencyHz: clamp(
+          Number(requestedPoint?.frequencyHz || defaultFreq),
+          20,
+          20000,
+        ),
+        gainDb: clamp(
+          Number(
+            requestedPoint?.gainDb ??
+              (Number.isFinite(legacyGain) ? legacyGain : 0),
+          ),
+          -18,
+          18,
+        ),
+        q: clamp(Number(requestedPoint?.q || 1.2), 0.25, 8),
+        bandType: sanitizeEqBandType(
+          requestedPoint?.bandType,
+          getDefaultEqBandType(index),
+        ),
+      };
+    }),
+  };
+}
+
+function getCombinedGraphicEqState(insert) {
+  const fxSlots = Array.isArray(insert?.fxSlots) ? insert.fxSlots : [];
+  const enabledSlots = fxSlots.filter(function (slot) {
+    return Boolean(slot?.enabled) && slot?.effectType === FX_EFFECT_GRAPHIC_EQ;
+  });
+
+  if (enabledSlots.length === 0) {
+    return {
+      enabled: false,
+      params: getSafeGraphicEqParams(null),
+    };
+  }
+
+  return {
+    enabled: true,
+    params: getSafeGraphicEqParams(enabledSlots[enabledSlots.length - 1]?.params),
+  };
+}
 
 function midiPitchToPlaybackRate(midiPitch) {
   const semitoneOffset = midiPitch - DEFAULT_SAMPLE_MIDI_PITCH;
@@ -172,6 +261,49 @@ function areMixerSettingsEqual(prev, next) {
       return false;
     }
 
+    const aSlots = a.fxSlots || [];
+    const bSlots = b.fxSlots || [];
+    if (aSlots.length !== bSlots.length) {
+      return false;
+    }
+
+    for (let slotIndex = 0; slotIndex < aSlots.length; slotIndex += 1) {
+      const aSlot = aSlots[slotIndex];
+      const bSlot = bSlots[slotIndex];
+      if (!aSlot || !bSlot) {
+        return false;
+      }
+
+      if (
+        aSlot.id !== bSlot.id ||
+        aSlot.enabled !== bSlot.enabled ||
+        aSlot.effectType !== bSlot.effectType
+      ) {
+        return false;
+      }
+
+      const aParams = aSlot.params || {};
+      const bParams = bSlot.params || {};
+      const aPoints = aParams.points || [];
+      const bPoints = bParams.points || [];
+      if (aPoints.length !== bPoints.length) {
+        return false;
+      }
+
+      for (let pointIndex = 0; pointIndex < aPoints.length; pointIndex += 1) {
+        const aPoint = aPoints[pointIndex] || {};
+        const bPoint = bPoints[pointIndex] || {};
+        if (
+          aPoint.frequencyHz !== bPoint.frequencyHz ||
+          aPoint.gainDb !== bPoint.gainDb ||
+          aPoint.q !== bPoint.q ||
+          aPoint.bandType !== bPoint.bandType
+        ) {
+          return false;
+        }
+      }
+    }
+
     const aRoutes = a.routesTo || [];
     const bRoutes = b.routesTo || [];
     if (aRoutes.length !== bRoutes.length) {
@@ -243,6 +375,20 @@ export function useAudioScheduler() {
         stereoSeparation: Number(insert.stereoSeparation || 0),
         fader: Number(insert.fader || 0),
         routesTo: Array.isArray(insert.routesTo) ? insert.routesTo.slice() : [],
+        fxSlots: (Array.isArray(insert.fxSlots) ? insert.fxSlots : []).map(
+          function (slot) {
+            const effectType = String(slot.effectType || "none");
+            return {
+              id: slot.id,
+              enabled: Boolean(slot.enabled),
+              effectType,
+              params:
+                effectType === FX_EFFECT_GRAPHIC_EQ
+                  ? getSafeGraphicEqParams(slot.params)
+                  : null,
+            };
+          },
+        ),
       };
     });
   }, areMixerSettingsEqual);
@@ -390,6 +536,15 @@ export function useAudioScheduler() {
           safeDisconnect(node.rightToRight);
           safeDisconnect(node.merger);
           safeDisconnect(node.panner);
+          safeDisconnect(node.fxDryGain);
+          safeDisconnect(node.fxWetGain);
+          safeDisconnect(node.eqInput);
+          safeDisconnect(node.eqLowCut);
+          if (Array.isArray(node.eqBands)) {
+            node.eqBands.forEach(function (band) {
+              safeDisconnect(band);
+            });
+          }
           safeDisconnect(node.outputGain);
           safeDisconnect(node.analyser);
         });
@@ -406,6 +561,18 @@ export function useAudioScheduler() {
         const rightToRight = audioCtx.createGain();
         const merger = audioCtx.createChannelMerger(2);
         const panner = audioCtx.createStereoPanner();
+        const fxDryGain = audioCtx.createGain();
+        const fxWetGain = audioCtx.createGain();
+        const eqInput = audioCtx.createGain();
+        const eqLowCut = audioCtx.createBiquadFilter();
+        const eqBands = GRAPHIC_EQ_DEFAULT_POINT_FREQUENCIES.map(function (frequencyHz, index) {
+          const band = audioCtx.createBiquadFilter();
+          band.type = getDefaultEqBandType(index);
+          band.frequency.value = frequencyHz;
+          band.Q.value = 1.08;
+          band.gain.value = 0;
+          return band;
+        });
         const outputGain = audioCtx.createGain();
         const analyser = audioCtx.createAnalyser();
 
@@ -425,7 +592,23 @@ export function useAudioScheduler() {
         rightToRight.connect(merger, 0, 1);
 
         merger.connect(panner);
-        panner.connect(outputGain);
+        panner.connect(fxDryGain);
+        panner.connect(eqInput);
+
+        eqLowCut.type = "highpass";
+        eqLowCut.frequency.value = 20;
+        eqLowCut.Q.value = 0.707;
+        eqInput.connect(eqLowCut);
+
+        let eqTail = eqLowCut;
+        eqBands.forEach(function (band) {
+          eqTail.connect(band);
+          eqTail = band;
+        });
+        eqTail.connect(fxWetGain);
+
+        fxDryGain.connect(outputGain);
+        fxWetGain.connect(outputGain);
         outputGain.connect(analyser);
 
         inserts.set(insert.id, {
@@ -437,6 +620,11 @@ export function useAudioScheduler() {
           rightToRight,
           merger,
           panner,
+          fxDryGain,
+          fxWetGain,
+          eqInput,
+          eqLowCut,
+          eqBands,
           outputGain,
           analyser,
           meterData: new Uint8Array(analyser.fftSize),
@@ -496,6 +684,12 @@ export function useAudioScheduler() {
         return;
       }
 
+      const smoothTo = function (param, targetValue, atTime) {
+        param.cancelScheduledValues(atTime);
+        param.setValueAtTime(param.value, atTime);
+        param.linearRampToValueAtTime(targetValue, atTime + 0.018);
+      };
+
       const targetFader = insert.active
         ? Math.max(0, Math.min(1.25, insert.fader))
         : 0;
@@ -504,6 +698,9 @@ export function useAudioScheduler() {
         -1,
         Math.min(1, insert.stereoSeparation),
       );
+      const eqState = getCombinedGraphicEqState(insert);
+      const eqEnabled = eqState.enabled;
+      const eqParams = eqState.params;
 
       const width = 1 - targetSeparation;
       const directGain = 0.5 * (1 + width);
@@ -515,6 +712,33 @@ export function useAudioScheduler() {
       node.leftToRight.gain.setValueAtTime(crossGain, now);
 
       node.panner.pan.setValueAtTime(targetPan, now);
+
+      smoothTo(node.fxDryGain.gain, eqEnabled ? 0 : 1, now);
+      smoothTo(node.fxWetGain.gain, eqEnabled ? 1 : 0, now);
+      smoothTo(node.eqLowCut.frequency, 20, now);
+      node.eqLowCut.Q.setValueAtTime(0.707, now);
+
+      if (Array.isArray(node.eqBands)) {
+        node.eqBands.forEach(function (bandNode, index) {
+          const point = eqParams.points[index] || {
+            frequencyHz: GRAPHIC_EQ_DEFAULT_POINT_FREQUENCIES[index],
+            gainDb: 0,
+            q: 1.2,
+            bandType: getDefaultEqBandType(index),
+          };
+          bandNode.type = sanitizeEqBandType(
+            point.bandType,
+            getDefaultEqBandType(index),
+          );
+          bandNode.frequency.setValueAtTime(
+            point.frequencyHz,
+            now,
+          );
+          bandNode.Q.setValueAtTime(point.q, now);
+          smoothTo(bandNode.gain, eqEnabled ? point.gainDb : 0, now);
+        });
+      }
+
       node.outputGain.gain.cancelScheduledValues(now);
       node.outputGain.gain.setValueAtTime(node.outputGain.gain.value, now);
       node.outputGain.gain.linearRampToValueAtTime(targetFader, now + 0.01);

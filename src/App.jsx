@@ -3,6 +3,7 @@ import { useDispatch, useSelector } from "react-redux";
 import { useAudioScheduler } from "./audio/useAudioScheduler";
 import { BrowserPanel } from "./components/BrowserPanel";
 import { ChannelRackWindow } from "./components/ChannelRackWindow";
+import { FxPluginWindow } from "./components/FxPluginWindow";
 import { FloatingWindow } from "./components/FloatingWindow";
 import { MixerWindow } from "./components/MixerWindow";
 import { PatternListWindow } from "./components/PatternListWindow";
@@ -85,6 +86,28 @@ function getSampleWindowTitle(activeChannel) {
   return baseName + " (" + insertLabel + ")";
 }
 
+function getFxWindowTitle(activeInsert, activeSlot) {
+  if (!activeInsert || !activeSlot) {
+    return "FX Plugin";
+  }
+
+  const effectLabel =
+    activeSlot.effectType === "graphic-eq"
+      ? "Parametric EQ 2"
+      : String(activeSlot.name || "FX Plugin").trim() || "FX Plugin";
+
+  if (activeInsert.isMaster) {
+    return effectLabel + " (Master)";
+  }
+
+  const insertMatch = String(activeInsert.id || "").match(/insert-(\d+)/i);
+  const insertLabel = insertMatch
+    ? "Insert " + insertMatch[1]
+    : String(activeInsert.name || "Insert").trim() || "Insert";
+
+  return effectLabel + " (" + insertLabel + ")";
+}
+
 function App() {
   const dispatch = useDispatch();
   const isPlaying = useSelector(function (state) {
@@ -99,11 +122,26 @@ function App() {
   const channels = useSelector(function (state) {
     return state.daw.project.channels;
   });
+  const inserts = useSelector(function (state) {
+    return state.daw.mixer.inserts;
+  });
+  const fxEditorTarget = useSelector(function (state) {
+    return state.daw.ui.fxEditorTarget;
+  });
 
   const activeChannel = channels.find(function (channel) {
     return channel.id === activeChannelId;
   });
   const sampleWindowTitle = getSampleWindowTitle(activeChannel);
+  const fxWindowInsert = inserts.find(function (insert) {
+    return insert.id === fxEditorTarget?.insertId;
+  });
+  const fxWindowSlot = Array.isArray(fxWindowInsert?.fxSlots)
+    ? fxWindowInsert.fxSlots.find(function (slot) {
+        return slot.id === fxEditorTarget?.slotId;
+      })
+    : null;
+  const fxWindowTitle = getFxWindowTitle(fxWindowInsert, fxWindowSlot);
 
   useAudioScheduler();
 
@@ -214,6 +252,15 @@ function App() {
             minHeight={280}
           >
             <SampleSettingsWindow />
+          </FloatingWindow>
+
+          <FloatingWindow
+            id="fxPlugin"
+            title={fxWindowTitle}
+            minWidth={480}
+            minHeight={340}
+          >
+            <FxPluginWindow />
           </FloatingWindow>
 
           <FloatingWindow
