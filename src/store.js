@@ -442,6 +442,8 @@ const initialState = {
     browserTab: "drumkits",
     channelRackMode: "sequencer",
     patternClipboardIds: [],
+    pianoRollScaleRoot: "C",
+    pianoRollScaleType: "minor",
     fxEditorTarget: {
       insertId: "insert-1",
       slotId: "slot-1",
@@ -724,6 +726,7 @@ const nonUndoableActionTypes = new Set([
   "daw/setRecording",
   "daw/setTransportMode",
   "daw/bringWindowToFront",
+  "daw/setPianoRollScale",
   LOAD_PROJECT_FROM_FILE_ACTION,
   RESET_TO_DEFAULT_PROJECT_ACTION,
 ]);
@@ -799,6 +802,29 @@ function sanitizeLoadedDawState(currentState, rawLoadedState) {
       ...(isObjectLike(uiRaw.windows) ? uiRaw.windows : {}),
     },
   };
+
+  const allowedScaleRoots = new Set([
+    "C",
+    "C#",
+    "D",
+    "D#",
+    "E",
+    "F",
+    "F#",
+    "G",
+    "G#",
+    "A",
+    "A#",
+    "B",
+  ]);
+  const scaleRoot = String(nextUi.pianoRollScaleRoot || "C")
+    .trim()
+    .toUpperCase();
+  const scaleType = String(nextUi.pianoRollScaleType || "minor")
+    .trim()
+    .toLowerCase();
+  nextUi.pianoRollScaleRoot = allowedScaleRoots.has(scaleRoot) ? scaleRoot : "C";
+  nextUi.pianoRollScaleType = scaleType === "major" ? "major" : "minor";
 
   const projectRaw = isObjectLike(loadedState.project)
     ? loadedState.project
@@ -1371,6 +1397,30 @@ const dawSlice = createSlice({
         });
 
       state.ui.patternClipboardIds = sanitized;
+    },
+
+    setPianoRollScale(state, action) {
+      const root = String(action.payload?.root || "").trim().toUpperCase();
+      const type = String(action.payload?.type || "").trim().toLowerCase();
+      const allowedRoots = new Set([
+        "C",
+        "C#",
+        "D",
+        "D#",
+        "E",
+        "F",
+        "F#",
+        "G",
+        "G#",
+        "A",
+        "A#",
+        "B",
+      ]);
+
+      state.ui.pianoRollScaleRoot = allowedRoots.has(root)
+        ? root
+        : state.ui.pianoRollScaleRoot || "C";
+      state.ui.pianoRollScaleType = type === "major" ? "major" : "minor";
     },
 
     setFxEditorTarget(state, action) {
@@ -2187,6 +2237,218 @@ const dawSlice = createSlice({
         0.0625,
         Math.min(maxLen, Number(note.length || 1)),
       );
+    },
+
+    addPianoNotesBatch(state, action) {
+      const pattern = state.project.patterns.find(function (item) {
+        return item.id === action.payload.patternId;
+      });
+      if (!pattern) {
+        return;
+      }
+
+      const channelId = String(action.payload.channelId || "").trim();
+      if (!channelId) {
+        return;
+      }
+
+      const incomingNotes = Array.isArray(action.payload.notes)
+        ? action.payload.notes
+        : [];
+      if (incomingNotes.length === 0) {
+        return;
+      }
+
+      if (!pattern.pianoPreview) {
+        pattern.pianoPreview = {};
+      }
+      if (!Array.isArray(pattern.pianoPreview[channelId])) {
+        pattern.pianoPreview[channelId] = [];
+      }
+
+      const patternLength = Math.max(1, pattern.lengthSteps || 16);
+      const notes = pattern.pianoPreview[channelId];
+      const occupied = new Set(
+        notes.map(function (note) {
+          return Math.round((note.start || 0) * 1000) + ":" + note.pitch;
+        }),
+      );
+
+      incomingNotes.forEach(function (inputNote) {
+        const start = Math.max(
+          0,
+          Math.min(patternLength - 0.0625, Number(inputNote?.start || 0)),
+        );
+        const maxLen = Math.max(0.0625, patternLength - start);
+        const length = Math.max(
+          0.0625,
+          Math.min(maxLen, Number(inputNote?.length || 1)),
+        );
+        const pitch = Math.max(
+          0,
+          Math.min(127, Math.round(Number(inputNote?.pitch || DEFAULT_MIDI_PITCH))),
+        );
+        const key = Math.round(start * 1000) + ":" + pitch;
+        if (occupied.has(key)) {
+          return;
+        }
+
+        occupied.add(key);
+        notes.push({
+          id:
+            inputNote?.id ||
+            "n-" +
+              channelId +
+              "-" +
+              Date.now().toString(36) +
+              "-" +
+              Math.random().toString(36).slice(2, 7),
+          start,
+          length,
+          pitch,
+        });
+      });
+
+      notes.sort(function (a, b) {
+        if (a.start !== b.start) {
+          return a.start - b.start;
+        }
+
+        return b.pitch - a.pitch;
+      });
+    },
+
+    movePianoNotesBatch(state, action) {
+      const pattern = state.project.patterns.find(function (item) {
+        return item.id === action.payload.patternId;
+      });
+      if (!pattern) {
+        return;
+      }
+
+      const channelId = String(action.payload.channelId || "").trim();
+      const notes = pattern.pianoPreview?.[channelId];
+      if (!notes) {
+        return;
+      }
+
+      const moves = Array.isArray(action.payload.moves) ? action.payload.moves : [];
+      if (moves.length === 0) {
+        return;
+      }
+
+      const patternLength = Math.max(1, pattern.lengthSteps || 16);
+
+      moves.forEach(function (move) {
+        const start = Number(move?.start || 0);
+        const pitch = Math.round(Number(move?.pitch || 72));
+        const note =
+          notes.find(function (item) {
+            return item.id === move?.noteId;
+          }) ||
+          notes.find(function (item) {
+            return nearlyEqual(item.start || 0, start) && item.pitch === pitch;
+          });
+        if (!note) {
+          return;
+        }
+
+        const nextStart = Math.max(
+          0,
+          Math.min(patternLength - 0.0625, Number(move?.nextStart || 0)),
+        );
+        const nextPitch = Math.round(Number(move?.nextPitch || note.pitch));
+
+        note.start = nextStart;
+        note.pitch = nextPitch;
+
+        const maxLen = Math.max(0.0625, patternLength - note.start);
+        note.length = Math.max(0.0625, Math.min(maxLen, Number(note.length || 1)));
+      });
+
+      notes.sort(function (a, b) {
+        if (a.start !== b.start) {
+          return a.start - b.start;
+        }
+
+        return b.pitch - a.pitch;
+      });
+    },
+
+    removePianoNotesBatch(state, action) {
+      const pattern = state.project.patterns.find(function (item) {
+        return item.id === action.payload.patternId;
+      });
+      if (!pattern) {
+        return;
+      }
+
+      const channelId = String(action.payload.channelId || "").trim();
+      if (!channelId) {
+        return;
+      }
+
+      const removals = Array.isArray(action.payload.notes)
+        ? action.payload.notes
+        : [];
+      if (removals.length === 0) {
+        return;
+      }
+
+      const notesToRemove = removals.filter(function (item) {
+        return String(item?.source || "piano").toLowerCase() !== "step";
+      });
+      const stepsToRemove = removals.filter(function (item) {
+        return String(item?.source || "piano").toLowerCase() === "step";
+      });
+
+      if (stepsToRemove.length > 0) {
+        if (!pattern.stepGrid) {
+          pattern.stepGrid = {};
+        }
+        if (!Array.isArray(pattern.stepGrid[channelId])) {
+          const patternLength = Math.max(1, Number(pattern.lengthSteps || 16));
+          pattern.stepGrid[channelId] = makeStepRow(patternLength, []);
+        }
+
+        const row = pattern.stepGrid[channelId];
+        stepsToRemove.forEach(function (stepItem) {
+          const stepIndex = Math.max(0, Math.round(Number(stepItem.start || 0)));
+          if (stepIndex < row.length) {
+            row[stepIndex] = false;
+          }
+        });
+      }
+
+      if (notesToRemove.length > 0) {
+        const existing = pattern.pianoPreview?.[channelId];
+        if (!Array.isArray(existing) || existing.length === 0) {
+          return;
+        }
+
+        const byId = new Set(
+          notesToRemove
+            .map(function (item) {
+              return String(item?.id || "").trim();
+            })
+            .filter(Boolean),
+        );
+
+        pattern.pianoPreview[channelId] = existing.filter(function (note) {
+          if (byId.has(String(note.id || "").trim())) {
+            return false;
+          }
+
+          const removeByStartPitch = notesToRemove.some(function (item) {
+            return (
+              nearlyEqual(Number(item.start || 0), Number(note.start || 0)) &&
+              Math.round(Number(item.pitch || 72)) === Math.round(Number(note.pitch || 72))
+            );
+          });
+
+          return !removeByStartPitch;
+        });
+      }
     },
 
     pasteMidiPatternToChannel(state, action) {
@@ -3018,6 +3280,7 @@ export const {
   toggleWindowMaximize,
   setBrowserTab,
   setPatternClipboard,
+  setPianoRollScale,
   setFxEditorTarget,
   setChannelRackMode,
   toggleBrowserFolder,
@@ -3041,6 +3304,9 @@ export const {
   togglePianoNote,
   setPianoNoteLength,
   movePianoNote,
+  addPianoNotesBatch,
+  movePianoNotesBatch,
+  removePianoNotesBatch,
   pasteMidiPatternToChannel,
   setChannelInputMode,
   setChannelMute,

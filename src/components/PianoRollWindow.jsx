@@ -3,9 +3,13 @@ import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useDispatch, useSelector } from "react-redux";
 import { getPluginInstrument } from "../data/pluginInstruments";
 import {
+  addPianoNotesBatch,
+  removePianoNotesBatch,
   setActiveChannel,
+  movePianoNotesBatch,
   movePianoNote,
   pasteMidiPatternToChannel,
+  setPianoRollScale,
   setPianoNoteLength,
   togglePianoNote,
   toggleStep,
@@ -199,6 +203,12 @@ export function PianoRollWindow() {
   const bpm = useSelector(function (state) {
     return state.daw.transport.bpm;
   });
+  const scaleRoot = useSelector(function (state) {
+    return state.daw.ui.pianoRollScaleRoot || "C";
+  });
+  const scaleType = useSelector(function (state) {
+    return state.daw.ui.pianoRollScaleType || "minor";
+  });
   const isPlaying = useSelector(function (state) {
     return state.daw.transport.isPlaying;
   });
@@ -243,8 +253,6 @@ export function PianoRollWindow() {
   const [editMode, setEditMode] = useState("add");
   const [selectedNoteIds, setSelectedNoteIds] = useState([]);
   const [selectionBox, setSelectionBox] = useState(null);
-  const [scaleRoot, setScaleRoot] = useState("C");
-  const [scaleType, setScaleType] = useState("minor");
 
   const activeSnap =
     SNAP_OPTIONS.find(function (option) {
@@ -1017,9 +1025,23 @@ export function PianoRollWindow() {
       return;
     }
 
-    selectedNotes.forEach(function (note) {
-      removeNote(note);
-    });
+    if (activeChannel) {
+      dispatch(
+        removePianoNotesBatch({
+          patternId: activePatternId,
+          channelId: activeChannel.id,
+          notes: selectedNotes.map(function (note) {
+            return {
+              id: note.id,
+              source: note.source,
+              start: note.start,
+              pitch: note.pitch,
+            };
+          }),
+        }),
+      );
+    }
+
     setSelectedNoteIds([]);
   };
 
@@ -1059,6 +1081,7 @@ export function PianoRollWindow() {
       }),
     );
 
+    const notesToAdd = [];
     const nextSelection = [];
 
     sharedPianoClipboard.entries.forEach(function (entry) {
@@ -1078,18 +1101,24 @@ export function PianoRollWindow() {
 
       occupied.add(key);
       const newId = makeGeneratedNoteId("paste");
-      dispatch(
-        togglePianoNote({
-          patternId: activePatternId,
-          channelId: activeChannel.id,
-          id: newId,
-          start,
-          pitch,
-          length,
-        }),
-      );
+      notesToAdd.push({
+        id: newId,
+        start,
+        pitch,
+        length,
+      });
       nextSelection.push("piano:" + newId);
     });
+
+    if (notesToAdd.length > 0) {
+      dispatch(
+        addPianoNotesBatch({
+          patternId: activePatternId,
+          channelId: activeChannel.id,
+          notes: notesToAdd,
+        }),
+      );
+    }
 
     if (nextSelection.length > 0) {
       setSelectedNoteIds(nextSelection);
@@ -1163,6 +1192,8 @@ export function PianoRollWindow() {
           return ensureNoteIsPiano(note);
         });
 
+        const moves = [];
+
         moved.forEach(function (note) {
           const nextPitch =
             fixedStep > 0
@@ -1179,20 +1210,26 @@ export function PianoRollWindow() {
             return;
           }
 
-          dispatch(
-            movePianoNote({
-              patternId: activePatternId,
-              channelId: activeChannel.id,
-              noteId: note.id,
-              start: note.start,
-              pitch: note.pitch,
-              nextStart: note.start,
-              nextPitch,
-            }),
-          );
+          moves.push({
+            noteId: note.id,
+            start: note.start,
+            pitch: note.pitch,
+            nextStart: note.start,
+            nextPitch,
+          });
 
           note.pitch = nextPitch;
         });
+
+        if (moves.length > 0) {
+          dispatch(
+            movePianoNotesBatch({
+              patternId: activePatternId,
+              channelId: activeChannel.id,
+              moves,
+            }),
+          );
+        }
 
         setSelectedNoteIds(
           moved.map(function (note) {
@@ -1734,6 +1771,27 @@ export function PianoRollWindow() {
         }),
       };
 
+      const anchorNote = session.notes.reduce(function (best, item) {
+        if (!best) {
+          return item;
+        }
+
+        if (item.originStart < best.originStart) {
+          return item;
+        }
+
+        return best;
+      }, null);
+
+      session.anchorOriginStart = anchorNote ? anchorNote.originStart : 0;
+      session.minDeltaSteps = session.notes.reduce(function (acc, item) {
+        return Math.max(acc, -item.originStart);
+      }, -Infinity);
+      session.maxDeltaSteps = session.notes.reduce(function (acc, item) {
+        const maxStart = Math.max(0, patternLength - item.length);
+        return Math.min(acc, maxStart - item.originStart);
+      }, Infinity);
+
       dragSelectionRef.current = session;
 
       const onMouseMove = function (moveEvent) {
@@ -1744,6 +1802,17 @@ export function PianoRollWindow() {
 
         const deltaStepsRaw =
           (moveEvent.clientX - dragSession.originX) / stepWidth;
+        const anchorTargetStart = snapStepSize
+          ? quantizeBySnap(
+              dragSession.anchorOriginStart + deltaStepsRaw,
+              snapStepSize,
+            )
+          : dragSession.anchorOriginStart + deltaStepsRaw;
+        const deltaSteps = clamp(
+          anchorTargetStart - dragSession.anchorOriginStart,
+          dragSession.minDeltaSteps,
+          dragSession.maxDeltaSteps,
+        );
         const deltaRows = Math.round(
           (moveEvent.clientY - dragSession.originY) / rowHeight,
         );
@@ -1756,10 +1825,11 @@ export function PianoRollWindow() {
           void startPreviewNote(previewPitch);
         }
 
+        dragSession.moves = [];
         dragSession.notes.forEach(function (item) {
           const maxStart = Math.max(0, patternLength - item.length);
           const nextStart = clamp(
-            quantizeBySnap(item.originStart + deltaStepsRaw, snapStepSize),
+            item.originStart + deltaSteps,
             0,
             maxStart,
           );
@@ -1768,25 +1838,40 @@ export function PianoRollWindow() {
             Math.min(PITCH_MAX, item.originPitch - deltaRows),
           );
 
-          if (nextStart === item.start && nextPitch === item.pitch) {
+          if (isNearlyEqual(nextStart, item.start) && nextPitch === item.pitch) {
             return;
           }
 
+          dragSession.moves.push({
+            noteId: item.id,
+            start: item.start,
+            pitch: item.pitch,
+            nextStart,
+            nextPitch,
+          });
+        });
+
+        if (Array.isArray(dragSession.moves) && dragSession.moves.length > 0) {
           dispatch(
-            movePianoNote({
+            movePianoNotesBatch({
               patternId: activePatternId,
               channelId: activeChannel.id,
-              noteId: item.id,
-              start: item.start,
-              pitch: item.pitch,
-              nextStart,
-              nextPitch,
+              moves: dragSession.moves,
             }),
           );
 
-          item.start = nextStart;
-          item.pitch = nextPitch;
-        });
+          dragSession.moves.forEach(function (move) {
+            const target = dragSession.notes.find(function (item) {
+              return item.id === move.noteId;
+            });
+            if (!target) {
+              return;
+            }
+
+            target.start = move.nextStart;
+            target.pitch = move.nextPitch;
+          });
+        }
       };
 
       const onMouseUp = function () {
@@ -2107,8 +2192,19 @@ export function PianoRollWindow() {
           <select
             className="scale-select"
             value={scaleRoot}
+            onKeyDown={function (event) {
+              if (event.code === "Space") {
+                event.preventDefault();
+                event.stopPropagation();
+              }
+            }}
             onChange={function (event) {
-              setScaleRoot(event.target.value);
+              dispatch(
+                setPianoRollScale({
+                  root: event.target.value,
+                  type: scaleType,
+                }),
+              );
             }}
           >
             {SCALE_ROOTS.map(function (noteName) {
@@ -2122,8 +2218,19 @@ export function PianoRollWindow() {
           <select
             className="scale-select"
             value={scaleType}
+            onKeyDown={function (event) {
+              if (event.code === "Space") {
+                event.preventDefault();
+                event.stopPropagation();
+              }
+            }}
             onChange={function (event) {
-              setScaleType(event.target.value);
+              dispatch(
+                setPianoRollScale({
+                  root: scaleRoot,
+                  type: event.target.value,
+                }),
+              );
             }}
           >
             {SCALE_TYPES.map(function (item) {
