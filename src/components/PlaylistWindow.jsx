@@ -13,6 +13,7 @@ import {
 } from "../store";
 import { getPatternDragSession } from "../utils/patternDragSession";
 import { C5_PITCH } from "../utils/patternNotes";
+import { toSafeSampleUrl } from "../utils/sampleUrl";
 
 const DEFAULT_PLAYLIST_BARS = 16;
 const MIN_PLAYLIST_BARS = 4;
@@ -79,31 +80,6 @@ function hexToRgb(hexColor) {
 function withAlpha(hexColor, alpha) {
   const rgb = hexToRgb(hexColor);
   return "rgba(" + rgb.r + ", " + rgb.g + ", " + rgb.b + ", " + alpha + ")";
-}
-
-function toSafeSampleUrl(rawPath) {
-  const input = String(rawPath || "").trim();
-  if (!input) {
-    return "";
-  }
-
-  const hashIndex = input.indexOf("#");
-  const pathWithoutHash = hashIndex >= 0 ? input.slice(0, hashIndex) : input;
-  const parts = pathWithoutHash.split("/");
-
-  const encoded = parts.map(function (part, index) {
-    if (index === 0 && part === "") {
-      return "";
-    }
-
-    try {
-      return encodeURIComponent(decodeURIComponent(part));
-    } catch {
-      return encodeURIComponent(part);
-    }
-  });
-
-  return encoded.join("/");
 }
 
 function buildWaveformPeaks(audioBuffer, bins) {

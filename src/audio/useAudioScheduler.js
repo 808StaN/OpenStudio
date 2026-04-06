@@ -3,6 +3,8 @@ import Soundfont from "soundfont-player";
 import { useDispatch, useSelector } from "react-redux";
 import { getPluginInstrument } from "../data/pluginInstruments";
 import { setInsertMeter, setPlayheadStep } from "../store";
+import { toSafeSampleUrl } from "../utils/sampleUrl";
+import { createWsolaStretchedBufferFromSample } from "./wsolaStretch";
 
 const defaultSampleSettings = {
   cutItself: false,
@@ -17,6 +19,12 @@ const defaultSampleSettings = {
   envDecayMs: 0,
   envSustainPct: 100,
   envReleaseMs: 0,
+  stretchMode: "resample",
+  stretchPitchSemitones: 0,
+  stretchMultiplier: 1,
+  stretchSourceBpm: 120,
+  stretchProjectTempoBpm: 120,
+  stretchTimeMode: "none",
 };
 
 const DEFAULT_SAMPLE_MIDI_PITCH = 72;
@@ -74,31 +82,6 @@ function sanitizeEqBandType(raw, fallback) {
 
 function clamp(value, min, max) {
   return Math.max(min, Math.min(max, value));
-}
-
-function toSafeSampleUrl(rawPath) {
-  const input = String(rawPath || "").trim();
-  if (!input) {
-    return "";
-  }
-
-  const hashIndex = input.indexOf("#");
-  const pathWithoutHash = hashIndex >= 0 ? input.slice(0, hashIndex) : input;
-  const parts = pathWithoutHash.split("/");
-
-  const encoded = parts.map(function (part, index) {
-    if (index === 0 && part === "") {
-      return "";
-    }
-
-    try {
-      return encodeURIComponent(decodeURIComponent(part));
-    } catch {
-      return encodeURIComponent(part);
-    }
-  });
-
-  return encoded.join("/");
 }
 
 function getSafeGraphicEqParams(raw) {
@@ -318,6 +301,50 @@ function getSafeSampleSettings(raw) {
       Math.min(100, Math.round(Number(base.pitchCents ?? 0))),
     ),
     monoMode: Boolean(base.monoMode),
+    stretchMode: ["none", "resample", "stretch", "realtime"].includes(
+      String(base.stretchMode || "")
+        .trim()
+        .toLowerCase(),
+    )
+      ? String(base.stretchMode || "none")
+          .trim()
+          .toLowerCase()
+      : "none",
+    stretchPitchSemitones: Math.max(
+      -24,
+      Math.min(24, Number(base.stretchPitchSemitones ?? 0)),
+    ),
+    stretchMultiplier: Math.max(
+      0.25,
+      Math.min(8, Number(base.stretchMultiplier ?? 1)),
+    ),
+    stretchSourceBpm: Math.max(
+      20,
+      Math.min(300, Number(base.stretchSourceBpm ?? 120)),
+    ),
+    stretchProjectTempoBpm: Math.max(
+      20,
+      Math.min(300, Number(base.stretchProjectTempoBpm ?? 120)),
+    ),
+    stretchTimeMode: [
+      "none",
+      "set-bpm",
+      "project-tempo",
+      "beat-1",
+      "beat-2",
+      "bar-1",
+      "bar-2",
+      "bar-3",
+      "bar-4",
+    ].includes(
+      String(base.stretchTimeMode || "")
+        .trim()
+        .toLowerCase(),
+    )
+      ? String(base.stretchTimeMode || "none")
+          .trim()
+          .toLowerCase()
+      : "none",
   };
 
   const fadeTotal = next.fadeInPct + next.fadeOutPct;
@@ -328,6 +355,192 @@ function getSafeSampleSettings(raw) {
   }
 
   return next;
+}
+
+function getStretchTargetDurationSeconds(settings, sampleReadDuration, bpm) {
+  const safeDuration = Math.max(0.01, Number(sampleReadDuration || 0.01));
+  const safeBpm = Math.max(1, Number(bpm || 120));
+  const quarterSec = 60 / safeBpm;
+  const timeMode = String(settings.stretchTimeMode || "none")
+    .trim()
+    .toLowerCase();
+  const mul = Math.max(
+    0.25,
+    Math.min(8, Number(settings.stretchMultiplier || 1)),
+  );
+
+  if (timeMode === "set-bpm") {
+    const sourceBpm = Math.max(
+      20,
+      Math.min(300, Number(settings.stretchSourceBpm || 120)),
+    );
+    return Math.max(0.01, safeDuration * (sourceBpm / safeBpm) * mul);
+  }
+
+  if (timeMode === "project-tempo") {
+    const projectLockBpm = Math.max(
+      20,
+      Math.min(300, Number(settings.stretchProjectTempoBpm || safeBpm)),
+    );
+    return Math.max(0.01, safeDuration * (projectLockBpm / safeBpm) * mul);
+  }
+
+  if (timeMode === "beat-1") {
+    return quarterSec * mul;
+  }
+  if (timeMode === "beat-2") {
+    return quarterSec * 2 * mul;
+  }
+  if (timeMode === "bar-1") {
+    return quarterSec * 4 * mul;
+  }
+  if (timeMode === "bar-2") {
+    return quarterSec * 8 * mul;
+  }
+  if (timeMode === "bar-3") {
+    return quarterSec * 12 * mul;
+  }
+  if (timeMode === "bar-4") {
+    return quarterSec * 16 * mul;
+  }
+
+  return Math.max(0.01, safeDuration * mul);
+}
+
+function getTimeStretchProfile(settings, sampleReadDuration, bpm, baseRate) {
+  const stretchMode = String(settings.stretchMode || "none")
+    .trim()
+    .toLowerCase();
+  const safeBaseRate = Math.max(0.125, Math.min(8, Number(baseRate || 1)));
+  const targetDurationSec = getStretchTargetDurationSeconds(
+    settings,
+    sampleReadDuration,
+    bpm,
+  );
+
+  if (stretchMode === "none") {
+    return {
+      playbackRate: safeBaseRate,
+      targetDurationSec: Math.max(0.01, sampleReadDuration / safeBaseRate),
+      useGranularStretch: false,
+    };
+  }
+
+  const pitchShiftSemitones = Math.max(
+    -24,
+    Math.min(24, Number(settings.stretchPitchSemitones || 0)),
+  );
+  const pitchShiftRate = Math.pow(2, pitchShiftSemitones / 12);
+
+  if (stretchMode === "stretch") {
+    return {
+      // In stretch mode keep duration target independent from pitch changes.
+      playbackRate: Math.max(0.125, Math.min(8, safeBaseRate * pitchShiftRate)),
+      targetDurationSec: Math.max(0.01, targetDurationSec),
+      useGranularStretch: true,
+    };
+  }
+
+  const durationRate = Math.max(
+    0.125,
+    Math.min(8, sampleReadDuration / targetDurationSec),
+  );
+
+  return {
+    playbackRate: Math.max(
+      0.125,
+      Math.min(8, safeBaseRate * pitchShiftRate * durationRate),
+    ),
+    targetDurationSec: Math.max(0.01, sampleReadDuration / durationRate),
+    useGranularStretch: false,
+  };
+}
+
+const hannWindowCache = new Map();
+
+function getHannWindowCurve(samples) {
+  const size = Math.max(16, Math.min(2048, Math.round(Number(samples) || 256)));
+  const cached = hannWindowCache.get(size);
+  if (cached) {
+    return cached;
+  }
+
+  const curve = new Float32Array(size);
+  for (let i = 0; i < size; i += 1) {
+    const phase = size > 1 ? i / (size - 1) : 0;
+    curve[i] = Math.max(0, Math.sin(Math.PI * phase));
+  }
+
+  hannWindowCache.set(size, curve);
+  return curve;
+}
+
+function findBestWsolaOffsetSamples(
+  channelData,
+  predictedOffset,
+  referenceOffset,
+  windowSamples,
+  searchRadiusSamples,
+  maxOffsetSamples,
+) {
+  if (!channelData || channelData.length <= 1) {
+    return Math.max(0, Math.min(maxOffsetSamples, predictedOffset));
+  }
+
+  const safeMax = Math.max(
+    0,
+    Math.min(maxOffsetSamples, channelData.length - 2),
+  );
+  const safeWindow = Math.max(32, Math.min(windowSamples, 1024));
+  const halfWindow = Math.max(16, Math.floor(safeWindow / 2));
+  const safeRef = Math.max(0, Math.min(safeMax, referenceOffset));
+  const searchMin = Math.max(
+    0,
+    Math.min(safeMax, predictedOffset - searchRadiusSamples),
+  );
+  const searchMax = Math.max(
+    0,
+    Math.min(safeMax, predictedOffset + searchRadiusSamples),
+  );
+
+  let bestOffset = Math.max(searchMin, Math.min(searchMax, predictedOffset));
+  let bestScore = -Infinity;
+
+  for (let candidate = searchMin; candidate <= searchMax; candidate += 1) {
+    let dot = 0;
+    let energyA = 0;
+    let energyB = 0;
+
+    for (let i = 0; i < safeWindow; i += 1) {
+      const centerShift = i - halfWindow;
+      const refIndex = safeRef + centerShift;
+      const candIndex = candidate + centerShift;
+
+      if (
+        refIndex < 0 ||
+        candIndex < 0 ||
+        refIndex >= channelData.length ||
+        candIndex >= channelData.length
+      ) {
+        continue;
+      }
+
+      const a = channelData[refIndex];
+      const b = channelData[candIndex];
+      dot += a * b;
+      energyA += a * a;
+      energyB += b * b;
+    }
+
+    const denom = Math.sqrt(energyA * energyB) + 1e-9;
+    const score = dot / denom;
+    if (score > bestScore) {
+      bestScore = score;
+      bestOffset = candidate;
+    }
+  }
+
+  return bestOffset;
 }
 
 function areMixerSettingsEqual(prev, next) {
@@ -386,11 +599,7 @@ function areMixerSettingsEqual(prev, next) {
           return false;
         }
 
-        for (
-          let pointIndex = 0;
-          pointIndex < aPoints.length;
-          pointIndex += 1
-        ) {
+        for (let pointIndex = 0; pointIndex < aPoints.length; pointIndex += 1) {
           const aPoint = aPoints[pointIndex] || {};
           const bPoint = bPoints[pointIndex] || {};
           if (
@@ -607,7 +816,7 @@ export function useAudioScheduler() {
                   ? getSafeGraphicEqParams(slot.params)
                   : effectType === FX_EFFECT_REVERB
                     ? getSafeReverbParams(slot.params)
-                  : null,
+                    : null,
             };
           },
         ),
@@ -630,6 +839,7 @@ export function useAudioScheduler() {
   const sampleLoadPromiseRef = useRef(new Map());
   const sampleLoadFailedRef = useRef(new Set());
   const sampleNormalizeGainRef = useRef(new WeakMap());
+  const stretchedSampleBufferCacheRef = useRef(new WeakMap());
   const activeSampleVoicesRef = useRef(new Map());
   const activeSynthVoicesRef = useRef(new Map());
   const pluginInstrumentRef = useRef(new Map());
@@ -740,6 +950,7 @@ export function useAudioScheduler() {
 
         const data = await response.arrayBuffer();
         const decodedBuffer = await audioCtx.decodeAudioData(data.slice(0));
+
         sampleBufferCacheRef.current.set(sampleUrl, decodedBuffer);
         sampleLoadFailedRef.current.delete(sampleUrl);
         return decodedBuffer;
@@ -1146,9 +1357,7 @@ export function useAudioScheduler() {
         });
       }
 
-      const reverbSize = reverbEnabled
-        ? clamp(reverbParams.size, 0, 1)
-        : 0.62;
+      const reverbSize = reverbEnabled ? clamp(reverbParams.size, 0, 1) : 0.62;
       const reverbDiffusion = reverbEnabled
         ? clamp(reverbParams.diffusion, 0, 1)
         : 0.72;
@@ -1171,9 +1380,7 @@ export function useAudioScheduler() {
       const earlyMix = reverbEnabled
         ? clamp(reverbParams.earlyReflections, 0, 1)
         : 0.38;
-      const widthValue = reverbEnabled
-        ? clamp(reverbParams.width, 0, 1)
-        : 0.9;
+      const widthValue = reverbEnabled ? clamp(reverbParams.width, 0, 1) : 0.9;
       const modDepth = reverbEnabled
         ? clamp(reverbParams.modulationDepth, 0, 1)
         : 0.22;
@@ -1188,10 +1395,7 @@ export function useAudioScheduler() {
       const feedbackBase = isFreeze
         ? 0.988
         : clamp(
-            0.24 +
-              reverbDecay / 34 +
-              reverbSize * 0.14 +
-              reverbDiffusion * 0.1,
+            0.24 + reverbDecay / 34 + reverbSize * 0.14 + reverbDiffusion * 0.1,
             0.2,
             0.82,
           );
@@ -1399,7 +1603,22 @@ export function useAudioScheduler() {
             voice.gain.gain.cancelScheduledValues(atTime);
             voice.gain.gain.setValueAtTime(nowGain, atTime);
             voice.gain.gain.linearRampToValueAtTime(0.0001, atTime + 0.01);
-            voice.source.stop(atTime + 0.012);
+
+            if (Array.isArray(voice.sources)) {
+              voice.sources.forEach(function (sourceNode) {
+                try {
+                  sourceNode.stop(atTime + 0.012);
+                } catch {
+                  return;
+                }
+              });
+            } else if (voice.source) {
+              voice.source.stop(atTime + 0.012);
+            }
+
+            if (voice.cleanupTimeout) {
+              clearTimeout(voice.cleanupTimeout);
+            }
           } catch {
             return;
           }
@@ -1629,22 +1848,35 @@ export function useAudioScheduler() {
           ? midiPitch
           : DEFAULT_SAMPLE_MIDI_PITCH;
         const pitchRate = Math.pow(2, Number(settings.pitchCents || 0) / 1200);
-        const playbackRate = Math.max(
+        const basePlaybackRate = Math.max(
           0.125,
           Math.min(8, midiPitchToPlaybackRate(safeMidiPitch) * pitchRate),
         );
+        const sampleReadDuration = Math.max(
+          0.01,
+          sampleBuffer.duration * (settings.lengthPct / 100),
+        );
+        const stretchProfile = getTimeStretchProfile(
+          settings,
+          sampleReadDuration,
+          transport.bpm,
+          basePlaybackRate,
+        );
+        const playbackRate = stretchProfile.playbackRate;
 
         if (settings.cutItself) {
           stopActiveChannelSamples(channel.id, time);
         }
 
-        const sampleReadDuration = Math.max(
+        const naturalPlayableDuration = Math.max(
           0.01,
-          sampleBuffer.duration * (settings.lengthPct / 100),
+          sampleReadDuration / playbackRate,
         );
         const samplePlayableDuration = Math.max(
           0.01,
-          sampleReadDuration / playbackRate,
+          stretchProfile.useGranularStretch
+            ? stretchProfile.targetDurationSec
+            : naturalPlayableDuration,
         );
         const noteGateDuration = Math.max(
           0.01,
@@ -1677,8 +1909,60 @@ export function useAudioScheduler() {
         const finalGain = Math.max(0.001, gainAmount * getNormalizeGain());
         const sampleStopAt = time + sourcePlayDuration;
         const fadeOutStart = Math.max(time, sampleStopAt - finalFadeOut);
+        const requiredBufferDuration = Math.max(
+          0.01,
+          sourcePlayDuration * playbackRate,
+        );
 
-        source.buffer = sampleBuffer;
+        let scheduledBuffer = sampleBuffer;
+        if (stretchProfile.useGranularStretch) {
+          const desiredBufferedDuration = Math.max(
+            0.01,
+            sourcePlayDuration * playbackRate,
+          );
+          const stretchFactor = clamp(
+            sampleReadDuration / desiredBufferedDuration,
+            0.25,
+            4,
+          );
+          const readFrames = Math.max(
+            16,
+            Math.floor(sampleReadDuration * sampleBuffer.sampleRate),
+          );
+          const cacheKey =
+            readFrames +
+            "|" +
+            stretchFactor.toFixed(4) +
+            "|" +
+            sampleBuffer.numberOfChannels;
+
+          let perSampleCache =
+            stretchedSampleBufferCacheRef.current.get(sampleBuffer);
+          if (!perSampleCache) {
+            perSampleCache = new Map();
+            stretchedSampleBufferCacheRef.current.set(
+              sampleBuffer,
+              perSampleCache,
+            );
+          }
+
+          const cached = perSampleCache.get(cacheKey);
+          if (cached) {
+            scheduledBuffer = cached;
+          } else {
+            scheduledBuffer = createWsolaStretchedBufferFromSample(
+              audioCtx,
+              sampleBuffer,
+              sampleReadDuration,
+              stretchFactor,
+              false,
+            );
+            perSampleCache.set(cacheKey, scheduledBuffer);
+          }
+        }
+
+        source.buffer = scheduledBuffer;
+
         source.playbackRate.setValueAtTime(playbackRate, time);
         if (finalFadeIn > 0.001) {
           gain.gain.setValueAtTime(0.0001, time);
@@ -1729,11 +2013,7 @@ export function useAudioScheduler() {
         source.start(
           time,
           0,
-          Math.min(
-            sampleReadDuration,
-            sampleBuffer.duration,
-            sourcePlayDuration * playbackRate,
-          ),
+          Math.min(scheduledBuffer.duration, requiredBufferDuration),
         );
         source.stop(sampleStopAt + 0.005);
       };

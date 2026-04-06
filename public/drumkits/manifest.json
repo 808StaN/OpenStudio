@@ -1,5 +1,5 @@
 {
-  "generatedAt": "2026-04-05T23:01:52.163Z",
+  "generatedAt": "2026-04-06T01:20:37.354Z",
   "folders": [
     {
       "folder": "808 Mafia - Sizzle's Stolen Laptop Kit/808 Mafia Tags",
@@ -591,7 +591,7 @@
       "items": [
         {
           "name": "afk clap @miratouch.wav",
-          "path": "/drumkits/Nick%20Mira%20-%202000/Clap/afk%20clap%20@miratouch.wav"
+          "path": "/drumkits/Nick%20Mira%20-%202000/Clap/afk%20clap%20%40miratouch.wav"
         },
         {
           "name": "CLAM CLAP_2.wav",
@@ -599,31 +599,31 @@
         },
         {
           "name": "click clap @miratouch.wav",
-          "path": "/drumkits/Nick%20Mira%20-%202000/Clap/click%20clap%20@miratouch.wav"
+          "path": "/drumkits/Nick%20Mira%20-%202000/Clap/click%20clap%20%40miratouch.wav"
         },
         {
           "name": "cyb clap @miratouch.wav",
-          "path": "/drumkits/Nick%20Mira%20-%202000/Clap/cyb%20clap%20@miratouch.wav"
+          "path": "/drumkits/Nick%20Mira%20-%202000/Clap/cyb%20clap%20%40miratouch.wav"
         },
         {
           "name": "fixed clap @miratouch.wav",
-          "path": "/drumkits/Nick%20Mira%20-%202000/Clap/fixed%20clap%20@miratouch.wav"
+          "path": "/drumkits/Nick%20Mira%20-%202000/Clap/fixed%20clap%20%40miratouch.wav"
         },
         {
           "name": "major clap @miratouch_2.wav",
-          "path": "/drumkits/Nick%20Mira%20-%202000/Clap/major%20clap%20@miratouch_2.wav"
+          "path": "/drumkits/Nick%20Mira%20-%202000/Clap/major%20clap%20%40miratouch_2.wav"
         },
         {
           "name": "nvrheardb4XD clap @miratouch.wav",
-          "path": "/drumkits/Nick%20Mira%20-%202000/Clap/nvrheardb4XD%20clap%20@miratouch.wav"
+          "path": "/drumkits/Nick%20Mira%20-%202000/Clap/nvrheardb4XD%20clap%20%40miratouch.wav"
         },
         {
           "name": "samsung clap @miratouch.wav",
-          "path": "/drumkits/Nick%20Mira%20-%202000/Clap/samsung%20clap%20@miratouch.wav"
+          "path": "/drumkits/Nick%20Mira%20-%202000/Clap/samsung%20clap%20%40miratouch.wav"
         },
         {
           "name": "sci clap @miratouch.wav",
-          "path": "/drumkits/Nick%20Mira%20-%202000/Clap/sci%20clap%20@miratouch.wav"
+          "path": "/drumkits/Nick%20Mira%20-%202000/Clap/sci%20clap%20%40miratouch.wav"
         },
         {
           "name": "SUBMARINE CLAP_2.wav",
@@ -631,11 +631,11 @@
         },
         {
           "name": "subverse clap @miratouch_2.wav",
-          "path": "/drumkits/Nick%20Mira%20-%202000/Clap/subverse%20clap%20@miratouch_2.wav"
+          "path": "/drumkits/Nick%20Mira%20-%202000/Clap/subverse%20clap%20%40miratouch_2.wav"
         },
         {
           "name": "THX clap @miratouch_2.wav",
-          "path": "/drumkits/Nick%20Mira%20-%202000/Clap/THX%20clap%20@miratouch_2.wav"
+          "path": "/drumkits/Nick%20Mira%20-%202000/Clap/THX%20clap%20%40miratouch_2.wav"
         }
       ]
     },
@@ -693,19 +693,19 @@
       "items": [
         {
           "name": "[2000] AIR #1_2.wav",
-          "path": "/drumkits/Nick%20Mira%20-%202000/Fx/%5B2000%5D%20AIR%20#1_2.wav"
+          "path": "/drumkits/__safe__/Nick%20Mira%20-%202000/Fx/%5B2000%5D%20AIR%20_hash_1_2.wav"
         },
         {
           "name": "[2000] EMP #1_2.wav",
-          "path": "/drumkits/Nick%20Mira%20-%202000/Fx/%5B2000%5D%20EMP%20#1_2.wav"
+          "path": "/drumkits/__safe__/Nick%20Mira%20-%202000/Fx/%5B2000%5D%20EMP%20_hash_1_2.wav"
         },
         {
           "name": "[2000] EMP #2_2.wav",
-          "path": "/drumkits/Nick%20Mira%20-%202000/Fx/%5B2000%5D%20EMP%20#2_2.wav"
+          "path": "/drumkits/__safe__/Nick%20Mira%20-%202000/Fx/%5B2000%5D%20EMP%20_hash_2_2.wav"
         },
         {
           "name": "bark sfx @miratouch_2.wav",
-          "path": "/drumkits/Nick%20Mira%20-%202000/Fx/bark%20sfx%20@miratouch_2.wav"
+          "path": "/drumkits/Nick%20Mira%20-%202000/Fx/bark%20sfx%20%40miratouch_2.wav"
         },
         {
           "name": "BIRD DOG FETCH_2.wav",
@@ -837,7 +837,7 @@
         },
         {
           "name": "hyper sfx @miratouch_2.wav",
-          "path": "/drumkits/Nick%20Mira%20-%202000/Fx/hyper%20sfx%20@miratouch_2.wav"
+          "path": "/drumkits/Nick%20Mira%20-%202000/Fx/hyper%20sfx%20%40miratouch_2.wav"
         },
         {
           "name": "INAWORLD FLASH_2.wav",
@@ -897,7 +897,7 @@
         },
         {
           "name": "persona808 @miratouch.wav",
-          "path": "/drumkits/Nick%20Mira%20-%202000/Fx/persona808%20@miratouch.wav"
+          "path": "/drumkits/Nick%20Mira%20-%202000/Fx/persona808%20%40miratouch.wav"
         },
         {
           "name": "PEW ZAP ZAP_2.wav",
@@ -925,7 +925,7 @@
         },
         {
           "name": "right on sfx @miratouch_2.wav",
-          "path": "/drumkits/Nick%20Mira%20-%202000/Fx/right%20on%20sfx%20@miratouch_2.wav"
+          "path": "/drumkits/Nick%20Mira%20-%202000/Fx/right%20on%20sfx%20%40miratouch_2.wav"
         },
         {
           "name": "RUMMAGE_2.wav",
@@ -961,7 +961,7 @@
         },
         {
           "name": "stomp1 sfx @miratouch.wav",
-          "path": "/drumkits/Nick%20Mira%20-%202000/Fx/stomp1%20sfx%20@miratouch.wav"
+          "path": "/drumkits/Nick%20Mira%20-%202000/Fx/stomp1%20sfx%20%40miratouch.wav"
         },
         {
           "name": "TINY ENGINE_2.wav",
@@ -998,11 +998,11 @@
       "items": [
         {
           "name": "[2000] HH #1_2.wav",
-          "path": "/drumkits/Nick%20Mira%20-%202000/Hi-Hat/%5B2000%5D%20HH%20#1_2.wav"
+          "path": "/drumkits/__safe__/Nick%20Mira%20-%202000/Hi-Hat/%5B2000%5D%20HH%20_hash_1_2.wav"
         },
         {
           "name": "angy hh @miratouch.wav",
-          "path": "/drumkits/Nick%20Mira%20-%202000/Hi-Hat/angy%20hh%20@miratouch.wav"
+          "path": "/drumkits/Nick%20Mira%20-%202000/Hi-Hat/angy%20hh%20%40miratouch.wav"
         },
         {
           "name": "BITS MAYBE A HAT_2.wav",
@@ -1010,31 +1010,31 @@
         },
         {
           "name": "clank hh @miratouch.wav",
-          "path": "/drumkits/Nick%20Mira%20-%202000/Hi-Hat/clank%20hh%20@miratouch.wav"
+          "path": "/drumkits/Nick%20Mira%20-%202000/Hi-Hat/clank%20hh%20%40miratouch.wav"
         },
         {
           "name": "gmod hh @miratouch.wav",
-          "path": "/drumkits/Nick%20Mira%20-%202000/Hi-Hat/gmod%20hh%20@miratouch.wav"
+          "path": "/drumkits/Nick%20Mira%20-%202000/Hi-Hat/gmod%20hh%20%40miratouch.wav"
         },
         {
           "name": "ice hh @miratouch.wav",
-          "path": "/drumkits/Nick%20Mira%20-%202000/Hi-Hat/ice%20hh%20@miratouch.wav"
+          "path": "/drumkits/Nick%20Mira%20-%202000/Hi-Hat/ice%20hh%20%40miratouch.wav"
         },
         {
           "name": "oon hh @miratouch.wav",
-          "path": "/drumkits/Nick%20Mira%20-%202000/Hi-Hat/oon%20hh%20@miratouch.wav"
+          "path": "/drumkits/Nick%20Mira%20-%202000/Hi-Hat/oon%20hh%20%40miratouch.wav"
         },
         {
           "name": "pinkwhite hh @miratouch.wav",
-          "path": "/drumkits/Nick%20Mira%20-%202000/Hi-Hat/pinkwhite%20hh%20@miratouch.wav"
+          "path": "/drumkits/Nick%20Mira%20-%202000/Hi-Hat/pinkwhite%20hh%20%40miratouch.wav"
         },
         {
           "name": "roll_clear hh @miratouch.wav",
-          "path": "/drumkits/Nick%20Mira%20-%202000/Hi-Hat/roll_clear%20hh%20@miratouch.wav"
+          "path": "/drumkits/Nick%20Mira%20-%202000/Hi-Hat/roll_clear%20hh%20%40miratouch.wav"
         },
         {
           "name": "stain hh @miratouch.wav",
-          "path": "/drumkits/Nick%20Mira%20-%202000/Hi-Hat/stain%20hh%20@miratouch.wav"
+          "path": "/drumkits/Nick%20Mira%20-%202000/Hi-Hat/stain%20hh%20%40miratouch.wav"
         },
         {
           "name": "WILD CAUGHT HIHAT_2.wav",
@@ -1099,43 +1099,43 @@
         },
         {
           "name": "c# minor _ belief.wav",
-          "path": "/drumkits/Nick%20Mira%20-%202000/NICK%20MIRA%20-%20WARPTOUR%20PHRASES/c#%20minor%20_%20belief.wav"
+          "path": "/drumkits/__safe__/Nick%20Mira%20-%202000/NICK%20MIRA%20-%20WARPTOUR%20PHRASES/c_hash_%20minor%20_%20belief.wav"
         },
         {
           "name": "c# minor _ dolly.wav",
-          "path": "/drumkits/Nick%20Mira%20-%202000/NICK%20MIRA%20-%20WARPTOUR%20PHRASES/c#%20minor%20_%20dolly.wav"
+          "path": "/drumkits/__safe__/Nick%20Mira%20-%202000/NICK%20MIRA%20-%20WARPTOUR%20PHRASES/c_hash_%20minor%20_%20dolly.wav"
         },
         {
           "name": "c# minor _ frontdoor.wav",
-          "path": "/drumkits/Nick%20Mira%20-%202000/NICK%20MIRA%20-%20WARPTOUR%20PHRASES/c#%20minor%20_%20frontdoor.wav"
+          "path": "/drumkits/__safe__/Nick%20Mira%20-%202000/NICK%20MIRA%20-%20WARPTOUR%20PHRASES/c_hash_%20minor%20_%20frontdoor.wav"
         },
         {
           "name": "c# minor _ middleman.wav",
-          "path": "/drumkits/Nick%20Mira%20-%202000/NICK%20MIRA%20-%20WARPTOUR%20PHRASES/c#%20minor%20_%20middleman.wav"
+          "path": "/drumkits/__safe__/Nick%20Mira%20-%202000/NICK%20MIRA%20-%20WARPTOUR%20PHRASES/c_hash_%20minor%20_%20middleman.wav"
         },
         {
           "name": "c# minor _ phases.wav",
-          "path": "/drumkits/Nick%20Mira%20-%202000/NICK%20MIRA%20-%20WARPTOUR%20PHRASES/c#%20minor%20_%20phases.wav"
+          "path": "/drumkits/__safe__/Nick%20Mira%20-%202000/NICK%20MIRA%20-%20WARPTOUR%20PHRASES/c_hash_%20minor%20_%20phases.wav"
         },
         {
           "name": "c# minor _ pirates.wav",
-          "path": "/drumkits/Nick%20Mira%20-%202000/NICK%20MIRA%20-%20WARPTOUR%20PHRASES/c#%20minor%20_%20pirates.wav"
+          "path": "/drumkits/__safe__/Nick%20Mira%20-%202000/NICK%20MIRA%20-%20WARPTOUR%20PHRASES/c_hash_%20minor%20_%20pirates.wav"
         },
         {
           "name": "c# minor _ priordemands.wav",
-          "path": "/drumkits/Nick%20Mira%20-%202000/NICK%20MIRA%20-%20WARPTOUR%20PHRASES/c#%20minor%20_%20priordemands.wav"
+          "path": "/drumkits/__safe__/Nick%20Mira%20-%202000/NICK%20MIRA%20-%20WARPTOUR%20PHRASES/c_hash_%20minor%20_%20priordemands.wav"
         },
         {
           "name": "c# minor _ think2much.wav",
-          "path": "/drumkits/Nick%20Mira%20-%202000/NICK%20MIRA%20-%20WARPTOUR%20PHRASES/c#%20minor%20_%20think2much.wav"
+          "path": "/drumkits/__safe__/Nick%20Mira%20-%202000/NICK%20MIRA%20-%20WARPTOUR%20PHRASES/c_hash_%20minor%20_%20think2much.wav"
         },
         {
           "name": "c# minor _ wartorn.wav",
-          "path": "/drumkits/Nick%20Mira%20-%202000/NICK%20MIRA%20-%20WARPTOUR%20PHRASES/c#%20minor%20_%20wartorn.wav"
+          "path": "/drumkits/__safe__/Nick%20Mira%20-%202000/NICK%20MIRA%20-%20WARPTOUR%20PHRASES/c_hash_%20minor%20_%20wartorn.wav"
         },
         {
           "name": "c# minor _ zombieland.wav",
-          "path": "/drumkits/Nick%20Mira%20-%202000/NICK%20MIRA%20-%20WARPTOUR%20PHRASES/c#%20minor%20_%20zombieland.wav"
+          "path": "/drumkits/__safe__/Nick%20Mira%20-%202000/NICK%20MIRA%20-%20WARPTOUR%20PHRASES/c_hash_%20minor%20_%20zombieland.wav"
         },
         {
           "name": "d minor _ 40points.wav",
@@ -1179,43 +1179,43 @@
         },
         {
           "name": "d# minor _ dunkman.wav",
-          "path": "/drumkits/Nick%20Mira%20-%202000/NICK%20MIRA%20-%20WARPTOUR%20PHRASES/d#%20minor%20_%20dunkman.wav"
+          "path": "/drumkits/__safe__/Nick%20Mira%20-%202000/NICK%20MIRA%20-%20WARPTOUR%20PHRASES/d_hash_%20minor%20_%20dunkman.wav"
         },
         {
           "name": "d# minor _ fireandice.wav",
-          "path": "/drumkits/Nick%20Mira%20-%202000/NICK%20MIRA%20-%20WARPTOUR%20PHRASES/d#%20minor%20_%20fireandice.wav"
+          "path": "/drumkits/__safe__/Nick%20Mira%20-%202000/NICK%20MIRA%20-%20WARPTOUR%20PHRASES/d_hash_%20minor%20_%20fireandice.wav"
         },
         {
           "name": "d# minor _ giftshopstring.wav",
-          "path": "/drumkits/Nick%20Mira%20-%202000/NICK%20MIRA%20-%20WARPTOUR%20PHRASES/d#%20minor%20_%20giftshopstring.wav"
+          "path": "/drumkits/__safe__/Nick%20Mira%20-%202000/NICK%20MIRA%20-%20WARPTOUR%20PHRASES/d_hash_%20minor%20_%20giftshopstring.wav"
         },
         {
           "name": "d# minor _ greatlook.wav",
-          "path": "/drumkits/Nick%20Mira%20-%202000/NICK%20MIRA%20-%20WARPTOUR%20PHRASES/d#%20minor%20_%20greatlook.wav"
+          "path": "/drumkits/__safe__/Nick%20Mira%20-%202000/NICK%20MIRA%20-%20WARPTOUR%20PHRASES/d_hash_%20minor%20_%20greatlook.wav"
         },
         {
           "name": "d# minor _ mafia.wav",
-          "path": "/drumkits/Nick%20Mira%20-%202000/NICK%20MIRA%20-%20WARPTOUR%20PHRASES/d#%20minor%20_%20mafia.wav"
+          "path": "/drumkits/__safe__/Nick%20Mira%20-%202000/NICK%20MIRA%20-%20WARPTOUR%20PHRASES/d_hash_%20minor%20_%20mafia.wav"
         },
         {
           "name": "d# minor _ orbits.wav",
-          "path": "/drumkits/Nick%20Mira%20-%202000/NICK%20MIRA%20-%20WARPTOUR%20PHRASES/d#%20minor%20_%20orbits.wav"
+          "path": "/drumkits/__safe__/Nick%20Mira%20-%202000/NICK%20MIRA%20-%20WARPTOUR%20PHRASES/d_hash_%20minor%20_%20orbits.wav"
         },
         {
           "name": "d# minor _ priority.wav",
-          "path": "/drumkits/Nick%20Mira%20-%202000/NICK%20MIRA%20-%20WARPTOUR%20PHRASES/d#%20minor%20_%20priority.wav"
+          "path": "/drumkits/__safe__/Nick%20Mira%20-%202000/NICK%20MIRA%20-%20WARPTOUR%20PHRASES/d_hash_%20minor%20_%20priority.wav"
         },
         {
           "name": "d# minor _ stophim.wav",
-          "path": "/drumkits/Nick%20Mira%20-%202000/NICK%20MIRA%20-%20WARPTOUR%20PHRASES/d#%20minor%20_%20stophim.wav"
+          "path": "/drumkits/__safe__/Nick%20Mira%20-%202000/NICK%20MIRA%20-%20WARPTOUR%20PHRASES/d_hash_%20minor%20_%20stophim.wav"
         },
         {
           "name": "d# minor _ tempocontrol.wav",
-          "path": "/drumkits/Nick%20Mira%20-%202000/NICK%20MIRA%20-%20WARPTOUR%20PHRASES/d#%20minor%20_%20tempocontrol.wav"
+          "path": "/drumkits/__safe__/Nick%20Mira%20-%202000/NICK%20MIRA%20-%20WARPTOUR%20PHRASES/d_hash_%20minor%20_%20tempocontrol.wav"
         },
         {
           "name": "d# minor _ ultra.wav",
-          "path": "/drumkits/Nick%20Mira%20-%202000/NICK%20MIRA%20-%20WARPTOUR%20PHRASES/d#%20minor%20_%20ultra.wav"
+          "path": "/drumkits/__safe__/Nick%20Mira%20-%202000/NICK%20MIRA%20-%20WARPTOUR%20PHRASES/d_hash_%20minor%20_%20ultra.wav"
         },
         {
           "name": "e minor _ globetrotter.wav",
@@ -1299,39 +1299,39 @@
         },
         {
           "name": "f# minor _ apply.wav",
-          "path": "/drumkits/Nick%20Mira%20-%202000/NICK%20MIRA%20-%20WARPTOUR%20PHRASES/f#%20minor%20_%20apply.wav"
+          "path": "/drumkits/__safe__/Nick%20Mira%20-%202000/NICK%20MIRA%20-%20WARPTOUR%20PHRASES/f_hash_%20minor%20_%20apply.wav"
         },
         {
           "name": "f# minor _ butler.wav",
-          "path": "/drumkits/Nick%20Mira%20-%202000/NICK%20MIRA%20-%20WARPTOUR%20PHRASES/f#%20minor%20_%20butler.wav"
+          "path": "/drumkits/__safe__/Nick%20Mira%20-%202000/NICK%20MIRA%20-%20WARPTOUR%20PHRASES/f_hash_%20minor%20_%20butler.wav"
         },
         {
           "name": "f# minor _ butterlemon.wav",
-          "path": "/drumkits/Nick%20Mira%20-%202000/NICK%20MIRA%20-%20WARPTOUR%20PHRASES/f#%20minor%20_%20butterlemon.wav"
+          "path": "/drumkits/__safe__/Nick%20Mira%20-%202000/NICK%20MIRA%20-%20WARPTOUR%20PHRASES/f_hash_%20minor%20_%20butterlemon.wav"
         },
         {
           "name": "f# minor _ coffin.wav",
-          "path": "/drumkits/Nick%20Mira%20-%202000/NICK%20MIRA%20-%20WARPTOUR%20PHRASES/f#%20minor%20_%20coffin.wav"
+          "path": "/drumkits/__safe__/Nick%20Mira%20-%202000/NICK%20MIRA%20-%20WARPTOUR%20PHRASES/f_hash_%20minor%20_%20coffin.wav"
         },
         {
           "name": "f# minor _ moneytree - Loop_2 - Loop_3.wav",
-          "path": "/drumkits/Nick%20Mira%20-%202000/NICK%20MIRA%20-%20WARPTOUR%20PHRASES/f#%20minor%20_%20moneytree%20-%20Loop_2%20-%20Loop_3.wav"
+          "path": "/drumkits/__safe__/Nick%20Mira%20-%202000/NICK%20MIRA%20-%20WARPTOUR%20PHRASES/f_hash_%20minor%20_%20moneytree%20-%20Loop_2%20-%20Loop_3.wav"
         },
         {
           "name": "f# minor _ mourning.wav",
-          "path": "/drumkits/Nick%20Mira%20-%202000/NICK%20MIRA%20-%20WARPTOUR%20PHRASES/f#%20minor%20_%20mourning.wav"
+          "path": "/drumkits/__safe__/Nick%20Mira%20-%202000/NICK%20MIRA%20-%20WARPTOUR%20PHRASES/f_hash_%20minor%20_%20mourning.wav"
         },
         {
           "name": "f# minor _ solstice.wav",
-          "path": "/drumkits/Nick%20Mira%20-%202000/NICK%20MIRA%20-%20WARPTOUR%20PHRASES/f#%20minor%20_%20solstice.wav"
+          "path": "/drumkits/__safe__/Nick%20Mira%20-%202000/NICK%20MIRA%20-%20WARPTOUR%20PHRASES/f_hash_%20minor%20_%20solstice.wav"
         },
         {
           "name": "f# minor _ tippingpoint.wav",
-          "path": "/drumkits/Nick%20Mira%20-%202000/NICK%20MIRA%20-%20WARPTOUR%20PHRASES/f#%20minor%20_%20tippingpoint.wav"
+          "path": "/drumkits/__safe__/Nick%20Mira%20-%202000/NICK%20MIRA%20-%20WARPTOUR%20PHRASES/f_hash_%20minor%20_%20tippingpoint.wav"
         },
         {
           "name": "f# minor _ yawn.wav",
-          "path": "/drumkits/Nick%20Mira%20-%202000/NICK%20MIRA%20-%20WARPTOUR%20PHRASES/f#%20minor%20_%20yawn.wav"
+          "path": "/drumkits/__safe__/Nick%20Mira%20-%202000/NICK%20MIRA%20-%20WARPTOUR%20PHRASES/f_hash_%20minor%20_%20yawn.wav"
         },
         {
           "name": "g minor _ bluecrab - Loop_2.wav",
@@ -1360,39 +1360,39 @@
       "items": [
         {
           "name": "bankrollnew openhat @miratouch.wav",
-          "path": "/drumkits/Nick%20Mira%20-%202000/Open-Hat/bankrollnew%20openhat%20@miratouch.wav"
+          "path": "/drumkits/Nick%20Mira%20-%202000/Open-Hat/bankrollnew%20openhat%20%40miratouch.wav"
         },
         {
           "name": "crosshair openhat @miratouch_2.wav",
-          "path": "/drumkits/Nick%20Mira%20-%202000/Open-Hat/crosshair%20openhat%20@miratouch_2.wav"
+          "path": "/drumkits/Nick%20Mira%20-%202000/Open-Hat/crosshair%20openhat%20%40miratouch_2.wav"
         },
         {
           "name": "dbz openhat @miratouch_2.wav",
-          "path": "/drumkits/Nick%20Mira%20-%202000/Open-Hat/dbz%20openhat%20@miratouch_2.wav"
+          "path": "/drumkits/Nick%20Mira%20-%202000/Open-Hat/dbz%20openhat%20%40miratouch_2.wav"
         },
         {
           "name": "invincible openhat @miratouch.wav",
-          "path": "/drumkits/Nick%20Mira%20-%202000/Open-Hat/invincible%20openhat%20@miratouch.wav"
+          "path": "/drumkits/Nick%20Mira%20-%202000/Open-Hat/invincible%20openhat%20%40miratouch.wav"
         },
         {
           "name": "maryland openhat @miratouch.wav",
-          "path": "/drumkits/Nick%20Mira%20-%202000/Open-Hat/maryland%20openhat%20@miratouch.wav"
+          "path": "/drumkits/Nick%20Mira%20-%202000/Open-Hat/maryland%20openhat%20%40miratouch.wav"
         },
         {
           "name": "shortlived openhat @miratouch.wav",
-          "path": "/drumkits/Nick%20Mira%20-%202000/Open-Hat/shortlived%20openhat%20@miratouch.wav"
+          "path": "/drumkits/Nick%20Mira%20-%202000/Open-Hat/shortlived%20openhat%20%40miratouch.wav"
         },
         {
           "name": "snax openhat @miratouch.wav",
-          "path": "/drumkits/Nick%20Mira%20-%202000/Open-Hat/snax%20openhat%20@miratouch.wav"
+          "path": "/drumkits/Nick%20Mira%20-%202000/Open-Hat/snax%20openhat%20%40miratouch.wav"
         },
         {
           "name": "tetris openhat @miratouch.wav",
-          "path": "/drumkits/Nick%20Mira%20-%202000/Open-Hat/tetris%20openhat%20@miratouch.wav"
+          "path": "/drumkits/Nick%20Mira%20-%202000/Open-Hat/tetris%20openhat%20%40miratouch.wav"
         },
         {
           "name": "xmaseve openhat @miratouch_2.wav",
-          "path": "/drumkits/Nick%20Mira%20-%202000/Open-Hat/xmaseve%20openhat%20@miratouch_2.wav"
+          "path": "/drumkits/Nick%20Mira%20-%202000/Open-Hat/xmaseve%20openhat%20%40miratouch_2.wav"
         }
       ]
     },
@@ -1401,11 +1401,11 @@
       "items": [
         {
           "name": "baxter perc @miratouch.wav",
-          "path": "/drumkits/Nick%20Mira%20-%202000/Perc/baxter%20perc%20@miratouch.wav"
+          "path": "/drumkits/Nick%20Mira%20-%202000/Perc/baxter%20perc%20%40miratouch.wav"
         },
         {
           "name": "ezio perc @miratouch.wav",
-          "path": "/drumkits/Nick%20Mira%20-%202000/Perc/ezio%20perc%20@miratouch.wav"
+          "path": "/drumkits/Nick%20Mira%20-%202000/Perc/ezio%20perc%20%40miratouch.wav"
         },
         {
           "name": "MORE MODS PERC_2.wav",
@@ -1413,7 +1413,7 @@
         },
         {
           "name": "otw perc @miratouch_2.wav",
-          "path": "/drumkits/Nick%20Mira%20-%202000/Perc/otw%20perc%20@miratouch_2.wav"
+          "path": "/drumkits/Nick%20Mira%20-%202000/Perc/otw%20perc%20%40miratouch_2.wav"
         },
         {
           "name": "PERC CHOPPING BOARD TYPE_2.wav",
@@ -1439,39 +1439,39 @@
       "items": [
         {
           "name": "ball snare @miratouch.wav",
-          "path": "/drumkits/Nick%20Mira%20-%202000/Snare/ball%20snare%20@miratouch.wav"
+          "path": "/drumkits/Nick%20Mira%20-%202000/Snare/ball%20snare%20%40miratouch.wav"
         },
         {
           "name": "boo snare @miratouch_3.wav",
-          "path": "/drumkits/Nick%20Mira%20-%202000/Snare/boo%20snare%20@miratouch_3.wav"
+          "path": "/drumkits/Nick%20Mira%20-%202000/Snare/boo%20snare%20%40miratouch_3.wav"
         },
         {
           "name": "c4 snare @miratouch.wav",
-          "path": "/drumkits/Nick%20Mira%20-%202000/Snare/c4%20snare%20@miratouch.wav"
+          "path": "/drumkits/Nick%20Mira%20-%202000/Snare/c4%20snare%20%40miratouch.wav"
         },
         {
           "name": "editor snare @miratouch.wav",
-          "path": "/drumkits/Nick%20Mira%20-%202000/Snare/editor%20snare%20@miratouch.wav"
+          "path": "/drumkits/Nick%20Mira%20-%202000/Snare/editor%20snare%20%40miratouch.wav"
         },
         {
           "name": "munyun snare @miratouch.wav",
-          "path": "/drumkits/Nick%20Mira%20-%202000/Snare/munyun%20snare%20@miratouch.wav"
+          "path": "/drumkits/Nick%20Mira%20-%202000/Snare/munyun%20snare%20%40miratouch.wav"
         },
         {
           "name": "my2000 snare @miratouch.wav",
-          "path": "/drumkits/Nick%20Mira%20-%202000/Snare/my2000%20snare%20@miratouch.wav"
+          "path": "/drumkits/Nick%20Mira%20-%202000/Snare/my2000%20snare%20%40miratouch.wav"
         },
         {
           "name": "og808 snare @miratouch_2.wav",
-          "path": "/drumkits/Nick%20Mira%20-%202000/Snare/og808%20snare%20@miratouch_2.wav"
+          "path": "/drumkits/Nick%20Mira%20-%202000/Snare/og808%20snare%20%40miratouch_2.wav"
         },
         {
           "name": "paint snare @miratouch.wav",
-          "path": "/drumkits/Nick%20Mira%20-%202000/Snare/paint%20snare%20@miratouch.wav"
+          "path": "/drumkits/Nick%20Mira%20-%202000/Snare/paint%20snare%20%40miratouch.wav"
         },
         {
           "name": "shrt snare @miratouch.wav",
-          "path": "/drumkits/Nick%20Mira%20-%202000/Snare/shrt%20snare%20@miratouch.wav"
+          "path": "/drumkits/Nick%20Mira%20-%202000/Snare/shrt%20snare%20%40miratouch.wav"
         },
         {
           "name": "SUN LAY SNARE_2.wav",
@@ -1488,7 +1488,7 @@
         },
         {
           "name": "pbs - a$att [ 808 ].wav",
-          "path": "/drumkits/Polo%20Boy%20Shawty%20-%20G.O.A.T/808/pbs%20-%20a$att%20%5B%20808%20%5D.wav"
+          "path": "/drumkits/Polo%20Boy%20Shawty%20-%20G.O.A.T/808/pbs%20-%20a%24att%20%5B%20808%20%5D.wav"
         },
         {
           "name": "pbs - boat count me in [ 808 ].wav",
@@ -1809,7 +1809,7 @@
         },
         {
           "name": "pbs - metro & 40 [ Sub ].wav",
-          "path": "/drumkits/Polo%20Boy%20Shawty%20-%20G.O.A.T/808/Subs/pbs%20-%20metro%20&%2040%20%5B%20Sub%20%5D.wav"
+          "path": "/drumkits/Polo%20Boy%20Shawty%20-%20G.O.A.T/808/Subs/pbs%20-%20metro%20%26%2040%20%5B%20Sub%20%5D.wav"
         },
         {
           "name": "pbs - mustard moog [ Sub ].wav",
@@ -2035,151 +2035,151 @@
       "items": [
         {
           "name": "pbs - 24kbruce [ Cymbal ].wav",
-          "path": "/drumkits/Polo%20Boy%20Shawty%20-%20G.O.A.T/Cymbals%20&%20Crashed/pbs%20-%2024kbruce%20%5B%20Cymbal%20%5D.wav"
+          "path": "/drumkits/Polo%20Boy%20Shawty%20-%20G.O.A.T/Cymbals%20%26%20Crashed/pbs%20-%2024kbruce%20%5B%20Cymbal%20%5D.wav"
         },
         {
           "name": "pbs - asap ferg [ Crash ].wav",
-          "path": "/drumkits/Polo%20Boy%20Shawty%20-%20G.O.A.T/Cymbals%20&%20Crashed/pbs%20-%20asap%20ferg%20%5B%20Crash%20%5D.wav"
+          "path": "/drumkits/Polo%20Boy%20Shawty%20-%20G.O.A.T/Cymbals%20%26%20Crashed/pbs%20-%20asap%20ferg%20%5B%20Crash%20%5D.wav"
         },
         {
           "name": "pbs - blueface washer [ Cymbal.wav",
-          "path": "/drumkits/Polo%20Boy%20Shawty%20-%20G.O.A.T/Cymbals%20&%20Crashed/pbs%20-%20blueface%20washer%20%5B%20Cymbal.wav"
+          "path": "/drumkits/Polo%20Boy%20Shawty%20-%20G.O.A.T/Cymbals%20%26%20Crashed/pbs%20-%20blueface%20washer%20%5B%20Cymbal.wav"
         },
         {
           "name": "pbs - blueface westcoast [ Cymbal ].wav",
-          "path": "/drumkits/Polo%20Boy%20Shawty%20-%20G.O.A.T/Cymbals%20&%20Crashed/pbs%20-%20blueface%20westcoast%20%5B%20Cymbal%20%5D.wav"
+          "path": "/drumkits/Polo%20Boy%20Shawty%20-%20G.O.A.T/Cymbals%20%26%20Crashed/pbs%20-%20blueface%20westcoast%20%5B%20Cymbal%20%5D.wav"
         },
         {
           "name": "pbs - bussdown [ Cymbal ].wav",
-          "path": "/drumkits/Polo%20Boy%20Shawty%20-%20G.O.A.T/Cymbals%20&%20Crashed/pbs%20-%20bussdown%20%5B%20Cymbal%20%5D.wav"
+          "path": "/drumkits/Polo%20Boy%20Shawty%20-%20G.O.A.T/Cymbals%20%26%20Crashed/pbs%20-%20bussdown%20%5B%20Cymbal%20%5D.wav"
         },
         {
           "name": "pbs - cardo [ Cymbal ].wav",
-          "path": "/drumkits/Polo%20Boy%20Shawty%20-%20G.O.A.T/Cymbals%20&%20Crashed/pbs%20-%20cardo%20%5B%20Cymbal%20%5D.wav"
+          "path": "/drumkits/Polo%20Boy%20Shawty%20-%20G.O.A.T/Cymbals%20%26%20Crashed/pbs%20-%20cardo%20%5B%20Cymbal%20%5D.wav"
         },
         {
           "name": "pbs - chinatown [ Cymbal ].wav",
-          "path": "/drumkits/Polo%20Boy%20Shawty%20-%20G.O.A.T/Cymbals%20&%20Crashed/pbs%20-%20chinatown%20%5B%20Cymbal%20%5D.wav"
+          "path": "/drumkits/Polo%20Boy%20Shawty%20-%20G.O.A.T/Cymbals%20%26%20Crashed/pbs%20-%20chinatown%20%5B%20Cymbal%20%5D.wav"
         },
         {
           "name": "pbs - dp on the beat [ Crash ].wav",
-          "path": "/drumkits/Polo%20Boy%20Shawty%20-%20G.O.A.T/Cymbals%20&%20Crashed/pbs%20-%20dp%20on%20the%20beat%20%5B%20Crash%20%5D.wav"
+          "path": "/drumkits/Polo%20Boy%20Shawty%20-%20G.O.A.T/Cymbals%20%26%20Crashed/pbs%20-%20dp%20on%20the%20beat%20%5B%20Crash%20%5D.wav"
         },
         {
           "name": "pbs - drich [ Cymbal ].wav",
-          "path": "/drumkits/Polo%20Boy%20Shawty%20-%20G.O.A.T/Cymbals%20&%20Crashed/pbs%20-%20drich%20%5B%20Cymbal%20%5D.wav"
+          "path": "/drumkits/Polo%20Boy%20Shawty%20-%20G.O.A.T/Cymbals%20%26%20Crashed/pbs%20-%20drich%20%5B%20Cymbal%20%5D.wav"
         },
         {
           "name": "pbs - etheral [ Cymbal ].wav",
-          "path": "/drumkits/Polo%20Boy%20Shawty%20-%20G.O.A.T/Cymbals%20&%20Crashed/pbs%20-%20etheral%20%5B%20Cymbal%20%5D.wav"
+          "path": "/drumkits/Polo%20Boy%20Shawty%20-%20G.O.A.T/Cymbals%20%26%20Crashed/pbs%20-%20etheral%20%5B%20Cymbal%20%5D.wav"
         },
         {
           "name": "pbs - fight night [ Cymbal ].wav",
-          "path": "/drumkits/Polo%20Boy%20Shawty%20-%20G.O.A.T/Cymbals%20&%20Crashed/pbs%20-%20fight%20night%20%5B%20Cymbal%20%5D.wav"
+          "path": "/drumkits/Polo%20Boy%20Shawty%20-%20G.O.A.T/Cymbals%20%26%20Crashed/pbs%20-%20fight%20night%20%5B%20Cymbal%20%5D.wav"
         },
         {
           "name": "pbs - heavy [ Crash ].wav",
-          "path": "/drumkits/Polo%20Boy%20Shawty%20-%20G.O.A.T/Cymbals%20&%20Crashed/pbs%20-%20heavy%20%5B%20Crash%20%5D.wav"
+          "path": "/drumkits/Polo%20Boy%20Shawty%20-%20G.O.A.T/Cymbals%20%26%20Crashed/pbs%20-%20heavy%20%5B%20Crash%20%5D.wav"
         },
         {
           "name": "pbs - mexiko dro [ Crash ].wav",
-          "path": "/drumkits/Polo%20Boy%20Shawty%20-%20G.O.A.T/Cymbals%20&%20Crashed/pbs%20-%20mexiko%20dro%20%5B%20Crash%20%5D.wav"
+          "path": "/drumkits/Polo%20Boy%20Shawty%20-%20G.O.A.T/Cymbals%20%26%20Crashed/pbs%20-%20mexiko%20dro%20%5B%20Crash%20%5D.wav"
         },
         {
           "name": "pbs - mikewill [ Cymbal ].wav",
-          "path": "/drumkits/Polo%20Boy%20Shawty%20-%20G.O.A.T/Cymbals%20&%20Crashed/pbs%20-%20mikewill%20%5B%20Cymbal%20%5D.wav"
+          "path": "/drumkits/Polo%20Boy%20Shawty%20-%20G.O.A.T/Cymbals%20%26%20Crashed/pbs%20-%20mikewill%20%5B%20Cymbal%20%5D.wav"
         },
         {
           "name": "pbs - muddy [ Cymbal ].wav",
-          "path": "/drumkits/Polo%20Boy%20Shawty%20-%20G.O.A.T/Cymbals%20&%20Crashed/pbs%20-%20muddy%20%5B%20Cymbal%20%5D.wav"
+          "path": "/drumkits/Polo%20Boy%20Shawty%20-%20G.O.A.T/Cymbals%20%26%20Crashed/pbs%20-%20muddy%20%5B%20Cymbal%20%5D.wav"
         },
         {
           "name": "pbs - murda [ Cymbal ].wav",
-          "path": "/drumkits/Polo%20Boy%20Shawty%20-%20G.O.A.T/Cymbals%20&%20Crashed/pbs%20-%20murda%20%5B%20Cymbal%20%5D.wav"
+          "path": "/drumkits/Polo%20Boy%20Shawty%20-%20G.O.A.T/Cymbals%20%26%20Crashed/pbs%20-%20murda%20%5B%20Cymbal%20%5D.wav"
         },
         {
           "name": "pbs - nbayoungboy [ Cymbal ].wav",
-          "path": "/drumkits/Polo%20Boy%20Shawty%20-%20G.O.A.T/Cymbals%20&%20Crashed/pbs%20-%20nbayoungboy%20%5B%20Cymbal%20%5D.wav"
+          "path": "/drumkits/Polo%20Boy%20Shawty%20-%20G.O.A.T/Cymbals%20%26%20Crashed/pbs%20-%20nbayoungboy%20%5B%20Cymbal%20%5D.wav"
         },
         {
           "name": "pbs - official dj l [ Crash ].wav",
-          "path": "/drumkits/Polo%20Boy%20Shawty%20-%20G.O.A.T/Cymbals%20&%20Crashed/pbs%20-%20official%20dj%20l%20%5B%20Crash%20%5D.wav"
+          "path": "/drumkits/Polo%20Boy%20Shawty%20-%20G.O.A.T/Cymbals%20%26%20Crashed/pbs%20-%20official%20dj%20l%20%5B%20Crash%20%5D.wav"
         },
         {
           "name": "pbs - official pluggz [ Crash ].wav",
-          "path": "/drumkits/Polo%20Boy%20Shawty%20-%20G.O.A.T/Cymbals%20&%20Crashed/pbs%20-%20official%20pluggz%20%5B%20Crash%20%5D.wav"
+          "path": "/drumkits/Polo%20Boy%20Shawty%20-%20G.O.A.T/Cymbals%20%26%20Crashed/pbs%20-%20official%20pluggz%20%5B%20Crash%20%5D.wav"
         },
         {
           "name": "pbs - old school [ Crash ].wav",
-          "path": "/drumkits/Polo%20Boy%20Shawty%20-%20G.O.A.T/Cymbals%20&%20Crashed/pbs%20-%20old%20school%20%5B%20Crash%20%5D.wav"
+          "path": "/drumkits/Polo%20Boy%20Shawty%20-%20G.O.A.T/Cymbals%20%26%20Crashed/pbs%20-%20old%20school%20%5B%20Crash%20%5D.wav"
         },
         {
           "name": "pbs - panned I [ Cymbal ].wav",
-          "path": "/drumkits/Polo%20Boy%20Shawty%20-%20G.O.A.T/Cymbals%20&%20Crashed/pbs%20-%20panned%20I%20%5B%20Cymbal%20%5D.wav"
+          "path": "/drumkits/Polo%20Boy%20Shawty%20-%20G.O.A.T/Cymbals%20%26%20Crashed/pbs%20-%20panned%20I%20%5B%20Cymbal%20%5D.wav"
         },
         {
           "name": "pbs - panned II [ Cymbal ].wav",
-          "path": "/drumkits/Polo%20Boy%20Shawty%20-%20G.O.A.T/Cymbals%20&%20Crashed/pbs%20-%20panned%20II%20%5B%20Cymbal%20%5D.wav"
+          "path": "/drumkits/Polo%20Boy%20Shawty%20-%20G.O.A.T/Cymbals%20%26%20Crashed/pbs%20-%20panned%20II%20%5B%20Cymbal%20%5D.wav"
         },
         {
           "name": "pbs - reverse [ Cymbal ].wav",
-          "path": "/drumkits/Polo%20Boy%20Shawty%20-%20G.O.A.T/Cymbals%20&%20Crashed/pbs%20-%20reverse%20%5B%20Cymbal%20%5D.wav"
+          "path": "/drumkits/Polo%20Boy%20Shawty%20-%20G.O.A.T/Cymbals%20%26%20Crashed/pbs%20-%20reverse%20%5B%20Cymbal%20%5D.wav"
         },
         {
           "name": "pbs - rickross [ Crash ].wav",
-          "path": "/drumkits/Polo%20Boy%20Shawty%20-%20G.O.A.T/Cymbals%20&%20Crashed/pbs%20-%20rickross%20%5B%20Crash%20%5D.wav"
+          "path": "/drumkits/Polo%20Boy%20Shawty%20-%20G.O.A.T/Cymbals%20%26%20Crashed/pbs%20-%20rickross%20%5B%20Crash%20%5D.wav"
         },
         {
           "name": "pbs - roland [ Cymbal ].wav",
-          "path": "/drumkits/Polo%20Boy%20Shawty%20-%20G.O.A.T/Cymbals%20&%20Crashed/pbs%20-%20roland%20%5B%20Cymbal%20%5D.wav"
+          "path": "/drumkits/Polo%20Boy%20Shawty%20-%20G.O.A.T/Cymbals%20%26%20Crashed/pbs%20-%20roland%20%5B%20Cymbal%20%5D.wav"
         },
         {
           "name": "pbs - shawtyredd [ Cymbal ].wav",
-          "path": "/drumkits/Polo%20Boy%20Shawty%20-%20G.O.A.T/Cymbals%20&%20Crashed/pbs%20-%20shawtyredd%20%5B%20Cymbal%20%5D.wav"
+          "path": "/drumkits/Polo%20Boy%20Shawty%20-%20G.O.A.T/Cymbals%20%26%20Crashed/pbs%20-%20shawtyredd%20%5B%20Cymbal%20%5D.wav"
         },
         {
           "name": "pbs - trap I [ Cymbal ].wav",
-          "path": "/drumkits/Polo%20Boy%20Shawty%20-%20G.O.A.T/Cymbals%20&%20Crashed/pbs%20-%20trap%20I%20%5B%20Cymbal%20%5D.wav"
+          "path": "/drumkits/Polo%20Boy%20Shawty%20-%20G.O.A.T/Cymbals%20%26%20Crashed/pbs%20-%20trap%20I%20%5B%20Cymbal%20%5D.wav"
         },
         {
           "name": "pbs - trap II [ Cymbal ].wav",
-          "path": "/drumkits/Polo%20Boy%20Shawty%20-%20G.O.A.T/Cymbals%20&%20Crashed/pbs%20-%20trap%20II%20%5B%20Cymbal%20%5D.wav"
+          "path": "/drumkits/Polo%20Boy%20Shawty%20-%20G.O.A.T/Cymbals%20%26%20Crashed/pbs%20-%20trap%20II%20%5B%20Cymbal%20%5D.wav"
         },
         {
           "name": "pbs - vybes cym [ Cymbal ].wav",
-          "path": "/drumkits/Polo%20Boy%20Shawty%20-%20G.O.A.T/Cymbals%20&%20Crashed/pbs%20-%20vybes%20cym%20%5B%20Cymbal%20%5D.wav"
+          "path": "/drumkits/Polo%20Boy%20Shawty%20-%20G.O.A.T/Cymbals%20%26%20Crashed/pbs%20-%20vybes%20cym%20%5B%20Cymbal%20%5D.wav"
         },
         {
           "name": "pbs - west coast [ Cymbal ].wav",
-          "path": "/drumkits/Polo%20Boy%20Shawty%20-%20G.O.A.T/Cymbals%20&%20Crashed/pbs%20-%20west%20coast%20%5B%20Cymbal%20%5D.wav"
+          "path": "/drumkits/Polo%20Boy%20Shawty%20-%20G.O.A.T/Cymbals%20%26%20Crashed/pbs%20-%20west%20coast%20%5B%20Cymbal%20%5D.wav"
         },
         {
           "name": "pbs - west coast II [ Cymbal ].wav",
-          "path": "/drumkits/Polo%20Boy%20Shawty%20-%20G.O.A.T/Cymbals%20&%20Crashed/pbs%20-%20west%20coast%20II%20%5B%20Cymbal%20%5D.wav"
+          "path": "/drumkits/Polo%20Boy%20Shawty%20-%20G.O.A.T/Cymbals%20%26%20Crashed/pbs%20-%20west%20coast%20II%20%5B%20Cymbal%20%5D.wav"
         },
         {
           "name": "pbs - west coast III [ Cymbal ].wav",
-          "path": "/drumkits/Polo%20Boy%20Shawty%20-%20G.O.A.T/Cymbals%20&%20Crashed/pbs%20-%20west%20coast%20III%20%5B%20Cymbal%20%5D.wav"
+          "path": "/drumkits/Polo%20Boy%20Shawty%20-%20G.O.A.T/Cymbals%20%26%20Crashed/pbs%20-%20west%20coast%20III%20%5B%20Cymbal%20%5D.wav"
         },
         {
           "name": "pbs - zay crash 1 [ Crash ].wav",
-          "path": "/drumkits/Polo%20Boy%20Shawty%20-%20G.O.A.T/Cymbals%20&%20Crashed/pbs%20-%20zay%20crash%201%20%5B%20Crash%20%5D.wav"
+          "path": "/drumkits/Polo%20Boy%20Shawty%20-%20G.O.A.T/Cymbals%20%26%20Crashed/pbs%20-%20zay%20crash%201%20%5B%20Crash%20%5D.wav"
         },
         {
           "name": "pbs - zay crash II [ Crash ].wav",
-          "path": "/drumkits/Polo%20Boy%20Shawty%20-%20G.O.A.T/Cymbals%20&%20Crashed/pbs%20-%20zay%20crash%20II%20%5B%20Crash%20%5D.wav"
+          "path": "/drumkits/Polo%20Boy%20Shawty%20-%20G.O.A.T/Cymbals%20%26%20Crashed/pbs%20-%20zay%20crash%20II%20%5B%20Crash%20%5D.wav"
         },
         {
           "name": "pbs - zay crash III [ Crash ].wav",
-          "path": "/drumkits/Polo%20Boy%20Shawty%20-%20G.O.A.T/Cymbals%20&%20Crashed/pbs%20-%20zay%20crash%20III%20%5B%20Crash%20%5D.wav"
+          "path": "/drumkits/Polo%20Boy%20Shawty%20-%20G.O.A.T/Cymbals%20%26%20Crashed/pbs%20-%20zay%20crash%20III%20%5B%20Crash%20%5D.wav"
         },
         {
           "name": "pbs - zay crash iv [ Crash ].wav",
-          "path": "/drumkits/Polo%20Boy%20Shawty%20-%20G.O.A.T/Cymbals%20&%20Crashed/pbs%20-%20zay%20crash%20iv%20%5B%20Crash%20%5D.wav"
+          "path": "/drumkits/Polo%20Boy%20Shawty%20-%20G.O.A.T/Cymbals%20%26%20Crashed/pbs%20-%20zay%20crash%20iv%20%5B%20Crash%20%5D.wav"
         },
         {
           "name": "pbs - zay crash with fx [ Crash ].wav",
-          "path": "/drumkits/Polo%20Boy%20Shawty%20-%20G.O.A.T/Cymbals%20&%20Crashed/pbs%20-%20zay%20crash%20with%20fx%20%5B%20Crash%20%5D.wav"
+          "path": "/drumkits/Polo%20Boy%20Shawty%20-%20G.O.A.T/Cymbals%20%26%20Crashed/pbs%20-%20zay%20crash%20with%20fx%20%5B%20Crash%20%5D.wav"
         }
       ]
     },
@@ -3079,7 +3079,7 @@
         },
         {
           "name": "pbs - classic cowbell [ Perc ] [G +48].wav",
-          "path": "/drumkits/Polo%20Boy%20Shawty%20-%20G.O.A.T/Percs/pbs%20-%20classic%20cowbell%20%5B%20Perc%20%5D%20%5BG%20+48%5D.wav"
+          "path": "/drumkits/Polo%20Boy%20Shawty%20-%20G.O.A.T/Percs/pbs%20-%20classic%20cowbell%20%5B%20Perc%20%5D%20%5BG%20%2B48%5D.wav"
         },
         {
           "name": "pbs - close [ Perc ].wav",
@@ -3107,7 +3107,7 @@
         },
         {
           "name": "pbs - cowbell $$$ [ Perc ].wav",
-          "path": "/drumkits/Polo%20Boy%20Shawty%20-%20G.O.A.T/Percs/pbs%20-%20cowbell%20$$$%20%5B%20Perc%20%5D.wav"
+          "path": "/drumkits/Polo%20Boy%20Shawty%20-%20G.O.A.T/Percs/pbs%20-%20cowbell%20%24%24%24%20%5B%20Perc%20%5D.wav"
         },
         {
           "name": "pbs - cowbell 2020 [ Perc ].wav",
@@ -3307,7 +3307,7 @@
         },
         {
           "name": "pbs - pots & pans [ Perc ].wav",
-          "path": "/drumkits/Polo%20Boy%20Shawty%20-%20G.O.A.T/Percs/pbs%20-%20pots%20&%20pans%20%5B%20Perc%20%5D.wav"
+          "path": "/drumkits/Polo%20Boy%20Shawty%20-%20G.O.A.T/Percs/pbs%20-%20pots%20%26%20pans%20%5B%20Perc%20%5D.wav"
         },
         {
           "name": "pbs - punched [ Perc ].wav",
@@ -3572,139 +3572,139 @@
       "items": [
         {
           "name": "Bass Roll 2.wav",
-          "path": "/drumkits/Polo%20Boy%20Shawty%20-%20G.O.A.T/SF2%20&%20Sounds/Bass%20Roll%202.wav"
+          "path": "/drumkits/Polo%20Boy%20Shawty%20-%20G.O.A.T/SF2%20%26%20Sounds/Bass%20Roll%202.wav"
         },
         {
           "name": "BassRoll.wav",
-          "path": "/drumkits/Polo%20Boy%20Shawty%20-%20G.O.A.T/SF2%20&%20Sounds/BassRoll.wav"
+          "path": "/drumkits/Polo%20Boy%20Shawty%20-%20G.O.A.T/SF2%20%26%20Sounds/BassRoll.wav"
         },
         {
           "name": "Bell 1 (Official).wav",
-          "path": "/drumkits/Polo%20Boy%20Shawty%20-%20G.O.A.T/SF2%20&%20Sounds/Bell%201%20(Official).wav"
+          "path": "/drumkits/Polo%20Boy%20Shawty%20-%20G.O.A.T/SF2%20%26%20Sounds/Bell%201%20(Official).wav"
         },
         {
           "name": "Bell 2 (Official).wav",
-          "path": "/drumkits/Polo%20Boy%20Shawty%20-%20G.O.A.T/SF2%20&%20Sounds/Bell%202%20(Official).wav"
+          "path": "/drumkits/Polo%20Boy%20Shawty%20-%20G.O.A.T/SF2%20%26%20Sounds/Bell%202%20(Official).wav"
         },
         {
           "name": "Bell.wav",
-          "path": "/drumkits/Polo%20Boy%20Shawty%20-%20G.O.A.T/SF2%20&%20Sounds/Bell.wav"
+          "path": "/drumkits/Polo%20Boy%20Shawty%20-%20G.O.A.T/SF2%20%26%20Sounds/Bell.wav"
         },
         {
           "name": "Ding.wav",
-          "path": "/drumkits/Polo%20Boy%20Shawty%20-%20G.O.A.T/SF2%20&%20Sounds/Ding.wav"
+          "path": "/drumkits/Polo%20Boy%20Shawty%20-%20G.O.A.T/SF2%20%26%20Sounds/Ding.wav"
         },
         {
           "name": "Funky Guitar.wav",
-          "path": "/drumkits/Polo%20Boy%20Shawty%20-%20G.O.A.T/SF2%20&%20Sounds/Funky%20Guitar.wav"
+          "path": "/drumkits/Polo%20Boy%20Shawty%20-%20G.O.A.T/SF2%20%26%20Sounds/Funky%20Guitar.wav"
         },
         {
           "name": "Gtr (Wah II).wav",
-          "path": "/drumkits/Polo%20Boy%20Shawty%20-%20G.O.A.T/SF2%20&%20Sounds/Gtr%20(Wah%20II).wav"
+          "path": "/drumkits/Polo%20Boy%20Shawty%20-%20G.O.A.T/SF2%20%26%20Sounds/Gtr%20(Wah%20II).wav"
         },
         {
           "name": "Gtr (Wah III).wav",
-          "path": "/drumkits/Polo%20Boy%20Shawty%20-%20G.O.A.T/SF2%20&%20Sounds/Gtr%20(Wah%20III).wav"
+          "path": "/drumkits/Polo%20Boy%20Shawty%20-%20G.O.A.T/SF2%20%26%20Sounds/Gtr%20(Wah%20III).wav"
         },
         {
           "name": "Gtr (Wah IV).wav",
-          "path": "/drumkits/Polo%20Boy%20Shawty%20-%20G.O.A.T/SF2%20&%20Sounds/Gtr%20(Wah%20IV).wav"
+          "path": "/drumkits/Polo%20Boy%20Shawty%20-%20G.O.A.T/SF2%20%26%20Sounds/Gtr%20(Wah%20IV).wav"
         },
         {
           "name": "Gtr (Wah).wav",
-          "path": "/drumkits/Polo%20Boy%20Shawty%20-%20G.O.A.T/SF2%20&%20Sounds/Gtr%20(Wah).wav"
+          "path": "/drumkits/Polo%20Boy%20Shawty%20-%20G.O.A.T/SF2%20%26%20Sounds/Gtr%20(Wah).wav"
         },
         {
           "name": "Gtr Lick.WAV",
-          "path": "/drumkits/Polo%20Boy%20Shawty%20-%20G.O.A.T/SF2%20&%20Sounds/Gtr%20Lick.WAV"
+          "path": "/drumkits/Polo%20Boy%20Shawty%20-%20G.O.A.T/SF2%20%26%20Sounds/Gtr%20Lick.WAV"
         },
         {
           "name": "Guiatr Wah.wav",
-          "path": "/drumkits/Polo%20Boy%20Shawty%20-%20G.O.A.T/SF2%20&%20Sounds/Guiatr%20Wah.wav"
+          "path": "/drumkits/Polo%20Boy%20Shawty%20-%20G.O.A.T/SF2%20%26%20Sounds/Guiatr%20Wah.wav"
         },
         {
           "name": "Guitar BA.wav",
-          "path": "/drumkits/Polo%20Boy%20Shawty%20-%20G.O.A.T/SF2%20&%20Sounds/Guitar%20BA.wav"
+          "path": "/drumkits/Polo%20Boy%20Shawty%20-%20G.O.A.T/SF2%20%26%20Sounds/Guitar%20BA.wav"
         },
         {
           "name": "Guitar Drop.wav",
-          "path": "/drumkits/Polo%20Boy%20Shawty%20-%20G.O.A.T/SF2%20&%20Sounds/Guitar%20Drop.wav"
+          "path": "/drumkits/Polo%20Boy%20Shawty%20-%20G.O.A.T/SF2%20%26%20Sounds/Guitar%20Drop.wav"
         },
         {
           "name": "Guitar HIt.wav",
-          "path": "/drumkits/Polo%20Boy%20Shawty%20-%20G.O.A.T/SF2%20&%20Sounds/Guitar%20HIt.wav"
+          "path": "/drumkits/Polo%20Boy%20Shawty%20-%20G.O.A.T/SF2%20%26%20Sounds/Guitar%20HIt.wav"
         },
         {
           "name": "Guitar Single Note.wav",
-          "path": "/drumkits/Polo%20Boy%20Shawty%20-%20G.O.A.T/SF2%20&%20Sounds/Guitar%20Single%20Note.wav"
+          "path": "/drumkits/Polo%20Boy%20Shawty%20-%20G.O.A.T/SF2%20%26%20Sounds/Guitar%20Single%20Note.wav"
         },
         {
           "name": "Guitar Stab.wav",
-          "path": "/drumkits/Polo%20Boy%20Shawty%20-%20G.O.A.T/SF2%20&%20Sounds/Guitar%20Stab.wav"
+          "path": "/drumkits/Polo%20Boy%20Shawty%20-%20G.O.A.T/SF2%20%26%20Sounds/Guitar%20Stab.wav"
         },
         {
           "name": "Guitar Strats.wav",
-          "path": "/drumkits/Polo%20Boy%20Shawty%20-%20G.O.A.T/SF2%20&%20Sounds/Guitar%20Strats.wav"
+          "path": "/drumkits/Polo%20Boy%20Shawty%20-%20G.O.A.T/SF2%20%26%20Sounds/Guitar%20Strats.wav"
         },
         {
           "name": "Guitar Strum.wav",
-          "path": "/drumkits/Polo%20Boy%20Shawty%20-%20G.O.A.T/SF2%20&%20Sounds/Guitar%20Strum.wav"
+          "path": "/drumkits/Polo%20Boy%20Shawty%20-%20G.O.A.T/SF2%20%26%20Sounds/Guitar%20Strum.wav"
         },
         {
           "name": "Guitar.wav",
-          "path": "/drumkits/Polo%20Boy%20Shawty%20-%20G.O.A.T/SF2%20&%20Sounds/Guitar.wav"
+          "path": "/drumkits/Polo%20Boy%20Shawty%20-%20G.O.A.T/SF2%20%26%20Sounds/Guitar.wav"
         },
         {
           "name": "Korg Evil ZAY SYNTH.wav",
-          "path": "/drumkits/Polo%20Boy%20Shawty%20-%20G.O.A.T/SF2%20&%20Sounds/Korg%20Evil%20ZAY%20SYNTH.wav"
+          "path": "/drumkits/Polo%20Boy%20Shawty%20-%20G.O.A.T/SF2%20%26%20Sounds/Korg%20Evil%20ZAY%20SYNTH.wav"
         },
         {
           "name": "Korg Zay Bell 2.wav",
-          "path": "/drumkits/Polo%20Boy%20Shawty%20-%20G.O.A.T/SF2%20&%20Sounds/Korg%20Zay%20Bell%202.wav"
+          "path": "/drumkits/Polo%20Boy%20Shawty%20-%20G.O.A.T/SF2%20%26%20Sounds/Korg%20Zay%20Bell%202.wav"
         },
         {
           "name": "Korg Zay Bell.wav",
-          "path": "/drumkits/Polo%20Boy%20Shawty%20-%20G.O.A.T/SF2%20&%20Sounds/Korg%20Zay%20Bell.wav"
+          "path": "/drumkits/Polo%20Boy%20Shawty%20-%20G.O.A.T/SF2%20%26%20Sounds/Korg%20Zay%20Bell.wav"
         },
         {
           "name": "Korg Zay Pitch Down.wav",
-          "path": "/drumkits/Polo%20Boy%20Shawty%20-%20G.O.A.T/SF2%20&%20Sounds/Korg%20Zay%20Pitch%20Down.wav"
+          "path": "/drumkits/Polo%20Boy%20Shawty%20-%20G.O.A.T/SF2%20%26%20Sounds/Korg%20Zay%20Pitch%20Down.wav"
         },
         {
           "name": "Korg Zay Pop Synth Pad.wav",
-          "path": "/drumkits/Polo%20Boy%20Shawty%20-%20G.O.A.T/SF2%20&%20Sounds/Korg%20Zay%20Pop%20Synth%20Pad.wav"
+          "path": "/drumkits/Polo%20Boy%20Shawty%20-%20G.O.A.T/SF2%20%26%20Sounds/Korg%20Zay%20Pop%20Synth%20Pad.wav"
         },
         {
           "name": "Lil Pump kSynth.wav",
-          "path": "/drumkits/Polo%20Boy%20Shawty%20-%20G.O.A.T/SF2%20&%20Sounds/Lil%20Pump%20kSynth.wav"
+          "path": "/drumkits/Polo%20Boy%20Shawty%20-%20G.O.A.T/SF2%20%26%20Sounds/Lil%20Pump%20kSynth.wav"
         },
         {
           "name": "Outlaw Piano Stab .wav",
-          "path": "/drumkits/Polo%20Boy%20Shawty%20-%20G.O.A.T/SF2%20&%20Sounds/Outlaw%20Piano%20Stab%20.wav"
+          "path": "/drumkits/Polo%20Boy%20Shawty%20-%20G.O.A.T/SF2%20%26%20Sounds/Outlaw%20Piano%20Stab%20.wav"
         },
         {
           "name": "Pad2.wav",
-          "path": "/drumkits/Polo%20Boy%20Shawty%20-%20G.O.A.T/SF2%20&%20Sounds/Pad2.wav"
+          "path": "/drumkits/Polo%20Boy%20Shawty%20-%20G.O.A.T/SF2%20%26%20Sounds/Pad2.wav"
         },
         {
           "name": "PERC_SteelDrum_C5.wav",
-          "path": "/drumkits/Polo%20Boy%20Shawty%20-%20G.O.A.T/SF2%20&%20Sounds/PERC_SteelDrum_C5.wav"
+          "path": "/drumkits/Polo%20Boy%20Shawty%20-%20G.O.A.T/SF2%20%26%20Sounds/PERC_SteelDrum_C5.wav"
         },
         {
           "name": "String Stab.wav",
-          "path": "/drumkits/Polo%20Boy%20Shawty%20-%20G.O.A.T/SF2%20&%20Sounds/String%20Stab.wav"
+          "path": "/drumkits/Polo%20Boy%20Shawty%20-%20G.O.A.T/SF2%20%26%20Sounds/String%20Stab.wav"
         },
         {
           "name": "Vette Boyz.wav",
-          "path": "/drumkits/Polo%20Boy%20Shawty%20-%20G.O.A.T/SF2%20&%20Sounds/Vette%20Boyz.wav"
+          "path": "/drumkits/Polo%20Boy%20Shawty%20-%20G.O.A.T/SF2%20%26%20Sounds/Vette%20Boyz.wav"
         },
         {
           "name": "Zay Brite Reezy Synth.wav",
-          "path": "/drumkits/Polo%20Boy%20Shawty%20-%20G.O.A.T/SF2%20&%20Sounds/Zay%20Brite%20Reezy%20Synth.wav"
+          "path": "/drumkits/Polo%20Boy%20Shawty%20-%20G.O.A.T/SF2%20%26%20Sounds/Zay%20Brite%20Reezy%20Synth.wav"
         },
         {
           "name": "Zaytiggy SFX.wav",
-          "path": "/drumkits/Polo%20Boy%20Shawty%20-%20G.O.A.T/SF2%20&%20Sounds/Zaytiggy%20SFX.wav"
+          "path": "/drumkits/Polo%20Boy%20Shawty%20-%20G.O.A.T/SF2%20%26%20Sounds/Zaytiggy%20SFX.wav"
         }
       ]
     },
@@ -3737,7 +3737,7 @@
         },
         {
           "name": "pbs - c4 + cell [ Sfx ].wav",
-          "path": "/drumkits/Polo%20Boy%20Shawty%20-%20G.O.A.T/SFXs/pbs%20-%20c4%20+%20cell%20%5B%20Sfx%20%5D.wav"
+          "path": "/drumkits/Polo%20Boy%20Shawty%20-%20G.O.A.T/SFXs/pbs%20-%20c4%20%2B%20cell%20%5B%20Sfx%20%5D.wav"
         },
         {
           "name": "pbs - catcrow [ Sfx ].wav",
@@ -4138,7 +4138,7 @@
         },
         {
           "name": "pbs - curren$y [ Snare ].wav",
-          "path": "/drumkits/Polo%20Boy%20Shawty%20-%20G.O.A.T/Snares/pbs%20-%20curren$y%20%5B%20Snare%20%5D.wav"
+          "path": "/drumkits/Polo%20Boy%20Shawty%20-%20G.O.A.T/Snares/pbs%20-%20curren%24y%20%5B%20Snare%20%5D.wav"
         },
         {
           "name": "pbs - diesel [ Snare ].wav",
@@ -4507,7 +4507,7 @@
         },
         {
           "name": "pbs - jj & sso [ Transition].wav",
-          "path": "/drumkits/Polo%20Boy%20Shawty%20-%20G.O.A.T/Transitions/pbs%20-%20jj%20&%20sso%20%5B%20Transition%5D.wav"
+          "path": "/drumkits/Polo%20Boy%20Shawty%20-%20G.O.A.T/Transitions/pbs%20-%20jj%20%26%20sso%20%5B%20Transition%5D.wav"
         },
         {
           "name": "pbs - mechanix [ Transition].wav",
@@ -4523,7 +4523,7 @@
         },
         {
           "name": "pbs - phenom & dj l [ Transition].wav",
-          "path": "/drumkits/Polo%20Boy%20Shawty%20-%20G.O.A.T/Transitions/pbs%20-%20phenom%20&%20dj%20l%20%5B%20Transition%5D.wav"
+          "path": "/drumkits/Polo%20Boy%20Shawty%20-%20G.O.A.T/Transitions/pbs%20-%20phenom%20%26%20dj%20l%20%5B%20Transition%5D.wav"
         },
         {
           "name": "pbs - pluggz pitchtick [ Transition].wav",

@@ -4,6 +4,7 @@ import { useDispatch, useSelector } from "react-redux";
 import { PLUGIN_EFFECTS } from "../data/pluginEffects";
 import { PLUGIN_INSTRUMENTS } from "../data/pluginInstruments";
 import { setBrowserTab } from "../store";
+import { toSafeSampleUrl } from "../utils/sampleUrl";
 
 const browserData = {
   plugins: [
@@ -39,31 +40,6 @@ const browserData = {
     },
   ],
 };
-
-function toSafeSampleUrl(rawPath) {
-  const input = String(rawPath || "").trim();
-  if (!input) {
-    return "";
-  }
-
-  const hashIndex = input.indexOf("#");
-  const pathWithoutHash = hashIndex >= 0 ? input.slice(0, hashIndex) : input;
-  const parts = pathWithoutHash.split("/");
-
-  const encoded = parts.map(function (part, index) {
-    if (index === 0 && part === "") {
-      return "";
-    }
-
-    try {
-      return encodeURIComponent(decodeURIComponent(part));
-    } catch {
-      return encodeURIComponent(part);
-    }
-  });
-
-  return encoded.join("/");
-}
 
 export function BrowserPanel() {
   const dispatch = useDispatch();
@@ -116,6 +92,7 @@ export function BrowserPanel() {
       if (!response.ok) {
         throw new Error("Cannot load sample");
       }
+
       const arrayBuffer = await response.arrayBuffer();
       const audioBuffer = await context.decodeAudioData(arrayBuffer.slice(0));
       previewBufferCacheRef.current.set(safeSamplePath, audioBuffer);

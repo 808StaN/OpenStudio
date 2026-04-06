@@ -3,6 +3,23 @@ import { configureStore, createAction, createSlice } from "@reduxjs/toolkit";
 const FX_SLOT_EFFECT_NONE = "none";
 const FX_SLOT_EFFECT_GRAPHIC_EQ = "graphic-eq";
 const FX_SLOT_EFFECT_REVERB = "reverb";
+const SAMPLE_STRETCH_MODES = new Set([
+  "none",
+  "resample",
+  "stretch",
+  "realtime",
+]);
+const SAMPLE_STRETCH_TIME_MODES = new Set([
+  "none",
+  "set-bpm",
+  "project-tempo",
+  "beat-1",
+  "beat-2",
+  "bar-1",
+  "bar-2",
+  "bar-3",
+  "bar-4",
+]);
 const DEFAULT_INSERT_SPECTRUM_BINS = 112;
 const GRAPHIC_EQ_DEFAULT_POINT_FREQUENCIES = [
   50, 100, 250, 500, 1000, 3000, 8000,
@@ -125,12 +142,7 @@ function getSafeReverbParams(raw) {
     earlyReflections: clampReverb01(base.earlyReflections, 0.38),
     diffusion: clampReverb01(base.diffusion, 0.72),
     modulationDepth: clampReverb01(base.modulationDepth, 0.22),
-    modulationRateHz: clampReverbInRange(
-      base.modulationRateHz,
-      0,
-      8,
-      0.35,
-    ),
+    modulationRateHz: clampReverbInRange(base.modulationRateHz, 0, 8, 0.35),
     width: clampReverb01(base.width, 0.9),
     dryWet: clampReverb01(base.dryWet, 0.34),
     freeze: Boolean(base.freeze),
@@ -183,13 +195,13 @@ function normalizeFxSlot(slot, index) {
       ? FX_SLOT_EFFECT_GRAPHIC_EQ
       : rawEffectType === FX_SLOT_EFFECT_REVERB
         ? FX_SLOT_EFFECT_REVERB
-      : FX_SLOT_EFFECT_NONE;
+        : FX_SLOT_EFFECT_NONE;
   const defaultName =
     effectType === FX_SLOT_EFFECT_GRAPHIC_EQ
       ? "Graphic EQ"
       : effectType === FX_SLOT_EFFECT_REVERB
         ? "Reverb"
-      : getFxSlotDefaultName(index);
+        : getFxSlotDefaultName(index);
 
   return {
     id: slot?.id || "slot-" + (index + 1),
@@ -202,7 +214,7 @@ function normalizeFxSlot(slot, index) {
         ? getSafeGraphicEqParams(slot?.params)
         : effectType === FX_SLOT_EFFECT_REVERB
           ? getSafeReverbParams(slot?.params)
-        : null,
+          : null,
   };
 }
 
@@ -258,6 +270,12 @@ const makeSampleSettings = function () {
     releaseMs: 420,
     pitchCents: 0,
     monoMode: false,
+    stretchMode: "resample",
+    stretchPitchSemitones: 0,
+    stretchMultiplier: 1,
+    stretchSourceBpm: 120,
+    stretchProjectTempoBpm: 120,
+    stretchTimeMode: "none",
   };
 };
 
@@ -1941,6 +1959,70 @@ const dawSlice = createSlice({
 
       if (Object.hasOwn(changes, "monoMode")) {
         next.monoMode = Boolean(changes.monoMode);
+      }
+
+      if (Object.hasOwn(changes, "stretchMode")) {
+        const requestedMode = String(changes.stretchMode || "")
+          .trim()
+          .toLowerCase();
+        next.stretchMode = SAMPLE_STRETCH_MODES.has(requestedMode)
+          ? requestedMode
+          : next.stretchMode || "resample";
+      }
+
+      if (Object.hasOwn(changes, "stretchPitchSemitones")) {
+        next.stretchPitchSemitones = Math.max(
+          -24,
+          Math.min(
+            24,
+            Number(
+              changes.stretchPitchSemitones ?? next.stretchPitchSemitones ?? 0,
+            ),
+          ),
+        );
+      }
+
+      if (Object.hasOwn(changes, "stretchMultiplier")) {
+        next.stretchMultiplier = Math.max(
+          0.25,
+          Math.min(
+            8,
+            Number(changes.stretchMultiplier ?? next.stretchMultiplier ?? 1),
+          ),
+        );
+      }
+
+      if (Object.hasOwn(changes, "stretchSourceBpm")) {
+        next.stretchSourceBpm = Math.max(
+          20,
+          Math.min(
+            300,
+            Number(changes.stretchSourceBpm ?? next.stretchSourceBpm ?? 120),
+          ),
+        );
+      }
+
+      if (Object.hasOwn(changes, "stretchProjectTempoBpm")) {
+        next.stretchProjectTempoBpm = Math.max(
+          20,
+          Math.min(
+            300,
+            Number(
+              changes.stretchProjectTempoBpm ??
+                next.stretchProjectTempoBpm ??
+                120,
+            ),
+          ),
+        );
+      }
+
+      if (Object.hasOwn(changes, "stretchTimeMode")) {
+        const requestedMode = String(changes.stretchTimeMode || "")
+          .trim()
+          .toLowerCase();
+        next.stretchTimeMode = SAMPLE_STRETCH_TIME_MODES.has(requestedMode)
+          ? requestedMode
+          : next.stretchTimeMode || "none";
       }
 
       const fadeTotal = next.fadeInPct + next.fadeOutPct;

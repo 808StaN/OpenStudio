@@ -9,6 +9,7 @@ import {
   togglePianoNote,
   toggleStep,
 } from "../store";
+import { toSafeSampleUrl } from "../utils/sampleUrl";
 import {
   C5_PITCH,
   PIANO_PITCH_MAX,
@@ -496,39 +497,40 @@ export function PianoRollWindow() {
 
   const getPreviewSampleBuffer = useCallback(
     async function (sampleRef) {
-      if (!sampleRef) {
+      const safeSampleRef = toSafeSampleUrl(sampleRef);
+      if (!safeSampleRef) {
         return null;
       }
 
-      const cached = previewSampleBufferCacheRef.current.get(sampleRef);
+      const cached = previewSampleBufferCacheRef.current.get(safeSampleRef);
       if (cached) {
         return cached;
       }
 
-      const pending = previewSamplePendingRef.current.get(sampleRef);
+      const pending = previewSamplePendingRef.current.get(safeSampleRef);
       if (pending) {
         return pending;
       }
 
       const request = (async function () {
         const context = ensurePreviewContext();
-        const response = await fetch(sampleRef);
+        const response = await fetch(safeSampleRef);
         if (!response.ok) {
           throw new Error("Sample request failed");
         }
 
         const data = await response.arrayBuffer();
         const decoded = await context.decodeAudioData(data.slice(0));
-        previewSampleBufferCacheRef.current.set(sampleRef, decoded);
+        previewSampleBufferCacheRef.current.set(safeSampleRef, decoded);
         return decoded;
       })();
 
-      previewSamplePendingRef.current.set(sampleRef, request);
+      previewSamplePendingRef.current.set(safeSampleRef, request);
 
       try {
         return await request;
       } finally {
-        previewSamplePendingRef.current.delete(sampleRef);
+        previewSamplePendingRef.current.delete(safeSampleRef);
       }
     },
     [ensurePreviewContext],

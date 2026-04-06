@@ -1,8 +1,10 @@
 import Soundfont from "soundfont-player";
 import { useEffect, useMemo, useRef, useState } from "react";
-import { useDispatch } from "react-redux";
+import { useDispatch, useSelector } from "react-redux";
+import { createWsolaStretchedBufferFromSample } from "../audio/wsolaStretch";
 import { getPluginInstrument } from "../data/pluginInstruments";
 import { assignSampleToChannel, setChannelSampleSettings } from "../store";
+import { toSafeSampleUrl } from "../utils/sampleUrl";
 
 let waveformDecodeContext = null;
 const PREVIEW_C5_MIDI = 72;
@@ -24,7 +26,30 @@ const defaultChannelSettings = {
   releaseMs: 420,
   pitchCents: 0,
   monoMode: false,
+  stretchMode: "resample",
+  stretchPitchSemitones: 0,
+  stretchMultiplier: 1,
+  stretchSourceBpm: 120,
+  stretchProjectTempoBpm: 120,
+  stretchTimeMode: "none",
 };
+
+const STRETCH_TIME_MODE_OPTIONS = [
+  { value: "none", label: "(none)" },
+  { value: "set-bpm", label: "Set BPM" },
+  { value: "project-tempo", label: "Project tempo" },
+  { value: "beat-1", label: "1 beat" },
+  { value: "beat-2", label: "2 beats" },
+  { value: "bar-1", label: "1 bar" },
+  { value: "bar-2", label: "2 bars" },
+  { value: "bar-3", label: "3 bars" },
+  { value: "bar-4", label: "4 bars" },
+];
+
+const STRETCH_MODE_OPTIONS = [
+  { value: "resample", label: "Resample" },
+  { value: "stretch", label: "Stretch" },
+];
 
 function getWaveformDecodeContext() {
   if (!waveformDecodeContext) {
@@ -238,6 +263,190 @@ function formatSettingValue(value, suffix, isSigned) {
   return rounded + suffix;
 }
 
+function getStretchTargetDurationSeconds(settings, sampleReadDuration, bpm) {
+  const safeDuration = Math.max(0.01, Number(sampleReadDuration || 0.01));
+  const safeBpm = Math.max(1, Number(bpm || 120));
+  const quarterSec = 60 / safeBpm;
+  const timeMode = String(settings.stretchTimeMode || "none")
+    .trim()
+    .toLowerCase();
+  const mul = Math.max(
+    0.25,
+    Math.min(8, Number(settings.stretchMultiplier || 1)),
+  );
+
+  if (timeMode === "set-bpm") {
+    const sourceBpm = Math.max(
+      20,
+      Math.min(300, Number(settings.stretchSourceBpm || 120)),
+    );
+    return Math.max(0.01, safeDuration * (sourceBpm / safeBpm) * mul);
+  }
+
+  if (timeMode === "project-tempo") {
+    const projectLockBpm = Math.max(
+      20,
+      Math.min(300, Number(settings.stretchProjectTempoBpm || safeBpm)),
+    );
+    return Math.max(0.01, safeDuration * (projectLockBpm / safeBpm) * mul);
+  }
+
+  if (timeMode === "beat-1") {
+    return quarterSec * mul;
+  }
+  if (timeMode === "beat-2") {
+    return quarterSec * 2 * mul;
+  }
+  if (timeMode === "bar-1") {
+    return quarterSec * 4 * mul;
+  }
+  if (timeMode === "bar-2") {
+    return quarterSec * 8 * mul;
+  }
+  if (timeMode === "bar-3") {
+    return quarterSec * 12 * mul;
+  }
+  if (timeMode === "bar-4") {
+    return quarterSec * 16 * mul;
+  }
+  return Math.max(0.01, safeDuration * mul);
+}
+
+function getTimeStretchProfile(settings, sampleReadDuration, bpm, baseRate) {
+  const stretchMode = String(settings.stretchMode || "none")
+    .trim()
+    .toLowerCase();
+  const safeBaseRate = Math.max(0.125, Math.min(8, Number(baseRate || 1)));
+  const targetDurationSec = getStretchTargetDurationSeconds(
+    settings,
+    sampleReadDuration,
+    bpm,
+  );
+
+  if (stretchMode === "none") {
+    return {
+      playbackRate: safeBaseRate,
+      targetDurationSec: Math.max(0.01, sampleReadDuration / safeBaseRate),
+      useGranularStretch: false,
+    };
+  }
+
+  const pitchShiftSemitones = Math.max(
+    -24,
+    Math.min(24, Number(settings.stretchPitchSemitones || 0)),
+  );
+  const pitchShiftRate = Math.pow(2, pitchShiftSemitones / 12);
+
+  if (stretchMode === "stretch") {
+    return {
+      playbackRate: Math.max(0.125, Math.min(8, safeBaseRate * pitchShiftRate)),
+      targetDurationSec: Math.max(0.01, targetDurationSec),
+      useGranularStretch: true,
+    };
+  }
+
+  const durationRate = Math.max(
+    0.125,
+    Math.min(8, sampleReadDuration / targetDurationSec),
+  );
+
+  return {
+    playbackRate: Math.max(
+      0.125,
+      Math.min(8, safeBaseRate * pitchShiftRate * durationRate),
+    ),
+    targetDurationSec: Math.max(0.01, sampleReadDuration / durationRate),
+    useGranularStretch: false,
+  };
+}
+
+const previewHannWindowCache = new Map();
+
+function getPreviewHannWindowCurve(samples) {
+  const size = Math.max(16, Math.min(2048, Math.round(Number(samples) || 256)));
+  const cached = previewHannWindowCache.get(size);
+  if (cached) {
+    return cached;
+  }
+
+  const curve = new Float32Array(size);
+  for (let i = 0; i < size; i += 1) {
+    const phase = size > 1 ? i / (size - 1) : 0;
+    curve[i] = Math.max(0, Math.sin(Math.PI * phase));
+  }
+
+  previewHannWindowCache.set(size, curve);
+  return curve;
+}
+
+function findBestPreviewWsolaOffsetSamples(
+  channelData,
+  predictedOffset,
+  referenceOffset,
+  windowSamples,
+  searchRadiusSamples,
+  maxOffsetSamples,
+) {
+  if (!channelData || channelData.length <= 1) {
+    return Math.max(0, Math.min(maxOffsetSamples, predictedOffset));
+  }
+
+  const safeMax = Math.max(
+    0,
+    Math.min(maxOffsetSamples, channelData.length - 2),
+  );
+  const safeWindow = Math.max(32, Math.min(windowSamples, 1024));
+  const halfWindow = Math.max(16, Math.floor(safeWindow / 2));
+  const safeRef = Math.max(0, Math.min(safeMax, referenceOffset));
+  const searchMin = Math.max(
+    0,
+    Math.min(safeMax, predictedOffset - searchRadiusSamples),
+  );
+  const searchMax = Math.max(
+    0,
+    Math.min(safeMax, predictedOffset + searchRadiusSamples),
+  );
+
+  let bestOffset = Math.max(searchMin, Math.min(searchMax, predictedOffset));
+  let bestScore = -Infinity;
+
+  for (let candidate = searchMin; candidate <= searchMax; candidate += 1) {
+    let dot = 0;
+    let energyA = 0;
+    let energyB = 0;
+
+    for (let i = 0; i < safeWindow; i += 1) {
+      const centerShift = i - halfWindow;
+      const refIndex = safeRef + centerShift;
+      const candIndex = candidate + centerShift;
+
+      if (
+        refIndex < 0 ||
+        candIndex < 0 ||
+        refIndex >= channelData.length ||
+        candIndex >= channelData.length
+      ) {
+        continue;
+      }
+
+      const a = channelData[refIndex];
+      const b = channelData[candIndex];
+      dot += a * b;
+      energyA += a * a;
+      energyB += b * b;
+    }
+
+    const denom = Math.sqrt(energyA * energyB) + 1e-9;
+    const score = dot / denom;
+    if (score > bestScore) {
+      bestScore = score;
+      bestOffset = candidate;
+    }
+  }
+
+  return bestOffset;
+}
+
 function SettingValueEditor({
   value,
   min,
@@ -314,6 +523,9 @@ function SettingValueEditor({
 
 export function SampleSettingsDialog({ channel }) {
   const dispatch = useDispatch();
+  const bpm = useSelector(function (state) {
+    return state.daw.transport.bpm;
+  });
   const plugin = getPluginInstrument(channel.pluginRef);
   const isPluginChannel = Boolean(plugin && plugin.soundfont);
   const sampleRef = channel.sampleRef;
@@ -339,6 +551,7 @@ export function SampleSettingsDialog({ channel }) {
   const previewSampleBufferCacheRef = useRef(new Map());
   const previewSamplePendingRef = useRef(new Map());
   const previewSampleGainRef = useRef(new WeakMap());
+  const previewStretchedBufferCacheRef = useRef(new WeakMap());
   const previewSampleNodeRef = useRef(null);
   const previewSampleStopTimeoutRef = useRef(null);
   const previewPluginContextRef = useRef(null);
@@ -406,7 +619,7 @@ export function SampleSettingsDialog({ channel }) {
   };
 
   const getPreviewSampleBuffer = async function (sampleUrl) {
-    const key = String(sampleUrl || "").trim();
+    const key = toSafeSampleUrl(sampleUrl);
     if (!key) {
       return null;
     }
@@ -536,7 +749,12 @@ export function SampleSettingsDialog({ channel }) {
 
       const load = async function () {
         try {
-          const response = await fetch(sampleRef);
+          const safeSampleRef = toSafeSampleUrl(sampleRef);
+          if (!safeSampleRef) {
+            throw new Error("Sample path is empty");
+          }
+
+          const response = await fetch(safeSampleRef);
           if (!response.ok) {
             throw new Error("Sample fetch failed");
           }
@@ -544,6 +762,7 @@ export function SampleSettingsDialog({ channel }) {
           const buffer = await response.arrayBuffer();
           const decodeCtx = getWaveformDecodeContext();
           const decoded = await decodeCtx.decodeAudioData(buffer.slice(0));
+
           const primaryChannel = decoded.getChannelData(0);
           const waveformPeaks = computeWaveformPeaks(primaryChannel, 180);
 
@@ -779,8 +998,23 @@ export function SampleSettingsDialog({ channel }) {
         sampleBuffer.duration * (settings.lengthPct / 100),
       );
       const pitchRate = Math.pow(2, Number(settings.pitchCents || 0) / 1200);
-      const playbackRate = Math.max(0.125, Math.min(8, pitchRate));
-      const playDuration = Math.max(0.01, sampleReadDuration / playbackRate);
+      const stretchProfile = getTimeStretchProfile(
+        settings,
+        sampleReadDuration,
+        bpm,
+        Math.max(0.125, Math.min(8, pitchRate)),
+      );
+      const playbackRate = stretchProfile.playbackRate;
+      const naturalPlayDuration = Math.max(
+        0.01,
+        sampleReadDuration / playbackRate,
+      );
+      const playDuration = Math.max(
+        0.01,
+        stretchProfile.useGranularStretch
+          ? stretchProfile.targetDurationSec
+          : naturalPlayDuration,
+      );
       const fadeInSec = playDuration * (settings.fadeInPct / 100);
       const fadeOutSec = playDuration * (settings.fadeOutPct / 100);
       const fadeTotal = fadeInSec + fadeOutSec;
@@ -792,8 +1026,58 @@ export function SampleSettingsDialog({ channel }) {
       const fadeOutStart = Math.max(context.currentTime, stopAt - finalFadeOut);
       const baseGain = Math.max(0.05, Number(channel.volume ?? 0.7) * 0.55);
       const finalGain = baseGain * (settings.normalize ? normalizeGain : 1);
+      const requiredBufferDuration = Math.max(
+        0.01,
+        playDuration * playbackRate,
+      );
+      let previewBuffer = sampleBuffer;
+      if (stretchProfile.useGranularStretch) {
+        const desiredBufferedDuration = Math.max(
+          0.01,
+          playDuration * playbackRate,
+        );
+        const stretchFactor = Math.max(
+          0.25,
+          Math.min(4, sampleReadDuration / desiredBufferedDuration),
+        );
+        const readFrames = Math.max(
+          16,
+          Math.floor(sampleReadDuration * sampleBuffer.sampleRate),
+        );
+        const cacheKey =
+          readFrames +
+          "|" +
+          stretchFactor.toFixed(4) +
+          "|" +
+          sampleBuffer.numberOfChannels;
 
-      source.buffer = sampleBuffer;
+        let perSampleCache =
+          previewStretchedBufferCacheRef.current.get(sampleBuffer);
+        if (!perSampleCache) {
+          perSampleCache = new Map();
+          previewStretchedBufferCacheRef.current.set(
+            sampleBuffer,
+            perSampleCache,
+          );
+        }
+
+        const cached = perSampleCache.get(cacheKey);
+        if (cached) {
+          previewBuffer = cached;
+        } else {
+          previewBuffer = createWsolaStretchedBufferFromSample(
+            context,
+            sampleBuffer,
+            sampleReadDuration,
+            stretchFactor,
+            false,
+          );
+          perSampleCache.set(cacheKey, previewBuffer);
+        }
+      }
+      let previewHandle = source;
+
+      source.buffer = previewBuffer;
       source.playbackRate.setValueAtTime(playbackRate, context.currentTime);
 
       if (finalFadeIn > 0.001) {
@@ -833,24 +1117,41 @@ export function SampleSettingsDialog({ channel }) {
       envelopeGain.connect(panner);
       panner.connect(context.destination);
 
-      previewSampleNodeRef.current = source;
-      source.onended = function () {
-        if (previewSampleNodeRef.current === source) {
-          previewSampleNodeRef.current = null;
-          setIsPreviewPlaying(false);
-        }
-      };
+      if (stretchProfile.useGranularStretch) {
+        previewSampleNodeRef.current = source;
+        source.onended = function () {
+          if (previewSampleNodeRef.current === source) {
+            previewSampleNodeRef.current = null;
+            setIsPreviewPlaying(false);
+          }
+        };
 
-      source.start(
-        context.currentTime,
-        0,
-        Math.min(sampleReadDuration, sampleBuffer.duration),
-      );
-      source.stop(stopAt + 0.005);
+        source.start(
+          context.currentTime,
+          0,
+          Math.min(previewBuffer.duration, requiredBufferDuration),
+        );
+        source.stop(stopAt + 0.005);
+      } else {
+        previewSampleNodeRef.current = source;
+        source.onended = function () {
+          if (previewSampleNodeRef.current === source) {
+            previewSampleNodeRef.current = null;
+            setIsPreviewPlaying(false);
+          }
+        };
+
+        source.start(
+          context.currentTime,
+          0,
+          Math.min(previewBuffer.duration, requiredBufferDuration),
+        );
+        source.stop(stopAt + 0.005);
+      }
 
       previewSampleStopTimeoutRef.current = setTimeout(
         function () {
-          if (previewSampleNodeRef.current === source) {
+          if (previewSampleNodeRef.current === previewHandle) {
             previewSampleNodeRef.current = null;
             setIsPreviewPlaying(false);
           }
@@ -902,6 +1203,20 @@ export function SampleSettingsDialog({ channel }) {
             }}
           >
             Envelope
+          </button>
+          <button
+            type="button"
+            role="tab"
+            aria-selected={activeSampleTab === "time-stretching"}
+            className={
+              "sample-settings-tab" +
+              (activeSampleTab === "time-stretching" ? " is-active" : "")
+            }
+            onClick={function () {
+              setActiveSampleTab("time-stretching");
+            }}
+          >
+            Time stretching
           </button>
         </div>
       ) : null}
@@ -1218,7 +1533,7 @@ export function SampleSettingsDialog({ channel }) {
                   />
                 </label>
               </>
-            ) : (
+            ) : activeSampleTab === "envelope" ? (
               <>
                 <section className="sample-envelope-panel">
                   <header className="sample-envelope-header">
@@ -1401,6 +1716,146 @@ export function SampleSettingsDialog({ channel }) {
                     }}
                   />
                 </label>
+              </>
+            ) : (
+              <>
+                <section className="sample-time-stretch-panel">
+                  <header className="sample-time-stretch-header">
+                    <span>Time stretching</span>
+                  </header>
+
+                  <div className="sample-time-stretch-knobs">
+                    <label className="sample-time-knob-row">
+                      <span>PITCH</span>
+                      <input
+                        type="range"
+                        min="-24"
+                        max="24"
+                        step="0.01"
+                        value={Number(settings.stretchPitchSemitones || 0)}
+                        onChange={function (event) {
+                          onSettingChange({
+                            stretchPitchSemitones: Number(event.target.value),
+                          });
+                        }}
+                      />
+                      <SettingValueEditor
+                        value={Number(settings.stretchPitchSemitones || 0)}
+                        min={-24}
+                        max={24}
+                        step={0.01}
+                        suffix="st"
+                        isSigned={true}
+                        onCommit={function (nextValue) {
+                          onSettingChange({ stretchPitchSemitones: nextValue });
+                        }}
+                      />
+                    </label>
+
+                    <label className="sample-time-knob-row">
+                      <span>MUL</span>
+                      <input
+                        type="range"
+                        min="0.25"
+                        max="8"
+                        step="0.01"
+                        value={Number(settings.stretchMultiplier || 1)}
+                        onChange={function (event) {
+                          onSettingChange({
+                            stretchMultiplier: Number(event.target.value),
+                          });
+                        }}
+                      />
+                      <SettingValueEditor
+                        value={Number(settings.stretchMultiplier || 1)}
+                        min={0.25}
+                        max={8}
+                        step={0.01}
+                        suffix="x"
+                        isSigned={false}
+                        onCommit={function (nextValue) {
+                          onSettingChange({ stretchMultiplier: nextValue });
+                        }}
+                      />
+                    </label>
+                  </div>
+
+                  <div className="sample-time-stretch-selects">
+                    <label className="sample-time-select-row">
+                      <span>TIME</span>
+                      <select
+                        value={String(settings.stretchTimeMode || "none")}
+                        onChange={function (event) {
+                          const nextMode = event.target.value;
+                          const changes = {
+                            stretchTimeMode: nextMode,
+                          };
+
+                          if (nextMode === "project-tempo") {
+                            changes.stretchProjectTempoBpm = Number(bpm || 120);
+                          }
+
+                          onSettingChange(changes);
+                        }}
+                      >
+                        {STRETCH_TIME_MODE_OPTIONS.map(function (option) {
+                          return (
+                            <option key={option.value} value={option.value}>
+                              {option.label}
+                            </option>
+                          );
+                        })}
+                      </select>
+                    </label>
+
+                    <label className="sample-time-select-row">
+                      <span>Mode</span>
+                      <select
+                        value={String(settings.stretchMode || "resample")}
+                        onChange={function (event) {
+                          onSettingChange({ stretchMode: event.target.value });
+                        }}
+                      >
+                        {STRETCH_MODE_OPTIONS.map(function (option) {
+                          return (
+                            <option key={option.value} value={option.value}>
+                              {option.label}
+                            </option>
+                          );
+                        })}
+                      </select>
+                    </label>
+                  </div>
+
+                  {String(settings.stretchTimeMode || "none") === "set-bpm" ? (
+                    <label className="sample-setting-row">
+                      <span>Set BPM</span>
+                      <input
+                        type="range"
+                        min="20"
+                        max="300"
+                        step="1"
+                        value={Number(settings.stretchSourceBpm || 120)}
+                        onChange={function (event) {
+                          onSettingChange({
+                            stretchSourceBpm: Number(event.target.value),
+                          });
+                        }}
+                      />
+                      <SettingValueEditor
+                        value={Number(settings.stretchSourceBpm || 120)}
+                        min={20}
+                        max={300}
+                        step={1}
+                        suffix=" bpm"
+                        isSigned={false}
+                        onCommit={function (nextValue) {
+                          onSettingChange({ stretchSourceBpm: nextValue });
+                        }}
+                      />
+                    </label>
+                  ) : null}
+                </section>
               </>
             )}
           </>

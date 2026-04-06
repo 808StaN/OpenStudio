@@ -272,7 +272,11 @@ function formatMs(value) {
 }
 
 function formatSeconds(value) {
-  return Number(value || 0).toFixed(2).replace(/\.00$/, "") + " s";
+  return (
+    Number(value || 0)
+      .toFixed(2)
+      .replace(/\.00$/, "") + " s"
+  );
 }
 
 function roundToStep(value, step) {
@@ -907,7 +911,10 @@ export function FxPluginWindow() {
     const direction = event.deltaY < 0 ? 1 : -1;
     const current = Number(reverbParams[control.param] || 0);
     const wheelFactor = event.shiftKey ? 0.4 : 2;
-    adjustReverbValue(control, current + direction * control.step * wheelFactor);
+    adjustReverbValue(
+      control,
+      current + direction * control.step * wheelFactor,
+    );
   };
 
   const resetReverbControl = function (control) {
@@ -944,7 +951,10 @@ export function FxPluginWindow() {
         const range = drag.control.max - drag.control.min;
         const delta = drag.startY - event.clientY;
         const valuePerPixel = range / (event.shiftKey ? 700 : 160);
-        adjustReverbValue(drag.control, drag.startValue + delta * valuePerPixel);
+        adjustReverbValue(
+          drag.control,
+          drag.startValue + delta * valuePerPixel,
+        );
       };
 
       const onMouseUp = function () {

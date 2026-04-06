@@ -655,7 +655,7 @@
 
 .sample-settings-tabs {
   display: grid;
-  grid-template-columns: 1fr 1fr;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
   gap: 4px;
   width: 100%;
   height: 33px;
@@ -703,6 +703,119 @@
   padding: 8px;
   display: grid;
   gap: 6px;
+}
+
+.sample-time-stretch-panel {
+  border: 1px solid #44536d;
+  border-radius: 8px;
+  background: linear-gradient(180deg, #131d2d 0%, #0f1625 100%);
+  padding: 8px;
+  display: grid;
+  gap: 8px;
+}
+
+.sample-time-stretch-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  color: #8fffd0;
+  font-size: 12px;
+  letter-spacing: 0.3px;
+}
+
+.sample-time-stretch-knobs {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 8px;
+}
+
+.sample-time-knob-row {
+  border: 1px solid #3d4d67;
+  border-radius: 7px;
+  padding: 6px;
+  background: linear-gradient(180deg, #182538 0%, #121b2a 100%);
+  display: grid;
+  gap: 5px;
+}
+
+.sample-time-knob-row span {
+  color: #9ec2ff;
+  font-size: 10px;
+  font-weight: 700;
+  letter-spacing: 0.35px;
+}
+
+.sample-time-knob-row input[type="range"] {
+  width: 100%;
+  accent-color: #ffae3e;
+}
+
+.sample-time-stretch-selects {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 8px;
+}
+
+.sample-time-select-row {
+  position: relative;
+  display: grid;
+  gap: 4px;
+}
+
+.sample-time-select-row span {
+  color: #c9d8ef;
+  font-size: 11px;
+}
+
+.sample-time-select-row::after {
+  content: "";
+  position: absolute;
+  right: 10px;
+  bottom: 9px;
+  width: 0;
+  height: 0;
+  border-left: 5px solid transparent;
+  border-right: 5px solid transparent;
+  border-top: 6px solid #6effbe;
+  pointer-events: none;
+  filter: drop-shadow(0 0 3px rgba(110, 255, 190, 0.35));
+}
+
+.sample-time-select-row select {
+  height: 27px;
+  border: 1px solid #51617d;
+  border-radius: 6px;
+  background: linear-gradient(180deg, #2a3448 0%, #1a2232 100%);
+  color: #c6ffe7;
+  font-size: 11px;
+  font-weight: 600;
+  padding: 0 28px 0 8px;
+  appearance: none;
+  -webkit-appearance: none;
+  -moz-appearance: none;
+  box-shadow:
+    inset 0 1px 0 rgba(255, 255, 255, 0.08),
+    inset 0 -1px 0 rgba(0, 0, 0, 0.35);
+  cursor: pointer;
+}
+
+.sample-time-select-row select:hover {
+  border-color: #6d819f;
+  filter: brightness(1.03);
+}
+
+.sample-time-select-row select:focus {
+  outline: none;
+  border-color: #72f5b5;
+  box-shadow:
+    0 0 0 1px rgba(114, 245, 181, 0.35),
+    inset 0 1px 0 rgba(255, 255, 255, 0.08),
+    inset 0 -1px 0 rgba(0, 0, 0, 0.35);
+}
+
+.sample-time-select-row select option {
+  color: #7dffd0;
+  background: #30353f;
 }
 
 .sample-envelope-header {

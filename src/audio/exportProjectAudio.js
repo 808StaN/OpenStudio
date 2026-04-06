@@ -1,5 +1,6 @@
 import Soundfont from "soundfont-player";
 import { getPluginInstrument } from "../data/pluginInstruments";
+import { toSafeSampleUrl } from "../utils/sampleUrl";
 
 const DEFAULT_SAMPLE_MIDI_PITCH = 72;
 const PLUGIN_INSTRUMENT_GAIN_BOOST = 1.5;
@@ -541,7 +542,12 @@ export async function renderPlaylistArrangementToFile(options) {
   await Promise.all(
     uniqueSampleRefs.map(async function (sampleRef) {
       try {
-        const response = await fetch(sampleRef);
+        const safeSampleRef = toSafeSampleUrl(sampleRef);
+        if (!safeSampleRef) {
+          return;
+        }
+
+        const response = await fetch(safeSampleRef);
         if (!response.ok) {
           return;
         }

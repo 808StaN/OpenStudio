@@ -900,7 +900,12 @@
   position: absolute;
   inset: 9px;
   border-radius: 50%;
-  background: radial-gradient(circle at 35% 30%, #3d4c66 0%, #222f46 58%, #151d2b 100%);
+  background: radial-gradient(
+    circle at 35% 30%,
+    #3d4c66 0%,
+    #222f46 58%,
+    #151d2b 100%
+  );
 }
 
 .fx-reverb-value {

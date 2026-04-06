@@ -7,6 +7,7 @@ const __dirname = path.dirname(__filename);
 const projectRoot = path.resolve(__dirname, "..");
 const drumkitsDir = path.join(projectRoot, "public", "drumkits");
 const manifestPath = path.join(drumkitsDir, "manifest.json");
+const safeAliasRoot = "__safe__";
 
 const audioExtensions = new Set([
   ".wav",
@@ -20,6 +21,22 @@ const audioExtensions = new Set([
 
 function toPosixPath(filePath) {
   return filePath.split(path.sep).join("/");
+}
+
+function toWebPathFromRelative(relPath) {
+  const parts = String(relPath || "")
+    .split("/")
+    .filter(Boolean)
+    .map(function (part) {
+      return encodeURIComponent(part);
+    });
+
+  return "/drumkits/" + parts.join("/");
+}
+
+function toSafeAliasRelativePath(relPath) {
+  const safeRel = String(relPath || "").replace(/#/g, "_hash_");
+  return toPosixPath(path.posix.join(safeAliasRoot, safeRel));
 }
 
 async function walkAudioFiles(dirPath, baseDir, output) {
@@ -46,16 +63,36 @@ async function walkAudioFiles(dirPath, baseDir, output) {
 async function generateManifest() {
   await fs.mkdir(drumkitsDir, { recursive: true });
 
+  const safeAliasDir = path.join(drumkitsDir, safeAliasRoot);
+  await fs.rm(safeAliasDir, { recursive: true, force: true });
+
   const files = [];
   await walkAudioFiles(drumkitsDir, drumkitsDir, files);
 
   const folderMap = new Map();
 
   for (const relPath of files) {
+    if (relPath.startsWith(safeAliasRoot + "/")) {
+      continue;
+    }
+
     const folderPath = path.posix.dirname(relPath);
     const folder = folderPath === "." ? "Root" : folderPath;
     const name = path.posix.basename(relPath);
-    const webPath = encodeURI("/drumkits/" + relPath);
+    let targetRelativePath = relPath;
+
+    if (relPath.includes("#")) {
+      targetRelativePath = toSafeAliasRelativePath(relPath);
+      const sourceAbsolute = path.join(drumkitsDir, ...relPath.split("/"));
+      const targetAbsolute = path.join(
+        drumkitsDir,
+        ...targetRelativePath.split("/"),
+      );
+      await fs.mkdir(path.dirname(targetAbsolute), { recursive: true });
+      await fs.copyFile(sourceAbsolute, targetAbsolute);
+    }
+
+    const webPath = toWebPathFromRelative(targetRelativePath);
 
     if (!folderMap.has(folder)) {
       folderMap.set(folder, []);
