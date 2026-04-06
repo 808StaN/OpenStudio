@@ -11,6 +11,7 @@ import {
   setPlayheadStep,
   setPlaylistClipPlacement,
   setPlaylistClipLength,
+  setPlaylistClipTrimStart,
   setSongLoopEnabled,
   setTransportMode,
 } from "../store";
@@ -177,14 +178,28 @@ function getPatternPreviewNotes(pattern) {
 }
 
 const ClipPreviewNotes = memo(function ClipPreviewNotes(props) {
-  const { clipId, previewNotes, clipLengthSteps, patternLength } = props;
+  const {
+    clipId,
+    previewNotes,
+    clipLengthSteps,
+    patternLength,
+    clipOffsetSteps,
+  } = props;
 
   const renderedPreviewNotes = useMemo(
     function () {
       const visibleNotes = [];
+      const visiblePatternStart = Math.max(
+        0,
+        Math.min(patternLength, Number(clipOffsetSteps || 0)),
+      );
+      const visiblePatternEnd = Math.max(
+        visiblePatternStart,
+        Math.min(patternLength, visiblePatternStart + clipLengthSteps),
+      );
       const visiblePatternSteps = Math.max(
         1,
-        Math.min(patternLength, clipLengthSteps),
+        visiblePatternEnd - visiblePatternStart,
       );
       let minPitch = Infinity;
       let maxPitch = -Infinity;
@@ -192,17 +207,15 @@ const ClipPreviewNotes = memo(function ClipPreviewNotes(props) {
       for (let noteIndex = 0; noteIndex < previewNotes.length; noteIndex += 1) {
         const note = previewNotes[noteIndex];
         const noteStart = Number(note.start || 0);
-        if (noteStart >= visiblePatternSteps) {
+        const noteEnd = noteStart + Math.max(0.0625, Number(note.length || 1));
+        const visibleStart = Math.max(noteStart, visiblePatternStart);
+        const visibleEnd = Math.min(noteEnd, visiblePatternEnd);
+
+        if (visibleEnd <= visibleStart) {
           continue;
         }
 
-        const noteLength = Math.max(
-          0.0625,
-          Math.min(
-            Number(note.length || 1),
-            Math.max(0.0625, visiblePatternSteps - noteStart),
-          ),
-        );
+        const noteLength = Math.max(0.0625, visibleEnd - visibleStart);
         const pitch = Math.max(
           MIDI_PITCH_MIN,
           Math.min(MIDI_PITCH_MAX, Math.round(note.pitch || C5_PITCH)),
@@ -213,7 +226,7 @@ const ClipPreviewNotes = memo(function ClipPreviewNotes(props) {
         visibleNotes.push({
           id: note.id,
           noteIndex,
-          left: (noteStart / clipLengthSteps) * 100,
+          left: ((visibleStart - visiblePatternStart) / clipLengthSteps) * 100,
           width: Math.max(0.8, (noteLength / clipLengthSteps) * 100),
           pitch,
         });
@@ -243,7 +256,7 @@ const ClipPreviewNotes = memo(function ClipPreviewNotes(props) {
         );
       });
     },
-    [clipId, previewNotes, clipLengthSteps, patternLength],
+    [clipId, previewNotes, clipLengthSteps, patternLength, clipOffsetSteps],
   );
 
   return <div className="clip-note-preview">{renderedPreviewNotes}</div>;
@@ -690,8 +703,14 @@ export function PlaylistWindow() {
     const rect = trackElement.getBoundingClientRect();
     const barWidthPx = rect.width / playlistBarCount;
     const startClientX = event.clientX;
-    const initialLength = Math.max(1, Math.round(Number(clip.barLength || 1)));
-    const maxTrackLength = Math.max(1, playlistBarCount - clip.barStart + 1);
+    const initialLength = Math.max(
+      MIN_CLIP_BAR_LENGTH,
+      Number(clip.barLength || 1),
+    );
+    const maxTrackLength = Math.max(
+      MIN_CLIP_BAR_LENGTH,
+      playlistBarCount - Number(clip.barStart || 1) + 1,
+    );
 
     const onMouseMove = function (moveEvent) {
       const deltaPx = moveEvent.clientX - startClientX;
@@ -722,6 +741,66 @@ export function PlaylistWindow() {
     window.addEventListener("mouseup", onMouseUp);
   };
 
+  const startResizeFromStart = function (event, clip) {
+    if (event.button !== 0) {
+      return;
+    }
+
+    event.preventDefault();
+    event.stopPropagation();
+
+    const trackElement = event.currentTarget.closest(".track-grid");
+    if (!trackElement) {
+      return;
+    }
+
+    const rect = trackElement.getBoundingClientRect();
+    const barWidthPx = rect.width / playlistBarCount;
+    const startClientX = event.clientX;
+    const startBar = clamp(Number(clip.barStart || 1), 1, playlistBarCount);
+    const startLength = Math.max(
+      MIN_CLIP_BAR_LENGTH,
+      Number(clip.barLength || 1),
+    );
+    const startOffsetSteps = Math.max(0, Number(clip.sourceOffsetSteps || 0));
+    const clipEndBar = startBar + startLength;
+    const sourceEndSteps = startOffsetSteps + startLength * 16;
+
+    const onMouseMove = function (moveEvent) {
+      const deltaBarsRaw =
+        (moveEvent.clientX - startClientX) / Math.max(1, barWidthPx);
+      const nextRawStart = startBar + deltaBarsRaw;
+      const snappedStart = quantizeBySnap(nextRawStart, snapBarSize);
+
+      const maxStartByClipEnd = Math.max(1, clipEndBar - MIN_CLIP_BAR_LENGTH);
+      const nextStart = clamp(snappedStart, 1, maxStartByClipEnd);
+      const nextLengthRaw = Math.max(
+        MIN_CLIP_BAR_LENGTH,
+        clipEndBar - nextStart,
+      );
+      const nextLength = Math.min(nextLengthRaw, sourceEndSteps / 16);
+      const normalizedStart = clipEndBar - nextLength;
+      const nextOffsetSteps = Math.max(0, sourceEndSteps - nextLength * 16);
+
+      dispatch(
+        setPlaylistClipTrimStart({
+          clipId: clip.id,
+          barStart: normalizedStart,
+          barLength: nextLength,
+          sourceOffsetSteps: nextOffsetSteps,
+        }),
+      );
+    };
+
+    const onMouseUp = function () {
+      window.removeEventListener("mousemove", onMouseMove);
+      window.removeEventListener("mouseup", onMouseUp);
+    };
+
+    window.addEventListener("mousemove", onMouseMove);
+    window.addEventListener("mouseup", onMouseUp);
+  };
+
   const startMove = function (event, clip) {
     if (event.button !== 0) {
       return;
@@ -738,9 +817,12 @@ export function PlaylistWindow() {
     }
 
     const startClientX = event.clientX;
-    const startBar = Math.max(1, Math.round(Number(clip.barStart || 1)));
-    const clipLength = Math.max(1, Math.round(Number(clip.barLength || 1)));
-    const fallbackTrackId = clip.trackId;
+    const startBar = clamp(Number(clip.barStart || 1), 1, playlistBarCount);
+    const clipLength = Math.max(
+      MIN_CLIP_BAR_LENGTH,
+      Number(clip.barLength || 1),
+    );
+    let fallbackTrackId = clip.trackId;
 
     const findTargetGrid = function (moveEvent) {
       const targetElement = document.elementFromPoint(
@@ -767,11 +849,13 @@ export function PlaylistWindow() {
         targetGrid.getAttribute("data-track-id") || fallbackTrackId;
       const rect = targetGrid.getBoundingClientRect();
       const barWidthPx = rect.width / playlistBarCount;
-      const deltaBars = Math.round(
-        (moveEvent.clientX - startClientX) / Math.max(1, barWidthPx),
-      );
+      const deltaBarsRaw =
+        (moveEvent.clientX - startClientX) / Math.max(1, barWidthPx);
+      const nextRawStart = startBar + deltaBarsRaw;
+      const snappedStart = quantizeBySnap(nextRawStart, snapBarSize);
       const maxBarStart = Math.max(1, playlistBarCount - clipLength + 1);
-      const barStart = clamp(startBar + deltaBars, 1, maxBarStart);
+      const barStart = clamp(snappedStart, 1, maxBarStart);
+      fallbackTrackId = targetTrackId;
 
       dispatch(
         setPlaylistClipPlacement({
@@ -1548,7 +1632,11 @@ export function PlaylistWindow() {
                   const patternLength = Math.max(1, pattern?.lengthSteps || 16);
                   const clipLengthSteps = Math.max(
                     1,
-                    Math.round(Number(clip.barLength || 1)) * 16,
+                    Math.round(Number(clip.barLength || 1) * 16),
+                  );
+                  const clipOffsetSteps = Math.max(
+                    0,
+                    Number(clip.sourceOffsetSteps || 0),
                   );
                   const previewNotes =
                     previewNotesByPatternId[clip.patternId] || [];
@@ -1557,12 +1645,17 @@ export function PlaylistWindow() {
                     0.01,
                     Number(clip.barLength || 1) * secondsPerBar,
                   );
+                  const clipOffsetSec = Math.max(
+                    0,
+                    Number(clipOffsetSteps || 0) * (60 / Math.max(1, bpm) / 4),
+                  );
                   const sourceDurationSec = Math.max(
                     0.01,
                     Number(audioAnalysis?.durationSec || 0.01),
                   );
+                  const sourceStartSec = Math.min(sourceDurationSec, clipOffsetSec);
                   const visibleDurationSec = Math.min(
-                    sourceDurationSec,
+                    Math.max(0, sourceDurationSec - sourceStartSec),
                     clipDurationSec,
                   );
                   const waveformBarCount = isAudioClip
@@ -1612,7 +1705,10 @@ export function PlaylistWindow() {
                         dispatch(removePlaylistClip(clip.id));
                       }}
                       onDoubleClick={function (event) {
-                        if (event.target.closest(".clip-resize-handle")) {
+                        if (
+                          event.target.closest(".clip-resize-handle") ||
+                          event.target.closest(".clip-resize-handle-start")
+                        ) {
                           return;
                         }
 
@@ -1644,9 +1740,10 @@ export function PlaylistWindow() {
                               const timeSec =
                                 (index / Math.max(1, waveformBarCount)) *
                                 visibleDurationSec;
+                              const sourceTimeSec = sourceStartSec + timeSec;
                               const sourceRatio =
                                 sourceDurationSec > 0
-                                  ? timeSec / sourceDurationSec
+                                  ? sourceTimeSec / sourceDurationSec
                                   : 0;
                               const sourceIndex = Math.max(
                                 0,
@@ -1687,6 +1784,7 @@ export function PlaylistWindow() {
                           previewNotes={previewNotes}
                           clipLengthSteps={clipLengthSteps}
                           patternLength={patternLength}
+                          clipOffsetSteps={clipOffsetSteps}
                         />
                       )}
                       <span className="clip-label">
@@ -1694,6 +1792,23 @@ export function PlaylistWindow() {
                           ? clip.audioName || "Audio"
                           : pattern?.name || "Pattern"}
                       </span>
+                      <button
+                        type="button"
+                        className="clip-resize-handle-start"
+                        title={
+                          isAudioClip
+                            ? "Trim audio clip start"
+                            : "Trim pattern clip start"
+                        }
+                        aria-label={
+                          isAudioClip
+                            ? "Trim audio clip start"
+                            : "Trim pattern clip start"
+                        }
+                        onMouseDown={function (event) {
+                          startResizeFromStart(event, clip);
+                        }}
+                      />
                       <button
                         type="button"
                         className="clip-resize-handle"

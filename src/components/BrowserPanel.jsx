@@ -118,7 +118,8 @@ export function BrowserPanel() {
         return;
       }
 
-      const folder = folderSegments.length > 0 ? folderSegments.join("/") : "Root";
+      const folder =
+        folderSegments.length > 0 ? folderSegments.join("/") : "Root";
       const encodedPath =
         "/drumkits/" +
         segments
@@ -167,20 +168,22 @@ export function BrowserPanel() {
         }
 
         const itemMap = mergedMap.get(folder);
-        (Array.isArray(group?.items) ? group.items : []).forEach(function (item) {
-          const name = String(item?.name || "").trim();
-          const path = String(item?.path || "").trim();
-          if (!name || !path) {
-            return;
-          }
+        (Array.isArray(group?.items) ? group.items : []).forEach(
+          function (item) {
+            const name = String(item?.name || "").trim();
+            const path = String(item?.path || "").trim();
+            if (!name || !path) {
+              return;
+            }
 
-          if (!itemMap.has(path)) {
-            itemMap.set(path, {
-              name,
-              path,
-            });
-          }
-        });
+            if (!itemMap.has(path)) {
+              itemMap.set(path, {
+                name,
+                path,
+              });
+            }
+          },
+        );
       });
     };
 
@@ -231,7 +234,9 @@ export function BrowserPanel() {
         continue;
       }
 
-      const contentType = String(response.headers.get("content-type") || "").toLowerCase();
+      const contentType = String(
+        response.headers.get("content-type") || "",
+      ).toLowerCase();
       if (!contentType.includes("text/html")) {
         continue;
       }
@@ -419,54 +424,63 @@ export function BrowserPanel() {
     });
   };
 
-  const loadManifest = useCallback(async function () {
-    setManifestStatus("loading");
-    try {
-      const response = await fetch("/drumkits/manifest.json?ts=" + Date.now(), {
-        cache: "no-store",
-      });
+  const loadManifest = useCallback(
+    async function () {
+      setManifestStatus("loading");
+      try {
+        const response = await fetch(
+          "/drumkits/manifest.json?ts=" + Date.now(),
+          {
+            cache: "no-store",
+          },
+        );
 
-      if (!response.ok) {
-        const discoveredFolders = await discoverDrumkitsFromDirectoryIndex();
-        if (discoveredFolders.length === 0) {
-          throw new Error("Manifest not found");
+        if (!response.ok) {
+          const discoveredFolders = await discoverDrumkitsFromDirectoryIndex();
+          if (discoveredFolders.length === 0) {
+            throw new Error("Manifest not found");
+          }
+
+          setDrumkitGroups(discoveredFolders);
+          setManifestStatus("ready");
+          setExpandedByParent({});
+          return;
         }
 
-        setDrumkitGroups(discoveredFolders);
+        const manifest = await response.json();
+        const manifestFolders = Array.isArray(manifest.folders)
+          ? manifest.folders
+          : [];
+        const discoveredFolders = await discoverDrumkitsFromDirectoryIndex();
+        const merged = mergeGroups(manifestFolders, discoveredFolders);
+
+        setDrumkitGroups(merged);
         setManifestStatus("ready");
         setExpandedByParent({});
-        return;
+      } catch {
+        setDrumkitGroups([]);
+        setManifestStatus("missing");
+        setExpandedByParent({});
+      }
+    },
+    [discoverDrumkitsFromDirectoryIndex],
+  );
+
+  const triggerDrumkitsRescan = useCallback(
+    async function () {
+      try {
+        await fetch("/__openstudio/refresh-drumkits", {
+          method: "POST",
+          cache: "no-store",
+        });
+      } catch {
+        // Ignore endpoint failures outside dev; manifest reload still runs.
       }
 
-      const manifest = await response.json();
-      const manifestFolders = Array.isArray(manifest.folders)
-        ? manifest.folders
-        : [];
-      const discoveredFolders = await discoverDrumkitsFromDirectoryIndex();
-      const merged = mergeGroups(manifestFolders, discoveredFolders);
-
-      setDrumkitGroups(merged);
-      setManifestStatus("ready");
-      setExpandedByParent({});
-    } catch {
-      setDrumkitGroups([]);
-      setManifestStatus("missing");
-      setExpandedByParent({});
-    }
-  }, [discoverDrumkitsFromDirectoryIndex]);
-
-  const triggerDrumkitsRescan = useCallback(async function () {
-    try {
-      await fetch("/__openstudio/refresh-drumkits", {
-        method: "POST",
-        cache: "no-store",
-      });
-    } catch {
-      // Ignore endpoint failures outside dev; manifest reload still runs.
-    }
-
-    await loadManifest();
-  }, [loadManifest]);
+      await loadManifest();
+    },
+    [loadManifest],
+  );
 
   useEffect(
     function () {

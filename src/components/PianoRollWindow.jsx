@@ -2139,7 +2139,9 @@ export function PianoRollWindow() {
           {editMode === "add"
             ? "LMB add. LMB drag note to move, right edge to resize. RMB delete."
             : "Drag to select. Move selected with mouse. Ctrl+C/X/V, Delete, Arrow Up/Down (scale), Shift+Arrow +/-1, Ctrl+Arrow +/-12."}{" "}
-          Drop MID file on Piano Roll (from Drumkits Browser or your computer) to paste melody. Import MIDI opens file picker. Export MIDI saves current channel melody. Wheel: up/down, Ctrl+Wheel: zoom.
+          Drop MID file on Piano Roll (from Drumkits Browser or your computer)
+          to paste melody. Import MIDI opens file picker. Export MIDI saves
+          current channel melody. Wheel: up/down, Ctrl+Wheel: zoom.
         </small>
       </header>
 

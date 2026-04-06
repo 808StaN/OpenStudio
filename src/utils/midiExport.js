@@ -55,7 +55,10 @@ function buildTrackEventBytes(notes, bpm) {
   const safeNotes = (Array.isArray(notes) ? notes : []).map(function (note) {
     const pitch = Math.round(clamp(Number(note?.pitch || 72), 0, 127));
     const velocity = Math.round(clamp(Number(note?.velocity || 100), 1, 127));
-    const startTick = Math.max(0, Math.round(Number(note?.start || 0) * TICKS_PER_STEP));
+    const startTick = Math.max(
+      0,
+      Math.round(Number(note?.start || 0) * TICKS_PER_STEP),
+    );
     const lengthTick = Math.max(
       1,
       Math.round(Math.max(0.0625, Number(note?.length || 1)) * TICKS_PER_STEP),

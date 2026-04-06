@@ -396,7 +396,27 @@
   cursor: ew-resize;
 }
 
+.clip-resize-handle-start {
+  position: absolute;
+  top: 2px;
+  left: 2px;
+  bottom: 2px;
+  width: 10px;
+  border: 0;
+  border-radius: 2px;
+  background: linear-gradient(
+    270deg,
+    rgba(255, 255, 255, 0) 0%,
+    rgba(255, 255, 255, 0.08) 100%
+  );
+  cursor: ew-resize;
+}
+
 .clip-resize-handle:hover {
+  filter: brightness(1.08);
+}
+
+.clip-resize-handle-start:hover {
   filter: brightness(1.08);
 }
 

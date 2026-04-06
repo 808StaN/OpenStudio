@@ -2705,8 +2705,18 @@ export function useAudioScheduler() {
 
       const scheduleAhead = 0.11;
 
-      const schedulePatternStep = function (pattern, patternStep, noteTime) {
+      const schedulePatternStep = function (
+        pattern,
+        patternStep,
+        noteTime,
+        options,
+      ) {
         const currentChannels = channelsRef.current;
+        const includeSustainFromStep = Boolean(options?.includeSustainFromStep);
+        const sustainSourceStep = Math.max(
+          0,
+          Number(options?.sustainSourceStep ?? 0),
+        );
 
         if (!pattern || !currentChannels) {
           return;
@@ -2734,8 +2744,23 @@ export function useAudioScheduler() {
           const pianoNotes = pattern.pianoPreview?.[channel.id] || [];
           const noteHits = pianoNotes.reduce(function (acc, note) {
             const noteStart = Math.max(0, Number(note.start || 0));
+            const noteLength = Math.max(0.0625, Number(note.length || 1));
+            const noteEnd = noteStart + noteLength;
             const startStep = Math.floor(noteStart);
             if (startStep !== stepIndex) {
+              if (!includeSustainFromStep) {
+                return acc;
+              }
+
+              if (noteStart >= sustainSourceStep || noteEnd <= sustainSourceStep) {
+                return acc;
+              }
+
+              acc.push({
+                pitch: Math.round(note.pitch || DEFAULT_SAMPLE_MIDI_PITCH),
+                offsetSeconds: 0,
+                lengthSteps: Math.max(0.0625, noteEnd - sustainSourceStep),
+              });
               return acc;
             }
 
@@ -2743,7 +2768,7 @@ export function useAudioScheduler() {
             acc.push({
               pitch: Math.round(note.pitch || DEFAULT_SAMPLE_MIDI_PITCH),
               offsetSeconds: Math.max(0, stepOffset * sixteenth),
-              lengthSteps: Math.max(0.0625, Number(note.length || 1)),
+              lengthSteps: noteLength,
             });
             return acc;
           }, []);
@@ -2871,6 +2896,10 @@ export function useAudioScheduler() {
             1,
             Math.round(Number(clip.barLength || 1) * 16),
           );
+          const clipSourceOffsetSteps = Math.max(
+            0,
+            Number(clip.sourceOffsetSteps || 0),
+          );
           const relativeStep = songStep - clipStartStep;
 
           if (relativeStep < 0 || relativeStep >= clipLengthSteps) {
@@ -2912,7 +2941,7 @@ export function useAudioScheduler() {
                 noteTime,
                 outputNode,
                 clipLengthSteps,
-                relativeStep,
+                clipSourceOffsetSteps + relativeStep,
                 clipChannel,
               );
               scheduledAudioClipStartRef.current.set(
@@ -2931,11 +2960,16 @@ export function useAudioScheduler() {
           }
 
           const patternLength = Math.max(1, pattern.lengthSteps || 16);
-          if (relativeStep >= patternLength) {
+          const patternStepWithOffset =
+            Math.round(clipSourceOffsetSteps) + relativeStep;
+          if (patternStepWithOffset >= patternLength) {
             return;
           }
 
-          schedulePatternStep(pattern, relativeStep, noteTime);
+          schedulePatternStep(pattern, patternStepWithOffset, noteTime, {
+            includeSustainFromStep: relativeStep === 0 && clipSourceOffsetSteps > 0,
+            sustainSourceStep: patternStepWithOffset,
+          });
         });
       };
 

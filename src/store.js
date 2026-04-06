@@ -1009,6 +1009,10 @@ function sanitizeLoadedDawState(currentState, rawLoadedState) {
               trackId,
               barStart,
               barLength,
+              sourceOffsetSteps: Math.max(
+                0,
+                Number(clip.sourceOffsetSteps || 0),
+              ),
             };
           }
 
@@ -1029,6 +1033,7 @@ function sanitizeLoadedDawState(currentState, rawLoadedState) {
             trackId,
             barStart,
             barLength,
+            sourceOffsetSteps: Math.max(0, Number(clip.sourceOffsetSteps || 0)),
           };
         })
         .filter(Boolean)
@@ -1599,29 +1604,6 @@ const dawSlice = createSlice({
         MIN_CLIP_BAR_LENGTH,
         64,
       );
-      const newClipEnd = barStart + barLength;
-
-      state.project.playlistClips = state.project.playlistClips.filter(
-        function (clip) {
-          if (clip.trackId !== trackId) {
-            return true;
-          }
-
-          const start = normalizeBarValue(
-            clip.barStart || 1,
-            1,
-            MAX_PLAYLIST_BARS,
-          );
-          const length = normalizeBarValue(
-            clip.barLength || 1,
-            MIN_CLIP_BAR_LENGTH,
-            64,
-          );
-          const end = start + length;
-
-          return end <= barStart || start >= newClipEnd;
-        },
-      );
 
       state.project.playlistClips.push({
         id:
@@ -1634,6 +1616,7 @@ const dawSlice = createSlice({
         trackId,
         barStart,
         barLength,
+        sourceOffsetSteps: 0,
       });
 
       const trackOrderById = state.project.playlistTracks.reduce(function (
@@ -1686,29 +1669,6 @@ const dawSlice = createSlice({
         MIN_CLIP_BAR_LENGTH,
         64,
       );
-      const newClipEnd = barStart + barLength;
-
-      state.project.playlistClips = state.project.playlistClips.filter(
-        function (clip) {
-          if (clip.trackId !== trackId) {
-            return true;
-          }
-
-          const start = normalizeBarValue(
-            clip.barStart || 1,
-            1,
-            MAX_PLAYLIST_BARS,
-          );
-          const length = normalizeBarValue(
-            clip.barLength || 1,
-            MIN_CLIP_BAR_LENGTH,
-            64,
-          );
-          const end = start + length;
-
-          return end <= barStart || start >= newClipEnd;
-        },
-      );
 
       state.project.playlistClips.push({
         id:
@@ -1722,6 +1682,7 @@ const dawSlice = createSlice({
         trackId,
         barStart,
         barLength,
+        sourceOffsetSteps: 0,
       });
 
       const trackOrderById = state.project.playlistTracks.reduce(function (
@@ -1769,7 +1730,6 @@ const dawSlice = createSlice({
         MIN_CLIP_BAR_LENGTH,
         64,
       );
-      const newClipEnd = barStart + barLength;
 
       const rawSampleName =
         String(action.payload.clipName || "").trim() ||
@@ -1815,27 +1775,6 @@ const dawSlice = createSlice({
         pattern.stepGrid[newChannelId] = makeStepRow(length, []);
       });
 
-      state.project.playlistClips = state.project.playlistClips.filter(
-        function (clip) {
-          if (clip.trackId !== trackId) {
-            return true;
-          }
-
-          const start = normalizeBarValue(
-            clip.barStart || 1,
-            1,
-            MAX_PLAYLIST_BARS,
-          );
-          const length = normalizeBarValue(
-            clip.barLength || 1,
-            MIN_CLIP_BAR_LENGTH,
-            64,
-          );
-          const end = start + length;
-          return end <= barStart || start >= newClipEnd;
-        },
-      );
-
       state.project.playlistClips.push({
         id:
           "clip-" +
@@ -1849,6 +1788,7 @@ const dawSlice = createSlice({
         trackId,
         barStart,
         barLength,
+        sourceOffsetSteps: 0,
       });
 
       const trackOrderById = state.project.playlistTracks.reduce(function (
@@ -1906,22 +1846,6 @@ const dawSlice = createSlice({
         return;
       }
 
-      const trackClips = state.project.playlistClips
-        .filter(function (item) {
-          return item.trackId === clip.trackId && item.id !== clip.id;
-        })
-        .sort(function (a, b) {
-          return a.barStart - b.barStart;
-        });
-
-      const nextClip = trackClips.find(function (item) {
-        return item.barStart > clip.barStart;
-      });
-
-      const maxLengthByNextClip = nextClip
-        ? Math.max(MIN_CLIP_BAR_LENGTH, nextClip.barStart - clip.barStart)
-        : 64;
-
       const currentStart = normalizeBarValue(
         clip.barStart || 1,
         1,
@@ -1940,7 +1864,7 @@ const dawSlice = createSlice({
       clip.barLength = normalizeBarValue(
         requestedLength,
         MIN_CLIP_BAR_LENGTH,
-        Math.min(maxLengthByNextClip, maxLengthByTimeline),
+        maxLengthByTimeline,
       );
     },
 
@@ -1975,63 +1899,8 @@ const dawSlice = createSlice({
         maxStartByTimeline,
       );
 
-      const clipsOnTargetTrack = state.project.playlistClips.filter(
-        function (item) {
-          return item.trackId === trackId && item.id !== clip.id;
-        },
-      );
-
-      const isSlotFree = function (start) {
-        const end = start + clipLength;
-
-        return clipsOnTargetTrack.every(function (item) {
-          const otherStart = normalizeBarValue(
-            item.barStart || 1,
-            1,
-            MAX_PLAYLIST_BARS,
-          );
-          const otherLength = normalizeBarValue(
-            item.barLength || 1,
-            MIN_CLIP_BAR_LENGTH,
-            64,
-          );
-          const otherEnd = otherStart + otherLength;
-          return otherEnd <= start || otherStart >= end;
-        });
-      };
-
-      let resolvedStart = desiredStart;
-      if (!isSlotFree(resolvedStart)) {
-        const moveDirection = Math.sign(desiredStart - clip.barStart);
-        let foundStart = null;
-
-        for (let delta = 1; delta <= maxStartByTimeline; delta += 1) {
-          const left = desiredStart - delta;
-          const right = desiredStart + delta;
-          const canLeft = left >= 1 && isSlotFree(left);
-          const canRight = right <= maxStartByTimeline && isSlotFree(right);
-
-          if (!canLeft && !canRight) {
-            continue;
-          }
-
-          if (canLeft && canRight) {
-            foundStart = moveDirection >= 0 ? right : left;
-          } else {
-            foundStart = canRight ? right : left;
-          }
-          break;
-        }
-
-        if (foundStart === null) {
-          return;
-        }
-
-        resolvedStart = foundStart;
-      }
-
       clip.trackId = trackId;
-      clip.barStart = resolvedStart;
+      clip.barStart = desiredStart;
 
       const trackOrderById = state.project.playlistTracks.reduce(function (
         acc,
@@ -2052,6 +1921,37 @@ const dawSlice = createSlice({
 
         return a.barStart - b.barStart;
       });
+    },
+
+    setPlaylistClipTrimStart(state, action) {
+      const clip = state.project.playlistClips.find(function (item) {
+        return item.id === action.payload.clipId;
+      });
+      if (!clip) {
+        return;
+      }
+
+      const nextStart = normalizeBarValue(
+        action.payload.barStart || clip.barStart || 1,
+        1,
+        MAX_PLAYLIST_BARS,
+      );
+      const maxLengthByTimeline = Math.max(
+        MIN_CLIP_BAR_LENGTH,
+        MAX_PLAYLIST_BARS - nextStart + 1,
+      );
+      const nextLength = normalizeBarValue(
+        action.payload.barLength || clip.barLength || 1,
+        MIN_CLIP_BAR_LENGTH,
+        maxLengthByTimeline,
+      );
+
+      clip.barStart = nextStart;
+      clip.barLength = nextLength;
+      clip.sourceOffsetSteps = Math.max(
+        0,
+        Number(action.payload.sourceOffsetSteps || 0),
+      );
     },
 
     setActiveChannel(state, action) {
@@ -3069,6 +2969,7 @@ export const {
   removePlaylistClip,
   setPlaylistClipLength,
   setPlaylistClipPlacement,
+  setPlaylistClipTrimStart,
   setActiveChannel,
   addChannel,
   togglePianoNote,

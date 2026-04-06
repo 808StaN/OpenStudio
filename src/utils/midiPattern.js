@@ -19,7 +19,11 @@ function sanitizeNote(note) {
   const pitch = Number(note.pitch);
   const velocity = Number(note.velocity);
 
-  if (!Number.isFinite(start) || !Number.isFinite(length) || !Number.isFinite(pitch)) {
+  if (
+    !Number.isFinite(start) ||
+    !Number.isFinite(length) ||
+    !Number.isFinite(pitch)
+  ) {
     return null;
   }
 
@@ -27,8 +31,13 @@ function sanitizeNote(note) {
     start: clamp(start, 0, 9999),
     length: clamp(length, 0.0625, 9999),
     pitch: Math.round(clamp(pitch, 0, 127)),
-    velocity: Math.round(clamp(Number.isFinite(velocity) ? velocity : 100, 1, 127)),
-    source: String(note.source || "piano").toLowerCase() === "step" ? "step" : "piano",
+    velocity: Math.round(
+      clamp(Number.isFinite(velocity) ? velocity : 100, 1, 127),
+    ),
+    source:
+      String(note.source || "piano").toLowerCase() === "step"
+        ? "step"
+        : "piano",
   };
 }
 

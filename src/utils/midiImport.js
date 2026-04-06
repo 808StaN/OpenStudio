@@ -10,11 +10,12 @@ function readUint16(bytes, offset) {
 
 function readUint32(bytes, offset) {
   return (
-    (bytes[offset] << 24) |
-    (bytes[offset + 1] << 16) |
-    (bytes[offset + 2] << 8) |
-    bytes[offset + 3]
-  ) >>> 0;
+    ((bytes[offset] << 24) |
+      (bytes[offset + 1] << 16) |
+      (bytes[offset + 2] << 8) |
+      bytes[offset + 3]) >>>
+    0
+  );
 }
 
 function readVarLength(bytes, startOffset) {
@@ -274,7 +275,9 @@ function mapTickNotesToStepNotes(parsed) {
 }
 
 export function isMidiFileName(fileName) {
-  const normalized = String(fileName || "").trim().toLowerCase();
+  const normalized = String(fileName || "")
+    .trim()
+    .toLowerCase();
   return normalized.endsWith(".mid") || normalized.endsWith(".midi");
 }
 
@@ -361,9 +364,11 @@ export function dataTransferHasMidiFilePayload(dataTransfer) {
   }
 
   if (types.includes("Files")) {
-    const droppedFile = Array.from(dataTransfer.files || []).find(function (file) {
-      return isMidiFileName(file?.name);
-    });
+    const droppedFile = Array.from(dataTransfer.files || []).find(
+      function (file) {
+        return isMidiFileName(file?.name);
+      },
+    );
 
     if (droppedFile) {
       return true;
