@@ -1539,11 +1539,11 @@ export function useAudioScheduler() {
       const graph = mixerGraphRef.current;
       const outputNode =
         graph?.inserts?.get("master")?.inputGain || audioCtx.destination;
-      const masterInsert = (mixerSettingsRef.current || []).find(function (
-        insert,
-      ) {
-        return insert?.isMaster || insert?.id === "master";
-      });
+      const masterInsert = (mixerSettingsRef.current || []).find(
+        function (insert) {
+          return insert?.isMaster || insert?.id === "master";
+        },
+      );
       const masterFader = masterInsert?.active
         ? clamp(Number(masterInsert?.fader ?? 1), 0, 1.25)
         : 0;
@@ -1615,14 +1615,12 @@ export function useAudioScheduler() {
           }
 
           updateMasterPreviewMeter();
-          drumkitPreviewMeterRafRef.current = requestAnimationFrame(
-            tickPreviewMeter,
-          );
+          drumkitPreviewMeterRafRef.current =
+            requestAnimationFrame(tickPreviewMeter);
         };
 
-        drumkitPreviewMeterRafRef.current = requestAnimationFrame(
-          tickPreviewMeter,
-        );
+        drumkitPreviewMeterRafRef.current =
+          requestAnimationFrame(tickPreviewMeter);
       }
 
       source.onended = function () {
@@ -1688,7 +1686,10 @@ export function useAudioScheduler() {
             activeVoice.gain.gain.value || BASE_CHANNEL_TRIGGER_GAIN,
             stopTime,
           );
-          activeVoice.gain.gain.linearRampToValueAtTime(0.0001, stopTime + 0.01);
+          activeVoice.gain.gain.linearRampToValueAtTime(
+            0.0001,
+            stopTime + 0.01,
+          );
           activeVoice.source.stop(stopTime + 0.012);
         } catch {
           // Voice might already be stopped.
@@ -1711,11 +1712,11 @@ export function useAudioScheduler() {
         return;
       }
 
-      const masterInsert = (mixerSettingsRef.current || []).find(function (
-        insert,
-      ) {
-        return insert?.isMaster || insert?.id === "master";
-      });
+      const masterInsert = (mixerSettingsRef.current || []).find(
+        function (insert) {
+          return insert?.isMaster || insert?.id === "master";
+        },
+      );
       const target = masterInsert?.active
         ? clamp(Number(masterInsert?.fader ?? 1), 0, 1.25)
         : 0;
@@ -2482,9 +2483,8 @@ export function useAudioScheduler() {
         applyMixerSettingsToGraph();
 
         const outputNode = getInsertInputNodeForChannel(channel);
-        const targetInsertId = String(
-          channel.mixerInsertId || "master",
-        ).trim() || "master";
+        const targetInsertId =
+          String(channel.mixerInsertId || "master").trim() || "master";
         sampleSettingsPreviewMeterInsertIdRef.current = targetInsertId;
 
         const stopSampleSettingsPreviewMeterLoop = function () {
@@ -2509,14 +2509,12 @@ export function useAudioScheduler() {
 
             const nowCtx = audioCtxRef.current || ensureContext();
             updateMixerMeters(nowCtx.currentTime);
-            sampleSettingsPreviewMeterRafRef.current = requestAnimationFrame(
-              tickPreviewMeters,
-            );
+            sampleSettingsPreviewMeterRafRef.current =
+              requestAnimationFrame(tickPreviewMeters);
           };
 
-          sampleSettingsPreviewMeterRafRef.current = requestAnimationFrame(
-            tickPreviewMeters,
-          );
+          sampleSettingsPreviewMeterRafRef.current =
+            requestAnimationFrame(tickPreviewMeters);
         };
 
         startSampleSettingsPreviewMeterLoop();
@@ -2526,8 +2524,7 @@ export function useAudioScheduler() {
         const hasPluginInstrument = Boolean(plugin && plugin.soundfont);
 
         const gainAmount =
-          BASE_CHANNEL_TRIGGER_GAIN *
-          clamp(Number(channel.volume ?? 1), 0, 1);
+          BASE_CHANNEL_TRIGGER_GAIN * clamp(Number(channel.volume ?? 1), 0, 1);
 
         const scheduleSampleSettingsPlugin = function () {
           const nowCtx = audioCtxRef.current || previewContext;
@@ -2604,7 +2601,9 @@ export function useAudioScheduler() {
         }
 
         if (!sampleLoadFailedRef.current.has(safeSampleRef)) {
-          void loadSampleBuffer(safeSampleRef).then(scheduleSampleSettingsSample);
+          void loadSampleBuffer(safeSampleRef).then(
+            scheduleSampleSettingsSample,
+          );
         }
       };
 

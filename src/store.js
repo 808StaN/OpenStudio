@@ -31,6 +31,7 @@ const GRAPHIC_EQ_BAND_TYPES = [
   "lowpass",
   "highpass",
 ];
+const DEFAULT_MIDI_PITCH = 72;
 
 function getDefaultEqBandType(index) {
   if (index === 0) {
@@ -316,6 +317,16 @@ function makeChannelId() {
     Date.now().toString(36) +
     "-" +
     Math.random().toString(36).slice(2, 6)
+  );
+}
+
+function makeMidiPatternNoteId(prefix) {
+  return (
+    prefix +
+    "-" +
+    Date.now().toString(36) +
+    "-" +
+    Math.random().toString(36).slice(2, 7)
   );
 }
 
@@ -1764,6 +1775,166 @@ const dawSlice = createSlice({
       );
     },
 
+    pasteMidiPatternToChannel(state, action) {
+      const pattern = state.project.patterns.find(function (item) {
+        return item.id === action.payload.patternId;
+      });
+      if (!pattern) {
+        return;
+      }
+
+      const channelId = String(action.payload.channelId || "").trim();
+      if (!channelId) {
+        return;
+      }
+
+      const channelExists = state.project.channels.some(function (channel) {
+        return channel.id === channelId;
+      });
+      if (!channelExists) {
+        return;
+      }
+
+      const incomingNotes = Array.isArray(action.payload.notes)
+        ? action.payload.notes
+        : [];
+      if (incomingNotes.length === 0) {
+        return;
+      }
+
+      const patternLength = Math.max(1, Number(pattern.lengthSteps || 16));
+      const safeInsertStep = Math.max(
+        0,
+        Math.min(
+          patternLength - 0.0625,
+          Number(action.payload.insertStep ?? 0),
+        ),
+      );
+
+      if (!pattern.stepGrid) {
+        pattern.stepGrid = {};
+      }
+
+      if (!Array.isArray(pattern.stepGrid[channelId])) {
+        pattern.stepGrid[channelId] = makeStepRow(patternLength, []);
+      }
+
+      if (pattern.stepGrid[channelId].length < patternLength) {
+        pattern.stepGrid[channelId].push(
+          ...Array(patternLength - pattern.stepGrid[channelId].length).fill(
+            false,
+          ),
+        );
+      }
+
+      if (!pattern.pianoPreview) {
+        pattern.pianoPreview = {};
+      }
+
+      if (!Array.isArray(pattern.pianoPreview[channelId])) {
+        pattern.pianoPreview[channelId] = [];
+      }
+
+      const stepRow = pattern.stepGrid[channelId];
+      const pianoNotes = pattern.pianoPreview[channelId];
+      const occupiedPiano = new Set(
+        pianoNotes.map(function (note) {
+          return (
+            Math.round(Number(note.start || 0) * 1000) +
+            ":" +
+            Math.round(Number(note.pitch || DEFAULT_MIDI_PITCH))
+          );
+        }),
+      );
+
+      const normalizedNotes = incomingNotes
+        .map(function (note) {
+          const start = Math.max(
+            0,
+            Math.min(patternLength - 0.0625, Number(note?.start || 0)),
+          );
+          const maxLen = Math.max(0.0625, patternLength - start);
+          const length = Math.max(
+            0.0625,
+            Math.min(maxLen, Number(note?.length || 1)),
+          );
+          const pitch = Math.max(
+            0,
+            Math.min(127, Math.round(Number(note?.pitch || DEFAULT_MIDI_PITCH))),
+          );
+          const velocity = Math.max(
+            1,
+            Math.min(127, Math.round(Number(note?.velocity || 100))),
+          );
+          const source = String(note?.source || "piano").toLowerCase();
+
+          return {
+            start,
+            length,
+            pitch,
+            velocity,
+            source: source === "step" ? "step" : "piano",
+          };
+        })
+        .filter(Boolean);
+
+      if (normalizedNotes.length === 0) {
+        return;
+      }
+
+      const minStart = normalizedNotes.reduce(function (acc, note) {
+        return Math.min(acc, note.start);
+      }, normalizedNotes[0].start);
+
+      normalizedNotes.forEach(function (note) {
+        const shiftedStart = Math.max(
+          0,
+          Math.min(
+            patternLength - 0.0625,
+            safeInsertStep + (note.start - minStart),
+          ),
+        );
+        const maxLen = Math.max(0.0625, patternLength - shiftedStart);
+        const shiftedLength = Math.max(0.0625, Math.min(maxLen, note.length));
+
+        const isStepCandidate =
+          note.source === "step" &&
+          note.pitch === DEFAULT_MIDI_PITCH &&
+          nearlyEqual(shiftedLength, 1) &&
+          nearlyEqual(shiftedStart, Math.round(shiftedStart));
+
+        if (isStepCandidate) {
+          const stepIndex = Math.round(shiftedStart);
+          if (stepIndex >= 0 && stepIndex < patternLength) {
+            stepRow[stepIndex] = true;
+          }
+          return;
+        }
+
+        const pianoKey =
+          Math.round(shiftedStart * 1000) + ":" + Math.round(note.pitch);
+        if (occupiedPiano.has(pianoKey)) {
+          return;
+        }
+
+        occupiedPiano.add(pianoKey);
+        pianoNotes.push({
+          id: makeMidiPatternNoteId("midi"),
+          start: shiftedStart,
+          length: shiftedLength,
+          pitch: note.pitch,
+          velocity: note.velocity,
+        });
+      });
+
+      pianoNotes.sort(function (a, b) {
+        if (a.start !== b.start) {
+          return a.start - b.start;
+        }
+        return b.pitch - a.pitch;
+      });
+    },
+
     setChannelInputMode(state, action) {
       const channel = state.project.channels.find(function (item) {
         return item.id === action.payload.channelId;
@@ -2458,6 +2629,7 @@ export const {
   togglePianoNote,
   setPianoNoteLength,
   movePianoNote,
+  pasteMidiPatternToChannel,
   setChannelInputMode,
   setChannelMute,
   setChannelSolo,

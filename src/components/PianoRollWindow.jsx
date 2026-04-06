@@ -5,11 +5,23 @@ import { getPluginInstrument } from "../data/pluginInstruments";
 import {
   setActiveChannel,
   movePianoNote,
+  pasteMidiPatternToChannel,
   setPianoNoteLength,
   togglePianoNote,
   toggleStep,
 } from "../store";
 import { toSafeSampleUrl } from "../utils/sampleUrl";
+import { triggerMidiDownload } from "../utils/midiExport";
+import {
+  buildMidiPatternDragPayload,
+  extractMidiPatternNotes,
+  readMidiPatternFromDataTransfer,
+} from "../utils/midiPattern";
+import {
+  isMidiFileName,
+  parseMidiArrayBufferToStepNotes,
+  readMidiFilePayloadFromDataTransfer,
+} from "../utils/midiImport";
 import {
   C5_PITCH,
   PIANO_PITCH_MAX,
@@ -1459,6 +1471,135 @@ export function PianoRollWindow() {
     }
   };
 
+  const getDroppedMidiFile = function (dataTransfer) {
+    const files = Array.from(dataTransfer?.files || []);
+    return (
+      files.find(function (file) {
+        return isMidiFileName(file?.name);
+      }) || null
+    );
+  };
+
+  const onPianoRollMidiDragOver = function (event) {
+    const payload = readMidiPatternFromDataTransfer(event.dataTransfer);
+    const midiFilePayload = readMidiFilePayloadFromDataTransfer(
+      event.dataTransfer,
+    );
+    const droppedFile = getDroppedMidiFile(event.dataTransfer);
+
+    if (payload || midiFilePayload || droppedFile) {
+      event.preventDefault();
+      event.dataTransfer.dropEffect = "copy";
+    }
+  };
+
+  const onPianoRollMidiDrop = async function (event) {
+    if (!activePattern || !activeChannel) {
+      return;
+    }
+
+    const payload = readMidiPatternFromDataTransfer(event.dataTransfer);
+
+    const pointer = getGridPointerFromEvent(event);
+    if (!pointer) {
+      return;
+    }
+
+    event.preventDefault();
+
+    const insertStep = clamp(
+      Math.floor(pointer.x / stepWidth),
+      0,
+      patternLength - 1,
+    );
+
+    if (payload) {
+      dispatch(
+        pasteMidiPatternToChannel({
+          patternId: activePatternId,
+          channelId: activeChannel.id,
+          insertStep,
+          notes: payload.notes,
+        }),
+      );
+      return;
+    }
+
+    const midiFilePayload = readMidiFilePayloadFromDataTransfer(
+      event.dataTransfer,
+    );
+    if (midiFilePayload?.midiPath) {
+      try {
+        const response = await fetch(midiFilePayload.midiPath, {
+          cache: "no-store",
+        });
+        if (!response.ok) {
+          return;
+        }
+
+        const bytes = await response.arrayBuffer();
+        const notes = parseMidiArrayBufferToStepNotes(bytes);
+        if (notes.length === 0) {
+          return;
+        }
+
+        dispatch(
+          pasteMidiPatternToChannel({
+            patternId: activePatternId,
+            channelId: activeChannel.id,
+            insertStep,
+            notes,
+          }),
+        );
+      } catch {
+        return;
+      }
+
+      return;
+    }
+
+    const droppedFile = getDroppedMidiFile(event.dataTransfer);
+    if (!droppedFile) {
+      return;
+    }
+
+    try {
+      const bytes = await droppedFile.arrayBuffer();
+      const notes = parseMidiArrayBufferToStepNotes(bytes);
+      if (notes.length === 0) {
+        return;
+      }
+
+      dispatch(
+        pasteMidiPatternToChannel({
+          patternId: activePatternId,
+          channelId: activeChannel.id,
+          insertStep,
+          notes,
+        }),
+      );
+    } catch {
+      return;
+    }
+  };
+
+  const onExportMidiClick = function () {
+    if (!activePattern || !activeChannel) {
+      return;
+    }
+
+    const notes = extractMidiPatternNotes(activePattern, activeChannel.id);
+    if (notes.length === 0) {
+      return;
+    }
+
+    const fileName =
+      String(activePattern.name || "pattern").trim() +
+      "-" +
+      String(activeChannel.name || "channel").trim();
+    triggerMidiDownload(notes, bpm, fileName);
+  };
+
   const onNoteMouseDown = function (event, note) {
     event.stopPropagation();
     event.preventDefault();
@@ -1824,6 +1965,13 @@ export function PianoRollWindow() {
             );
           })}
         </select>
+        <button
+          type="button"
+          className="snap-trigger"
+          onClick={onExportMidiClick}
+        >
+          Export MIDI
+        </button>
         <div className="edit-mode-toggle">
           <button
             type="button"
@@ -1915,7 +2063,7 @@ export function PianoRollWindow() {
           {editMode === "add"
             ? "LMB add. LMB drag note to move, right edge to resize. RMB delete."
             : "Drag to select. Move selected with mouse. Ctrl+C/X/V, Delete, Arrow Up/Down (scale), Shift+Arrow +/-1, Ctrl+Arrow +/-12."}{" "}
-          Wheel: up/down, Ctrl+Wheel: zoom.
+          Drop MID file on Piano Roll (from Drumkits Browser or your computer) to paste melody. Export MIDI saves current channel melody. Wheel: up/down, Ctrl+Wheel: zoom.
         </small>
       </header>
 
@@ -1988,6 +2136,8 @@ export function PianoRollWindow() {
               "--snap-width": snapLineWidth + "px",
               "--snap-opacity": String(snapLineOpacity),
             }}
+            onDragOver={onPianoRollMidiDragOver}
+            onDrop={onPianoRollMidiDrop}
             onMouseDown={onGridMouseDown}
             onContextMenu={function (event) {
               event.preventDefault();

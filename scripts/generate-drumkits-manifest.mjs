@@ -18,6 +18,8 @@ const audioExtensions = new Set([
   ".ogg",
   ".flac",
 ]);
+const midiExtensions = new Set([".mid", ".midi"]);
+const drumkitExtensions = new Set([...audioExtensions, ...midiExtensions]);
 
 function toPosixPath(filePath) {
   return filePath.split(path.sep).join("/");
@@ -39,19 +41,19 @@ function toSafeAliasRelativePath(relPath) {
   return toPosixPath(path.posix.join(safeAliasRoot, safeRel));
 }
 
-async function walkAudioFiles(dirPath, baseDir, output) {
+async function walkDrumkitFiles(dirPath, baseDir, output) {
   const entries = await fs.readdir(dirPath, { withFileTypes: true });
 
   for (const entry of entries) {
     const absolute = path.join(dirPath, entry.name);
 
     if (entry.isDirectory()) {
-      await walkAudioFiles(absolute, baseDir, output);
+      await walkDrumkitFiles(absolute, baseDir, output);
       continue;
     }
 
     const ext = path.extname(entry.name).toLowerCase();
-    if (!audioExtensions.has(ext)) {
+    if (!drumkitExtensions.has(ext)) {
       continue;
     }
 
@@ -67,7 +69,7 @@ async function generateManifest() {
   await fs.rm(safeAliasDir, { recursive: true, force: true });
 
   const files = [];
-  await walkAudioFiles(drumkitsDir, drumkitsDir, files);
+  await walkDrumkitFiles(drumkitsDir, drumkitsDir, files);
 
   const folderMap = new Map();
 
@@ -132,7 +134,7 @@ async function generateManifest() {
     return acc + group.items.length;
   }, 0);
 
-  console.log("Drumkits manifest updated:", filesCount, "audio files");
+  console.log("Drumkits manifest updated:", filesCount, "media files");
 }
 
 generateManifest().catch(function (error) {

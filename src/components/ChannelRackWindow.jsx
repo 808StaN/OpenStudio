@@ -13,12 +13,21 @@ import {
   setChannelMixerInsert,
   setChannelPan,
   setPatternLength,
+  pasteMidiPatternToChannel,
   setChannelSolo,
   setChannelVolume,
   toggleStep,
 } from "../store";
 import { getPluginInstrument } from "../data/pluginInstruments";
 import { C5_PITCH, getChannelMergedNotes } from "../utils/patternNotes";
+import {
+  readMidiPatternFromDataTransfer,
+} from "../utils/midiPattern";
+import {
+  isMidiFileName,
+  parseMidiArrayBufferToStepNotes,
+  readMidiFilePayloadFromDataTransfer,
+} from "../utils/midiImport";
 
 const MIDI_PITCH_MIN = 0;
 const MIDI_PITCH_MAX = 127;
@@ -157,6 +166,124 @@ export function ChannelRackWindow() {
     }
 
     return "Insert " + (index + 1);
+  };
+
+  const getDropStepFromEvent = function (event) {
+    const rect = event.currentTarget.getBoundingClientRect();
+    if (rect.width <= 0) {
+      return 0;
+    }
+
+    const localX = clamp(event.clientX - rect.left, 0, rect.width);
+    const ratio = localX / rect.width;
+    return clamp(Math.floor(ratio * patternLength), 0, patternLength - 1);
+  };
+
+  const onMidiPatternDragOver = function (event) {
+    const payload = readMidiPatternFromDataTransfer(event.dataTransfer);
+    const midiFilePayload = readMidiFilePayloadFromDataTransfer(
+      event.dataTransfer,
+    );
+    const droppedFile = Array.from(event.dataTransfer?.files || []).find(
+      function (file) {
+        return isMidiFileName(file?.name);
+      },
+    );
+
+    if (payload || midiFilePayload || droppedFile) {
+      event.preventDefault();
+      event.dataTransfer.dropEffect = "copy";
+    }
+  };
+
+  const onMidiPatternDrop = async function (event, channel) {
+    if (!channel) {
+      return;
+    }
+
+    const payload = readMidiPatternFromDataTransfer(event.dataTransfer);
+    const midiFilePayload = readMidiFilePayloadFromDataTransfer(
+      event.dataTransfer,
+    );
+    const droppedFile = Array.from(event.dataTransfer?.files || []).find(
+      function (file) {
+        return isMidiFileName(file?.name);
+      },
+    );
+
+    if (!payload && !midiFilePayload && !droppedFile) {
+      return;
+    }
+
+    const insertStep = getDropStepFromEvent(event);
+
+    event.preventDefault();
+    event.stopPropagation();
+
+    if (payload) {
+      dispatch(
+        pasteMidiPatternToChannel({
+          patternId: activePatternId,
+          channelId: channel.id,
+          insertStep,
+          notes: payload.notes,
+        }),
+      );
+      return;
+    }
+
+    if (midiFilePayload?.midiPath) {
+      try {
+        const response = await fetch(midiFilePayload.midiPath, {
+          cache: "no-store",
+        });
+        if (!response.ok) {
+          return;
+        }
+
+        const bytes = await response.arrayBuffer();
+        const notes = parseMidiArrayBufferToStepNotes(bytes);
+        if (notes.length === 0) {
+          return;
+        }
+
+        dispatch(
+          pasteMidiPatternToChannel({
+            patternId: activePatternId,
+            channelId: channel.id,
+            insertStep,
+            notes,
+          }),
+        );
+      } catch {
+        return;
+      }
+
+      return;
+    }
+
+    if (!droppedFile) {
+      return;
+    }
+
+    try {
+      const bytes = await droppedFile.arrayBuffer();
+      const notes = parseMidiArrayBufferToStepNotes(bytes);
+      if (notes.length === 0) {
+        return;
+      }
+
+      dispatch(
+        pasteMidiPatternToChannel({
+          patternId: activePatternId,
+          channelId: channel.id,
+          insertStep,
+          notes,
+        }),
+      );
+    } catch {
+      return;
+    }
   };
 
   const handleRackKnobSpace = function (event) {
@@ -403,7 +530,6 @@ export function ChannelRackWindow() {
                   >
                     S
                   </button>
-
                   <label className="knob-label">
                     Vol
                     <input
@@ -515,6 +641,10 @@ export function ChannelRackWindow() {
                     <button
                       className="piano-preview"
                       style={{ width: channelGridWidthPx + "px" }}
+                      onDragOver={onMidiPatternDragOver}
+                      onDrop={function (event) {
+                        void onMidiPatternDrop(event, channel);
+                      }}
                       onClick={function () {
                         dispatch(setActiveChannel(channel.id));
                         dispatch(openWindow("pianoRoll"));
@@ -561,6 +691,10 @@ export function ChannelRackWindow() {
                   ) : (
                     <div
                       className="step-grid"
+                      onDragOver={onMidiPatternDragOver}
+                      onDrop={function (event) {
+                        void onMidiPatternDrop(event, channel);
+                      }}
                       style={{
                         gridTemplateColumns:
                           "repeat(" +
