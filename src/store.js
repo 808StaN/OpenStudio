@@ -716,6 +716,7 @@ const UNDO_HISTORY_LIMIT = 140;
 const undoPastStates = [];
 const undoFutureStates = [];
 const LOAD_PROJECT_FROM_FILE_ACTION = "daw/loadProjectFromFile";
+const RESET_TO_DEFAULT_PROJECT_ACTION = "daw/resetToDefaultProject";
 const nonUndoableActionTypes = new Set([
   "daw/setPlayheadStep",
   "daw/setInsertMeter",
@@ -724,6 +725,7 @@ const nonUndoableActionTypes = new Set([
   "daw/setTransportMode",
   "daw/bringWindowToFront",
   LOAD_PROJECT_FROM_FILE_ACTION,
+  RESET_TO_DEFAULT_PROJECT_ACTION,
 ]);
 
 function isObjectLike(value) {
@@ -1231,17 +1233,6 @@ function shouldTrackUndoForAction(action) {
   return true;
 }
 
-function syncTransportModeWithWindow(state, windowId) {
-  if (windowId === "channelRack") {
-    state.transport.mode = "pattern";
-    return;
-  }
-
-  if (windowId === "playlist") {
-    state.transport.mode = "song";
-  }
-}
-
 const dawSlice = createSlice({
   name: "daw",
   initialState,
@@ -1280,6 +1271,10 @@ const dawSlice = createSlice({
       return sanitizedState;
     },
 
+    resetToDefaultProject() {
+      return cloneSerializable(initialState) || initialState;
+    },
+
     openWindow(state, action) {
       const windowId = String(action.payload || "");
       if (!windowId || !state.ui.windows[windowId]) {
@@ -1289,7 +1284,6 @@ const dawSlice = createSlice({
       state.ui.nextZ += 1;
       state.ui.windows[windowId].open = true;
       state.ui.windows[windowId].z = state.ui.nextZ;
-      syncTransportModeWithWindow(state, windowId);
     },
     closeWindow(state, action) {
       state.ui.windows[action.payload].open = false;
@@ -1302,7 +1296,6 @@ const dawSlice = createSlice({
 
       state.ui.nextZ += 1;
       state.ui.windows[windowId].z = state.ui.nextZ;
-      syncTransportModeWithWindow(state, windowId);
     },
     setWindowRect(state, action) {
       const win = state.ui.windows[action.payload.id];
@@ -2983,6 +2976,16 @@ const dawReducerWithUndo = function (state = initialState, action) {
     return loadedState;
   }
 
+  if (action.type === RESET_TO_DEFAULT_PROJECT_ACTION) {
+    const resetState = dawSlice.reducer(state, action);
+    if (resetState !== state) {
+      undoPastStates.length = 0;
+      undoFutureStates.length = 0;
+    }
+
+    return resetState;
+  }
+
   const nextState = dawSlice.reducer(state, action);
   if (nextState === state) {
     return state;
@@ -3007,6 +3010,7 @@ export const {
   setSongLoopEnabled,
   setPlayheadStep,
   loadProjectFromFile,
+  resetToDefaultProject,
   openWindow,
   closeWindow,
   bringWindowToFront,

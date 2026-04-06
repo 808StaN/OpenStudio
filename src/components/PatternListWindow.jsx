@@ -197,7 +197,10 @@ export function PatternListWindow() {
       });
     };
 
-    window.addEventListener("openstudio:playlist-audio-focus", onPlaylistAudioFocus);
+    window.addEventListener(
+      "openstudio:playlist-audio-focus",
+      onPlaylistAudioFocus,
+    );
     window.addEventListener(
       "openstudio:playlist-pattern-focus",
       onPlaylistPatternFocus,

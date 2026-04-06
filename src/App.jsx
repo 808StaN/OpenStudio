@@ -189,6 +189,16 @@ function App() {
   useEffect(
     function () {
       const onKeyDown = function (event) {
+        const isSelectAllShortcut =
+          event.code === "KeyA" &&
+          (event.ctrlKey || event.metaKey) &&
+          !event.altKey;
+
+        if (isSelectAllShortcut && !shouldIgnoreSpaceShortcut(event.target)) {
+          event.preventDefault();
+          return;
+        }
+
         const isUndoShortcut =
           event.code === "KeyZ" &&
           (event.ctrlKey || event.metaKey) &&

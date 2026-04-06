@@ -4,6 +4,16 @@
   overflow: hidden;
   display: flex;
   flex-direction: column;
+  -webkit-user-select: none;
+  user-select: none;
+}
+
+.app-shell input,
+.app-shell textarea,
+.app-shell select,
+.app-shell [contenteditable="true"] {
+  -webkit-user-select: text;
+  user-select: text;
 }
 
 .transport-shell {

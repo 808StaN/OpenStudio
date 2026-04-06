@@ -9,6 +9,7 @@ import {
   isMidiFileName,
   writeMidiFileToDataTransfer,
 } from "../utils/midiImport";
+import { toSafeSampleUrl } from "../utils/sampleUrl";
 
 const DRUMKIT_MEDIA_EXTENSIONS = new Set([
   ".wav",
@@ -76,14 +77,15 @@ export function BrowserPanel() {
   });
 
   const playSamplePreview = function (samplePath) {
-    if (!samplePath) {
+    const safeSamplePath = toSafeSampleUrl(samplePath);
+    if (!safeSamplePath) {
       return;
     }
 
     window.dispatchEvent(
       new CustomEvent("openstudio:drumkit-preview", {
         detail: {
-          samplePath,
+          samplePath: safeSamplePath,
         },
       }),
     );
@@ -562,11 +564,17 @@ export function BrowserPanel() {
                           return;
                         }
 
+                        const safeSamplePath = toSafeSampleUrl(sampleItem.path);
+                        if (!safeSamplePath) {
+                          event.preventDefault();
+                          return;
+                        }
+
                         const payload = JSON.stringify({
                           tab: "drumkits",
                           folder: node.path,
                           file: sampleItem.name,
-                          samplePath: sampleItem.path,
+                          samplePath: safeSamplePath,
                         });
 
                         event.dataTransfer.effectAllowed = "copy";

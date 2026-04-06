@@ -37,7 +37,9 @@ function toWebPathFromRelative(relPath) {
 }
 
 function toSafeAliasRelativePath(relPath) {
-  const safeRel = String(relPath || "").replace(/#/g, "_hash_");
+  const safeRel = String(relPath || "")
+    .replace(/#/g, "_hash_")
+    .replace(/\+/g, "_plus_");
   return toPosixPath(path.posix.join(safeAliasRoot, safeRel));
 }
 
@@ -83,7 +85,7 @@ async function generateManifest() {
     const name = path.posix.basename(relPath);
     let targetRelativePath = relPath;
 
-    if (relPath.includes("#")) {
+    if (relPath.includes("#") || relPath.includes("+")) {
       targetRelativePath = toSafeAliasRelativePath(relPath);
       const sourceAbsolute = path.join(drumkitsDir, ...relPath.split("/"));
       const targetAbsolute = path.join(

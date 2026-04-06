@@ -1,6 +1,7 @@
 import {
   Circle,
   Download,
+  FilePlus2,
   FolderOpen,
   Grid2X2,
   ListMusic,
@@ -16,11 +17,14 @@ import { useDispatch, useSelector } from "react-redux";
 import {
   loadProjectFromFile,
   openWindow,
+  resetToDefaultProject,
   setBpm,
   setPlaying,
   setRecording,
   setTransportMode,
+  setWindowRect,
   store,
+  toggleWindowMaximize,
 } from "../store";
 
 function DraggableBpm({ value, onChange, min, max }) {
@@ -163,6 +167,69 @@ export function TopToolbar() {
     <header className="transport-shell">
       <div className="transport-main">
         <button
+          className="transport-btn small"
+          onClick={function () {
+            dispatch(resetToDefaultProject());
+
+            const workspace = document.querySelector(".workspace-surface");
+            const viewport = workspace
+              ? {
+                  width: workspace.clientWidth,
+                  height: workspace.clientHeight,
+                }
+              : {
+                  width: window.innerWidth,
+                  height: window.innerHeight,
+                };
+
+            dispatch(toggleWindowMaximize({ id: "playlist", viewport }));
+
+            const nextState = store.getState().daw;
+            const rackWindow = nextState?.ui?.windows?.channelRack;
+            if (rackWindow) {
+              const centeredX = Math.max(
+                0,
+                Math.round((viewport.width - rackWindow.width) / 2),
+              );
+              const centeredY = Math.max(
+                0,
+                Math.round((viewport.height - rackWindow.height) / 2),
+              );
+
+              dispatch(
+                setWindowRect({
+                  id: "channelRack",
+                  x: centeredX,
+                  y: centeredY,
+                  width: rackWindow.width,
+                  height: rackWindow.height,
+                }),
+              );
+            }
+          }}
+        >
+          <FilePlus2 size={14} />
+          New project
+        </button>
+        <button className="transport-btn small" onClick={onLoadProjectClick}>
+          <FolderOpen size={14} />
+          Load project
+        </button>
+        <button className="transport-btn small" onClick={onSaveProjectClick}>
+          <Save size={14} />
+          Save project
+        </button>
+        <button
+          className="transport-btn small"
+          onClick={function () {
+            dispatch(openWindow("renderExport"));
+          }}
+        >
+          <Download size={14} />
+          Render
+        </button>
+
+        <button
           className="transport-btn"
           title={transport.isPlaying ? "Stop" : "Play"}
           aria-label={transport.isPlaying ? "Stop" : "Play"}
@@ -212,24 +279,6 @@ export function TopToolbar() {
             Song
           </button>
         </div>
-
-        <button className="transport-btn small" onClick={onLoadProjectClick}>
-          <FolderOpen size={14} />
-          Load project
-        </button>
-        <button className="transport-btn small" onClick={onSaveProjectClick}>
-          <Save size={14} />
-          Save project
-        </button>
-        <button
-          className="transport-btn small"
-          onClick={function () {
-            dispatch(openWindow("renderExport"));
-          }}
-        >
-          <Download size={14} />
-          Render
-        </button>
         <input
           ref={projectFileInputRef}
           type="file"
