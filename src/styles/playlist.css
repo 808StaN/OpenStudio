@@ -113,6 +113,32 @@
   box-shadow: 0 0 0 1px rgba(130, 212, 255, 0.35);
 }
 
+.playlist-loop-toggle {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  margin-left: 4px;
+  color: #9eb0ca;
+  font-size: 11px;
+}
+
+.playlist-loop-btn {
+  height: 22px;
+  border-radius: 5px;
+  border: 1px solid #5d6a84;
+  background: linear-gradient(180deg, #223146 0%, #162131 100%);
+  color: #e6efff;
+  padding: 0 8px;
+  font-size: 11px;
+  cursor: pointer;
+}
+
+.playlist-loop-btn.is-active {
+  border-color: #9dd6ff;
+  box-shadow: 0 0 0 1px rgba(157, 214, 255, 0.25);
+  background: linear-gradient(180deg, #2e4867 0%, #213750 100%);
+}
+
 .playlist-header {
   display: grid;
   border-bottom: 1px solid #3f4758;

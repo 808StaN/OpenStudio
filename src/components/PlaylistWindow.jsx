@@ -8,8 +8,11 @@ import {
   removePlaylistClip,
   setActiveChannel,
   setActivePattern,
+  setPlayheadStep,
   setPlaylistClipPlacement,
   setPlaylistClipLength,
+  setSongLoopEnabled,
+  setTransportMode,
 } from "../store";
 import { getPatternDragSession } from "../utils/patternDragSession";
 import { C5_PITCH } from "../utils/patternNotes";
@@ -297,6 +300,9 @@ export function PlaylistWindow() {
   const transportMode = useSelector(function (state) {
     return state.daw.transport.mode;
   });
+  const songLoopEnabled = useSelector(function (state) {
+    return Boolean(state.daw.transport.songLoopEnabled);
+  });
 
   const ensureAudioDecodeContext = function () {
     if (!audioDecodeContextRef.current) {
@@ -481,7 +487,7 @@ export function PlaylistWindow() {
         cancelAnimationFrame(rafId);
       };
     },
-    [isPlaying, bpm, timelineSteps, barWidth],
+    [isPlaying, bpm, timelineSteps, barWidth, playheadStep],
   );
 
   useEffect(
@@ -633,6 +639,39 @@ export function PlaylistWindow() {
     setPlaylistBarCount(
       clamp(Math.round(parsed), MIN_PLAYLIST_BARS, MAX_PLAYLIST_BARS),
     );
+  };
+
+  const onPlaylistHeaderMouseDown = function (event) {
+    if (event.button !== 0) {
+      return;
+    }
+
+    const barCell = event.target.closest(".bar-cell");
+    if (!barCell) {
+      return;
+    }
+
+    const barIndex = Number(barCell.getAttribute("data-bar-index"));
+    if (!Number.isFinite(barIndex) || barIndex < 0) {
+      return;
+    }
+
+    const rect = barCell.getBoundingClientRect();
+    if (rect.width <= 0) {
+      return;
+    }
+
+    const localX = clamp(event.clientX - rect.left, 0, rect.width);
+    const stepOffsetInBar = clamp(
+      Math.floor((localX / rect.width) * 16),
+      0,
+      15,
+    );
+
+    const nextStep = Math.max(0, barIndex * 16 + stepOffsetInBar);
+
+    dispatch(setTransportMode("song"));
+    dispatch(setPlayheadStep(nextStep));
   };
 
   const startResize = function (event, clip, trackId) {
@@ -1143,12 +1182,35 @@ export function PlaylistWindow() {
             onChange={onPlaylistLengthChange}
           />
         </label>
+
+        <div className="playlist-loop-toggle" role="group" aria-label="Song loop">
+          <span>Loop</span>
+          <button
+            type="button"
+            className={"playlist-loop-btn" + (songLoopEnabled ? " is-active" : "")}
+            onClick={function () {
+              dispatch(setSongLoopEnabled(true));
+            }}
+          >
+            On
+          </button>
+          <button
+            type="button"
+            className={"playlist-loop-btn" + (!songLoopEnabled ? " is-active" : "")}
+            onClick={function () {
+              dispatch(setSongLoopEnabled(false));
+            }}
+          >
+            Off
+          </button>
+        </div>
       </div>
 
       <div className="playlist-header-shell">
         <div
           ref={playlistHeaderRef}
           className="playlist-header"
+          onMouseDown={onPlaylistHeaderMouseDown}
           style={{
             gridTemplateColumns:
               "92px repeat(" + playlistBarCount + ", " + barWidth + "px)",
@@ -1158,7 +1220,7 @@ export function PlaylistWindow() {
           <div className="bar-label empty" />
           {Array.from({ length: playlistBarCount }).map(function (_, index) {
             return (
-              <div className="bar-cell" key={index}>
+              <div className="bar-cell" key={index} data-bar-index={index}>
                 {index + 1}
               </div>
             );
@@ -1172,7 +1234,7 @@ export function PlaylistWindow() {
         onScroll={onPlaylistBodyScroll}
         onWheel={onPlaylistBodyWheel}
       >
-        {isPlaying ? (
+        {isPlaying || currentStep16 > 0 ? (
           <div
             className="playlist-playhead-layer"
             style={{ width: timelineWidth + "px" }}

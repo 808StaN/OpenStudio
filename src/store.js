@@ -435,6 +435,7 @@ const initialState = {
     isPlaying: false,
     isRecording: false,
     mode: "pattern",
+    songLoopEnabled: false,
     currentStep16: 0,
   },
   ui: {
@@ -769,6 +770,7 @@ function sanitizeLoadedDawState(currentState, rawLoadedState) {
     Math.min(300, Math.round(Number(nextTransport.bpm || 140))),
   );
   nextTransport.mode = nextTransport.mode === "song" ? "song" : "pattern";
+  nextTransport.songLoopEnabled = Boolean(nextTransport.songLoopEnabled);
   nextTransport.isPlaying = false;
   nextTransport.isRecording = false;
   nextTransport.currentStep16 = 0;
@@ -848,7 +850,9 @@ function sanitizeLoadedDawState(currentState, rawLoadedState) {
         return null;
       }
 
-      const rawStepGrid = isObjectLike(pattern.stepGrid) ? pattern.stepGrid : {};
+      const rawStepGrid = isObjectLike(pattern.stepGrid)
+        ? pattern.stepGrid
+        : {};
       const stepGrid = {};
       nextProject.channels.forEach(function (channel) {
         const rawRow = Array.isArray(rawStepGrid[channel.id])
@@ -889,14 +893,15 @@ function sanitizeLoadedDawState(currentState, rawLoadedState) {
             );
 
             return {
-              id:
-                String(note.id || "").trim() ||
-                makeMidiPatternNoteId("load"),
+              id: String(note.id || "").trim() || makeMidiPatternNoteId("load"),
               start,
               length,
               pitch: Math.max(
                 0,
-                Math.min(127, Math.round(Number(note.pitch || DEFAULT_MIDI_PITCH))),
+                Math.min(
+                  127,
+                  Math.round(Number(note.pitch || DEFAULT_MIDI_PITCH)),
+                ),
               ),
               velocity: Math.max(
                 1,
@@ -980,7 +985,11 @@ function sanitizeLoadedDawState(currentState, rawLoadedState) {
             return null;
           }
 
-          const barStart = normalizeBarValue(clip.barStart || 1, 1, MAX_PLAYLIST_BARS);
+          const barStart = normalizeBarValue(
+            clip.barStart || 1,
+            1,
+            MAX_PLAYLIST_BARS,
+          );
           const barLength = normalizeBarValue(
             clip.barLength || 1,
             MIN_CLIP_BAR_LENGTH,
@@ -994,9 +1003,7 @@ function sanitizeLoadedDawState(currentState, rawLoadedState) {
             }
 
             return {
-              id:
-                String(clip.id || "").trim() ||
-                "clip-load-" + (index + 1),
+              id: String(clip.id || "").trim() || "clip-load-" + (index + 1),
               clipType,
               patternId,
               trackId,
@@ -1012,13 +1019,13 @@ function sanitizeLoadedDawState(currentState, rawLoadedState) {
 
           const maybeChannelId = String(clip.channelId || "").trim();
           return {
-            id:
-              String(clip.id || "").trim() ||
-              "clip-load-" + (index + 1),
+            id: String(clip.id || "").trim() || "clip-load-" + (index + 1),
             clipType,
             samplePath,
             audioName: String(clip.audioName || "Audio").trim() || "Audio",
-            channelId: channelIdSet.has(maybeChannelId) ? maybeChannelId : undefined,
+            channelId: channelIdSet.has(maybeChannelId)
+              ? maybeChannelId
+              : undefined,
             trackId,
             barStart,
             barLength,
@@ -1052,9 +1059,7 @@ function sanitizeLoadedDawState(currentState, rawLoadedState) {
 
       const rawId = String(insert.id || "").trim();
       const isMaster = insert.isMaster === true || rawId === "master";
-      const safeId = isMaster
-        ? "master"
-        : rawId || "insert-" + (index + 1);
+      const safeId = isMaster ? "master" : rawId || "insert-" + (index + 1);
 
       const normalizedInsert = {
         ...insert,
@@ -1119,7 +1124,8 @@ function sanitizeLoadedDawState(currentState, rawLoadedState) {
   const firstNonMasterInsert =
     nextMixer.inserts.find(function (insert) {
       return !insert.isMaster;
-    }) || nextMixer.inserts.find(function (insert) {
+    }) ||
+    nextMixer.inserts.find(function (insert) {
       return insert.id !== "master";
     });
   const fallbackInsertId = firstNonMasterInsert
@@ -1203,6 +1209,9 @@ const dawSlice = createSlice({
     },
     setTransportMode(state, action) {
       state.transport.mode = action.payload;
+    },
+    setSongLoopEnabled(state, action) {
+      state.transport.songLoopEnabled = Boolean(action.payload);
     },
     setPlayheadStep(state, action) {
       state.transport.currentStep16 = Math.max(0, Math.round(action.payload));
@@ -2299,7 +2308,10 @@ const dawSlice = createSlice({
           );
           const pitch = Math.max(
             0,
-            Math.min(127, Math.round(Number(note?.pitch || DEFAULT_MIDI_PITCH))),
+            Math.min(
+              127,
+              Math.round(Number(note?.pitch || DEFAULT_MIDI_PITCH)),
+            ),
           );
           const velocity = Math.max(
             1,
@@ -3030,6 +3042,7 @@ export const {
   setPlaying,
   setRecording,
   setTransportMode,
+  setSongLoopEnabled,
   setPlayheadStep,
   loadProjectFromFile,
   openWindow,

@@ -2,7 +2,7 @@ import { useCallback, useEffect, useRef } from "react";
 import Soundfont from "soundfont-player";
 import { useDispatch, useSelector } from "react-redux";
 import { getPluginInstrument } from "../data/pluginInstruments";
-import { setInsertMeter, setPlayheadStep } from "../store";
+import { setInsertMeter, setPlayheadStep, setPlaying } from "../store";
 import { toSafeSampleUrl } from "../utils/sampleUrl";
 import { createWsolaStretchedBufferFromSample } from "./wsolaStretch";
 
@@ -860,6 +860,7 @@ export function useAudioScheduler() {
   const patternsRef = useRef(patterns);
   const playlistClipsRef = useRef(playlistClips);
   const transportModeRef = useRef(transport.mode);
+  const songLoopEnabledRef = useRef(Boolean(transport.songLoopEnabled));
   const scheduledAudioClipStartRef = useRef(new Map());
   const mixerSettingsRef = useRef(mixerSettings);
   const mixerGraphRef = useRef(null);
@@ -1758,6 +1759,13 @@ export function useAudioScheduler() {
       transportModeRef.current = transport.mode;
     },
     [transport.mode],
+  );
+
+  useEffect(
+    function () {
+      songLoopEnabledRef.current = Boolean(transport.songLoopEnabled);
+    },
+    [transport.songLoopEnabled],
   );
 
   useEffect(
@@ -2932,13 +2940,32 @@ export function useAudioScheduler() {
       };
 
       nextNoteTimeRef.current = audioCtx.currentTime + 0.02;
-      startedAtRef.current = nextNoteTimeRef.current;
-      stepRef.current = 0;
+      const playbackCycleLength =
+        transportModeRef.current === "song"
+          ? Math.max(1, getSongLengthInSteps())
+          : Math.max(1, activePatternRef.current?.lengthSteps || 16);
+      const requestedStartStep = Math.max(
+        0,
+        Math.round(Number(transport.currentStep16 || 0)),
+      );
+      if (transportModeRef.current === "song") {
+        if (songLoopEnabledRef.current) {
+          stepRef.current = requestedStartStep % playbackCycleLength;
+        } else {
+          stepRef.current = Math.min(playbackCycleLength - 1, requestedStartStep);
+        }
+      } else {
+        stepRef.current = requestedStartStep % playbackCycleLength;
+      }
+      startedAtRef.current =
+        nextNoteTimeRef.current - stepRef.current * sixteenth;
       scheduledAudioClipStartRef.current.clear();
 
       const tick = function () {
         const now = audioCtx.currentTime;
         const transportMode = transportModeRef.current;
+        const songLoopEnabled = songLoopEnabledRef.current;
+        let reachedSongEnd = false;
 
         applyMixerSettingsToGraph();
         updateMixerMeters(now);
@@ -2946,7 +2973,14 @@ export function useAudioScheduler() {
         while (nextNoteTimeRef.current < now + scheduleAhead) {
           if (transportMode === "song") {
             const songLength = Math.max(1, getSongLengthInSteps());
-            const currentSongStep = stepRef.current % songLength;
+            if (!songLoopEnabled && stepRef.current >= songLength) {
+              reachedSongEnd = true;
+              break;
+            }
+
+            const currentSongStep = songLoopEnabled
+              ? stepRef.current % songLength
+              : stepRef.current;
             scheduleSongStep(
               currentSongStep,
               stepRef.current,
@@ -2970,12 +3004,24 @@ export function useAudioScheduler() {
           nextNoteTimeRef.current += sixteenth;
         }
 
+        if (reachedSongEnd) {
+          dispatch(setPlayheadStep(Math.max(0, getSongLengthInSteps() - 1)));
+          dispatch(setPlaying(false));
+          return;
+        }
+
         const elapsed = now - startedAtRef.current;
         const uiLength =
           transportMode === "song"
             ? Math.max(1, getSongLengthInSteps())
             : Math.max(1, activePatternRef.current?.lengthSteps || 16);
-        const uiStep = Math.floor(elapsed / sixteenth) % uiLength;
+        const elapsedSteps = Math.floor(elapsed / sixteenth);
+        const uiStep =
+          transportMode === "song"
+            ? songLoopEnabled
+              ? elapsedSteps % uiLength
+              : Math.min(uiLength - 1, Math.max(0, elapsedSteps))
+            : elapsedSteps % uiLength;
         dispatch(setPlayheadStep(uiStep));
 
         rafIdRef.current = requestAnimationFrame(tick);
