@@ -221,6 +221,15 @@ export function TopToolbar() {
           <Save size={14} />
           Save project
         </button>
+        <button
+          className="transport-btn small"
+          onClick={function () {
+            dispatch(openWindow("renderExport"));
+          }}
+        >
+          <Download size={14} />
+          Render
+        </button>
         <input
           ref={projectFileInputRef}
           type="file"
@@ -277,15 +286,6 @@ export function TopToolbar() {
         >
           <SlidersHorizontal size={14} />
           Mixer
-        </button>
-        <button
-          className="transport-btn small"
-          onClick={function () {
-            dispatch(openWindow("renderExport"));
-          }}
-        >
-          <Download size={14} />
-          Render
         </button>
       </div>
     </header>

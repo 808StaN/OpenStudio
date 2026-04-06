@@ -128,9 +128,6 @@ export function PatternListWindow() {
   const colorRafMapRef = useRef(new Map());
   const pendingColorMapRef = useRef(new Map());
 
-  const activePatternId = useSelector(function (state) {
-    return state.daw.project.activePatternId;
-  });
   const patterns = useSelector(function (state) {
     return state.daw.project.patterns;
   });
@@ -154,6 +151,24 @@ export function PatternListWindow() {
       return pattern.id;
     });
 
+  useEffect(
+    function () {
+      const activeSelectionId =
+        orderedSelectedPatternIds.length > 0
+          ? orderedSelectedPatternIds[orderedSelectedPatternIds.length - 1]
+          : null;
+
+      window.dispatchEvent(
+        new CustomEvent("openstudio:pattern-list-selection-changed", {
+          detail: {
+            patternId: activeSelectionId,
+          },
+        }),
+      );
+    },
+    [orderedSelectedPatternIds],
+  );
+
   useEffect(function () {
     return function () {
       colorRafMapRef.current.forEach(function (rafId) {
@@ -162,6 +177,40 @@ export function PatternListWindow() {
       colorRafMapRef.current.clear();
       pendingColorMapRef.current.clear();
       clearPatternDragSession();
+    };
+  }, []);
+
+  useEffect(function () {
+    const onPlaylistAudioFocus = function () {
+      setSelectedPatternIds([]);
+      setOpenColorPatternId(null);
+    };
+
+    const onPlaylistPatternFocus = function (event) {
+      const patternId = String(event?.detail?.patternId || "").trim();
+      if (!patternId) {
+        return;
+      }
+
+      setSelectedPatternIds(function (prev) {
+        return prev.length === 1 && prev[0] === patternId ? prev : [patternId];
+      });
+    };
+
+    window.addEventListener("openstudio:playlist-audio-focus", onPlaylistAudioFocus);
+    window.addEventListener(
+      "openstudio:playlist-pattern-focus",
+      onPlaylistPatternFocus,
+    );
+    return function () {
+      window.removeEventListener(
+        "openstudio:playlist-audio-focus",
+        onPlaylistAudioFocus,
+      );
+      window.removeEventListener(
+        "openstudio:playlist-pattern-focus",
+        onPlaylistPatternFocus,
+      );
     };
   }, []);
 
@@ -466,7 +515,6 @@ export function PatternListWindow() {
 
       <div className="pattern-list-body">
         {patterns.map(function (pattern) {
-          const isActive = pattern.id === activePatternId;
           const pickerState = getPickerStateForPattern(pattern);
           const pickerColor = rgbToHex(
             hsvToRgb(pickerState.h, pickerState.s, pickerState.v),
@@ -481,7 +529,6 @@ export function PatternListWindow() {
               key={pattern.id}
               className={
                 "pattern-list-row" +
-                (isActive ? " is-active" : "") +
                 (selectedIdSet.has(pattern.id) ? " is-selected" : "") +
                 (draggingPatternId === pattern.id ? " is-dragging" : "")
               }
@@ -522,18 +569,6 @@ export function PatternListWindow() {
               }}
             >
               <div className="pattern-list-row-top">
-                <button
-                  type="button"
-                  className="pattern-list-select"
-                  onClick={function (event) {
-                    event.stopPropagation();
-                    setSelectedPatternIds([pattern.id]);
-                    dispatch(setActivePattern(pattern.id));
-                  }}
-                >
-                  {isActive ? "Active" : "Select"}
-                </button>
-
                 <input
                   className="pattern-list-name"
                   value={pattern.name}

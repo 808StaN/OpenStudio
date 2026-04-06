@@ -443,7 +443,6 @@ export function BrowserPanel() {
 
           setDrumkitGroups(discoveredFolders);
           setManifestStatus("ready");
-          setExpandedByParent({});
           return;
         }
 
@@ -456,11 +455,9 @@ export function BrowserPanel() {
 
         setDrumkitGroups(merged);
         setManifestStatus("ready");
-        setExpandedByParent({});
       } catch {
         setDrumkitGroups([]);
         setManifestStatus("missing");
-        setExpandedByParent({});
       }
     },
     [discoverDrumkitsFromDirectoryIndex],

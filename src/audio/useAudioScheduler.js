@@ -2752,7 +2752,10 @@ export function useAudioScheduler() {
                 return acc;
               }
 
-              if (noteStart >= sustainSourceStep || noteEnd <= sustainSourceStep) {
+              if (
+                noteStart >= sustainSourceStep ||
+                noteEnd <= sustainSourceStep
+              ) {
                 return acc;
               }
 
@@ -2967,7 +2970,8 @@ export function useAudioScheduler() {
           }
 
           schedulePatternStep(pattern, patternStepWithOffset, noteTime, {
-            includeSustainFromStep: relativeStep === 0 && clipSourceOffsetSteps > 0,
+            includeSustainFromStep:
+              relativeStep === 0 && clipSourceOffsetSteps > 0,
             sustainSourceStep: patternStepWithOffset,
           });
         });
@@ -2986,7 +2990,10 @@ export function useAudioScheduler() {
         if (songLoopEnabledRef.current) {
           stepRef.current = requestedStartStep % playbackCycleLength;
         } else {
-          stepRef.current = Math.min(playbackCycleLength - 1, requestedStartStep);
+          stepRef.current = Math.min(
+            playbackCycleLength - 1,
+            requestedStartStep,
+          );
         }
       } else {
         stepRef.current = requestedStartStep % playbackCycleLength;

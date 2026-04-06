@@ -1,6 +1,7 @@
 import { memo, useEffect, useMemo, useRef, useState } from "react";
 import { useDispatch, useSelector } from "react-redux";
 import {
+  addPlaylistAudioClip,
   addPlaylistPatternClip,
   addPlaylistSampleAsChannel,
   addPlaylistTrack,
@@ -264,6 +265,8 @@ const ClipPreviewNotes = memo(function ClipPreviewNotes(props) {
 
 export function PlaylistWindow() {
   const dispatch = useDispatch();
+  const lastTouchedAudioClipRef = useRef(null);
+  const patternSelectionForInsertRef = useRef(null);
   const previewCacheRef = useRef(new Map());
   const snapMenuRef = useRef(null);
   const playlistShellRef = useRef(null);
@@ -279,7 +282,7 @@ export function PlaylistWindow() {
   const [playlistBarCount, setPlaylistBarCount] = useState(
     DEFAULT_PLAYLIST_BARS,
   );
-  const [snapKey, setSnapKey] = useState("bar");
+  const [snapKey, setSnapKey] = useState("1-2-beat");
   const [isSnapMenuOpen, setIsSnapMenuOpen] = useState(false);
   const [dropPreview, setDropPreview] = useState(null);
   const [isPointerOverPlaylist, setIsPointerOverPlaylist] = useState(false);
@@ -316,6 +319,25 @@ export function PlaylistWindow() {
   const songLoopEnabled = useSelector(function (state) {
     return Boolean(state.daw.transport.songLoopEnabled);
   });
+
+  useEffect(function () {
+    const onPatternSelectionChanged = function (event) {
+      const nextPatternId = String(event?.detail?.patternId || "").trim();
+      patternSelectionForInsertRef.current = nextPatternId || null;
+    };
+
+    window.addEventListener(
+      "openstudio:pattern-list-selection-changed",
+      onPatternSelectionChanged,
+    );
+
+    return function () {
+      window.removeEventListener(
+        "openstudio:pattern-list-selection-changed",
+        onPatternSelectionChanged,
+      );
+    };
+  }, []);
 
   const ensureAudioDecodeContext = function () {
     if (!audioDecodeContextRef.current) {
@@ -812,8 +834,30 @@ export function PlaylistWindow() {
 
     event.preventDefault();
     event.stopPropagation();
+
+    if (clip.clipType === "audio") {
+      lastTouchedAudioClipRef.current = {
+        samplePath: String(clip.samplePath || "").trim(),
+        audioName: String(clip.audioName || "Audio").trim() || "Audio",
+        barLength: Math.max(MIN_CLIP_BAR_LENGTH, Number(clip.barLength || 1)),
+        sourceOffsetSteps: Math.max(0, Number(clip.sourceOffsetSteps || 0)),
+        channelId: String(clip.channelId || "").trim() || null,
+      };
+
+      patternSelectionForInsertRef.current = null;
+      window.dispatchEvent(new CustomEvent("openstudio:playlist-audio-focus"));
+    }
+
     if (clip.clipType !== "audio" && clip.patternId) {
       dispatch(setActivePattern(clip.patternId));
+      patternSelectionForInsertRef.current = clip.patternId;
+      window.dispatchEvent(
+        new CustomEvent("openstudio:playlist-pattern-focus", {
+          detail: {
+            patternId: clip.patternId,
+          },
+        }),
+      );
     }
 
     const startClientX = event.clientX;
@@ -951,7 +995,16 @@ export function PlaylistWindow() {
       return normalized;
     }
 
-    return normalizePatternIds([activePatternId]);
+    const activeFallback = normalizePatternIds([activePatternId]);
+    if (activeFallback.length > 0) {
+      return activeFallback;
+    }
+
+    const firstPatternId = patterns.find(function (pattern) {
+      return Boolean(pattern?.id) && Boolean(patternsById[pattern.id]);
+    })?.id;
+
+    return normalizePatternIds([firstPatternId]);
   };
 
   const hasDraggedPatternData = function (event) {
@@ -1065,13 +1118,25 @@ export function PlaylistWindow() {
       const resolvedBars = analysis
         ? analysis.durationSec / Math.max(0.001, secondsPerBar)
         : AUDIO_CLIP_FALLBACK_BAR_LENGTH;
+      const normalizedBarLength = clamp(resolvedBars, MIN_CLIP_BAR_LENGTH, 64);
+      const safeSamplePath = toSafeSampleUrl(samplePayload.samplePath);
+
+      lastTouchedAudioClipRef.current = {
+        samplePath: safeSamplePath,
+        audioName: samplePayload.clipName,
+        barLength: normalizedBarLength,
+        sourceOffsetSteps: 0,
+        channelId: null,
+      };
+      patternSelectionForInsertRef.current = null;
+      window.dispatchEvent(new CustomEvent("openstudio:playlist-audio-focus"));
 
       dispatch(
         addPlaylistSampleAsChannel({
           trackId,
           barStart: clamp(startBar, 1, playlistBarCount),
-          barLength: clamp(resolvedBars, MIN_CLIP_BAR_LENGTH, 64),
-          samplePath: toSafeSampleUrl(samplePayload.samplePath),
+          barLength: normalizedBarLength,
+          samplePath: safeSamplePath,
           clipName: samplePayload.clipName,
         }),
       );
@@ -1158,22 +1223,53 @@ export function PlaylistWindow() {
           return;
         }
 
-        const patternIds = resolvePatternIdsForPlacement(clipboardPatternIds);
-        if (patternIds.length === 0) {
-          return;
-        }
-
         const fallbackTrackId = tracks[0]?.id;
         const targetTrackId = lastHoverPlacement?.trackId || fallbackTrackId;
         if (!targetTrackId) {
           return;
         }
 
+        const targetBarStart = clamp(
+          lastHoverPlacement?.barStart ?? 1,
+          1,
+          playlistBarCount,
+        );
+
+        const selectedPatternId = patternSelectionForInsertRef.current;
+        if (selectedPatternId) {
+          const patternIds = normalizePatternIds(clipboardPatternIds);
+          const patternIdsToPaste =
+            patternIds.length > 0
+              ? patternIds
+              : normalizePatternIds([selectedPatternId]);
+
+          if (patternIdsToPaste.length > 0) {
+            event.preventDefault();
+            placePatternsOnTrack(
+              targetTrackId,
+              targetBarStart,
+              patternIdsToPaste,
+            );
+            return;
+          }
+        }
+
+        const touchedAudioClip = lastTouchedAudioClipRef.current;
+        if (!touchedAudioClip?.samplePath) {
+          return;
+        }
+
         event.preventDefault();
-        placePatternsOnTrack(
-          targetTrackId,
-          clamp(lastHoverPlacement?.barStart ?? 1, 1, playlistBarCount),
-          patternIds,
+        dispatch(
+          addPlaylistAudioClip({
+            trackId: targetTrackId,
+            barStart: targetBarStart,
+            barLength: touchedAudioClip.barLength,
+            samplePath: touchedAudioClip.samplePath,
+            clipName: touchedAudioClip.audioName,
+            channelId: touchedAudioClip.channelId,
+            sourceOffsetSteps: touchedAudioClip.sourceOffsetSteps,
+          }),
         );
       };
 
@@ -1188,7 +1284,7 @@ export function PlaylistWindow() {
       lastHoverPlacement,
       tracks,
       placePatternsOnTrack,
-      resolvePatternIdsForPlacement,
+      playlistBarCount,
     ],
   );
 
@@ -1267,11 +1363,17 @@ export function PlaylistWindow() {
           />
         </label>
 
-        <div className="playlist-loop-toggle" role="group" aria-label="Song loop">
+        <div
+          className="playlist-loop-toggle"
+          role="group"
+          aria-label="Song loop"
+        >
           <span>Loop</span>
           <button
             type="button"
-            className={"playlist-loop-btn" + (songLoopEnabled ? " is-active" : "")}
+            className={
+              "playlist-loop-btn" + (songLoopEnabled ? " is-active" : "")
+            }
             onClick={function () {
               dispatch(setSongLoopEnabled(true));
             }}
@@ -1280,7 +1382,9 @@ export function PlaylistWindow() {
           </button>
           <button
             type="button"
-            className={"playlist-loop-btn" + (!songLoopEnabled ? " is-active" : "")}
+            className={
+              "playlist-loop-btn" + (!songLoopEnabled ? " is-active" : "")
+            }
             onClick={function () {
               dispatch(setSongLoopEnabled(false));
             }}
@@ -1345,23 +1449,41 @@ export function PlaylistWindow() {
               return;
             }
 
-            const rect = event.currentTarget.getBoundingClientRect();
-            const x = clamp(event.clientX - rect.left, 0, rect.width);
-            const barStart = clamp(
-              Math.floor((x / rect.width) * playlistBarCount) + 1,
-              1,
-              playlistBarCount,
+            const barStart = resolveBarStartFromPointer(
+              event,
+              event.currentTarget,
             );
             setLastHoverPlacement({
               trackId: track.id,
               barStart,
             });
 
+            const selectedPatternId = patternSelectionForInsertRef.current;
+            if (selectedPatternId && patternsById[selectedPatternId]) {
+              dispatch(
+                addPlaylistPatternClip({
+                  patternId: selectedPatternId,
+                  trackId: track.id,
+                  barStart,
+                }),
+              );
+              return;
+            }
+
+            const touchedAudioClip = lastTouchedAudioClipRef.current;
+            if (!touchedAudioClip?.samplePath) {
+              return;
+            }
+
             dispatch(
-              addPlaylistPatternClip({
-                patternId: activePatternId,
+              addPlaylistAudioClip({
                 trackId: track.id,
                 barStart,
+                barLength: touchedAudioClip.barLength,
+                samplePath: touchedAudioClip.samplePath,
+                clipName: touchedAudioClip.audioName,
+                channelId: touchedAudioClip.channelId,
+                sourceOffsetSteps: touchedAudioClip.sourceOffsetSteps,
               }),
             );
           };
@@ -1653,7 +1775,10 @@ export function PlaylistWindow() {
                     0.01,
                     Number(audioAnalysis?.durationSec || 0.01),
                   );
-                  const sourceStartSec = Math.min(sourceDurationSec, clipOffsetSec);
+                  const sourceStartSec = Math.min(
+                    sourceDurationSec,
+                    clipOffsetSec,
+                  );
                   const visibleDurationSec = Math.min(
                     Math.max(0, sourceDurationSec - sourceStartSec),
                     clipDurationSec,
@@ -1730,6 +1855,14 @@ export function PlaylistWindow() {
                         }
 
                         dispatch(setActivePattern(clip.patternId));
+                        patternSelectionForInsertRef.current = clip.patternId;
+                        window.dispatchEvent(
+                          new CustomEvent("openstudio:playlist-pattern-focus", {
+                            detail: {
+                              patternId: clip.patternId,
+                            },
+                          }),
+                        );
                         dispatch(openWindow("channelRack"));
                       }}
                     >

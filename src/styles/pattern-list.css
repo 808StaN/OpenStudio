@@ -38,6 +38,34 @@
   display: flex;
   flex-direction: column;
   gap: 8px;
+  scrollbar-width: thin;
+  scrollbar-color: #7f8ca2 #202838;
+}
+
+.pattern-list-body::-webkit-scrollbar {
+  height: 12px;
+  width: 12px;
+}
+
+.pattern-list-body::-webkit-scrollbar-track {
+  background: linear-gradient(180deg, #1f2736 0%, #141c2a 100%);
+  border: 1px solid #3f4b62;
+  border-radius: 999px;
+  box-shadow: inset 0 1px 3px rgba(0, 0, 0, 0.45);
+}
+
+.pattern-list-body::-webkit-scrollbar-thumb {
+  border-radius: 999px;
+  border: 1px solid #9aa7bd;
+  background: linear-gradient(180deg, #d9deea 0%, #9ca8bc 48%, #7a879d 100%);
+  box-shadow:
+    inset 0 1px 0 rgba(255, 255, 255, 0.35),
+    inset 0 -1px 0 rgba(0, 0, 0, 0.25),
+    0 0 6px rgba(130, 150, 179, 0.35);
+}
+
+.pattern-list-body::-webkit-scrollbar-thumb:hover {
+  filter: brightness(1.08);
 }
 
 .pattern-list-row {
@@ -67,7 +95,7 @@
 
 .pattern-list-row-top {
   display: grid;
-  grid-template-columns: 70px minmax(0, 1fr) 32px;
+  grid-template-columns: minmax(0, 1fr) auto;
   gap: 8px;
 }
 
@@ -77,7 +105,7 @@
   width: 32px;
   height: 28px;
   border-radius: 6px;
-  border: 1px solid #61708d;
+  border: 0;
   background: linear-gradient(180deg, #151f2f 0%, #101827 100%);
   display: inline-flex;
   align-items: center;
@@ -100,6 +128,8 @@
 .pattern-list-color-wrap {
   position: relative;
   justify-self: end;
+  display: inline-flex;
+  align-items: center;
 }
 
 .pattern-list-color-popover {
@@ -217,6 +247,7 @@
 .pattern-list-meta {
   display: flex;
   justify-content: space-between;
+  align-items: center;
   color: #9fb0ca;
   font-size: 11px;
 }

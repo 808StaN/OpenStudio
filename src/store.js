@@ -522,7 +522,7 @@ const initialState = {
         z: 8,
         x: 780,
         y: 140,
-        width: 360,
+        width: 300,
         height: 440,
         isMaximized: false,
         restoreRect: null,
@@ -685,7 +685,20 @@ const initialState = {
         id: "insert-4",
         name: "Insert 4",
         isMaster: false,
-        active: false,
+        active: true,
+        pan: 0,
+        stereoSeparation: 0,
+        fader: 1,
+        meter: 0,
+        meterSpectrum: makeInsertSpectrum(),
+        routesTo: ["master"],
+        fxSlots: makeFxSlots(),
+      },
+      {
+        id: "insert-5",
+        name: "Insert 5",
+        isMaster: false,
+        active: true,
         pan: 0,
         stereoSeparation: 0,
         fader: 1,
@@ -1118,6 +1131,42 @@ function sanitizeLoadedDawState(currentState, rawLoadedState) {
       routesTo: [],
       fxSlots: makeFxSlots(),
     });
+  }
+
+  const requiredInserts = [
+    "insert-1",
+    "insert-2",
+    "insert-3",
+    "insert-4",
+    "insert-5",
+  ];
+  requiredInserts.forEach(function (insertId, index) {
+    const exists = nextMixer.inserts.some(function (insert) {
+      return !insert.isMaster && insert.id === insertId;
+    });
+
+    if (!exists) {
+      nextMixer.inserts.push({
+        id: insertId,
+        name: "Insert " + (index + 1),
+        isMaster: false,
+        active: true,
+        pan: 0,
+        stereoSeparation: 0,
+        fader: 1,
+        meter: 0,
+        meterSpectrum: makeInsertSpectrum(),
+        routesTo: ["master"],
+        fxSlots: makeFxSlots(),
+      });
+    }
+  });
+
+  const insert4 = nextMixer.inserts.find(function (insert) {
+    return !insert.isMaster && insert.id === "insert-4";
+  });
+  if (insert4) {
+    insert4.active = true;
   }
 
   const insertIdSet = new Set(
@@ -1669,6 +1718,18 @@ const dawSlice = createSlice({
         MIN_CLIP_BAR_LENGTH,
         64,
       );
+      const requestedChannelId = String(action.payload.channelId || "").trim();
+      const channelId = requestedChannelId
+        ? state.project.channels.some(function (channel) {
+            return channel.id === requestedChannelId;
+          })
+          ? requestedChannelId
+          : undefined
+        : undefined;
+      const sourceOffsetSteps = Math.max(
+        0,
+        Number(action.payload.sourceOffsetSteps || 0),
+      );
 
       state.project.playlistClips.push({
         id:
@@ -1679,10 +1740,11 @@ const dawSlice = createSlice({
         clipType: "audio",
         samplePath,
         audioName: clipName,
+        channelId,
         trackId,
         barStart,
         barLength,
-        sourceOffsetSteps: 0,
+        sourceOffsetSteps,
       });
 
       const trackOrderById = state.project.playlistTracks.reduce(function (
