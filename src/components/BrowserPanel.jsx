@@ -4,6 +4,23 @@ import { useDispatch, useSelector } from "react-redux";
 import { PLUGIN_EFFECTS } from "../data/pluginEffects";
 import { PLUGIN_INSTRUMENTS } from "../data/pluginInstruments";
 import { setBrowserTab } from "../store";
+import {
+  buildMidiFileDragPayload,
+  isMidiFileName,
+  writeMidiFileToDataTransfer,
+} from "../utils/midiImport";
+
+const DRUMKIT_MEDIA_EXTENSIONS = new Set([
+  ".wav",
+  ".wave",
+  ".aif",
+  ".aiff",
+  ".mp3",
+  ".ogg",
+  ".flac",
+  ".mid",
+  ".midi",
+]);
 
 const browserData = {
   plugins: [
@@ -79,6 +96,209 @@ export function BrowserPanel() {
     return folderPath;
   };
 
+  const buildGroupsFromRelativePaths = function (relativePaths) {
+    const folderMap = new Map();
+
+    relativePaths.forEach(function (relativePath) {
+      const cleanRelative = String(relativePath || "")
+        .replace(/^\/+/, "")
+        .trim();
+      if (!cleanRelative) {
+        return;
+      }
+
+      const segments = cleanRelative.split("/").filter(Boolean);
+      const fileName = segments[segments.length - 1];
+      if (!fileName) {
+        return;
+      }
+
+      const folderSegments = segments.slice(0, -1);
+      if (folderSegments[0] === "__safe__") {
+        return;
+      }
+
+      const folder = folderSegments.length > 0 ? folderSegments.join("/") : "Root";
+      const encodedPath =
+        "/drumkits/" +
+        segments
+          .map(function (segment) {
+            return encodeURIComponent(segment);
+          })
+          .join("/");
+
+      if (!folderMap.has(folder)) {
+        folderMap.set(folder, []);
+      }
+
+      folderMap.get(folder).push({
+        name: fileName,
+        path: encodedPath,
+      });
+    });
+
+    return Array.from(folderMap.entries())
+      .map(function (entry) {
+        const folder = entry[0];
+        const items = entry[1];
+
+        items.sort(function (a, b) {
+          return a.name.localeCompare(b.name);
+        });
+
+        return {
+          folder,
+          items,
+        };
+      })
+      .sort(function (a, b) {
+        return a.folder.localeCompare(b.folder);
+      });
+  };
+
+  const mergeGroups = function (manifestFolders, discoveredFolders) {
+    const mergedMap = new Map();
+
+    const appendFolders = function (folders) {
+      (Array.isArray(folders) ? folders : []).forEach(function (group) {
+        const folder = String(group?.folder || "Root");
+        if (!mergedMap.has(folder)) {
+          mergedMap.set(folder, new Map());
+        }
+
+        const itemMap = mergedMap.get(folder);
+        (Array.isArray(group?.items) ? group.items : []).forEach(function (item) {
+          const name = String(item?.name || "").trim();
+          const path = String(item?.path || "").trim();
+          if (!name || !path) {
+            return;
+          }
+
+          if (!itemMap.has(path)) {
+            itemMap.set(path, {
+              name,
+              path,
+            });
+          }
+        });
+      });
+    };
+
+    appendFolders(manifestFolders);
+    appendFolders(discoveredFolders);
+
+    return Array.from(mergedMap.entries())
+      .map(function (entry) {
+        const folder = entry[0];
+        const items = Array.from(entry[1].values()).sort(function (a, b) {
+          return a.name.localeCompare(b.name);
+        });
+
+        return {
+          folder,
+          items,
+        };
+      })
+      .sort(function (a, b) {
+        return a.folder.localeCompare(b.folder);
+      });
+  };
+
+  const discoverDrumkitsFromDirectoryIndex = useCallback(async function () {
+    const queue = ["/drumkits/"];
+    const visited = new Set();
+    const mediaRelativePaths = new Set();
+    const maxDirectories = 250;
+
+    while (queue.length > 0 && visited.size < maxDirectories) {
+      const directoryUrl = queue.shift();
+      if (!directoryUrl || visited.has(directoryUrl)) {
+        continue;
+      }
+
+      visited.add(directoryUrl);
+
+      let response = null;
+      try {
+        response = await fetch(directoryUrl + "?ts=" + Date.now(), {
+          cache: "no-store",
+        });
+      } catch {
+        continue;
+      }
+
+      if (!response.ok) {
+        continue;
+      }
+
+      const contentType = String(response.headers.get("content-type") || "").toLowerCase();
+      if (!contentType.includes("text/html")) {
+        continue;
+      }
+
+      let html = "";
+      try {
+        html = await response.text();
+      } catch {
+        continue;
+      }
+
+      const doc = new DOMParser().parseFromString(html, "text/html");
+      const links = Array.from(doc.querySelectorAll("a[href]"));
+
+      links.forEach(function (anchor) {
+        const href = String(anchor.getAttribute("href") || "").trim();
+        if (!href || href === "/" || href.startsWith("#")) {
+          return;
+        }
+
+        let resolved = null;
+        try {
+          resolved = new URL(href, window.location.origin + directoryUrl);
+        } catch {
+          return;
+        }
+
+        if (resolved.origin !== window.location.origin) {
+          return;
+        }
+
+        const pathname = decodeURIComponent(resolved.pathname);
+        if (!pathname.startsWith("/drumkits/")) {
+          return;
+        }
+
+        if (pathname.endsWith("/")) {
+          if (pathname.includes("/__safe__/")) {
+            return;
+          }
+
+          queue.push(pathname);
+          return;
+        }
+
+        const fileName = pathname.split("/").pop() || "";
+        const extMatch = fileName.toLowerCase().match(/\.[^.]+$/);
+        const ext = extMatch ? extMatch[0] : "";
+
+        if (!DRUMKIT_MEDIA_EXTENSIONS.has(ext)) {
+          return;
+        }
+
+        const relative = pathname.replace(/^\/drumkits\//, "");
+        if (relative) {
+          mediaRelativePaths.add(relative);
+        }
+      });
+    }
+
+    if (mediaRelativePaths.size === 0) {
+      return [];
+    }
+
+    return buildGroupsFromRelativePaths(Array.from(mediaRelativePaths));
+  }, []);
+
   const buildDrumkitTree = function (folders) {
     const root = {
       path: "",
@@ -117,10 +337,12 @@ export function BrowserPanel() {
                 normalizeFolderPath(group.folder) +
                 "/" +
                 item.name;
+        const itemType = isMidiFileName(sampleName) ? "midi" : "audio";
 
         currentNode.samples.push({
           name: sampleName,
           path: samplePath,
+          type: itemType,
         });
       });
     });
@@ -205,11 +427,25 @@ export function BrowserPanel() {
       });
 
       if (!response.ok) {
-        throw new Error("Manifest not found");
+        const discoveredFolders = await discoverDrumkitsFromDirectoryIndex();
+        if (discoveredFolders.length === 0) {
+          throw new Error("Manifest not found");
+        }
+
+        setDrumkitGroups(discoveredFolders);
+        setManifestStatus("ready");
+        setExpandedByParent({});
+        return;
       }
 
       const manifest = await response.json();
-      setDrumkitGroups(Array.isArray(manifest.folders) ? manifest.folders : []);
+      const manifestFolders = Array.isArray(manifest.folders)
+        ? manifest.folders
+        : [];
+      const discoveredFolders = await discoverDrumkitsFromDirectoryIndex();
+      const merged = mergeGroups(manifestFolders, discoveredFolders);
+
+      setDrumkitGroups(merged);
       setManifestStatus("ready");
       setExpandedByParent({});
     } catch {
@@ -217,7 +453,20 @@ export function BrowserPanel() {
       setManifestStatus("missing");
       setExpandedByParent({});
     }
-  }, []);
+  }, [discoverDrumkitsFromDirectoryIndex]);
+
+  const triggerDrumkitsRescan = useCallback(async function () {
+    try {
+      await fetch("/__openstudio/refresh-drumkits", {
+        method: "POST",
+        cache: "no-store",
+      });
+    } catch {
+      // Ignore endpoint failures outside dev; manifest reload still runs.
+    }
+
+    await loadManifest();
+  }, [loadManifest]);
 
   useEffect(
     function () {
@@ -283,9 +532,25 @@ export function BrowserPanel() {
                       style={{ marginLeft: 16 + depth * 14 + "px" }}
                       draggable
                       onClick={function () {
-                        void playSamplePreview(sampleItem.path);
+                        if (sampleItem.type === "audio") {
+                          void playSamplePreview(sampleItem.path);
+                        }
                       }}
                       onDragStart={function (event) {
+                        if (sampleItem.type === "midi") {
+                          const payload = buildMidiFileDragPayload({
+                            fileName: sampleItem.name,
+                            midiPath: sampleItem.path,
+                          });
+
+                          event.dataTransfer.effectAllowed = "copy";
+                          writeMidiFileToDataTransfer(
+                            event.dataTransfer,
+                            payload,
+                          );
+                          return;
+                        }
+
                         const payload = JSON.stringify({
                           tab: "drumkits",
                           folder: node.path,
@@ -341,7 +606,7 @@ export function BrowserPanel() {
           <button
             className="browser-rescan"
             onClick={function () {
-              void loadManifest();
+              void triggerDrumkitsRescan();
             }}
           >
             Odswiez Drumkity
@@ -354,7 +619,7 @@ export function BrowserPanel() {
           <div className="browser-hint">
             {manifestStatus === "loading"
               ? "Loading drumkits..."
-              : "Wklej WAV do public/drumkits i uruchom npm run refresh:drumkits"}
+              : "Wklej WAV lub MID do public/drumkits i uruchom npm run refresh:drumkits"}
           </div>
         ) : null}
 
