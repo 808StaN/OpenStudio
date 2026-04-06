@@ -609,7 +609,7 @@ export function BrowserPanel() {
               void triggerDrumkitsRescan();
             }}
           >
-            Odswiez Drumkity
+            Refresh
           </button>
         </div>
       ) : null}

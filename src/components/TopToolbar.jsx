@@ -1,22 +1,26 @@
 import {
   Circle,
   Download,
+  FolderOpen,
   Grid2X2,
   ListMusic,
   Music2,
   Play,
   Rows3,
+  Save,
   SlidersHorizontal,
   Square,
 } from "lucide-react";
 import { useRef } from "react";
 import { useDispatch, useSelector } from "react-redux";
 import {
+  loadProjectFromFile,
   openWindow,
   setBpm,
   setPlaying,
   setRecording,
   setTransportMode,
+  store,
 } from "../store";
 
 function DraggableBpm({ value, onChange, min, max }) {
@@ -57,6 +61,7 @@ function DraggableBpm({ value, onChange, min, max }) {
 
 export function TopToolbar() {
   const dispatch = useDispatch();
+  const projectFileInputRef = useRef(null);
   const transport = useSelector(function (state) {
     return state.daw.transport;
   });
@@ -71,6 +76,87 @@ export function TopToolbar() {
     if (event.currentTarget instanceof HTMLElement) {
       event.currentTarget.blur();
     }
+  };
+
+  const onSaveProjectClick = function () {
+    const dawState = store.getState().daw;
+    if (!dawState) {
+      return;
+    }
+
+    const snapshot = JSON.parse(JSON.stringify(dawState));
+    if (snapshot.transport) {
+      snapshot.transport.isPlaying = false;
+      snapshot.transport.isRecording = false;
+      snapshot.transport.currentStep16 = 0;
+    }
+
+    const payload = {
+      format: "openstudio-project",
+      version: 1,
+      savedAt: new Date().toISOString(),
+      daw: snapshot,
+    };
+
+    const serialized = JSON.stringify(payload, null, 2);
+    const fileStamp = new Date().toISOString().replace(/[.:]/g, "-");
+    const fileName = "openstudio-" + fileStamp + ".os";
+    const blob = new Blob([serialized], { type: "application/json" });
+    const objectUrl = URL.createObjectURL(blob);
+
+    const anchor = document.createElement("a");
+    anchor.href = objectUrl;
+    anchor.download = fileName;
+    document.body.appendChild(anchor);
+    anchor.click();
+    anchor.remove();
+
+    setTimeout(function () {
+      URL.revokeObjectURL(objectUrl);
+    }, 0);
+  };
+
+  const onLoadProjectClick = function () {
+    if (!projectFileInputRef.current) {
+      return;
+    }
+
+    projectFileInputRef.current.click();
+  };
+
+  const onProjectFileSelected = async function (event) {
+    const input = event.target;
+    const file = input?.files?.[0] || null;
+    if (!file) {
+      if (input) {
+        input.value = "";
+      }
+      return;
+    }
+
+    try {
+      const text = await file.text();
+      const parsed = JSON.parse(text);
+      const candidate =
+        parsed && typeof parsed === "object" && parsed.daw
+          ? parsed.daw
+          : parsed;
+
+      if (
+        !candidate ||
+        typeof candidate !== "object" ||
+        !candidate.project ||
+        !candidate.transport
+      ) {
+        throw new Error("Invalid project file");
+      }
+
+      dispatch(loadProjectFromFile(candidate));
+    } catch {
+      window.alert("Nie udalo sie wczytac pliku .os");
+    }
+
+    input.value = "";
   };
 
   return (
@@ -126,6 +212,24 @@ export function TopToolbar() {
             Song
           </button>
         </div>
+
+        <button className="transport-btn small" onClick={onLoadProjectClick}>
+          <FolderOpen size={14} />
+          Load project
+        </button>
+        <button className="transport-btn small" onClick={onSaveProjectClick}>
+          <Save size={14} />
+          Save project
+        </button>
+        <input
+          ref={projectFileInputRef}
+          type="file"
+          accept=".os,application/json,text/json"
+          style={{ display: "none" }}
+          onChange={function (event) {
+            void onProjectFileSelected(event);
+          }}
+        />
       </div>
 
       <div className="transport-window-toggles">

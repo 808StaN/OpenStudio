@@ -701,6 +701,7 @@ const undoLastChange = createAction("daw/undoLastChange");
 const UNDO_HISTORY_LIMIT = 140;
 const undoPastStates = [];
 const undoFutureStates = [];
+const LOAD_PROJECT_FROM_FILE_ACTION = "daw/loadProjectFromFile";
 const nonUndoableActionTypes = new Set([
   "daw/setPlayheadStep",
   "daw/setInsertMeter",
@@ -708,7 +709,447 @@ const nonUndoableActionTypes = new Set([
   "daw/setRecording",
   "daw/setTransportMode",
   "daw/bringWindowToFront",
+  LOAD_PROJECT_FROM_FILE_ACTION,
 ]);
+
+function isObjectLike(value) {
+  return Boolean(value) && typeof value === "object" && !Array.isArray(value);
+}
+
+function cloneSerializable(value) {
+  try {
+    return JSON.parse(JSON.stringify(value));
+  } catch {
+    return null;
+  }
+}
+
+function sanitizeLoadedSampleSettings(raw) {
+  const merged = {
+    ...makeSampleSettings(),
+    ...(isObjectLike(raw) ? raw : {}),
+  };
+
+  merged.stretchMode = SAMPLE_STRETCH_MODES.has(merged.stretchMode)
+    ? merged.stretchMode
+    : "resample";
+  merged.stretchTimeMode = SAMPLE_STRETCH_TIME_MODES.has(merged.stretchTimeMode)
+    ? merged.stretchTimeMode
+    : "none";
+
+  return merged;
+}
+
+function sanitizeLoadedDawState(currentState, rawLoadedState) {
+  if (!isObjectLike(rawLoadedState)) {
+    return null;
+  }
+
+  const loadedState = cloneSerializable(rawLoadedState);
+  if (!isObjectLike(loadedState)) {
+    return null;
+  }
+
+  const fallbackState =
+    cloneSerializable(currentState) || cloneSerializable(initialState);
+  if (!isObjectLike(fallbackState)) {
+    return null;
+  }
+
+  const transportRaw = isObjectLike(loadedState.transport)
+    ? loadedState.transport
+    : {};
+  const nextTransport = {
+    ...fallbackState.transport,
+    ...transportRaw,
+  };
+
+  nextTransport.bpm = Math.max(
+    40,
+    Math.min(300, Math.round(Number(nextTransport.bpm || 140))),
+  );
+  nextTransport.mode = nextTransport.mode === "song" ? "song" : "pattern";
+  nextTransport.isPlaying = false;
+  nextTransport.isRecording = false;
+  nextTransport.currentStep16 = 0;
+
+  const uiRaw = isObjectLike(loadedState.ui) ? loadedState.ui : {};
+  const nextUi = {
+    ...fallbackState.ui,
+    ...uiRaw,
+    windows: {
+      ...fallbackState.ui.windows,
+      ...(isObjectLike(uiRaw.windows) ? uiRaw.windows : {}),
+    },
+  };
+
+  const projectRaw = isObjectLike(loadedState.project)
+    ? loadedState.project
+    : fallbackState.project;
+  const nextProject = cloneSerializable(projectRaw);
+
+  if (
+    !isObjectLike(nextProject) ||
+    !Array.isArray(nextProject.channels) ||
+    !Array.isArray(nextProject.patterns)
+  ) {
+    return null;
+  }
+
+  nextProject.channels = nextProject.channels
+    .map(function (channel, index) {
+      if (!isObjectLike(channel)) {
+        return null;
+      }
+
+      const safeId = String(channel.id || "ch-import-" + (index + 1)).trim();
+      if (!safeId) {
+        return null;
+      }
+
+      return {
+        id: safeId,
+        name: String(channel.name || "Channel " + (index + 1)).slice(0, 24),
+        sampleRef: String(channel.sampleRef || "").trim(),
+        pluginRef: String(channel.pluginRef || "").trim(),
+        sampleSettings: sanitizeLoadedSampleSettings(channel.sampleSettings),
+        muted: Boolean(channel.muted),
+        solo: Boolean(channel.solo),
+        volume: Math.max(0, Math.min(1, Number(channel.volume ?? 1))),
+        pan: Math.max(-1, Math.min(1, Number(channel.pan ?? 0))),
+        inputMode: channel.inputMode === "piano" ? "piano" : "steps",
+        mixerInsertId: String(channel.mixerInsertId || "insert-1").trim(),
+      };
+    })
+    .filter(Boolean);
+
+  if (nextProject.channels.length === 0) {
+    return null;
+  }
+
+  const channelIdSet = new Set(
+    nextProject.channels.map(function (channel) {
+      return channel.id;
+    }),
+  );
+
+  nextProject.patterns = nextProject.patterns
+    .map(function (pattern, index) {
+      if (!isObjectLike(pattern)) {
+        return null;
+      }
+
+      const lengthSteps = Math.max(
+        4,
+        Math.min(128, Math.round(Number(pattern.lengthSteps || 16))),
+      );
+      const safeId = String(pattern.id || "pat-import-" + (index + 1)).trim();
+      if (!safeId) {
+        return null;
+      }
+
+      const rawStepGrid = isObjectLike(pattern.stepGrid) ? pattern.stepGrid : {};
+      const stepGrid = {};
+      nextProject.channels.forEach(function (channel) {
+        const rawRow = Array.isArray(rawStepGrid[channel.id])
+          ? rawStepGrid[channel.id]
+          : [];
+
+        stepGrid[channel.id] = Array.from({ length: lengthSteps }).map(
+          function (_, rowIndex) {
+            return Boolean(rawRow[rowIndex]);
+          },
+        );
+      });
+
+      const rawPianoPreview = isObjectLike(pattern.pianoPreview)
+        ? pattern.pianoPreview
+        : {};
+      const pianoPreview = {};
+
+      nextProject.channels.forEach(function (channel) {
+        const rawNotes = Array.isArray(rawPianoPreview[channel.id])
+          ? rawPianoPreview[channel.id]
+          : [];
+
+        pianoPreview[channel.id] = rawNotes
+          .map(function (note) {
+            if (!isObjectLike(note)) {
+              return null;
+            }
+
+            const start = Math.max(
+              0,
+              Math.min(lengthSteps - 0.0625, Number(note.start || 0)),
+            );
+            const maxLen = Math.max(0.0625, lengthSteps - start);
+            const length = Math.max(
+              0.0625,
+              Math.min(maxLen, Number(note.length || 1)),
+            );
+
+            return {
+              id:
+                String(note.id || "").trim() ||
+                makeMidiPatternNoteId("load"),
+              start,
+              length,
+              pitch: Math.max(
+                0,
+                Math.min(127, Math.round(Number(note.pitch || DEFAULT_MIDI_PITCH))),
+              ),
+              velocity: Math.max(
+                1,
+                Math.min(127, Math.round(Number(note.velocity || 100))),
+              ),
+            };
+          })
+          .filter(Boolean)
+          .sort(function (a, b) {
+            if (a.start !== b.start) {
+              return a.start - b.start;
+            }
+
+            return b.pitch - a.pitch;
+          });
+      });
+
+      return {
+        id: safeId,
+        name: String(pattern.name || "Pattern " + (index + 1)).slice(0, 40),
+        color: getSafePatternColor(pattern.color),
+        lengthSteps,
+        stepGrid,
+        pianoPreview,
+      };
+    })
+    .filter(Boolean);
+
+  if (nextProject.patterns.length === 0) {
+    return null;
+  }
+
+  nextProject.playlistTracks = Array.isArray(nextProject.playlistTracks)
+    ? nextProject.playlistTracks
+        .map(function (track, index) {
+          if (!isObjectLike(track)) {
+            return null;
+          }
+
+          const safeId = String(track.id || "trk-" + (index + 1)).trim();
+          if (!safeId) {
+            return null;
+          }
+
+          return {
+            id: safeId,
+            name: String(track.name || "Track " + (index + 1)).slice(0, 40),
+          };
+        })
+        .filter(Boolean)
+    : [];
+
+  if (nextProject.playlistTracks.length === 0) {
+    nextProject.playlistTracks = makePlaylistTracks(10);
+  }
+
+  const trackIdSet = new Set(
+    nextProject.playlistTracks.map(function (track) {
+      return track.id;
+    }),
+  );
+  const patternIdSet = new Set(
+    nextProject.patterns.map(function (pattern) {
+      return pattern.id;
+    }),
+  );
+
+  nextProject.playlistClips = Array.isArray(nextProject.playlistClips)
+    ? nextProject.playlistClips
+        .map(function (clip, index) {
+          if (!isObjectLike(clip)) {
+            return null;
+          }
+
+          const clipType =
+            clip.clipType === "audio" || clip.clipType === "pattern"
+              ? clip.clipType
+              : "pattern";
+          const trackId = String(clip.trackId || "").trim();
+          if (!trackIdSet.has(trackId)) {
+            return null;
+          }
+
+          const barStart = normalizeBarValue(clip.barStart || 1, 1, MAX_PLAYLIST_BARS);
+          const barLength = normalizeBarValue(
+            clip.barLength || 1,
+            MIN_CLIP_BAR_LENGTH,
+            64,
+          );
+
+          if (clipType === "pattern") {
+            const patternId = String(clip.patternId || "").trim();
+            if (!patternIdSet.has(patternId)) {
+              return null;
+            }
+
+            return {
+              id:
+                String(clip.id || "").trim() ||
+                "clip-load-" + (index + 1),
+              clipType,
+              patternId,
+              trackId,
+              barStart,
+              barLength,
+            };
+          }
+
+          const samplePath = String(clip.samplePath || "").trim();
+          if (!samplePath) {
+            return null;
+          }
+
+          const maybeChannelId = String(clip.channelId || "").trim();
+          return {
+            id:
+              String(clip.id || "").trim() ||
+              "clip-load-" + (index + 1),
+            clipType,
+            samplePath,
+            audioName: String(clip.audioName || "Audio").trim() || "Audio",
+            channelId: channelIdSet.has(maybeChannelId) ? maybeChannelId : undefined,
+            trackId,
+            barStart,
+            barLength,
+          };
+        })
+        .filter(Boolean)
+    : [];
+
+  nextProject.activePatternId = patternIdSet.has(nextProject.activePatternId)
+    ? nextProject.activePatternId
+    : nextProject.patterns[0].id;
+
+  nextProject.activeChannelId = channelIdSet.has(nextProject.activeChannelId)
+    ? nextProject.activeChannelId
+    : nextProject.channels[0].id;
+
+  const mixerRaw = isObjectLike(loadedState.mixer)
+    ? loadedState.mixer
+    : fallbackState.mixer;
+  const nextMixer = cloneSerializable(mixerRaw);
+
+  if (!isObjectLike(nextMixer) || !Array.isArray(nextMixer.inserts)) {
+    return null;
+  }
+
+  nextMixer.inserts = nextMixer.inserts
+    .map(function (insert, index) {
+      if (!isObjectLike(insert)) {
+        return null;
+      }
+
+      const rawId = String(insert.id || "").trim();
+      const isMaster = insert.isMaster === true || rawId === "master";
+      const safeId = isMaster
+        ? "master"
+        : rawId || "insert-" + (index + 1);
+
+      const normalizedInsert = {
+        ...insert,
+        id: safeId,
+        name: String(
+          insert.name || (isMaster ? "Master" : "Insert " + (index + 1)),
+        ).trim(),
+        isMaster,
+        active: isMaster ? true : Boolean(insert.active),
+        pan: Math.max(-1, Math.min(1, Number(insert.pan || 0))),
+        stereoSeparation: Math.max(
+          -1,
+          Math.min(1, Number(insert.stereoSeparation || 0)),
+        ),
+        fader: Math.max(0, Math.min(1.25, Number(insert.fader || 1))),
+        meter: 0,
+        meterSpectrum: makeInsertSpectrum(),
+        routesTo: Array.isArray(insert.routesTo)
+          ? insert.routesTo.map(function (routeId) {
+              return String(routeId || "").trim();
+            })
+          : isMaster
+            ? []
+            : ["master"],
+      };
+
+      ensureInsertFxSlots(normalizedInsert);
+      return normalizedInsert;
+    })
+    .filter(Boolean);
+
+  if (nextMixer.inserts.length === 0) {
+    return null;
+  }
+
+  const masterExists = nextMixer.inserts.some(function (insert) {
+    return insert.isMaster || insert.id === "master";
+  });
+
+  if (!masterExists) {
+    nextMixer.inserts.unshift({
+      id: "master",
+      name: "Master",
+      isMaster: true,
+      active: true,
+      pan: 0,
+      stereoSeparation: 0,
+      fader: 1,
+      meter: 0,
+      meterSpectrum: makeInsertSpectrum(),
+      routesTo: [],
+      fxSlots: makeFxSlots(),
+    });
+  }
+
+  const insertIdSet = new Set(
+    nextMixer.inserts.map(function (insert) {
+      return insert.id;
+    }),
+  );
+
+  const firstNonMasterInsert =
+    nextMixer.inserts.find(function (insert) {
+      return !insert.isMaster;
+    }) || nextMixer.inserts.find(function (insert) {
+      return insert.id !== "master";
+    });
+  const fallbackInsertId = firstNonMasterInsert
+    ? firstNonMasterInsert.id
+    : "insert-1";
+
+  nextProject.channels = nextProject.channels.map(function (channel) {
+    const requestedInsertId = String(channel.mixerInsertId || "").trim();
+    return {
+      ...channel,
+      mixerInsertId: insertIdSet.has(requestedInsertId)
+        ? requestedInsertId
+        : fallbackInsertId,
+    };
+  });
+
+  if (!insertIdSet.has(nextMixer.selectedInsertId)) {
+    nextMixer.selectedInsertId =
+      fallbackInsertId === "insert-1" && insertIdSet.has("insert-1")
+        ? "insert-1"
+        : nextMixer.inserts[0].id;
+  }
+
+  return {
+    transport: nextTransport,
+    ui: nextUi,
+    project: nextProject,
+    mixer: nextMixer,
+  };
+}
 
 function shouldTrackUndoForAction(action) {
   if (!action || typeof action.type !== "string") {
@@ -765,6 +1206,15 @@ const dawSlice = createSlice({
     },
     setPlayheadStep(state, action) {
       state.transport.currentStep16 = Math.max(0, Math.round(action.payload));
+    },
+
+    loadProjectFromFile(state, action) {
+      const sanitizedState = sanitizeLoadedDawState(state, action.payload);
+      if (!sanitizedState) {
+        return state;
+      }
+
+      return sanitizedState;
     },
 
     openWindow(state, action) {
@@ -2549,6 +2999,16 @@ const dawReducerWithUndo = function (state = initialState, action) {
     return previousState;
   }
 
+  if (action.type === LOAD_PROJECT_FROM_FILE_ACTION) {
+    const loadedState = dawSlice.reducer(state, action);
+    if (loadedState !== state) {
+      undoPastStates.length = 0;
+      undoFutureStates.length = 0;
+    }
+
+    return loadedState;
+  }
+
   const nextState = dawSlice.reducer(state, action);
   if (nextState === state) {
     return state;
@@ -2571,6 +3031,7 @@ export const {
   setRecording,
   setTransportMode,
   setPlayheadStep,
+  loadProjectFromFile,
   openWindow,
   closeWindow,
   bringWindowToFront,
