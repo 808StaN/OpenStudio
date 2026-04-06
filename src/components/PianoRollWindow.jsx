@@ -14,10 +14,12 @@ import { toSafeSampleUrl } from "../utils/sampleUrl";
 import { triggerMidiDownload } from "../utils/midiExport";
 import {
   buildMidiPatternDragPayload,
+  dataTransferHasMidiPatternPayload,
   extractMidiPatternNotes,
   readMidiPatternFromDataTransfer,
 } from "../utils/midiPattern";
 import {
+  dataTransferHasMidiFilePayload,
   isMidiFileName,
   parseMidiArrayBufferToStepNotes,
   readMidiFilePayloadFromDataTransfer,
@@ -221,6 +223,7 @@ export function PianoRollWindow() {
   const isSyncingScrollRef = useRef(false);
   const initializedViewportRef = useRef(false);
   const snapMenuRef = useRef(null);
+  const midiImportInputRef = useRef(null);
   const dragSelectionRef = useRef(null);
   const previewAudioContextRef = useRef(null);
   const previewSampleBufferCacheRef = useRef(new Map());
@@ -1481,13 +1484,23 @@ export function PianoRollWindow() {
   };
 
   const onPianoRollMidiDragOver = function (event) {
+    const hasMidiPatternType = dataTransferHasMidiPatternPayload(
+      event.dataTransfer,
+    );
+    const hasMidiFileType = dataTransferHasMidiFilePayload(event.dataTransfer);
     const payload = readMidiPatternFromDataTransfer(event.dataTransfer);
     const midiFilePayload = readMidiFilePayloadFromDataTransfer(
       event.dataTransfer,
     );
     const droppedFile = getDroppedMidiFile(event.dataTransfer);
 
-    if (payload || midiFilePayload || droppedFile) {
+    if (
+      hasMidiPatternType ||
+      hasMidiFileType ||
+      payload ||
+      midiFilePayload ||
+      droppedFile
+    ) {
       event.preventDefault();
       event.dataTransfer.dropEffect = "copy";
     }
@@ -1598,6 +1611,53 @@ export function PianoRollWindow() {
       "-" +
       String(activeChannel.name || "channel").trim();
     triggerMidiDownload(notes, bpm, fileName);
+  };
+
+  const onImportMidiClick = function () {
+    if (!midiImportInputRef.current) {
+      return;
+    }
+
+    midiImportInputRef.current.click();
+  };
+
+  const onImportMidiFileChange = async function (event) {
+    const input = event.target;
+    const file = input?.files?.[0] || null;
+
+    if (!file || !isMidiFileName(file.name)) {
+      if (input) {
+        input.value = "";
+      }
+      return;
+    }
+
+    if (!activePattern || !activeChannel) {
+      input.value = "";
+      return;
+    }
+
+    try {
+      const bytes = await file.arrayBuffer();
+      const notes = parseMidiArrayBufferToStepNotes(bytes);
+      if (notes.length === 0) {
+        input.value = "";
+        return;
+      }
+
+      dispatch(
+        pasteMidiPatternToChannel({
+          patternId: activePatternId,
+          channelId: activeChannel.id,
+          insertStep: 0,
+          notes,
+        }),
+      );
+    } catch {
+      // Ignore unreadable MIDI files.
+    }
+
+    input.value = "";
   };
 
   const onNoteMouseDown = function (event, note) {
@@ -1968,10 +2028,26 @@ export function PianoRollWindow() {
         <button
           type="button"
           className="snap-trigger"
+          onClick={onImportMidiClick}
+        >
+          Import MIDI
+        </button>
+        <button
+          type="button"
+          className="snap-trigger"
           onClick={onExportMidiClick}
         >
           Export MIDI
         </button>
+        <input
+          ref={midiImportInputRef}
+          type="file"
+          accept=".mid,.midi,audio/midi,audio/x-midi"
+          style={{ display: "none" }}
+          onChange={function (event) {
+            void onImportMidiFileChange(event);
+          }}
+        />
         <div className="edit-mode-toggle">
           <button
             type="button"
@@ -2063,7 +2139,7 @@ export function PianoRollWindow() {
           {editMode === "add"
             ? "LMB add. LMB drag note to move, right edge to resize. RMB delete."
             : "Drag to select. Move selected with mouse. Ctrl+C/X/V, Delete, Arrow Up/Down (scale), Shift+Arrow +/-1, Ctrl+Arrow +/-12."}{" "}
-          Drop MID file on Piano Roll (from Drumkits Browser or your computer) to paste melody. Export MIDI saves current channel melody. Wheel: up/down, Ctrl+Wheel: zoom.
+          Drop MID file on Piano Roll (from Drumkits Browser or your computer) to paste melody. Import MIDI opens file picker. Export MIDI saves current channel melody. Wheel: up/down, Ctrl+Wheel: zoom.
         </small>
       </header>
 

@@ -118,3 +118,15 @@ export function readMidiPatternFromDataTransfer(dataTransfer) {
 
   return parseMidiPatternDragPayload(dataTransfer.getData("text/plain"));
 }
+
+export function dataTransferHasMidiPatternPayload(dataTransfer) {
+  if (!dataTransfer) {
+    return false;
+  }
+
+  const types = Array.from(dataTransfer.types || []).map(function (type) {
+    return String(type || "");
+  });
+
+  return types.includes(MIDI_PATTERN_DND_MIME);
+}

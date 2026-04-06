@@ -21,9 +21,11 @@ import {
 import { getPluginInstrument } from "../data/pluginInstruments";
 import { C5_PITCH, getChannelMergedNotes } from "../utils/patternNotes";
 import {
+  dataTransferHasMidiPatternPayload,
   readMidiPatternFromDataTransfer,
 } from "../utils/midiPattern";
 import {
+  dataTransferHasMidiFilePayload,
   isMidiFileName,
   parseMidiArrayBufferToStepNotes,
   readMidiFilePayloadFromDataTransfer,
@@ -169,6 +171,10 @@ export function ChannelRackWindow() {
   };
 
   const onMidiPatternDragOver = function (event) {
+    const hasMidiPatternType = dataTransferHasMidiPatternPayload(
+      event.dataTransfer,
+    );
+    const hasMidiFileType = dataTransferHasMidiFilePayload(event.dataTransfer);
     const payload = readMidiPatternFromDataTransfer(event.dataTransfer);
     const midiFilePayload = readMidiFilePayloadFromDataTransfer(
       event.dataTransfer,
@@ -179,7 +185,13 @@ export function ChannelRackWindow() {
       },
     );
 
-    if (payload || midiFilePayload || droppedFile) {
+    if (
+      hasMidiPatternType ||
+      hasMidiFileType ||
+      payload ||
+      midiFilePayload ||
+      droppedFile
+    ) {
       event.preventDefault();
       event.dataTransfer.dropEffect = "copy";
     }

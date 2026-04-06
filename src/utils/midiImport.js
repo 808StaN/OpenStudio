@@ -346,3 +346,32 @@ export function readMidiFilePayloadFromDataTransfer(dataTransfer) {
 
   return parse(dataTransfer.getData("text/plain"));
 }
+
+export function dataTransferHasMidiFilePayload(dataTransfer) {
+  if (!dataTransfer) {
+    return false;
+  }
+
+  const types = Array.from(dataTransfer.types || []).map(function (type) {
+    return String(type || "");
+  });
+
+  if (types.includes(MIDI_FILE_DND_MIME)) {
+    return true;
+  }
+
+  if (types.includes("Files")) {
+    const droppedFile = Array.from(dataTransfer.files || []).find(function (file) {
+      return isMidiFileName(file?.name);
+    });
+
+    if (droppedFile) {
+      return true;
+    }
+
+    // During dragover some browsers hide file names but still expose the Files type.
+    return true;
+  }
+
+  return false;
+}

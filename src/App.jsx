@@ -13,6 +13,8 @@ import { RenderWindow } from "./components/RenderWindow";
 import { SampleSettingsWindow } from "./components/SampleSettingsWindow";
 import { TopToolbar } from "./components/TopToolbar";
 import { setPlaying, undoLastChange, toggleWindowMaximize } from "./store";
+import { MIDI_FILE_DND_MIME } from "./utils/midiImport";
+import { MIDI_PATTERN_DND_MIME } from "./utils/midiPattern";
 import "./styles/app-shell.css";
 import "./styles/browser.css";
 import "./styles/channel-rack.css";
@@ -92,6 +94,27 @@ function getFxWindowTitle(activeInsert, activeSlot) {
     : String(activeInsert.name || "Insert").trim() || "Insert";
 
   return effectLabel + " (" + insertLabel + ")";
+}
+
+function shouldBlockNativeFileDrop(dataTransfer) {
+  if (!dataTransfer) {
+    return false;
+  }
+
+  const types = Array.from(dataTransfer.types || []).map(function (type) {
+    return String(type || "");
+  });
+
+  if (types.includes("Files")) {
+    return true;
+  }
+
+  return (
+    types.includes(MIDI_FILE_DND_MIME) ||
+    types.includes(MIDI_PATTERN_DND_MIME) ||
+    types.includes("application/x-daw-sample") ||
+    types.includes("application/x-daw-plugin")
+  );
 }
 
 function App() {
@@ -207,6 +230,32 @@ function App() {
     },
     [dispatch, isPlaying, windows],
   );
+
+  useEffect(function () {
+    const onWindowDragOver = function (event) {
+      if (!shouldBlockNativeFileDrop(event.dataTransfer)) {
+        return;
+      }
+
+      event.preventDefault();
+    };
+
+    const onWindowDrop = function (event) {
+      if (!shouldBlockNativeFileDrop(event.dataTransfer)) {
+        return;
+      }
+
+      event.preventDefault();
+    };
+
+    window.addEventListener("dragover", onWindowDragOver);
+    window.addEventListener("drop", onWindowDrop);
+
+    return function () {
+      window.removeEventListener("dragover", onWindowDragOver);
+      window.removeEventListener("drop", onWindowDrop);
+    };
+  }, []);
 
   const onAppContextMenu = function (event) {
     event.preventDefault();
