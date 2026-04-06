@@ -168,17 +168,6 @@ export function ChannelRackWindow() {
     return "Insert " + (index + 1);
   };
 
-  const getDropStepFromEvent = function (event) {
-    const rect = event.currentTarget.getBoundingClientRect();
-    if (rect.width <= 0) {
-      return 0;
-    }
-
-    const localX = clamp(event.clientX - rect.left, 0, rect.width);
-    const ratio = localX / rect.width;
-    return clamp(Math.floor(ratio * patternLength), 0, patternLength - 1);
-  };
-
   const onMidiPatternDragOver = function (event) {
     const payload = readMidiPatternFromDataTransfer(event.dataTransfer);
     const midiFilePayload = readMidiFilePayloadFromDataTransfer(
@@ -215,8 +204,6 @@ export function ChannelRackWindow() {
       return;
     }
 
-    const insertStep = getDropStepFromEvent(event);
-
     event.preventDefault();
     event.stopPropagation();
 
@@ -225,7 +212,6 @@ export function ChannelRackWindow() {
         pasteMidiPatternToChannel({
           patternId: activePatternId,
           channelId: channel.id,
-          insertStep,
           notes: payload.notes,
         }),
       );
@@ -251,7 +237,6 @@ export function ChannelRackWindow() {
           pasteMidiPatternToChannel({
             patternId: activePatternId,
             channelId: channel.id,
-            insertStep,
             notes,
           }),
         );
@@ -277,7 +262,6 @@ export function ChannelRackWindow() {
         pasteMidiPatternToChannel({
           patternId: activePatternId,
           channelId: channel.id,
-          insertStep,
           notes,
         }),
       );

@@ -1803,13 +1803,6 @@ const dawSlice = createSlice({
       }
 
       const patternLength = Math.max(1, Number(pattern.lengthSteps || 16));
-      const safeInsertStep = Math.max(
-        0,
-        Math.min(
-          patternLength - 0.0625,
-          Number(action.payload.insertStep ?? 0),
-        ),
-      );
 
       if (!pattern.stepGrid) {
         pattern.stepGrid = {};
@@ -1836,16 +1829,12 @@ const dawSlice = createSlice({
       }
 
       const stepRow = pattern.stepGrid[channelId];
+      for (let i = 0; i < patternLength; i += 1) {
+        stepRow[i] = false;
+      }
+
+      pattern.pianoPreview[channelId] = [];
       const pianoNotes = pattern.pianoPreview[channelId];
-      const occupiedPiano = new Set(
-        pianoNotes.map(function (note) {
-          return (
-            Math.round(Number(note.start || 0) * 1000) +
-            ":" +
-            Math.round(Number(note.pitch || DEFAULT_MIDI_PITCH))
-          );
-        }),
-      );
 
       const normalizedNotes = incomingNotes
         .map(function (note) {
@@ -1882,45 +1871,27 @@ const dawSlice = createSlice({
         return;
       }
 
-      const minStart = normalizedNotes.reduce(function (acc, note) {
-        return Math.min(acc, note.start);
-      }, normalizedNotes[0].start);
-
       normalizedNotes.forEach(function (note) {
-        const shiftedStart = Math.max(
-          0,
-          Math.min(
-            patternLength - 0.0625,
-            safeInsertStep + (note.start - minStart),
-          ),
-        );
-        const maxLen = Math.max(0.0625, patternLength - shiftedStart);
+        const maxLen = Math.max(0.0625, patternLength - note.start);
         const shiftedLength = Math.max(0.0625, Math.min(maxLen, note.length));
 
         const isStepCandidate =
           note.source === "step" &&
           note.pitch === DEFAULT_MIDI_PITCH &&
           nearlyEqual(shiftedLength, 1) &&
-          nearlyEqual(shiftedStart, Math.round(shiftedStart));
+          nearlyEqual(note.start, Math.round(note.start));
 
         if (isStepCandidate) {
-          const stepIndex = Math.round(shiftedStart);
+          const stepIndex = Math.round(note.start);
           if (stepIndex >= 0 && stepIndex < patternLength) {
             stepRow[stepIndex] = true;
           }
           return;
         }
 
-        const pianoKey =
-          Math.round(shiftedStart * 1000) + ":" + Math.round(note.pitch);
-        if (occupiedPiano.has(pianoKey)) {
-          return;
-        }
-
-        occupiedPiano.add(pianoKey);
         pianoNotes.push({
           id: makeMidiPatternNoteId("midi"),
-          start: shiftedStart,
+          start: note.start,
           length: shiftedLength,
           pitch: note.pitch,
           velocity: note.velocity,

@@ -445,7 +445,7 @@
 
 .mini-note {
   position: absolute;
-  height: 8px;
+  height: 4px;
   border-radius: 2px;
   transform: translateY(-50%);
   background: linear-gradient(180deg, #69ffb2 0%, #1ecf6e 100%);
