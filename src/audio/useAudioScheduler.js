@@ -2152,7 +2152,7 @@ export function useAudioScheduler() {
             : 1;
         const finalFadeIn = fadeInSec * fadeScale;
         const finalFadeOut = fadeOutSec * fadeScale;
-        const finalGain = Math.max(0.001, gainAmount * getNormalizeGain());
+        const finalGain = Math.max(0, gainAmount * getNormalizeGain());
         const sampleStopAt = time + sourcePlayDuration;
         const fadeOutStart = Math.max(time, sampleStopAt - finalFadeOut);
         const requiredBufferDuration = Math.max(
@@ -2380,7 +2380,7 @@ export function useAudioScheduler() {
           Number(noteLengthSteps || 1) * sixteenth * 0.95 + releaseSec,
         );
         const noteGain = Math.max(
-          0.03,
+          0,
           gainAmount * 2.2 * PLUGIN_INSTRUMENT_GAIN_BOOST,
         );
 
@@ -2526,7 +2526,8 @@ export function useAudioScheduler() {
         const hasPluginInstrument = Boolean(plugin && plugin.soundfont);
 
         const gainAmount =
-          BASE_CHANNEL_TRIGGER_GAIN * Number(channel.volume || 0.75);
+          BASE_CHANNEL_TRIGGER_GAIN *
+          clamp(Number(channel.volume ?? 1), 0, 1);
 
         const scheduleSampleSettingsPlugin = function () {
           const nowCtx = audioCtxRef.current || previewContext;
@@ -2756,6 +2757,7 @@ export function useAudioScheduler() {
           }
 
           const outputNode = getInsertInputNodeForChannel(channel);
+          const channelVolume = clamp(Number(channel.volume ?? 1), 0, 1);
 
           const playOneHit = function (midiPitch, offsetSeconds, lengthSteps) {
             const hitTime = noteTime + Math.max(0, Number(offsetSeconds || 0));
@@ -2764,7 +2766,7 @@ export function useAudioScheduler() {
               schedulePluginInstrument(
                 pluginRef,
                 hitTime,
-                BASE_CHANNEL_TRIGGER_GAIN * channel.volume,
+                BASE_CHANNEL_TRIGGER_GAIN * channelVolume,
                 channel.pan,
                 channel,
                 outputNode,
@@ -2781,7 +2783,7 @@ export function useAudioScheduler() {
               scheduleSample(
                 sampleBuffer,
                 hitTime,
-                BASE_CHANNEL_TRIGGER_GAIN * channel.volume,
+                BASE_CHANNEL_TRIGGER_GAIN * channelVolume,
                 channel.pan,
                 channel,
                 outputNode,

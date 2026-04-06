@@ -159,6 +159,17 @@ export function ChannelRackWindow() {
     return "Insert " + (index + 1);
   };
 
+  const handleRackKnobSpace = function (event) {
+    if (event.code !== "Space" && event.key !== " ") {
+      return;
+    }
+
+    event.preventDefault();
+    if (event.currentTarget && typeof event.currentTarget.blur === "function") {
+      event.currentTarget.blur();
+    }
+  };
+
   return (
     <section className="rack-shell" ref={rackShellRef}>
       <header className="rack-topbar">
@@ -402,6 +413,15 @@ export function ChannelRackWindow() {
                       max="1"
                       step="0.01"
                       value={channel.volume}
+                      onKeyDown={handleRackKnobSpace}
+                      onDoubleClick={function () {
+                        dispatch(
+                          setChannelVolume({
+                            channelId: channel.id,
+                            value: 1,
+                          }),
+                        );
+                      }}
                       onChange={function (event) {
                         dispatch(
                           setChannelVolume({
@@ -422,6 +442,15 @@ export function ChannelRackWindow() {
                       max="1"
                       step="0.01"
                       value={channel.pan}
+                      onKeyDown={handleRackKnobSpace}
+                      onDoubleClick={function () {
+                        dispatch(
+                          setChannelPan({
+                            channelId: channel.id,
+                            value: 0,
+                          }),
+                        );
+                      }}
                       onChange={function (event) {
                         dispatch(
                           setChannelPan({
