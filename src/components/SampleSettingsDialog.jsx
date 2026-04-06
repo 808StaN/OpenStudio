@@ -8,6 +8,10 @@ import { toSafeSampleUrl } from "../utils/sampleUrl";
 
 let waveformDecodeContext = null;
 const PREVIEW_C5_MIDI = 72;
+const SAMPLE_SETTINGS_PREVIEW_PLAY_EVENT =
+  "openstudio:sample-settings-preview-play";
+const SAMPLE_SETTINGS_PREVIEW_STOP_EVENT =
+  "openstudio:sample-settings-preview-stop";
 
 const defaultChannelSettings = {
   cutItself: false,
@@ -559,6 +563,7 @@ export function SampleSettingsDialog({ channel }) {
   const previewPluginPendingRef = useRef(new Map());
   const previewPluginNodeRef = useRef(null);
   const previewPluginStopTimeoutRef = useRef(null);
+  const previewUiResetTimeoutRef = useRef(null);
 
   const stopSamplePreview = function () {
     if (previewSampleStopTimeoutRef.current) {
@@ -597,8 +602,22 @@ export function SampleSettingsDialog({ channel }) {
   };
 
   const stopPreview = function () {
+    if (previewUiResetTimeoutRef.current) {
+      clearTimeout(previewUiResetTimeoutRef.current);
+      previewUiResetTimeoutRef.current = null;
+    }
+
     stopSamplePreview();
     stopPluginPreview();
+
+    window.dispatchEvent(
+      new CustomEvent(SAMPLE_SETTINGS_PREVIEW_STOP_EVENT, {
+        detail: {
+          channelId: channel.id,
+        },
+      }),
+    );
+
     setIsPreviewPlaying(false);
   };
 
@@ -872,73 +891,7 @@ export function SampleSettingsDialog({ channel }) {
   };
 
   const onPreviewClick = async function () {
-    if (isPluginChannel) {
-      if (isPreviewPlaying) {
-        stopPreview();
-        return;
-      }
-
-      stopPreview();
-
-      const context = ensurePluginPreviewContext();
-      if (context.state === "suspended") {
-        try {
-          await context.resume();
-        } catch {
-          setError("Cannot preview this instrument");
-          return;
-        }
-      }
-
-      const instrument = await getPreviewPluginInstrument();
-      if (!instrument) {
-        setError("Cannot load this instrument");
-        return;
-      }
-
-      const previewPitch = Math.max(
-        0,
-        Math.min(127, PREVIEW_C5_MIDI + Number(settings.pitchCents || 0) / 100),
-      );
-      const attackSec = Math.max(0, Number(settings.attackMs || 0) / 1000);
-      const releaseSec = Math.max(0, Number(settings.releaseMs ?? 420) / 1000);
-      const previewDuration = Math.max(0.18, 0.45 + releaseSec);
-
-      if (settings.monoMode) {
-        stopPluginPreview();
-      }
-
-      try {
-        const node = instrument.play(previewPitch, context.currentTime, {
-          duration: previewDuration,
-          gain: Math.max(0.05, Number(channel.volume ?? 0.7) * 0.24),
-          pan: Math.max(-1, Math.min(1, Number(channel.pan ?? 0))),
-          attack: attackSec,
-          release: releaseSec,
-          destination: context.destination,
-        });
-
-        previewPluginNodeRef.current = node;
-        setIsPreviewPlaying(true);
-        setError("");
-
-        previewPluginStopTimeoutRef.current = setTimeout(
-          function () {
-            previewPluginNodeRef.current = null;
-            setIsPreviewPlaying(false);
-          },
-          Math.round(previewDuration * 1000) + 220,
-        );
-      } catch {
-        setError("Cannot preview this instrument");
-        stopPluginPreview();
-        setIsPreviewPlaying(false);
-      }
-
-      return;
-    }
-
-    if (!sampleRef) {
+    if (!isPluginChannel && !sampleRef) {
       return;
     }
 
@@ -949,223 +902,28 @@ export function SampleSettingsDialog({ channel }) {
 
     stopPreview();
 
-    try {
-      const context = ensureSamplePreviewContext();
-      if (context.state === "suspended") {
-        await context.resume();
-      }
-
-      const sampleBuffer = await getPreviewSampleBuffer(sampleRef);
-      if (!sampleBuffer) {
-        setError("Cannot preview this sample");
-        return;
-      }
-
-      let peak = 0;
-      const normalizeCached = previewSampleGainRef.current.get(sampleBuffer);
-      let normalizeGain = normalizeCached;
-
-      if (!Number.isFinite(normalizeGain)) {
-        const channelsCount = Math.max(
-          1,
-          Number(sampleBuffer.numberOfChannels || 1),
-        );
-
-        for (let ch = 0; ch < channelsCount; ch += 1) {
-          const channelData = sampleBuffer.getChannelData(ch);
-          const step = Math.max(1, Math.floor(channelData.length / 64000));
-
-          for (let i = 0; i < channelData.length; i += step) {
-            const abs = Math.abs(channelData[i]);
-            if (abs > peak) {
-              peak = abs;
-            }
-          }
-        }
-
-        normalizeGain =
-          peak > 0.0001 ? Math.max(0.25, Math.min(4, 0.9 / peak)) : 1;
-        previewSampleGainRef.current.set(sampleBuffer, normalizeGain);
-      }
-
-      const source = context.createBufferSource();
-      const gain = context.createGain();
-      const envelopeGain = context.createGain();
-      const panner = context.createStereoPanner();
-
-      const sampleReadDuration = Math.max(
-        0.01,
-        sampleBuffer.duration * (settings.lengthPct / 100),
-      );
-      const pitchRate = Math.pow(2, Number(settings.pitchCents || 0) / 1200);
-      const stretchProfile = getTimeStretchProfile(
-        settings,
-        sampleReadDuration,
-        bpm,
-        Math.max(0.125, Math.min(8, pitchRate)),
-      );
-      const playbackRate = stretchProfile.playbackRate;
-      const naturalPlayDuration = Math.max(
-        0.01,
-        sampleReadDuration / playbackRate,
-      );
-      const playDuration = Math.max(
-        0.01,
-        stretchProfile.useGranularStretch
-          ? stretchProfile.targetDurationSec
-          : naturalPlayDuration,
-      );
-      const fadeInSec = playDuration * (settings.fadeInPct / 100);
-      const fadeOutSec = playDuration * (settings.fadeOutPct / 100);
-      const fadeTotal = fadeInSec + fadeOutSec;
-      const fadeScale =
-        fadeTotal > playDuration * 0.98 ? (playDuration * 0.98) / fadeTotal : 1;
-      const finalFadeIn = fadeInSec * fadeScale;
-      const finalFadeOut = fadeOutSec * fadeScale;
-      const stopAt = context.currentTime + playDuration;
-      const fadeOutStart = Math.max(context.currentTime, stopAt - finalFadeOut);
-      const baseGain = Math.max(0.05, Number(channel.volume ?? 0.7) * 0.55);
-      const finalGain = baseGain * (settings.normalize ? normalizeGain : 1);
-      const requiredBufferDuration = Math.max(
-        0.01,
-        playDuration * playbackRate,
-      );
-      let previewBuffer = sampleBuffer;
-      if (stretchProfile.useGranularStretch) {
-        const desiredBufferedDuration = Math.max(
-          0.01,
-          playDuration * playbackRate,
-        );
-        const stretchFactor = Math.max(
-          0.25,
-          Math.min(4, sampleReadDuration / desiredBufferedDuration),
-        );
-        const readFrames = Math.max(
-          16,
-          Math.floor(sampleReadDuration * sampleBuffer.sampleRate),
-        );
-        const cacheKey =
-          readFrames +
-          "|" +
-          stretchFactor.toFixed(4) +
-          "|" +
-          sampleBuffer.numberOfChannels;
-
-        let perSampleCache =
-          previewStretchedBufferCacheRef.current.get(sampleBuffer);
-        if (!perSampleCache) {
-          perSampleCache = new Map();
-          previewStretchedBufferCacheRef.current.set(
-            sampleBuffer,
-            perSampleCache,
-          );
-        }
-
-        const cached = perSampleCache.get(cacheKey);
-        if (cached) {
-          previewBuffer = cached;
-        } else {
-          previewBuffer = createWsolaStretchedBufferFromSample(
-            context,
-            sampleBuffer,
-            sampleReadDuration,
-            stretchFactor,
-            false,
-          );
-          perSampleCache.set(cacheKey, previewBuffer);
-        }
-      }
-      let previewHandle = source;
-
-      source.buffer = previewBuffer;
-      source.playbackRate.setValueAtTime(playbackRate, context.currentTime);
-
-      if (finalFadeIn > 0.001) {
-        gain.gain.setValueAtTime(0.0001, context.currentTime);
-        gain.gain.linearRampToValueAtTime(
-          finalGain,
-          context.currentTime + finalFadeIn,
-        );
-      } else {
-        gain.gain.setValueAtTime(finalGain, context.currentTime);
-      }
-
-      gain.gain.setValueAtTime(finalGain, fadeOutStart);
-      if (finalFadeOut > 0.001) {
-        gain.gain.linearRampToValueAtTime(0.0001, stopAt);
-      } else {
-        gain.gain.setValueAtTime(0.0001, stopAt);
-      }
-
-      panner.pan.setValueAtTime(
-        Math.max(-1, Math.min(1, Number(channel.pan ?? 0))),
-        context.currentTime,
-      );
-
-      source.connect(gain);
-      gain.connect(envelopeGain);
-      if (settings.envEnabled) {
-        applyVolumeEnvelopeToGain(
-          envelopeGain.gain,
-          context.currentTime,
-          playDuration,
-          settings,
-        );
-      } else {
-        envelopeGain.gain.setValueAtTime(1, context.currentTime);
-      }
-      envelopeGain.connect(panner);
-      panner.connect(context.destination);
-
-      if (stretchProfile.useGranularStretch) {
-        previewSampleNodeRef.current = source;
-        source.onended = function () {
-          if (previewSampleNodeRef.current === source) {
-            previewSampleNodeRef.current = null;
-            setIsPreviewPlaying(false);
-          }
-        };
-
-        source.start(
-          context.currentTime,
-          0,
-          Math.min(previewBuffer.duration, requiredBufferDuration),
-        );
-        source.stop(stopAt + 0.005);
-      } else {
-        previewSampleNodeRef.current = source;
-        source.onended = function () {
-          if (previewSampleNodeRef.current === source) {
-            previewSampleNodeRef.current = null;
-            setIsPreviewPlaying(false);
-          }
-        };
-
-        source.start(
-          context.currentTime,
-          0,
-          Math.min(previewBuffer.duration, requiredBufferDuration),
-        );
-        source.stop(stopAt + 0.005);
-      }
-
-      previewSampleStopTimeoutRef.current = setTimeout(
-        function () {
-          if (previewSampleNodeRef.current === previewHandle) {
-            previewSampleNodeRef.current = null;
-            setIsPreviewPlaying(false);
-          }
+    window.dispatchEvent(
+      new CustomEvent(SAMPLE_SETTINGS_PREVIEW_PLAY_EVENT, {
+        detail: {
+          channelId: channel.id,
         },
-        Math.round(playDuration * 1000) + 180,
-      );
+      }),
+    );
 
-      setIsPreviewPlaying(true);
-      setError("");
-    } catch {
-      setError("Cannot preview this sample");
+    setIsPreviewPlaying(true);
+    setError("");
+
+    previewUiResetTimeoutRef.current = setTimeout(function () {
+      window.dispatchEvent(
+        new CustomEvent(SAMPLE_SETTINGS_PREVIEW_STOP_EVENT, {
+          detail: {
+            channelId: channel.id,
+          },
+        }),
+      );
       setIsPreviewPlaying(false);
-      previewSampleNodeRef.current = null;
-    }
+      previewUiResetTimeoutRef.current = null;
+    }, 2600);
   };
 
   return (

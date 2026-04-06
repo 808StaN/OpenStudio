@@ -1,10 +1,9 @@
 import { FolderOpen, Package2 } from "lucide-react";
-import { useCallback, useEffect, useRef, useState } from "react";
+import { useCallback, useEffect, useState } from "react";
 import { useDispatch, useSelector } from "react-redux";
 import { PLUGIN_EFFECTS } from "../data/pluginEffects";
 import { PLUGIN_INSTRUMENTS } from "../data/pluginInstruments";
 import { setBrowserTab } from "../store";
-import { toSafeSampleUrl } from "../utils/sampleUrl";
 
 const browserData = {
   plugins: [
@@ -54,102 +53,23 @@ export function BrowserPanel() {
       }, {});
     },
   );
-  const previewAudioContextRef = useRef(null);
-  const previewSourceRef = useRef(null);
-  const previewBufferCacheRef = useRef(new Map());
-  const previewBufferPromiseRef = useRef(new Map());
 
   const browserTab = useSelector(function (state) {
     return state.daw.ui.browserTab;
   });
 
-  const ensurePreviewContext = function () {
-    if (!previewAudioContextRef.current) {
-      previewAudioContextRef.current = new AudioContext();
-    }
-    return previewAudioContextRef.current;
-  };
-
-  const getPreviewBuffer = async function (samplePath) {
-    const safeSamplePath = toSafeSampleUrl(samplePath);
-    if (!safeSamplePath) {
-      return null;
-    }
-
-    const cachedBuffer = previewBufferCacheRef.current.get(safeSamplePath);
-    if (cachedBuffer) {
-      return cachedBuffer;
-    }
-
-    const pendingBuffer = previewBufferPromiseRef.current.get(safeSamplePath);
-    if (pendingBuffer) {
-      return pendingBuffer;
-    }
-
-    const loadPromise = (async function () {
-      const context = ensurePreviewContext();
-      const response = await fetch(safeSamplePath);
-      if (!response.ok) {
-        throw new Error("Cannot load sample");
-      }
-
-      const arrayBuffer = await response.arrayBuffer();
-      const audioBuffer = await context.decodeAudioData(arrayBuffer.slice(0));
-      previewBufferCacheRef.current.set(safeSamplePath, audioBuffer);
-      return audioBuffer;
-    })();
-
-    previewBufferPromiseRef.current.set(safeSamplePath, loadPromise);
-
-    try {
-      return await loadPromise;
-    } finally {
-      previewBufferPromiseRef.current.delete(safeSamplePath);
-    }
-  };
-
-  const playSamplePreview = async function (samplePath) {
+  const playSamplePreview = function (samplePath) {
     if (!samplePath) {
       return;
     }
 
-    try {
-      const context = ensurePreviewContext();
-      if (context.state === "suspended") {
-        await context.resume();
-      }
-
-      const buffer = await getPreviewBuffer(samplePath);
-      if (!buffer) {
-        return;
-      }
-
-      if (previewSourceRef.current) {
-        try {
-          previewSourceRef.current.stop();
-        } catch {
-          // Source can be already stopped.
-        }
-      }
-
-      const source = context.createBufferSource();
-      const gain = context.createGain();
-
-      gain.gain.value = 0.85;
-      source.buffer = buffer;
-      source.connect(gain);
-      gain.connect(context.destination);
-      source.start();
-
-      previewSourceRef.current = source;
-      source.onended = function () {
-        if (previewSourceRef.current === source) {
-          previewSourceRef.current = null;
-        }
-      };
-    } catch {
-      // Ignore preview errors to keep UI responsive.
-    }
+    window.dispatchEvent(
+      new CustomEvent("openstudio:drumkit-preview", {
+        detail: {
+          samplePath,
+        },
+      }),
+    );
   };
 
   const normalizeFolderPath = function (folderPath) {

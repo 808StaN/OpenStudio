@@ -29,6 +29,7 @@ const defaultSampleSettings = {
 
 const DEFAULT_SAMPLE_MIDI_PITCH = 72;
 const PLUGIN_INSTRUMENT_GAIN_BOOST = 1.5;
+const BASE_CHANNEL_TRIGGER_GAIN = 0.75;
 const MIXER_METER_RMS_GAIN = 4.2;
 const MIXER_METER_PEAK_GAIN = 1.9;
 const MIXER_METER_NOISE_GATE = 0.0016;
@@ -42,6 +43,11 @@ const FX_EFFECT_REVERB = "reverb";
 const GRAPHIC_EQ_DEFAULT_POINT_FREQUENCIES = [
   50, 100, 250, 500, 1000, 3000, 8000,
 ];
+const DRUMKIT_PREVIEW_EVENT = "openstudio:drumkit-preview";
+const SAMPLE_SETTINGS_PREVIEW_PLAY_EVENT =
+  "openstudio:sample-settings-preview-play";
+const SAMPLE_SETTINGS_PREVIEW_STOP_EVENT =
+  "openstudio:sample-settings-preview-stop";
 const GRAPHIC_EQ_BAND_TYPES = [
   "peaking",
   "lowshelf",
@@ -845,6 +851,10 @@ export function useAudioScheduler() {
   const pluginInstrumentRef = useRef(new Map());
   const pluginInstrumentLoadRef = useRef(new Map());
   const pluginInstrumentFailedRef = useRef(new Set());
+  const drumkitPreviewVoiceRef = useRef(null);
+  const drumkitPreviewMeterRafRef = useRef(null);
+  const sampleSettingsPreviewMeterRafRef = useRef(null);
+  const sampleSettingsPreviewMeterInsertIdRef = useRef(null);
   const channelsRef = useRef(channels);
   const activePatternRef = useRef(activePattern);
   const patternsRef = useRef(patterns);
@@ -1488,6 +1498,239 @@ export function useAudioScheduler() {
     [channels],
   );
 
+  const playDrumkitBrowserPreview = useCallback(
+    async function (samplePath) {
+      const safeSamplePath = String(samplePath || "").trim();
+      if (!safeSamplePath) {
+        return;
+      }
+
+      const audioCtx = ensureContext();
+      if (audioCtx.state === "suspended") {
+        await audioCtx.resume();
+      }
+
+      ensureMixerGraph();
+      applyMixerSettingsToGraph();
+
+      const buffer = await loadSampleBuffer(safeSamplePath);
+      if (!buffer) {
+        return;
+      }
+
+      const previousVoice = drumkitPreviewVoiceRef.current;
+      if (previousVoice?.source) {
+        try {
+          previousVoice.gain.gain.cancelScheduledValues(audioCtx.currentTime);
+          previousVoice.gain.gain.setValueAtTime(
+            previousVoice.gain.gain.value || BASE_CHANNEL_TRIGGER_GAIN,
+            audioCtx.currentTime,
+          );
+          previousVoice.gain.gain.linearRampToValueAtTime(
+            0.0001,
+            audioCtx.currentTime + 0.01,
+          );
+          previousVoice.source.stop(audioCtx.currentTime + 0.012);
+        } catch {
+          // Voice might already be ending.
+        }
+      }
+
+      const graph = mixerGraphRef.current;
+      const outputNode =
+        graph?.inserts?.get("master")?.inputGain || audioCtx.destination;
+      const masterInsert = (mixerSettingsRef.current || []).find(function (
+        insert,
+      ) {
+        return insert?.isMaster || insert?.id === "master";
+      });
+      const masterFader = masterInsert?.active
+        ? clamp(Number(masterInsert?.fader ?? 1), 0, 1.25)
+        : 0;
+
+      const source = audioCtx.createBufferSource();
+      const gain = audioCtx.createGain();
+      const masterPreviewGain = audioCtx.createGain();
+
+      source.buffer = buffer;
+      gain.gain.setValueAtTime(BASE_CHANNEL_TRIGGER_GAIN, audioCtx.currentTime);
+      masterPreviewGain.gain.setValueAtTime(masterFader, audioCtx.currentTime);
+      source.connect(gain);
+      gain.connect(masterPreviewGain);
+      masterPreviewGain.connect(outputNode);
+
+      const voice = { source, gain, masterPreviewGain };
+      drumkitPreviewVoiceRef.current = voice;
+
+      const stopPreviewMeterLoop = function () {
+        if (drumkitPreviewMeterRafRef.current) {
+          cancelAnimationFrame(drumkitPreviewMeterRafRef.current);
+          drumkitPreviewMeterRafRef.current = null;
+        }
+      };
+
+      const updateMasterPreviewMeter = function () {
+        const masterNode = mixerGraphRef.current?.inserts?.get("master");
+        if (!masterNode || !masterNode.meterData) {
+          return;
+        }
+
+        masterNode.analyser.getByteTimeDomainData(masterNode.meterData);
+
+        let squareSum = 0;
+        let peak = 0;
+        for (let i = 0; i < masterNode.meterData.length; i += 1) {
+          const centered = (masterNode.meterData[i] - 128) / 128;
+          squareSum += centered * centered;
+
+          const absolute = Math.abs(centered);
+          if (absolute > peak) {
+            peak = absolute;
+          }
+        }
+
+        const rms = Math.sqrt(squareSum / masterNode.meterData.length);
+        const blended = Math.max(
+          rms * MIXER_METER_RMS_GAIN,
+          peak * MIXER_METER_PEAK_GAIN,
+        );
+        const gated = blended < MIXER_METER_NOISE_GATE ? 0 : blended;
+        const level = Math.min(1, Math.pow(gated, MIXER_METER_RESPONSE_CURVE));
+
+        dispatch(
+          setInsertMeter({
+            insertId: "master",
+            meter: level,
+          }),
+        );
+      };
+
+      if (!transport.isPlaying) {
+        stopPreviewMeterLoop();
+
+        const tickPreviewMeter = function () {
+          if (drumkitPreviewVoiceRef.current !== voice) {
+            stopPreviewMeterLoop();
+            return;
+          }
+
+          updateMasterPreviewMeter();
+          drumkitPreviewMeterRafRef.current = requestAnimationFrame(
+            tickPreviewMeter,
+          );
+        };
+
+        drumkitPreviewMeterRafRef.current = requestAnimationFrame(
+          tickPreviewMeter,
+        );
+      }
+
+      source.onended = function () {
+        stopPreviewMeterLoop();
+
+        if (drumkitPreviewVoiceRef.current === voice) {
+          drumkitPreviewVoiceRef.current = null;
+        }
+
+        dispatch(
+          setInsertMeter({
+            insertId: "master",
+            meter: 0,
+          }),
+        );
+      };
+
+      source.start(audioCtx.currentTime);
+    },
+    [
+      applyMixerSettingsToGraph,
+      dispatch,
+      ensureContext,
+      ensureMixerGraph,
+      loadSampleBuffer,
+      transport.isPlaying,
+    ],
+  );
+
+  useEffect(
+    function () {
+      const onDrumkitPreviewRequest = function (event) {
+        const samplePath = String(event?.detail?.samplePath || "").trim();
+        if (!samplePath) {
+          return;
+        }
+
+        void playDrumkitBrowserPreview(samplePath);
+      };
+
+      window.addEventListener(DRUMKIT_PREVIEW_EVENT, onDrumkitPreviewRequest);
+
+      return function () {
+        window.removeEventListener(
+          DRUMKIT_PREVIEW_EVENT,
+          onDrumkitPreviewRequest,
+        );
+
+        const activeVoice = drumkitPreviewVoiceRef.current;
+        if (!activeVoice?.source || !audioCtxRef.current) {
+          return;
+        }
+
+        if (drumkitPreviewMeterRafRef.current) {
+          cancelAnimationFrame(drumkitPreviewMeterRafRef.current);
+          drumkitPreviewMeterRafRef.current = null;
+        }
+
+        const stopTime = audioCtxRef.current.currentTime;
+        try {
+          activeVoice.gain.gain.cancelScheduledValues(stopTime);
+          activeVoice.gain.gain.setValueAtTime(
+            activeVoice.gain.gain.value || BASE_CHANNEL_TRIGGER_GAIN,
+            stopTime,
+          );
+          activeVoice.gain.gain.linearRampToValueAtTime(0.0001, stopTime + 0.01);
+          activeVoice.source.stop(stopTime + 0.012);
+        } catch {
+          // Voice might already be stopped.
+        }
+
+        drumkitPreviewVoiceRef.current = null;
+      };
+    },
+    [playDrumkitBrowserPreview],
+  );
+
+  useEffect(
+    function () {
+      if (!audioCtxRef.current) {
+        return;
+      }
+
+      const voice = drumkitPreviewVoiceRef.current;
+      if (!voice?.masterPreviewGain) {
+        return;
+      }
+
+      const masterInsert = (mixerSettingsRef.current || []).find(function (
+        insert,
+      ) {
+        return insert?.isMaster || insert?.id === "master";
+      });
+      const target = masterInsert?.active
+        ? clamp(Number(masterInsert?.fader ?? 1), 0, 1.25)
+        : 0;
+
+      const now = audioCtxRef.current.currentTime;
+      voice.masterPreviewGain.gain.cancelScheduledValues(now);
+      voice.masterPreviewGain.gain.setValueAtTime(
+        voice.masterPreviewGain.gain.value,
+        now,
+      );
+      voice.masterPreviewGain.gain.linearRampToValueAtTime(target, now + 0.01);
+    },
+    [mixerSettings],
+  );
+
   useEffect(
     function () {
       activePatternRef.current = activePattern;
@@ -1791,6 +2034,9 @@ export function useAudioScheduler() {
           }
         });
       };
+
+      const audioCtx = ensureContext();
+      const sixteenth = 60 / transport.bpm / 4;
 
       const scheduleSample = function (
         sampleBuffer,
@@ -2214,6 +2460,216 @@ export function useAudioScheduler() {
         }, removeAfterMs);
       };
 
+      const onSampleSettingsPreviewPlay = function (event) {
+        const channelId = String(event?.detail?.channelId || "").trim();
+        if (!channelId) {
+          return;
+        }
+
+        const channel = (channelsRef.current || []).find(function (item) {
+          return item.id === channelId;
+        });
+        if (!channel) {
+          return;
+        }
+
+        const previewContext = ensureContext();
+        if (previewContext.state === "suspended") {
+          void previewContext.resume();
+        }
+
+        ensureMixerGraph();
+        applyMixerSettingsToGraph();
+
+        const outputNode = getInsertInputNodeForChannel(channel);
+        const targetInsertId = String(
+          channel.mixerInsertId || "master",
+        ).trim() || "master";
+        sampleSettingsPreviewMeterInsertIdRef.current = targetInsertId;
+
+        const stopSampleSettingsPreviewMeterLoop = function () {
+          if (sampleSettingsPreviewMeterRafRef.current) {
+            cancelAnimationFrame(sampleSettingsPreviewMeterRafRef.current);
+            sampleSettingsPreviewMeterRafRef.current = null;
+          }
+        };
+
+        const startSampleSettingsPreviewMeterLoop = function () {
+          if (transport.isPlaying) {
+            return;
+          }
+
+          stopSampleSettingsPreviewMeterLoop();
+
+          const tickPreviewMeters = function () {
+            if (transport.isPlaying) {
+              stopSampleSettingsPreviewMeterLoop();
+              return;
+            }
+
+            const nowCtx = audioCtxRef.current || ensureContext();
+            updateMixerMeters(nowCtx.currentTime);
+            sampleSettingsPreviewMeterRafRef.current = requestAnimationFrame(
+              tickPreviewMeters,
+            );
+          };
+
+          sampleSettingsPreviewMeterRafRef.current = requestAnimationFrame(
+            tickPreviewMeters,
+          );
+        };
+
+        startSampleSettingsPreviewMeterLoop();
+
+        const pluginRef = String(channel.pluginRef || "").trim();
+        const plugin = getPluginInstrument(pluginRef);
+        const hasPluginInstrument = Boolean(plugin && plugin.soundfont);
+
+        const gainAmount =
+          BASE_CHANNEL_TRIGGER_GAIN * Number(channel.volume || 0.75);
+
+        const scheduleSampleSettingsPlugin = function () {
+          const nowCtx = audioCtxRef.current || previewContext;
+          const startAt = nowCtx.currentTime + 0.002;
+
+          stopActiveChannelSamples(channel.id, startAt);
+          stopActiveChannelSynthVoices(channel.id, startAt);
+
+          schedulePluginInstrument(
+            pluginRef,
+            startAt,
+            gainAmount,
+            channel.pan,
+            channel,
+            outputNode,
+            DEFAULT_SAMPLE_MIDI_PITCH,
+            1,
+            getSafeSampleSettings(channel.sampleSettings),
+          );
+        };
+
+        const scheduleSampleSettingsSample = function (buffer) {
+          if (!buffer) {
+            return;
+          }
+
+          const nowCtx = audioCtxRef.current || previewContext;
+          const startAt = nowCtx.currentTime + 0.002;
+
+          stopActiveChannelSamples(channel.id, startAt);
+          stopActiveChannelSynthVoices(channel.id, startAt);
+
+          scheduleSample(
+            buffer,
+            startAt,
+            gainAmount,
+            channel.pan,
+            channel,
+            outputNode,
+            DEFAULT_SAMPLE_MIDI_PITCH,
+            1,
+          );
+        };
+
+        if (hasPluginInstrument) {
+          const key = getPluginInstrumentCacheKey(pluginRef, channel.id);
+          const cachedInstrument = pluginInstrumentRef.current.get(key);
+          if (cachedInstrument) {
+            scheduleSampleSettingsPlugin();
+            return;
+          }
+
+          void loadPluginInstrument(pluginRef, channel.id, outputNode).then(
+            function (loadedInstrument) {
+              if (!loadedInstrument) {
+                return;
+              }
+
+              scheduleSampleSettingsPlugin();
+            },
+          );
+          return;
+        }
+
+        const safeSampleRef = toSafeSampleUrl(channel.sampleRef);
+        if (!safeSampleRef) {
+          return;
+        }
+
+        const cached = sampleBufferCacheRef.current.get(safeSampleRef);
+        if (cached) {
+          scheduleSampleSettingsSample(cached);
+          return;
+        }
+
+        if (!sampleLoadFailedRef.current.has(safeSampleRef)) {
+          void loadSampleBuffer(safeSampleRef).then(scheduleSampleSettingsSample);
+        }
+      };
+
+      const onSampleSettingsPreviewStop = function (event) {
+        const channelId = String(event?.detail?.channelId || "").trim();
+        if (!channelId || !audioCtxRef.current) {
+          return;
+        }
+
+        if (sampleSettingsPreviewMeterRafRef.current) {
+          cancelAnimationFrame(sampleSettingsPreviewMeterRafRef.current);
+          sampleSettingsPreviewMeterRafRef.current = null;
+        }
+
+        const stopAt = audioCtxRef.current.currentTime;
+        stopActiveChannelSamples(channelId, stopAt);
+        stopActiveChannelSynthVoices(channelId, stopAt);
+
+        const insertId =
+          sampleSettingsPreviewMeterInsertIdRef.current ||
+          String(
+            (channelsRef.current || []).find(function (item) {
+              return item.id === channelId;
+            })?.mixerInsertId || "master",
+          );
+        sampleSettingsPreviewMeterInsertIdRef.current = null;
+
+        dispatch(
+          setInsertMeter({
+            insertId,
+            meter: 0,
+          }),
+        );
+        dispatch(
+          setInsertMeter({
+            insertId: "master",
+            meter: 0,
+          }),
+        );
+      };
+
+      window.addEventListener(
+        SAMPLE_SETTINGS_PREVIEW_PLAY_EVENT,
+        onSampleSettingsPreviewPlay,
+      );
+      window.addEventListener(
+        SAMPLE_SETTINGS_PREVIEW_STOP_EVENT,
+        onSampleSettingsPreviewStop,
+      );
+
+      const removeSampleSettingsPreviewListeners = function () {
+        if (sampleSettingsPreviewMeterRafRef.current) {
+          cancelAnimationFrame(sampleSettingsPreviewMeterRafRef.current);
+          sampleSettingsPreviewMeterRafRef.current = null;
+        }
+
+        window.removeEventListener(
+          SAMPLE_SETTINGS_PREVIEW_PLAY_EVENT,
+          onSampleSettingsPreviewPlay,
+        );
+        window.removeEventListener(
+          SAMPLE_SETTINGS_PREVIEW_STOP_EVENT,
+          onSampleSettingsPreviewStop,
+        );
+      };
+
       if (!transport.isPlaying) {
         if (rafIdRef.current) {
           cancelAnimationFrame(rafIdRef.current);
@@ -2227,10 +2683,11 @@ export function useAudioScheduler() {
         resetMeters();
 
         stepRef.current = 0;
-        return;
+        return function () {
+          removeSampleSettingsPreviewListeners();
+        };
       }
 
-      const audioCtx = ensureContext();
       if (audioCtx.state === "suspended") {
         void audioCtx.resume();
       }
@@ -2238,7 +2695,6 @@ export function useAudioScheduler() {
       ensureMixerGraph();
       applyMixerSettingsToGraph();
 
-      const sixteenth = 60 / transport.bpm / 4;
       const scheduleAhead = 0.11;
 
       const schedulePatternStep = function (pattern, patternStep, noteTime) {
@@ -2308,7 +2764,7 @@ export function useAudioScheduler() {
               schedulePluginInstrument(
                 pluginRef,
                 hitTime,
-                0.16 * channel.volume,
+                BASE_CHANNEL_TRIGGER_GAIN * channel.volume,
                 channel.pan,
                 channel,
                 outputNode,
@@ -2325,7 +2781,7 @@ export function useAudioScheduler() {
               scheduleSample(
                 sampleBuffer,
                 hitTime,
-                0.2 * channel.volume,
+                BASE_CHANNEL_TRIGGER_GAIN * channel.volume,
                 channel.pan,
                 channel,
                 outputNode,
@@ -2527,6 +2983,8 @@ export function useAudioScheduler() {
       rafIdRef.current = requestAnimationFrame(tick);
 
       return function () {
+        removeSampleSettingsPreviewListeners();
+
         if (rafIdRef.current) {
           cancelAnimationFrame(rafIdRef.current);
           rafIdRef.current = null;
