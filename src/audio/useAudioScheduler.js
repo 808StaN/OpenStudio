@@ -48,6 +48,9 @@ const SAMPLE_SETTINGS_PREVIEW_PLAY_EVENT =
   "openstudio:sample-settings-preview-play";
 const SAMPLE_SETTINGS_PREVIEW_STOP_EVENT =
   "openstudio:sample-settings-preview-stop";
+const MIN_AUDIO_GAIN = 0.0001;
+const CUT_ITSELF_RELEASE_SEC = 0.01;
+const CUT_ITSELF_STOP_PADDING_SEC = 0.003;
 const GRAPHIC_EQ_BAND_TYPES = [
   "peaking",
   "lowshelf",
@@ -88,6 +91,25 @@ function sanitizeEqBandType(raw, fallback) {
 
 function clamp(value, min, max) {
   return Math.max(min, Math.min(max, value));
+}
+
+function scheduleSmoothGainStop(param, atTime, releaseSec) {
+  const safeReleaseSec = Math.max(0.003, Number(releaseSec || 0));
+  const stopAt = atTime + safeReleaseSec;
+  const tau = Math.max(0.001, safeReleaseSec * 0.25);
+
+  if (typeof param.cancelAndHoldAtTime === "function") {
+    param.cancelAndHoldAtTime(atTime);
+    const heldGain = Math.max(MIN_AUDIO_GAIN, Number(param.value || 0));
+    param.setValueAtTime(heldGain, atTime);
+  } else {
+    const nowGain = Math.max(MIN_AUDIO_GAIN, Number(param.value || 0));
+    param.cancelScheduledValues(atTime);
+    param.setValueAtTime(nowGain, atTime);
+  }
+
+  param.setTargetAtTime(MIN_AUDIO_GAIN, atTime, tau);
+  return stopAt;
 }
 
 function getSafeGraphicEqParams(raw) {
@@ -1851,21 +1873,22 @@ export function useAudioScheduler() {
 
         voices.forEach(function (voice) {
           try {
-            const nowGain = Math.max(0.0001, voice.gain.gain.value || 0.0001);
-            voice.gain.gain.cancelScheduledValues(atTime);
-            voice.gain.gain.setValueAtTime(nowGain, atTime);
-            voice.gain.gain.linearRampToValueAtTime(0.0001, atTime + 0.01);
+            const voiceStopAt = scheduleSmoothGainStop(
+              voice.gain.gain,
+              atTime,
+              CUT_ITSELF_RELEASE_SEC,
+            );
 
             if (Array.isArray(voice.sources)) {
               voice.sources.forEach(function (sourceNode) {
                 try {
-                  sourceNode.stop(atTime + 0.012);
+                  sourceNode.stop(voiceStopAt + CUT_ITSELF_STOP_PADDING_SEC);
                 } catch {
                   return;
                 }
               });
             } else if (voice.source) {
-              voice.source.stop(atTime + 0.012);
+              voice.source.stop(voiceStopAt + CUT_ITSELF_STOP_PADDING_SEC);
             }
 
             if (voice.cleanupTimeout) {
@@ -2137,10 +2160,19 @@ export function useAudioScheduler() {
           0.01,
           Number(noteLengthSteps || 1) * sixteenth,
         );
-        const envReleaseSec = settings.envEnabled
+        const hasAudibleEnvelopeShape =
+          Number(settings.envDelayMs || 0) > 0 ||
+          Number(settings.envAttackMs || 0) > 0 ||
+          Number(settings.envHoldMs || 0) > 0 ||
+          Number(settings.envDecayMs || 0) > 0 ||
+          Number(settings.envReleaseMs || 0) > 0 ||
+          Number(settings.envSustainPct ?? 100) < 100;
+        const shouldApplyEnvelope =
+          Boolean(settings.envEnabled) && hasAudibleEnvelopeShape;
+        const envReleaseSec = shouldApplyEnvelope
           ? Math.max(0, Number(settings.envReleaseMs ?? 0) / 1000)
           : 0;
-        const sourcePlayDuration = settings.envEnabled
+        const sourcePlayDuration = shouldApplyEnvelope
           ? Math.max(
               0.01,
               Math.min(
@@ -2149,11 +2181,12 @@ export function useAudioScheduler() {
               ),
             )
           : samplePlayableDuration;
-        const envelopeGateDuration = settings.envEnabled
+        const envelopeGateDuration = shouldApplyEnvelope
           ? Math.max(0.01, Math.min(noteGateDuration, sourcePlayDuration))
           : sourcePlayDuration;
         const fadeInSec = sourcePlayDuration * (settings.fadeInPct / 100);
-        const fadeOutSec = sourcePlayDuration * (settings.fadeOutPct / 100);
+        const shapedFadeOutPct = Math.pow(settings.fadeOutPct / 100, 0.7) * 100;
+        const fadeOutSec = sourcePlayDuration * (shapedFadeOutPct / 100);
         const fadeTotal = fadeInSec + fadeOutSec;
         const fadeScale =
           fadeTotal > sourcePlayDuration * 0.98
@@ -2220,7 +2253,7 @@ export function useAudioScheduler() {
 
         source.playbackRate.setValueAtTime(playbackRate, time);
         if (finalFadeIn > 0.001) {
-          gain.gain.setValueAtTime(0.0001, time);
+          gain.gain.setValueAtTime(MIN_AUDIO_GAIN, time);
           gain.gain.linearRampToValueAtTime(finalGain, time + finalFadeIn);
         } else {
           gain.gain.setValueAtTime(finalGain, time);
@@ -2228,16 +2261,16 @@ export function useAudioScheduler() {
 
         gain.gain.setValueAtTime(finalGain, fadeOutStart);
         if (finalFadeOut > 0.001) {
-          gain.gain.linearRampToValueAtTime(0.0001, sampleStopAt);
+          gain.gain.exponentialRampToValueAtTime(MIN_AUDIO_GAIN, sampleStopAt);
         } else {
-          gain.gain.setValueAtTime(0.0001, sampleStopAt);
+          gain.gain.setValueAtTime(MIN_AUDIO_GAIN, sampleStopAt);
         }
 
         panner.pan.setValueAtTime(Math.max(-1, Math.min(1, panValue)), time);
 
         source.connect(gain);
         gain.connect(envelopeGain);
-        if (settings.envEnabled) {
+        if (shouldApplyEnvelope) {
           applyVolumeEnvelopeToGain(
             envelopeGain.gain,
             time,
