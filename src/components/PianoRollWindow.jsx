@@ -1828,17 +1828,16 @@ export function PianoRollWindow() {
         dragSession.moves = [];
         dragSession.notes.forEach(function (item) {
           const maxStart = Math.max(0, patternLength - item.length);
-          const nextStart = clamp(
-            item.originStart + deltaSteps,
-            0,
-            maxStart,
-          );
+          const nextStart = clamp(item.originStart + deltaSteps, 0, maxStart);
           const nextPitch = Math.max(
             PITCH_MIN,
             Math.min(PITCH_MAX, item.originPitch - deltaRows),
           );
 
-          if (isNearlyEqual(nextStart, item.start) && nextPitch === item.pitch) {
+          if (
+            isNearlyEqual(nextStart, item.start) &&
+            nextPitch === item.pitch
+          ) {
             return;
           }
 

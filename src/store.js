@@ -823,7 +823,9 @@ function sanitizeLoadedDawState(currentState, rawLoadedState) {
   const scaleType = String(nextUi.pianoRollScaleType || "minor")
     .trim()
     .toLowerCase();
-  nextUi.pianoRollScaleRoot = allowedScaleRoots.has(scaleRoot) ? scaleRoot : "C";
+  nextUi.pianoRollScaleRoot = allowedScaleRoots.has(scaleRoot)
+    ? scaleRoot
+    : "C";
   nextUi.pianoRollScaleType = scaleType === "major" ? "major" : "minor";
 
   const projectRaw = isObjectLike(loadedState.project)
@@ -1400,8 +1402,12 @@ const dawSlice = createSlice({
     },
 
     setPianoRollScale(state, action) {
-      const root = String(action.payload?.root || "").trim().toUpperCase();
-      const type = String(action.payload?.type || "").trim().toLowerCase();
+      const root = String(action.payload?.root || "")
+        .trim()
+        .toUpperCase();
+      const type = String(action.payload?.type || "")
+        .trim()
+        .toLowerCase();
       const allowedRoots = new Set([
         "C",
         "C#",
@@ -2286,7 +2292,10 @@ const dawSlice = createSlice({
         );
         const pitch = Math.max(
           0,
-          Math.min(127, Math.round(Number(inputNote?.pitch || DEFAULT_MIDI_PITCH))),
+          Math.min(
+            127,
+            Math.round(Number(inputNote?.pitch || DEFAULT_MIDI_PITCH)),
+          ),
         );
         const key = Math.round(start * 1000) + ":" + pitch;
         if (occupied.has(key)) {
@@ -2332,7 +2341,9 @@ const dawSlice = createSlice({
         return;
       }
 
-      const moves = Array.isArray(action.payload.moves) ? action.payload.moves : [];
+      const moves = Array.isArray(action.payload.moves)
+        ? action.payload.moves
+        : [];
       if (moves.length === 0) {
         return;
       }
@@ -2363,7 +2374,10 @@ const dawSlice = createSlice({
         note.pitch = nextPitch;
 
         const maxLen = Math.max(0.0625, patternLength - note.start);
-        note.length = Math.max(0.0625, Math.min(maxLen, Number(note.length || 1)));
+        note.length = Math.max(
+          0.0625,
+          Math.min(maxLen, Number(note.length || 1)),
+        );
       });
 
       notes.sort(function (a, b) {
@@ -2413,7 +2427,10 @@ const dawSlice = createSlice({
 
         const row = pattern.stepGrid[channelId];
         stepsToRemove.forEach(function (stepItem) {
-          const stepIndex = Math.max(0, Math.round(Number(stepItem.start || 0)));
+          const stepIndex = Math.max(
+            0,
+            Math.round(Number(stepItem.start || 0)),
+          );
           if (stepIndex < row.length) {
             row[stepIndex] = false;
           }
@@ -2442,7 +2459,8 @@ const dawSlice = createSlice({
           const removeByStartPitch = notesToRemove.some(function (item) {
             return (
               nearlyEqual(Number(item.start || 0), Number(note.start || 0)) &&
-              Math.round(Number(item.pitch || 72)) === Math.round(Number(note.pitch || 72))
+              Math.round(Number(item.pitch || 72)) ===
+                Math.round(Number(note.pitch || 72))
             );
           });
 
