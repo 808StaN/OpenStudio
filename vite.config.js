@@ -7,11 +7,11 @@ import react from "@vitejs/plugin-react";
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 
-function runRefreshDrumkits() {
+function runRefreshPacks() {
   const scriptPath = path.resolve(
     __dirname,
     "scripts",
-    "generate-drumkits-manifest.mjs",
+    "generate-packs-manifest.mjs",
   );
 
   return new Promise(function (resolve, reject) {
@@ -41,19 +41,19 @@ function runRefreshDrumkits() {
       }
 
       const message =
-        stderr.trim() || stdout.trim() || "refresh:drumkits failed";
+        stderr.trim() || stdout.trim() || "refresh:packs failed";
       reject(new Error(message));
     });
   });
 }
 
-function drumkitsRescanPlugin() {
+function packsRescanPlugin() {
   return {
-    name: "openstudio-drumkits-rescan",
+    name: "openstudio-packs-rescan",
     configureServer(server) {
       server.middlewares.use(async function (req, res, next) {
         if (
-          req.url !== "/__openstudio/refresh-drumkits" ||
+          req.url !== "/__openstudio/refresh-packs" ||
           req.method !== "POST"
         ) {
           next();
@@ -61,7 +61,7 @@ function drumkitsRescanPlugin() {
         }
 
         try {
-          await runRefreshDrumkits();
+          await runRefreshPacks();
           res.statusCode = 200;
           res.setHeader("content-type", "application/json; charset=utf-8");
           res.end(JSON.stringify({ ok: true }));
@@ -82,5 +82,6 @@ function drumkitsRescanPlugin() {
 
 // https://vite.dev/config/
 export default defineConfig({
-  plugins: [react(), drumkitsRescanPlugin()],
+  plugins: [react(), packsRescanPlugin()],
 });
+

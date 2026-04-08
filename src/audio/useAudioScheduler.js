@@ -45,7 +45,7 @@ const FX_EFFECT_MAXIMIZER = "maximizer";
 const GRAPHIC_EQ_DEFAULT_POINT_FREQUENCIES = [
   50, 100, 250, 500, 1000, 3000, 8000,
 ];
-const DRUMKIT_PREVIEW_EVENT = "openstudio:drumkit-preview";
+const PACK_PREVIEW_EVENT = "openstudio:packs-preview";
 const SAMPLE_SETTINGS_PREVIEW_PLAY_EVENT =
   "openstudio:sample-settings-preview-play";
 const SAMPLE_SETTINGS_PREVIEW_STOP_EVENT =
@@ -955,8 +955,8 @@ export function useAudioScheduler() {
   const pluginInstrumentRef = useRef(new Map());
   const pluginInstrumentLoadRef = useRef(new Map());
   const pluginInstrumentFailedRef = useRef(new Set());
-  const drumkitPreviewVoiceRef = useRef(null);
-  const drumkitPreviewMeterRafRef = useRef(null);
+  const packPreviewVoiceRef = useRef(null);
+  const packPreviewMeterRafRef = useRef(null);
   const sampleSettingsPreviewMeterRafRef = useRef(null);
   const sampleSettingsPreviewMeterInsertIdRef = useRef(null);
   const channelsRef = useRef(channels);
@@ -1822,7 +1822,7 @@ export function useAudioScheduler() {
     [channels],
   );
 
-  const playDrumkitBrowserPreview = useCallback(
+  const playPackBrowserPreview = useCallback(
     async function (samplePath) {
       const safeSamplePath = String(samplePath || "").trim();
       if (!safeSamplePath) {
@@ -1842,7 +1842,7 @@ export function useAudioScheduler() {
         return;
       }
 
-      const previousVoice = drumkitPreviewVoiceRef.current;
+      const previousVoice = packPreviewVoiceRef.current;
       if (previousVoice?.source) {
         try {
           previousVoice.gain.gain.cancelScheduledValues(audioCtx.currentTime);
@@ -1884,12 +1884,12 @@ export function useAudioScheduler() {
       masterPreviewGain.connect(outputNode);
 
       const voice = { source, gain, masterPreviewGain };
-      drumkitPreviewVoiceRef.current = voice;
+      packPreviewVoiceRef.current = voice;
 
       const stopPreviewMeterLoop = function () {
-        if (drumkitPreviewMeterRafRef.current) {
-          cancelAnimationFrame(drumkitPreviewMeterRafRef.current);
-          drumkitPreviewMeterRafRef.current = null;
+        if (packPreviewMeterRafRef.current) {
+          cancelAnimationFrame(packPreviewMeterRafRef.current);
+          packPreviewMeterRafRef.current = null;
         }
       };
 
@@ -1933,25 +1933,25 @@ export function useAudioScheduler() {
         stopPreviewMeterLoop();
 
         const tickPreviewMeter = function () {
-          if (drumkitPreviewVoiceRef.current !== voice) {
+          if (packPreviewVoiceRef.current !== voice) {
             stopPreviewMeterLoop();
             return;
           }
 
           updateMasterPreviewMeter();
-          drumkitPreviewMeterRafRef.current =
+          packPreviewMeterRafRef.current =
             requestAnimationFrame(tickPreviewMeter);
         };
 
-        drumkitPreviewMeterRafRef.current =
+        packPreviewMeterRafRef.current =
           requestAnimationFrame(tickPreviewMeter);
       }
 
       source.onended = function () {
         stopPreviewMeterLoop();
 
-        if (drumkitPreviewVoiceRef.current === voice) {
-          drumkitPreviewVoiceRef.current = null;
+        if (packPreviewVoiceRef.current === voice) {
+          packPreviewVoiceRef.current = null;
         }
 
         dispatch(
@@ -1976,31 +1976,31 @@ export function useAudioScheduler() {
 
   useEffect(
     function () {
-      const onDrumkitPreviewRequest = function (event) {
+      const onPackPreviewRequest = function (event) {
         const samplePath = String(event?.detail?.samplePath || "").trim();
         if (!samplePath) {
           return;
         }
 
-        void playDrumkitBrowserPreview(samplePath);
+        void playPackBrowserPreview(samplePath);
       };
 
-      window.addEventListener(DRUMKIT_PREVIEW_EVENT, onDrumkitPreviewRequest);
+      window.addEventListener(PACK_PREVIEW_EVENT, onPackPreviewRequest);
 
       return function () {
         window.removeEventListener(
-          DRUMKIT_PREVIEW_EVENT,
-          onDrumkitPreviewRequest,
+          PACK_PREVIEW_EVENT,
+          onPackPreviewRequest,
         );
 
-        const activeVoice = drumkitPreviewVoiceRef.current;
+        const activeVoice = packPreviewVoiceRef.current;
         if (!activeVoice?.source || !audioCtxRef.current) {
           return;
         }
 
-        if (drumkitPreviewMeterRafRef.current) {
-          cancelAnimationFrame(drumkitPreviewMeterRafRef.current);
-          drumkitPreviewMeterRafRef.current = null;
+        if (packPreviewMeterRafRef.current) {
+          cancelAnimationFrame(packPreviewMeterRafRef.current);
+          packPreviewMeterRafRef.current = null;
         }
 
         const stopTime = audioCtxRef.current.currentTime;
@@ -2019,10 +2019,10 @@ export function useAudioScheduler() {
           // Voice might already be stopped.
         }
 
-        drumkitPreviewVoiceRef.current = null;
+        packPreviewVoiceRef.current = null;
       };
     },
-    [playDrumkitBrowserPreview],
+    [playPackBrowserPreview],
   );
 
   useEffect(
@@ -2031,7 +2031,7 @@ export function useAudioScheduler() {
         return;
       }
 
-      const voice = drumkitPreviewVoiceRef.current;
+      const voice = packPreviewVoiceRef.current;
       if (!voice?.masterPreviewGain) {
         return;
       }
@@ -3956,4 +3956,5 @@ export function useAudioScheduler() {
     ],
   );
 }
+
 

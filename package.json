@@ -4,9 +4,9 @@
   "version": "0.0.0",
   "type": "module",
   "scripts": {
-    "refresh:drumkits": "node scripts/generate-drumkits-manifest.mjs",
-    "predev": "npm run refresh:drumkits",
-    "prebuild": "npm run refresh:drumkits",
+    "refresh:packs": "node scripts/generate-packs-manifest.mjs",
+    "predev": "npm run refresh:packs",
+    "prebuild": "npm run refresh:packs",
     "dev": "vite",
     "build": "vite build",
     "lint": "eslint .",
@@ -34,3 +34,4 @@
     "vite": "^8.0.1"
   }
 }
+

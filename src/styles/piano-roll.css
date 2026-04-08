@@ -360,8 +360,8 @@
 }
 
 .piano-key-row.marker {
-  box-shadow: inset 3px 0 0 #8fd39e;
-  font-weight: 600;
+  box-shadow: none;
+  font-weight: inherit;
 }
 
 .piano-grid-wrap {

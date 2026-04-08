@@ -456,7 +456,7 @@ export function PlaylistWindow() {
     }) || SNAP_OPTIONS[11];
   const snapLineWidth = activeSnap.stepSize
     ? Math.max(1, (activeSnap.stepSize / 16) * barWidth)
-    : 0;
+    : 1;
   const snapLineOpacity = activeSnap.stepSize ? 0.09 : 0;
   const snapBarSize = activeSnap.stepSize
     ? Math.max(1 / 16, activeSnap.stepSize / 16)
@@ -1418,15 +1418,19 @@ export function PlaylistWindow() {
         onScroll={onPlaylistBodyScroll}
         onWheel={onPlaylistBodyWheel}
       >
-        {isPlaying || currentStep16 > 0 ? (
-          <div
-            className="playlist-playhead-layer"
-            style={{ width: timelineWidth + "px" }}
-          >
-            <span ref={playheadRef} className="playlist-playhead-line" />
-          </div>
-        ) : null}
-        {tracks.map(function (track) {
+        <div
+          className="playlist-tracks-shell"
+          style={{ width: 92 + timelineWidth }}
+        >
+          {isPlaying || currentStep16 > 0 ? (
+            <div
+              className="playlist-playhead-layer"
+              style={{ width: timelineWidth + "px" }}
+            >
+              <span ref={playheadRef} className="playlist-playhead-line" />
+            </div>
+          ) : null}
+          {tracks.map(function (track) {
           const clipsOnTrack = clips.filter(function (clip) {
             return clip.trackId === track.id;
           });
@@ -1664,15 +1668,15 @@ export function PlaylistWindow() {
             },
           );
 
-          return (
-            <article
-              className="playlist-track"
-              key={track.id}
-              style={{
-                gridTemplateColumns: "92px " + timelineWidth + "px",
-                width: 92 + timelineWidth,
-              }}
-            >
+            return (
+              <article
+                className="playlist-track"
+                key={track.id}
+                style={{
+                  gridTemplateColumns: "92px " + timelineWidth + "px",
+                  width: 92 + timelineWidth,
+                }}
+              >
               <div className="track-name">{track.name}</div>
               <div
                 className={
@@ -1967,9 +1971,10 @@ export function PlaylistWindow() {
                   );
                 })}
               </div>
-            </article>
-          );
-        })}
+              </article>
+            );
+          })}
+        </div>
       </div>
     </section>
   );

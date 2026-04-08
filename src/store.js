@@ -566,7 +566,7 @@ const initialState = {
   },
   ui: {
     theme: UI_THEME_DEFAULT,
-    browserTab: "drumkits",
+    browserTab: "packs",
     channelRackMode: "sequencer",
     patternClipboardIds: [],
     pianoRollScaleRoot: "C",
@@ -576,7 +576,7 @@ const initialState = {
       slotId: "slot-1",
     },
     browserCollapsedFolders: {
-      Drumkits: false,
+      Packs: false,
       Plugins: false,
       "808 Mafia": false,
       "Nick Mira": true,

@@ -1,0 +1,7 @@
+                                                           Drag Cxdy 2022 Template FLP ↓
+
+This PC > (whatever folder your FL Studio is installed to) > Data > Templates > *Create Folder* 
+
+Startup FL Studio > File > New From Template > Change Default Template > *click bottom right of popup window "Cxdy 2022 Template"*
+
+Enjoy

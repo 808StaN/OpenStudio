@@ -192,12 +192,17 @@
   position: relative;
   overflow: auto;
   padding: 0 var(--playlist-side-inset) 8px;
-  display: flex;
-  flex-direction: column;
-  gap: 7px;
   background: #121928;
   scrollbar-width: thin;
   scrollbar-color: #7f8ca2 #202838;
+}
+
+.playlist-tracks-shell {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  gap: 7px;
+  width: max-content;
 }
 
 .playlist-playhead-layer {
@@ -211,8 +216,8 @@
 
 .playlist-playhead-line {
   position: absolute;
-  top: 0;
-  bottom: 0;
+  top: 1px;
+  bottom: 1px;
   left: 0;
   width: 2px;
   background: linear-gradient(180deg, #d8f67a 0%, #7ce74a 100%);
@@ -267,26 +272,44 @@
 
 .track-grid {
   position: relative;
+  isolation: isolate;
   border: 1px solid #3f4758;
   border-radius: 0 5px 5px 0;
-  background:
-    repeating-linear-gradient(
-      to right,
-      rgba(154, 207, 255, var(--playlist-snap-opacity, 0)) 0,
-      rgba(154, 207, 255, var(--playlist-snap-opacity, 0)) 1px,
-      transparent 1px,
-      transparent var(--playlist-snap-width, 1px)
-    ),
-    repeating-linear-gradient(
-      to right,
-      rgba(113, 129, 153, 0.35) 0,
-      rgba(113, 129, 153, 0.35) 1px,
-      transparent 1px,
-      transparent var(--playlist-bar-width, 84px)
-    ),
-    linear-gradient(180deg, #121928 0%, #0d131f 100%);
+  background: linear-gradient(180deg, #121928 0%, #0d131f 100%);
   cursor: cell;
   min-height: 56px;
+}
+
+.track-grid::before {
+  content: "";
+  position: absolute;
+  inset: 0;
+  border-radius: inherit;
+  pointer-events: none;
+  z-index: 0;
+  background: repeating-linear-gradient(
+    to right,
+    rgba(154, 207, 255, var(--playlist-snap-opacity, 0)) 0,
+    rgba(154, 207, 255, var(--playlist-snap-opacity, 0)) 1px,
+    transparent 1px,
+    transparent var(--playlist-snap-width, 1px)
+  );
+}
+
+.track-grid::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  border-radius: inherit;
+  pointer-events: none;
+  z-index: 0;
+  background: repeating-linear-gradient(
+    to right,
+    rgba(126, 148, 179, 0.45) 0,
+    rgba(126, 148, 179, 0.45) 2px,
+    transparent 2px,
+    transparent var(--playlist-bar-width, 84px)
+  );
 }
 
 .track-grid.is-drop-target {

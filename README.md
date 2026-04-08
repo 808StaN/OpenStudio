@@ -99,9 +99,9 @@ OpenStudio/
 		store.js               # Redux state and reducers
 		main.jsx               # React entrypoint
 	public/
-		drumkits/              # Drumkit assets + generated manifest
+		packs/              # Packs assets + generated manifest
 	scripts/
-		generate-drumkits-manifest.mjs
+		generate-packs-manifest.mjs
 	vite.config.js
 	package.json
 ```
@@ -125,7 +125,7 @@ npm install
 npm run dev
 ```
 
-The project runs a predev step that refreshes the drumkits manifest automatically.
+The project runs a predev step that refreshes the packs manifest automatically.
 
 ### Build Production Bundle
 
@@ -133,11 +133,11 @@ The project runs a predev step that refreshes the drumkits manifest automaticall
 npm run build
 ```
 
-The build also runs drumkits manifest refresh before bundling.
+The build also runs packs manifest refresh before bundling.
 
 ## Available Scripts
 
-- `npm run refresh:drumkits` - regenerate drumkits manifest
+- `npm run refresh:packs` - regenerate packs manifest
 - `npm run dev` - start Vite dev server
 - `npm run build` - production build
 - `npm run lint` - run ESLint
@@ -205,7 +205,7 @@ For audio-related changes, validate both live playback and offline render:
 
 ## Known Notes
 
-- `public/drumkits/manifest.json` may change automatically after dev/build due to pre-scripts.
+- `public/packs/manifest.json` may change automatically after dev/build due to pre-scripts.
 - Keep this in mind when reviewing git diffs.
 
 ## Roadmap Ideas
@@ -214,3 +214,4 @@ For audio-related changes, validate both live playback and offline render:
 - explicit architecture decision records for audio pipeline changes
 - versioned changelog and release process
 - expanded user-facing documentation and tutorials
+

@@ -1,5 +1,5 @@
 import { FolderOpen, Package2 } from "lucide-react";
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import { useDispatch, useSelector } from "react-redux";
 import { PLUGIN_EFFECTS } from "../data/pluginEffects";
 import { PLUGIN_INSTRUMENTS } from "../data/pluginInstruments";
@@ -11,7 +11,7 @@ import {
 } from "../utils/midiImport";
 import { toSafeSampleUrl } from "../utils/sampleUrl";
 
-const DRUMKIT_MEDIA_EXTENSIONS = new Set([
+const PACK_MEDIA_EXTENSIONS = new Set([
   ".wav",
   ".wave",
   ".aif",
@@ -36,7 +36,7 @@ const browserData = {
       items: PLUGIN_EFFECTS,
     },
   ],
-  drumkits: [
+  packs: [
     {
       folder: "808 Mafia",
       items: [
@@ -60,9 +60,10 @@ const browserData = {
 
 export function BrowserPanel() {
   const dispatch = useDispatch();
-  const [drumkitGroups, setDrumkitGroups] = useState([]);
+  const [packGroups, setPackGroups] = useState([]);
   const [manifestStatus, setManifestStatus] = useState("loading");
   const [expandedByParent, setExpandedByParent] = useState({});
+  const hasInitialPacksRefreshRunRef = useRef(false);
   const [pluginExpandedByFolder, setPluginExpandedByFolder] = useState(
     function () {
       return browserData.plugins.reduce(function (acc, group) {
@@ -83,7 +84,7 @@ export function BrowserPanel() {
     }
 
     window.dispatchEvent(
-      new CustomEvent("openstudio:drumkit-preview", {
+      new CustomEvent("openstudio:packs-preview", {
         detail: {
           samplePath: safeSamplePath,
         },
@@ -123,7 +124,7 @@ export function BrowserPanel() {
       const folder =
         folderSegments.length > 0 ? folderSegments.join("/") : "Root";
       const encodedPath =
-        "/drumkits/" +
+        "/packs/" +
         segments
           .map(function (segment) {
             return encodeURIComponent(segment);
@@ -209,8 +210,8 @@ export function BrowserPanel() {
       });
   };
 
-  const discoverDrumkitsFromDirectoryIndex = useCallback(async function () {
-    const queue = ["/drumkits/"];
+  const discoverPacksFromDirectoryIndex = useCallback(async function () {
+    const queue = ["/packs/"];
     const visited = new Set();
     const mediaRelativePaths = new Set();
     const maxDirectories = 250;
@@ -271,7 +272,7 @@ export function BrowserPanel() {
         }
 
         const pathname = decodeURIComponent(resolved.pathname);
-        if (!pathname.startsWith("/drumkits/")) {
+        if (!pathname.startsWith("/packs/")) {
           return;
         }
 
@@ -288,11 +289,11 @@ export function BrowserPanel() {
         const extMatch = fileName.toLowerCase().match(/\.[^.]+$/);
         const ext = extMatch ? extMatch[0] : "";
 
-        if (!DRUMKIT_MEDIA_EXTENSIONS.has(ext)) {
+        if (!PACK_MEDIA_EXTENSIONS.has(ext)) {
           return;
         }
 
-        const relative = pathname.replace(/^\/drumkits\//, "");
+        const relative = pathname.replace(/^\/packs\//, "");
         if (relative) {
           mediaRelativePaths.add(relative);
         }
@@ -306,7 +307,7 @@ export function BrowserPanel() {
     return buildGroupsFromRelativePaths(Array.from(mediaRelativePaths));
   }, []);
 
-  const buildDrumkitTree = function (folders) {
+  const buildPackTree = function (folders) {
     const root = {
       path: "",
       name: "",
@@ -340,7 +341,7 @@ export function BrowserPanel() {
           typeof item === "string"
             ? ""
             : item.path ||
-              "/drumkits/" +
+              "/packs/" +
                 normalizeFolderPath(group.folder) +
                 "/" +
                 item.name;
@@ -431,19 +432,19 @@ export function BrowserPanel() {
       setManifestStatus("loading");
       try {
         const response = await fetch(
-          "/drumkits/manifest.json?ts=" + Date.now(),
+          "/packs/manifest.json?ts=" + Date.now(),
           {
             cache: "no-store",
           },
         );
 
         if (!response.ok) {
-          const discoveredFolders = await discoverDrumkitsFromDirectoryIndex();
+          const discoveredFolders = await discoverPacksFromDirectoryIndex();
           if (discoveredFolders.length === 0) {
             throw new Error("Manifest not found");
           }
 
-          setDrumkitGroups(discoveredFolders);
+          setPackGroups(discoveredFolders);
           setManifestStatus("ready");
           return;
         }
@@ -452,23 +453,23 @@ export function BrowserPanel() {
         const manifestFolders = Array.isArray(manifest.folders)
           ? manifest.folders
           : [];
-        const discoveredFolders = await discoverDrumkitsFromDirectoryIndex();
+        const discoveredFolders = await discoverPacksFromDirectoryIndex();
         const merged = mergeGroups(manifestFolders, discoveredFolders);
 
-        setDrumkitGroups(merged);
+        setPackGroups(merged);
         setManifestStatus("ready");
       } catch {
-        setDrumkitGroups([]);
+        setPackGroups([]);
         setManifestStatus("missing");
       }
     },
-    [discoverDrumkitsFromDirectoryIndex],
+    [discoverPacksFromDirectoryIndex],
   );
 
-  const triggerDrumkitsRescan = useCallback(
+  const triggerPacksRescan = useCallback(
     async function () {
       try {
-        await fetch("/__openstudio/refresh-drumkits", {
+        await fetch("/__openstudio/refresh-packs", {
           method: "POST",
           cache: "no-store",
         });
@@ -483,34 +484,36 @@ export function BrowserPanel() {
 
   useEffect(
     function () {
-      let isDisposed = false;
+      let isCancelled = false;
 
-      const loadSafe = async function () {
-        if (isDisposed) {
+      const refreshOnStart = async function () {
+        if (isCancelled || hasInitialPacksRefreshRunRef.current) {
           return;
         }
-        await loadManifest();
+
+        hasInitialPacksRefreshRunRef.current = true;
+        await triggerPacksRescan();
       };
 
-      void loadSafe();
+      void refreshOnStart();
 
       return function () {
-        isDisposed = true;
+        isCancelled = true;
       };
     },
-    [loadManifest],
+    [triggerPacksRescan],
   );
 
   useEffect(
     function () {
-      if (browserTab === "drumkits") {
-        void loadManifest();
+      if (browserTab === "packs") {
+        void triggerPacksRescan();
       }
     },
-    [browserTab, loadManifest],
+    [browserTab, triggerPacksRescan],
   );
 
-  const drumkitTree = buildDrumkitTree(drumkitGroups);
+  const packTree = buildPackTree(packGroups);
 
   const renderFolderNode = function (node, depth) {
     const parentPath = getParentPath(node.path);
@@ -574,7 +577,7 @@ export function BrowserPanel() {
                           }
 
                           const payload = JSON.stringify({
-                            tab: "drumkits",
+                            tab: "packs",
                             folder: node.path,
                             file: sampleItem.name,
                             samplePath: safeSamplePath,
@@ -614,35 +617,22 @@ export function BrowserPanel() {
           Plugins
         </button>
         <button
-          className={browserTab === "drumkits" ? "is-active" : ""}
+          className={browserTab === "packs" ? "is-active" : ""}
           onClick={function () {
-            dispatch(setBrowserTab("drumkits"));
+            dispatch(setBrowserTab("packs"));
           }}
         >
           <FolderOpen size={14} />
-          Drumkits
+          Packs
         </button>
       </div>
 
-      {browserTab === "drumkits" ? (
-        <div className="browser-actions">
-          <button
-            className="browser-rescan"
-            onClick={function () {
-              void triggerDrumkitsRescan();
-            }}
-          >
-            Refresh
-          </button>
-        </div>
-      ) : null}
-
       <div className="browser-tree">
-        {browserTab === "drumkits" && drumkitGroups.length === 0 ? (
+        {browserTab === "packs" && packGroups.length === 0 ? (
           <div className="browser-hint">
             {manifestStatus === "loading"
-              ? "Loading drumkits..."
-              : "Wklej WAV lub MID do public/drumkits i uruchom npm run refresh:drumkits"}
+              ? "Loading packs..."
+              : "Wklej WAV lub MID do public/packs i uruchom npm run refresh:packs (Packs)"}
           </div>
         ) : null}
 
@@ -719,10 +709,11 @@ export function BrowserPanel() {
                 </section>
               );
             })
-          : drumkitTree.children.map(function (node) {
+          : packTree.children.map(function (node) {
               return renderFolderNode(node, 0);
             })}
       </div>
     </aside>
   );
 }
+
