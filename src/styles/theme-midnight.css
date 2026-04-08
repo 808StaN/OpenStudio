@@ -329,12 +329,11 @@
   box-shadow: 0 0 8px rgba(64, 186, 255, 0.44) !important;
 }
 
-.clip {
-  border: 1px solid rgba(75, 239, 159, 0.9) !important;
+.theme-midnight .clip {
   box-shadow: none !important;
 }
 
-.clip.is-active {
+.theme-midnight .clip.is-active {
   box-shadow: none !important;
 }
 

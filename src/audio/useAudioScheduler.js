@@ -2990,31 +2990,127 @@ export function useAudioScheduler() {
         const gain = audioCtx.createGain();
         const panner = audioCtx.createStereoPanner();
 
-        const offsetSec = Math.max(0, Number(clipOffsetSteps || 0) * sixteenth);
-        const clipDurationSec = Math.max(
-          0.01,
-          Math.max(
-            0,
-            Number(clipLengthSteps || 1) - Number(clipOffsetSteps || 0),
-          ) * sixteenth,
-        );
-        const remainingSampleDuration = Math.max(
+        const settings = getSafeSampleSettings(channel?.sampleSettings);
+        const clipOffsetSec = Math.max(
           0,
-          Number(sampleBuffer.duration || 0) - offsetSec,
+          Number(clipOffsetSteps || 0) * sixteenth,
+        );
+        const clipTotalDurationSec = Math.max(
+          0.01,
+          Number(clipLengthSteps || 1) * sixteenth,
+        );
+        const clipRemainingDurationSec = Math.max(
+          0,
+          clipTotalDurationSec - clipOffsetSec,
+        );
+        const sampleReadDuration = Math.max(
+          0.01,
+          Number(sampleBuffer.duration || 0) * (settings.lengthPct / 100),
+        );
+        const basePlaybackRate = Math.max(
+          0.125,
+          Math.min(8, Math.pow(2, Number(settings.pitchCents || 0) / 1200)),
+        );
+        const stretchProfile = getTimeStretchProfile(
+          settings,
+          sampleReadDuration,
+          transport.bpm,
+          basePlaybackRate,
+        );
+        const playbackRate = stretchProfile.playbackRate;
+        const naturalPlayableDuration = Math.max(
+          0.01,
+          sampleReadDuration / playbackRate,
+        );
+        const totalPlayableDuration = Math.max(
+          0.01,
+          stretchProfile.useGranularStretch
+            ? stretchProfile.targetDurationSec
+            : naturalPlayableDuration,
+        );
+        const remainingPlayableDuration = Math.max(
+          0,
+          totalPlayableDuration - clipOffsetSec,
         );
         const playDuration = Math.max(
           0,
-          Math.min(remainingSampleDuration, clipDurationSec),
+          Math.min(clipRemainingDurationSec, remainingPlayableDuration),
         );
         if (playDuration <= 0) {
           return;
         }
 
+        let scheduledBuffer = sampleBuffer;
+        let maxReadableDuration = sampleReadDuration;
+        if (stretchProfile.useGranularStretch) {
+          const desiredBufferedDuration = Math.max(
+            0.01,
+            totalPlayableDuration * playbackRate,
+          );
+          const stretchFactor = clamp(
+            sampleReadDuration / desiredBufferedDuration,
+            0.25,
+            4,
+          );
+          const readFrames = Math.max(
+            16,
+            Math.floor(sampleReadDuration * sampleBuffer.sampleRate),
+          );
+          const cacheKey =
+            readFrames +
+            "|" +
+            stretchFactor.toFixed(4) +
+            "|" +
+            sampleBuffer.numberOfChannels;
+
+          let perSampleCache =
+            stretchedSampleBufferCacheRef.current.get(sampleBuffer);
+          if (!perSampleCache) {
+            perSampleCache = new Map();
+            stretchedSampleBufferCacheRef.current.set(
+              sampleBuffer,
+              perSampleCache,
+            );
+          }
+
+          const cached = perSampleCache.get(cacheKey);
+          if (cached) {
+            scheduledBuffer = cached;
+          } else {
+            scheduledBuffer = createWsolaStretchedBufferFromSample(
+              audioCtx,
+              sampleBuffer,
+              sampleReadDuration,
+              stretchFactor,
+              false,
+            );
+            perSampleCache.set(cacheKey, scheduledBuffer);
+          }
+
+          maxReadableDuration = Math.max(
+            0.01,
+            Math.min(scheduledBuffer.duration, desiredBufferedDuration),
+          );
+        }
+
+        const sourceOffsetSec = clipOffsetSec * playbackRate;
+        if (sourceOffsetSec >= maxReadableDuration) {
+          return;
+        }
+        const sourceReadDuration = Math.max(
+          0.01,
+          Math.min(
+            maxReadableDuration - sourceOffsetSec,
+            playDuration * playbackRate,
+          ),
+        );
+
         const fadeOutAt = time + Math.max(0, playDuration - 0.012);
         const clipGain = clamp(Number(channel?.volume ?? 0.75) * 0.36, 0.04, 1);
         const clipPan = clamp(Number(channel?.pan ?? 0), -1, 1);
 
-        source.buffer = sampleBuffer;
+        source.buffer = scheduledBuffer;
+        source.playbackRate.setValueAtTime(playbackRate, time);
         gain.gain.setValueAtTime(clipGain, time);
         gain.gain.setValueAtTime(clipGain, fadeOutAt);
         gain.gain.linearRampToValueAtTime(0.0001, time + playDuration);
@@ -3040,7 +3136,7 @@ export function useAudioScheduler() {
           }
         };
 
-        source.start(time, offsetSec, playDuration);
+        source.start(time, sourceOffsetSec, sourceReadDuration);
         source.stop(time + playDuration + 0.005);
       };
 

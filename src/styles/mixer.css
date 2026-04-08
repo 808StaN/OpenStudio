@@ -564,7 +564,7 @@
 
 .fx-proq-shell {
   display: grid;
-  gap: 8px;
+  gap: 0;
 }
 
 .fx-proq-graph-wrap {
