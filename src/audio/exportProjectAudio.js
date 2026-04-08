@@ -3,7 +3,23 @@ import { getPluginInstrument } from "../data/pluginInstruments";
 import { toSafeSampleUrl } from "../utils/sampleUrl";
 
 const DEFAULT_SAMPLE_MIDI_PITCH = 72;
+const DEFAULT_NOTE_VELOCITY = 95;
 const PLUGIN_INSTRUMENT_GAIN_BOOST = 1.5;
+const BASE_CHANNEL_TRIGGER_GAIN = 0.75;
+const CUT_ITSELF_RELEASE_SEC = 0.01;
+const CUT_ITSELF_MAX_RETRIGGER_RELEASE_SEC = 0.016;
+const CUT_ITSELF_STOP_PADDING_SEC = 0.003;
+const CUT_ITSELF_RETRIGGER_FADE_IN_SEC = 0.0025;
+const FX_EFFECT_GRAPHIC_EQ = "graphic-eq";
+const FX_EFFECT_REVERB = "reverb";
+const GRAPHIC_EQ_DEFAULT_POINT_FREQUENCIES = [50, 100, 250, 500, 1000, 3000, 8000];
+const GRAPHIC_EQ_BAND_TYPES = [
+  "peaking",
+  "lowshelf",
+  "highshelf",
+  "lowpass",
+  "highpass",
+];
 
 const defaultSampleSettings = {
   cutItself: false,
@@ -26,6 +42,152 @@ const defaultSampleSettings = {
 
 function clamp(value, min, max) {
   return Math.max(min, Math.min(max, value));
+}
+
+function scheduleSmoothGainStop(param, atTime, releaseSec) {
+  const safeReleaseSec = Math.max(0.003, Number(releaseSec || 0));
+  const stopAt = atTime + safeReleaseSec;
+  const tau = Math.max(0.001, safeReleaseSec * 0.25);
+
+  if (typeof param.cancelAndHoldAtTime === "function") {
+    param.cancelAndHoldAtTime(atTime);
+    const heldGain = Math.max(0.0001, Number(param.value || 0));
+    param.setValueAtTime(heldGain, atTime);
+  } else {
+    const nowGain = Math.max(0.0001, Number(param.value || 0));
+    param.cancelScheduledValues(atTime);
+    param.setValueAtTime(nowGain, atTime);
+  }
+
+  param.setTargetAtTime(0.0001, atTime, tau);
+  return stopAt;
+}
+
+function getDefaultEqBandType(index) {
+  if (index === 0) {
+    return "lowshelf";
+  }
+
+  if (index === GRAPHIC_EQ_DEFAULT_POINT_FREQUENCIES.length - 1) {
+    return "highshelf";
+  }
+
+  return "peaking";
+}
+
+function sanitizeEqBandType(raw, fallback) {
+  const requested = String(raw || "")
+    .trim()
+    .toLowerCase();
+  if (GRAPHIC_EQ_BAND_TYPES.includes(requested)) {
+    return requested;
+  }
+
+  const safeFallback = String(fallback || "")
+    .trim()
+    .toLowerCase();
+  if (GRAPHIC_EQ_BAND_TYPES.includes(safeFallback)) {
+    return safeFallback;
+  }
+
+  return "peaking";
+}
+
+function getSafeGraphicEqParams(raw) {
+  const requestedPoints = Array.isArray(raw?.points) ? raw.points : [];
+  const legacyBands = Array.isArray(raw?.bands) ? raw.bands : [];
+  return {
+    points: GRAPHIC_EQ_DEFAULT_POINT_FREQUENCIES.map(function (defaultFreq, index) {
+      const requestedPoint = requestedPoints[index];
+      const legacyGain = legacyBands[index];
+      return {
+        frequencyHz: clamp(Number(requestedPoint?.frequencyHz || defaultFreq), 20, 20000),
+        gainDb: clamp(
+          Number(
+            requestedPoint?.gainDb ?? (Number.isFinite(legacyGain) ? legacyGain : 0),
+          ),
+          -18,
+          18,
+        ),
+        q: clamp(Number(requestedPoint?.q || 1.2), 0.25, 8),
+        bandType: sanitizeEqBandType(
+          requestedPoint?.bandType,
+          getDefaultEqBandType(index),
+        ),
+      };
+    }),
+  };
+}
+
+function getSafeReverbParams(raw) {
+  const base = {
+    decayTime: 2.8,
+    preDelayMs: 24,
+    size: 0.62,
+    damping: 0.45,
+    hiCutHz: 9000,
+    loCutHz: 130,
+    earlyReflections: 0.38,
+    diffusion: 0.72,
+    modulationDepth: 0.22,
+    modulationRateHz: 0.35,
+    width: 0.9,
+    dryWet: 0.34,
+    freeze: false,
+    ...(raw || {}),
+  };
+
+  return {
+    decayTime: clamp(Number(base.decayTime ?? 2.8), 0.2, 20),
+    preDelayMs: clamp(Number(base.preDelayMs ?? 24), 0, 250),
+    size: clamp(Number(base.size ?? 0.62), 0, 1),
+    damping: clamp(Number(base.damping ?? 0.45), 0, 1),
+    hiCutHz: clamp(Number(base.hiCutHz ?? 9000), 1200, 18000),
+    loCutHz: clamp(Number(base.loCutHz ?? 130), 20, 1200),
+    earlyReflections: clamp(Number(base.earlyReflections ?? 0.38), 0, 1),
+    diffusion: clamp(Number(base.diffusion ?? 0.72), 0, 1),
+    modulationDepth: clamp(Number(base.modulationDepth ?? 0.22), 0, 1),
+    modulationRateHz: clamp(Number(base.modulationRateHz ?? 0.35), 0, 8),
+    width: clamp(Number(base.width ?? 0.9), 0, 1),
+    dryWet: clamp(Number(base.dryWet ?? 0.34), 0, 1),
+    freeze: Boolean(base.freeze),
+  };
+}
+
+function getActiveFxState(insert) {
+  const fxSlots = Array.isArray(insert?.fxSlots) ? insert.fxSlots : [];
+  const enabledSlots = fxSlots.filter(function (slot) {
+    return Boolean(slot?.enabled);
+  });
+
+  if (enabledSlots.length === 0) {
+    return {
+      effectType: "none",
+      params: null,
+    };
+  }
+
+  const activeSlot = enabledSlots[enabledSlots.length - 1];
+  const effectType = String(activeSlot?.effectType || "none");
+
+  if (effectType === FX_EFFECT_GRAPHIC_EQ) {
+    return {
+      effectType,
+      params: getSafeGraphicEqParams(activeSlot?.params),
+    };
+  }
+
+  if (effectType === FX_EFFECT_REVERB) {
+    return {
+      effectType,
+      params: getSafeReverbParams(activeSlot?.params),
+    };
+  }
+
+  return {
+    effectType: "none",
+    params: null,
+  };
 }
 
 function midiPitchToPlaybackRate(midiPitch) {
@@ -156,52 +318,396 @@ function buildInsertInputNodes(audioCtx, mixerInserts) {
   const inserts = Array.isArray(mixerInserts) ? mixerInserts : [];
   const insertMap = new Map();
 
-  const masterInsert =
-    inserts.find(function (insert) {
-      return Boolean(insert?.isMaster);
-    }) || null;
+  inserts.forEach(function (insert) {
+    const inputGain = audioCtx.createGain();
+    const splitter = audioCtx.createChannelSplitter(2);
+    const leftToLeft = audioCtx.createGain();
+    const rightToLeft = audioCtx.createGain();
+    const leftToRight = audioCtx.createGain();
+    const rightToRight = audioCtx.createGain();
+    const merger = audioCtx.createChannelMerger(2);
+    const panner = audioCtx.createStereoPanner();
+    const fxDryGain = audioCtx.createGain();
+    const fxWetGain = audioCtx.createGain();
+    const eqInput = audioCtx.createGain();
+    const eqLowCut = audioCtx.createBiquadFilter();
+    const eqBands = GRAPHIC_EQ_DEFAULT_POINT_FREQUENCIES.map(function (frequencyHz, index) {
+      const band = audioCtx.createBiquadFilter();
+      band.type = getDefaultEqBandType(index);
+      band.frequency.value = frequencyHz;
+      band.Q.value = 1.08;
+      band.gain.value = 0;
+      return band;
+    });
+    const reverbInput = audioCtx.createGain();
+    const reverbPreDelay = audioCtx.createDelay(0.5);
+    const reverbLoCut = audioCtx.createBiquadFilter();
+    const reverbHiCut = audioCtx.createBiquadFilter();
+    const reverbEarlyGain = audioCtx.createGain();
+    const reverbLateInput = audioCtx.createGain();
+    const reverbLateLeftDelay = audioCtx.createDelay(1.25);
+    const reverbLateRightDelay = audioCtx.createDelay(1.25);
+    const reverbLeftFeedback = audioCtx.createGain();
+    const reverbRightFeedback = audioCtx.createGain();
+    const reverbLeftDamping = audioCtx.createBiquadFilter();
+    const reverbRightDamping = audioCtx.createBiquadFilter();
+    const reverbLeftToLeft = audioCtx.createGain();
+    const reverbRightToLeft = audioCtx.createGain();
+    const reverbLeftToRight = audioCtx.createGain();
+    const reverbRightToRight = audioCtx.createGain();
+    const reverbWidthMerger = audioCtx.createChannelMerger(2);
+    const reverbWetGain = audioCtx.createGain();
+    const outputGain = audioCtx.createGain();
 
-  const masterInput = audioCtx.createGain();
-  const masterPanner = audioCtx.createStereoPanner();
-  const masterGain = audioCtx.createGain();
+    inputGain.connect(splitter);
 
-  masterPanner.pan.value = clamp(Number(masterInsert?.pan || 0), -1, 1);
-  masterGain.gain.value =
-    masterInsert?.active === false
-      ? 0
-      : clamp(Number(masterInsert?.fader ?? 1), 0, 1.25);
+    splitter.connect(leftToLeft, 0);
+    splitter.connect(rightToLeft, 1);
+    splitter.connect(leftToRight, 0);
+    splitter.connect(rightToRight, 1);
 
-  masterInput.connect(masterPanner);
-  masterPanner.connect(masterGain);
-  masterGain.connect(audioCtx.destination);
+    leftToLeft.connect(merger, 0, 0);
+    rightToLeft.connect(merger, 0, 0);
+    leftToRight.connect(merger, 0, 1);
+    rightToRight.connect(merger, 0, 1);
 
-  inserts
-    .filter(function (insert) {
-      return !insert?.isMaster;
-    })
-    .forEach(function (insert) {
-      const input = audioCtx.createGain();
-      const panner = audioCtx.createStereoPanner();
+    merger.connect(panner);
+    panner.connect(fxDryGain);
+    panner.connect(eqInput);
+    panner.connect(reverbInput);
+
+    eqLowCut.type = "highpass";
+    eqLowCut.frequency.value = 20;
+    eqLowCut.Q.value = 0.707;
+    eqInput.connect(eqLowCut);
+
+    let eqTail = eqLowCut;
+    eqBands.forEach(function (band) {
+      eqTail.connect(band);
+      eqTail = band;
+    });
+    eqTail.connect(fxWetGain);
+
+    reverbInput.connect(reverbPreDelay);
+    reverbLoCut.type = "highpass";
+    reverbHiCut.type = "lowpass";
+    reverbPreDelay.connect(reverbLoCut);
+    reverbLoCut.connect(reverbHiCut);
+
+    const earlyTapTimes = [0.011, 0.019, 0.031, 0.043];
+    const earlyTapGains = [0.5, 0.36, 0.26, 0.2];
+    const reverbEarlyTaps = earlyTapTimes.map(function (timeSeconds, idx) {
+      const delay = audioCtx.createDelay(0.25);
       const gain = audioCtx.createGain();
+      delay.delayTime.value = timeSeconds;
+      gain.gain.value = earlyTapGains[idx] || 0.2;
+      reverbHiCut.connect(delay);
+      delay.connect(gain);
+      gain.connect(reverbEarlyGain);
+      return {
+        delay,
+        gain,
+        baseTime: timeSeconds,
+      };
+    });
+    reverbEarlyGain.connect(reverbWetGain);
 
-      panner.pan.value = clamp(Number(insert?.pan || 0), -1, 1);
-      gain.gain.value =
-        insert?.active === false
-          ? 0
-          : clamp(Number(insert?.fader ?? 1), 0, 1.25);
+    reverbHiCut.connect(reverbLateInput);
+    reverbLateInput.connect(reverbLateLeftDelay);
+    reverbLateInput.connect(reverbLateRightDelay);
 
-      input.connect(panner);
-      panner.connect(gain);
-      gain.connect(masterInput);
+    reverbLateLeftDelay.connect(reverbLeftDamping);
+    reverbLateRightDelay.connect(reverbRightDamping);
 
-      insertMap.set(insert.id, input);
+    reverbLeftDamping.type = "lowpass";
+    reverbRightDamping.type = "lowpass";
+
+    reverbLeftDamping.connect(reverbLeftFeedback);
+    reverbRightDamping.connect(reverbRightFeedback);
+    reverbLeftFeedback.connect(reverbLateRightDelay);
+    reverbRightFeedback.connect(reverbLateLeftDelay);
+
+    reverbLeftDamping.connect(reverbLeftToLeft);
+    reverbLeftDamping.connect(reverbLeftToRight);
+    reverbRightDamping.connect(reverbRightToLeft);
+    reverbRightDamping.connect(reverbRightToRight);
+
+    reverbLeftToLeft.connect(reverbWidthMerger, 0, 0);
+    reverbRightToLeft.connect(reverbWidthMerger, 0, 0);
+    reverbLeftToRight.connect(reverbWidthMerger, 0, 1);
+    reverbRightToRight.connect(reverbWidthMerger, 0, 1);
+
+    reverbWidthMerger.connect(reverbWetGain);
+    reverbWetGain.connect(fxWetGain);
+
+    const reverbModulators = [reverbLateLeftDelay, reverbLateRightDelay].map(
+      function (targetDelay, index) {
+        const lfo = audioCtx.createOscillator();
+        const depth = audioCtx.createGain();
+        lfo.type = "sine";
+        lfo.frequency.value = 0.35 + index * 0.09;
+        depth.gain.value = 0;
+        lfo.connect(depth);
+        depth.connect(targetDelay.delayTime);
+        lfo.start();
+        return {
+          lfo,
+          depth,
+        };
+      },
+    );
+
+    fxDryGain.connect(outputGain);
+    fxWetGain.connect(outputGain);
+
+    insertMap.set(insert.id, {
+      inputGain,
+      leftToLeft,
+      rightToLeft,
+      leftToRight,
+      rightToRight,
+      panner,
+      fxDryGain,
+      fxWetGain,
+      eqLowCut,
+      eqBands,
+      reverbInput,
+      reverbPreDelay,
+      reverbLoCut,
+      reverbHiCut,
+      reverbEarlyGain,
+      reverbEarlyTaps,
+      reverbLateLeftDelay,
+      reverbLateRightDelay,
+      reverbLeftFeedback,
+      reverbRightFeedback,
+      reverbLeftDamping,
+      reverbRightDamping,
+      reverbLeftToLeft,
+      reverbRightToLeft,
+      reverbLeftToRight,
+      reverbRightToRight,
+      reverbModulators,
+      reverbWetGain,
+      outputGain,
+    });
+  });
+
+  inserts.forEach(function (insert) {
+    const node = insertMap.get(insert.id);
+    if (!node) {
+      return;
+    }
+
+    const routes =
+      Array.isArray(insert.routesTo) && insert.routesTo.length > 0
+        ? insert.routesTo
+        : insert.isMaster
+          ? []
+          : ["master"];
+
+    let hasConnectedRoute = false;
+    routes.forEach(function (targetId) {
+      const target = insertMap.get(targetId);
+      if (!target) {
+        return;
+      }
+      node.outputGain.connect(target.inputGain);
+      hasConnectedRoute = true;
     });
 
-  const fallbackInsertInput = insertMap.values().next().value || masterInput;
+    if (insert.isMaster || !hasConnectedRoute) {
+      node.outputGain.connect(audioCtx.destination);
+    }
+  });
+
+  inserts.forEach(function (insert) {
+    const node = insertMap.get(insert.id);
+    if (!node) {
+      return;
+    }
+
+    const targetFader = insert.active
+      ? Math.max(0, Math.min(1.25, Number(insert.fader ?? 1)))
+      : 0;
+    const targetPan = Math.max(-1, Math.min(1, Number(insert.pan || 0)));
+    const targetSeparation = Math.max(
+      -1,
+      Math.min(1, Number(insert.stereoSeparation || 0)),
+    );
+    const activeFx = getActiveFxState(insert);
+    const eqEnabled = activeFx.effectType === FX_EFFECT_GRAPHIC_EQ;
+    const reverbEnabled = activeFx.effectType === FX_EFFECT_REVERB;
+    const eqParams = eqEnabled ? activeFx.params : getSafeGraphicEqParams(null);
+    const reverbParams = reverbEnabled
+      ? activeFx.params
+      : getSafeReverbParams(null);
+
+    const width = 1 - targetSeparation;
+    const directGain = 0.5 * (1 + width);
+    const crossGain = 0.5 * (1 - width);
+
+    node.leftToLeft.gain.setValueAtTime(directGain, 0);
+    node.rightToRight.gain.setValueAtTime(directGain, 0);
+    node.rightToLeft.gain.setValueAtTime(crossGain, 0);
+    node.leftToRight.gain.setValueAtTime(crossGain, 0);
+    node.panner.pan.setValueAtTime(targetPan, 0);
+
+    const dryMix = reverbEnabled
+      ? clamp(1 - reverbParams.dryWet, 0, 1)
+      : eqEnabled
+        ? 0
+        : 1;
+    const wetMix = reverbEnabled
+      ? clamp(reverbParams.dryWet, 0, 1)
+      : eqEnabled
+        ? 1
+        : 0;
+
+    node.fxDryGain.gain.setValueAtTime(dryMix, 0);
+    node.fxWetGain.gain.setValueAtTime(wetMix, 0);
+    node.eqLowCut.frequency.setValueAtTime(20, 0);
+    node.eqLowCut.Q.setValueAtTime(0.707, 0);
+
+    if (Array.isArray(node.eqBands)) {
+      node.eqBands.forEach(function (bandNode, index) {
+        const point = eqParams.points[index] || {
+          frequencyHz: GRAPHIC_EQ_DEFAULT_POINT_FREQUENCIES[index],
+          gainDb: 0,
+          q: 1.2,
+          bandType: getDefaultEqBandType(index),
+        };
+        bandNode.type = sanitizeEqBandType(
+          point.bandType,
+          getDefaultEqBandType(index),
+        );
+        bandNode.frequency.setValueAtTime(point.frequencyHz, 0);
+        bandNode.Q.setValueAtTime(point.q, 0);
+        bandNode.gain.setValueAtTime(eqEnabled ? point.gainDb : 0, 0);
+      });
+    }
+
+    const reverbSize = reverbEnabled ? clamp(reverbParams.size, 0, 1) : 0.62;
+    const reverbDiffusion = reverbEnabled
+      ? clamp(reverbParams.diffusion, 0, 1)
+      : 0.72;
+    const reverbDamping = reverbEnabled
+      ? clamp(reverbParams.damping, 0, 1)
+      : 0.45;
+    const reverbDecay = reverbEnabled
+      ? clamp(reverbParams.decayTime, 0.2, 20)
+      : 2.8;
+    const isFreeze = reverbEnabled && Boolean(reverbParams.freeze);
+    const preDelaySec =
+      (reverbEnabled ? clamp(reverbParams.preDelayMs, 0, 250) : 24) / 1000;
+    const hiCutHz = reverbEnabled
+      ? clamp(reverbParams.hiCutHz, 1200, 18000)
+      : 9000;
+    const loCutHz = reverbEnabled
+      ? clamp(reverbParams.loCutHz, 20, 1200)
+      : 130;
+    const earlyMix = reverbEnabled
+      ? clamp(reverbParams.earlyReflections, 0, 1)
+      : 0.38;
+    const widthValue = reverbEnabled ? clamp(reverbParams.width, 0, 1) : 0.9;
+    const modDepth = reverbEnabled
+      ? clamp(reverbParams.modulationDepth, 0, 1)
+      : 0.22;
+    const modRate = reverbEnabled
+      ? clamp(reverbParams.modulationRateHz, 0, 8)
+      : 0.35;
+
+    const leftBaseDelay = 0.029 + reverbSize * 0.053 + reverbDiffusion * 0.011;
+    const rightBaseDelay =
+      0.037 + reverbSize * 0.061 + reverbDiffusion * 0.013;
+    const feedbackBase = isFreeze
+      ? 0.988
+      : clamp(
+          0.24 + reverbDecay / 34 + reverbSize * 0.14 + reverbDiffusion * 0.1,
+          0.2,
+          0.82,
+        );
+    const earlyLevel = isFreeze ? 0 : earlyMix;
+    const reverbInputLevel = isFreeze ? 0 : 1;
+    const dampFreq = Math.max(900, hiCutHz * (1 - reverbDamping * 0.55));
+    const directWidth = 0.5 * (1 + widthValue);
+    const crossWidth = 0.5 * (1 - widthValue);
+
+    node.reverbInput.gain.setValueAtTime(reverbInputLevel, 0);
+    node.reverbPreDelay.delayTime.setValueAtTime(preDelaySec, 0);
+    node.reverbLoCut.frequency.setValueAtTime(loCutHz, 0);
+    node.reverbLoCut.Q.setValueAtTime(0.707, 0);
+    node.reverbHiCut.frequency.setValueAtTime(hiCutHz, 0);
+    node.reverbHiCut.Q.setValueAtTime(0.62, 0);
+    node.reverbLateLeftDelay.delayTime.setValueAtTime(leftBaseDelay, 0);
+    node.reverbLateRightDelay.delayTime.setValueAtTime(rightBaseDelay, 0);
+    node.reverbLeftFeedback.gain.setValueAtTime(feedbackBase, 0);
+    node.reverbRightFeedback.gain.setValueAtTime(feedbackBase * 0.985, 0);
+    node.reverbLeftDamping.frequency.setValueAtTime(dampFreq, 0);
+    node.reverbRightDamping.frequency.setValueAtTime(dampFreq * 0.96, 0);
+    node.reverbLeftDamping.Q.setValueAtTime(0.68, 0);
+    node.reverbRightDamping.Q.setValueAtTime(0.68, 0);
+    node.reverbEarlyGain.gain.setValueAtTime(earlyLevel, 0);
+
+    if (Array.isArray(node.reverbEarlyTaps)) {
+      node.reverbEarlyTaps.forEach(function (tap, tapIndex) {
+        const spread = reverbSize * 0.018 + reverbDiffusion * 0.011;
+        const base = Number(tap.baseTime || 0.012);
+        tap.delay.delayTime.setValueAtTime(base + spread, 0);
+        const tapBaseGain = [0.5, 0.36, 0.26, 0.2][tapIndex] || 0.2;
+        tap.gain.gain.setValueAtTime(tapBaseGain * earlyLevel, 0);
+      });
+    }
+
+    node.reverbLeftToLeft.gain.setValueAtTime(directWidth, 0);
+    node.reverbRightToRight.gain.setValueAtTime(directWidth, 0);
+    node.reverbRightToLeft.gain.setValueAtTime(crossWidth, 0);
+    node.reverbLeftToRight.gain.setValueAtTime(crossWidth, 0);
+    node.reverbWetGain.gain.setValueAtTime(reverbEnabled ? 1 : 0, 0);
+
+    if (Array.isArray(node.reverbModulators)) {
+      node.reverbModulators.forEach(function (modNode, index) {
+        modNode.lfo.frequency.setValueAtTime(
+          modRate * (index === 0 ? 1 : 1.17),
+          0,
+        );
+        modNode.depth.gain.setValueAtTime(
+          (0.0004 + modDepth * 0.0032) * (index === 0 ? 1 : -1),
+          0,
+        );
+      });
+    }
+
+    node.outputGain.gain.setValueAtTime(targetFader, 0);
+  });
+
+  const masterNode =
+    insertMap.get("master") ||
+    inserts
+      .filter(function (insert) {
+        return insert?.isMaster;
+      })
+      .map(function (insert) {
+        return insertMap.get(insert.id);
+      })
+      .find(Boolean) ||
+    null;
+
+  const fallbackInsertInput =
+    inserts
+      .filter(function (insert) {
+        return !insert?.isMaster;
+      })
+      .map(function (insert) {
+        return insertMap.get(insert.id)?.inputGain;
+      })
+      .find(Boolean) ||
+    masterNode?.inputGain ||
+    audioCtx.destination;
 
   return {
     insertMap,
-    masterInput,
+    masterInput: masterNode?.inputGain || audioCtx.destination,
     fallbackInsertInput,
   };
 }
@@ -292,6 +798,7 @@ function collectEvents(project) {
         events.push({
           channel,
           midiPitch: DEFAULT_SAMPLE_MIDI_PITCH,
+          velocity: DEFAULT_NOTE_VELOCITY,
           offsetSteps: clipStartStep + stepIndex,
           lengthSteps: 1,
         });
@@ -309,6 +816,11 @@ function collectEvents(project) {
           midiPitch: clamp(
             Math.round(Number(note.pitch || DEFAULT_SAMPLE_MIDI_PITCH)),
             0,
+            127,
+          ),
+          velocity: clamp(
+            Math.round(Number(note.velocity || DEFAULT_NOTE_VELOCITY)),
+            1,
             127,
           ),
           offsetSteps: clipStartStep + noteStart,
@@ -626,12 +1138,41 @@ export async function renderPlaylistArrangementToFile(options) {
     return normalizeGain;
   };
 
+  const activeSampleVoicesByChannel = new Map();
+
+  const stopActiveChannelSamples = function (channelId, atTime) {
+    const voices = activeSampleVoicesByChannel.get(channelId);
+    if (!voices || voices.size === 0) {
+      return false;
+    }
+
+    voices.forEach(function (voice) {
+      try {
+        const releaseSec = Math.min(
+          CUT_ITSELF_MAX_RETRIGGER_RELEASE_SEC,
+          Math.max(CUT_ITSELF_RELEASE_SEC, Number(voice.cutReleaseSec || 0)),
+        );
+        const tau = Math.max(0.001, releaseSec * 0.25);
+        const voiceStopAt = atTime + releaseSec;
+        // Do not cancel existing automation here, otherwise we can introduce
+        // discontinuities in OfflineAudioContext and audible clicks.
+        voice.gain.gain.setTargetAtTime(0.0001, atTime, tau);
+        voice.source.stop(voiceStopAt + CUT_ITSELF_STOP_PADDING_SEC);
+      } catch {
+        return;
+      }
+    });
+
+    voices.clear();
+    return true;
+  };
+
   events.forEach(function (event) {
     const channel = event.channel;
     const settings = getSafeSampleSettings(channel.sampleSettings);
+    const insertNode = inserts.insertMap.get(channel.mixerInsertId);
     const insertInput =
-      inserts.insertMap.get(channel.mixerInsertId) ||
-      inserts.fallbackInsertInput;
+      insertNode?.inputGain || inserts.fallbackInsertInput;
 
     const noteStartTime = Math.max(
       0,
@@ -643,6 +1184,14 @@ export async function renderPlaylistArrangementToFile(options) {
     const plugin = pluginInstrumentByRef.get(pluginRef);
     const sampleRef = String(channel.sampleRef || "").trim();
     const sampleBuffer = sampleBufferByRef.get(sampleRef);
+    const channelVolume = clamp(Number(channel.volume ?? 1), 0, 1);
+    const velocityScale = clamp(
+      Number(event.velocity || DEFAULT_NOTE_VELOCITY) / 127,
+      1 / 127,
+      1,
+    );
+    const channelBaseGain =
+      BASE_CHANNEL_TRIGGER_GAIN * channelVolume * velocityScale;
 
     if (plugin) {
       const transposedPitch = clamp(
@@ -658,8 +1207,8 @@ export async function renderPlaylistArrangementToFile(options) {
         noteLengthSteps * sixteenth * 0.95 + releaseSec,
       );
       const noteGain = Math.max(
-        0.03,
-        Number(channel.volume || 0) * 0.16 * 2.2 * PLUGIN_INSTRUMENT_GAIN_BOOST,
+        0,
+        channelBaseGain * 2.2 * PLUGIN_INSTRUMENT_GAIN_BOOST,
       );
 
       try {
@@ -706,21 +1255,31 @@ export async function renderPlaylistArrangementToFile(options) {
       sampleReadDuration / playbackRate,
     );
     const noteGateDuration = Math.max(0.01, noteLengthSteps * sixteenth);
-    const envReleaseSec = settings.envEnabled
+    const hasAudibleEnvelopeShape =
+      Number(settings.envDelayMs || 0) > 0 ||
+      Number(settings.envAttackMs || 0) > 0 ||
+      Number(settings.envHoldMs || 0) > 0 ||
+      Number(settings.envDecayMs || 0) > 0 ||
+      Number(settings.envReleaseMs || 0) > 0 ||
+      Number(settings.envSustainPct ?? 100) < 100;
+    const shouldApplyEnvelope =
+      Boolean(settings.envEnabled) && hasAudibleEnvelopeShape;
+    const envReleaseSec = shouldApplyEnvelope
       ? Math.max(0, Number(settings.envReleaseMs ?? 0) / 1000)
       : 0;
-    const sourcePlayDuration = settings.envEnabled
+    const sourcePlayDuration = shouldApplyEnvelope
       ? Math.max(
           0.01,
           Math.min(samplePlayableDuration, noteGateDuration + envReleaseSec),
         )
       : samplePlayableDuration;
-    const envelopeGateDuration = settings.envEnabled
+    const envelopeGateDuration = shouldApplyEnvelope
       ? Math.max(0.01, Math.min(noteGateDuration, sourcePlayDuration))
       : sourcePlayDuration;
 
     const fadeInSec = sourcePlayDuration * (settings.fadeInPct / 100);
-    const fadeOutSec = sourcePlayDuration * (settings.fadeOutPct / 100);
+    const shapedFadeOutPct = Math.pow(settings.fadeOutPct / 100, 0.7) * 100;
+    const fadeOutSec = sourcePlayDuration * (shapedFadeOutPct / 100);
     const fadeTotal = fadeInSec + fadeOutSec;
     const fadeScale =
       fadeTotal > sourcePlayDuration * 0.98
@@ -729,27 +1288,35 @@ export async function renderPlaylistArrangementToFile(options) {
     const finalFadeIn = fadeInSec * fadeScale;
     const finalFadeOut = fadeOutSec * fadeScale;
     const finalGain = Math.max(
-      0.001,
-      Number(channel.volume || 0) *
-        0.2 *
-        (settings.normalize ? getNormalizeGain(sampleBuffer) : 1),
+      0,
+      channelBaseGain * (settings.normalize ? getNormalizeGain(sampleBuffer) : 1),
     );
     const sampleStopAt = noteStartTime + sourcePlayDuration;
     const fadeOutStart = Math.max(noteStartTime, sampleStopAt - finalFadeOut);
 
+    const channelId = String(channel?.id || "").trim();
+    let didRetriggerCut = false;
+    if (settings.cutItself && channelId) {
+      didRetriggerCut = stopActiveChannelSamples(channelId, noteStartTime);
+    }
+
     source.buffer = sampleBuffer;
     source.playbackRate.setValueAtTime(playbackRate, noteStartTime);
 
-    if (finalFadeIn > 0.001) {
+    const retriggerFadeIn = didRetriggerCut
+      ? Math.max(finalFadeIn, CUT_ITSELF_RETRIGGER_FADE_IN_SEC)
+      : finalFadeIn;
+
+    if (retriggerFadeIn > 0.001) {
       gain.gain.setValueAtTime(0.0001, noteStartTime);
-      gain.gain.linearRampToValueAtTime(finalGain, noteStartTime + finalFadeIn);
+      gain.gain.linearRampToValueAtTime(finalGain, noteStartTime + retriggerFadeIn);
     } else {
       gain.gain.setValueAtTime(finalGain, noteStartTime);
     }
 
     gain.gain.setValueAtTime(finalGain, fadeOutStart);
     if (finalFadeOut > 0.001) {
-      gain.gain.linearRampToValueAtTime(0.0001, sampleStopAt);
+      gain.gain.exponentialRampToValueAtTime(0.0001, sampleStopAt);
     } else {
       gain.gain.setValueAtTime(0.0001, sampleStopAt);
     }
@@ -762,7 +1329,7 @@ export async function renderPlaylistArrangementToFile(options) {
     source.connect(gain);
     gain.connect(envelopeGain);
 
-    if (settings.envEnabled) {
+    if (shouldApplyEnvelope) {
       applyVolumeEnvelopeToGain(
         envelopeGain.gain,
         noteStartTime,
@@ -786,6 +1353,33 @@ export async function renderPlaylistArrangementToFile(options) {
       ),
     );
     source.stop(sampleStopAt + 0.005);
+
+    if (channelId) {
+      const channelVoices =
+        activeSampleVoicesByChannel.get(channelId) || new Set();
+      if (!activeSampleVoicesByChannel.has(channelId)) {
+        activeSampleVoicesByChannel.set(channelId, channelVoices);
+      }
+
+      const voice = {
+        source,
+        gain,
+        cutReleaseSec: Math.max(CUT_ITSELF_RELEASE_SEC, finalFadeOut),
+      };
+
+      channelVoices.add(voice);
+
+      source.onended = function () {
+        const voices = activeSampleVoicesByChannel.get(channelId);
+        if (!voices) {
+          return;
+        }
+        voices.delete(voice);
+        if (voices.size === 0) {
+          activeSampleVoicesByChannel.delete(channelId);
+        }
+      };
+    }
   });
 
   const renderedBuffer = await audioCtx.startRendering();
