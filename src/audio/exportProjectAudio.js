@@ -176,21 +176,41 @@ function sanitizeMaximizerMode(rawMode) {
 }
 
 function getSafeMaximizerParams(raw) {
+  const legacyThreshold = Number(raw?.thresholdDb);
+  const legacyCeiling = Number(raw?.ceilingDb);
+  const legacyCharacter = Number(raw?.character);
+  const legacyMode = sanitizeMaximizerMode(raw?.mode);
+  const isLegacyDefault =
+    Number.isFinite(legacyThreshold) &&
+    Number.isFinite(legacyCeiling) &&
+    Number.isFinite(legacyCharacter) &&
+    Math.abs(legacyThreshold + 6) < 0.001 &&
+    Math.abs(legacyCeiling + 0.1) < 0.001 &&
+    Math.abs(legacyCharacter - 0.58) < 0.001 &&
+    legacyMode === "irc-ii" &&
+    Boolean(raw?.truePeakEnabled ?? true);
+
   const base = {
     mode: "irc-ii",
     truePeakEnabled: true,
-    thresholdDb: -6,
-    ceilingDb: -0.1,
-    character: 0.58,
+    thresholdDb: 0,
+    ceilingDb: -1,
+    character: 0.5,
     ...(raw || {}),
   };
+
+  if (isLegacyDefault) {
+    base.thresholdDb = 0;
+    base.ceilingDb = -1;
+    base.character = 0.5;
+  }
 
   return {
     mode: sanitizeMaximizerMode(base.mode),
     truePeakEnabled: Boolean(base.truePeakEnabled),
-    thresholdDb: clamp(Number(base.thresholdDb ?? -6), -24, 0),
-    ceilingDb: clamp(Number(base.ceilingDb ?? -0.1), -18, 0),
-    character: clamp(Number(base.character ?? 0.58), 0, 1),
+    thresholdDb: clamp(Number(base.thresholdDb ?? 0), -24, 0),
+    ceilingDb: clamp(Number(base.ceilingDb ?? -1), -18, 0),
+    character: clamp(Number(base.character ?? 0.5), 0, 1),
   };
 }
 
@@ -539,6 +559,7 @@ function buildInsertInputNodes(audioCtx, mixerInserts) {
       panner,
       fxDryGain,
       fxWetGain,
+      eqInput,
       eqLowCut,
       eqBands,
       reverbInput,
@@ -640,6 +661,7 @@ function buildInsertInputNodes(audioCtx, mixerInserts) {
 
     node.fxDryGain.gain.setValueAtTime(dryMix, 0);
     node.fxWetGain.gain.setValueAtTime(wetMix, 0);
+    node.eqInput.gain.setValueAtTime(eqEnabled ? 1 : 0, 0);
     node.eqLowCut.frequency.setValueAtTime(20, 0);
     node.eqLowCut.Q.setValueAtTime(0.707, 0);
 
@@ -699,7 +721,7 @@ function buildInsertInputNodes(audioCtx, mixerInserts) {
           0.82,
         );
     const earlyLevel = isFreeze ? 0 : earlyMix;
-    const reverbInputLevel = isFreeze ? 0 : 1;
+    const reverbInputLevel = reverbEnabled ? (isFreeze ? 0 : 1) : 0;
     const dampFreq = Math.max(900, hiCutHz * (1 - reverbDamping * 0.55));
     const directWidth = 0.5 * (1 + widthValue);
     const crossWidth = 0.5 * (1 - widthValue);
@@ -758,31 +780,69 @@ function buildInsertInputNodes(audioCtx, mixerInserts) {
 
     const mode = sanitizeMaximizerMode(maximizerParams.mode);
     const modeConfigById = {
-      "irc-ll": { ratio: 20, knee: 1, lookahead: 0.0008 },
-      "irc-i": { ratio: 24, knee: 1.5, lookahead: 0.0012 },
-      "irc-ii": { ratio: 30, knee: 2.2, lookahead: 0.0017 },
-      "irc-iii": { ratio: 42, knee: 3.2, lookahead: 0.0022 },
-      "irc-iv": { ratio: 60, knee: 4.8, lookahead: 0.0028 },
+      "irc-ll": {
+        ratio: 12,
+        knee: 1.2,
+        attackFast: 0.0015,
+        attackSlow: 0.006,
+        releaseFast: 0.04,
+        releaseSlow: 0.16,
+      },
+      "irc-i": {
+        ratio: 16,
+        knee: 1.8,
+        attackFast: 0.001,
+        attackSlow: 0.005,
+        releaseFast: 0.05,
+        releaseSlow: 0.2,
+      },
+      "irc-ii": {
+        ratio: 18,
+        knee: 2.3,
+        attackFast: 0.0006,
+        attackSlow: 0.004,
+        releaseFast: 0.06,
+        releaseSlow: 0.24,
+      },
+      "irc-iii": {
+        ratio: 24,
+        knee: 3.1,
+        attackFast: 0.0008,
+        attackSlow: 0.0045,
+        releaseFast: 0.07,
+        releaseSlow: 0.28,
+      },
+      "irc-iv": {
+        ratio: 28,
+        knee: 4.2,
+        attackFast: 0.0012,
+        attackSlow: 0.006,
+        releaseFast: 0.08,
+        releaseSlow: 0.32,
+      },
     };
     const modeConfig = modeConfigById[mode] || modeConfigById["irc-ii"];
     const thresholdDb = clamp(maximizerParams.thresholdDb, -24, 0);
     const ceilingDb = clamp(maximizerParams.ceilingDb, -18, 0);
     const character = clamp(maximizerParams.character, 0, 1);
     const truePeakEnabled = Boolean(maximizerParams.truePeakEnabled);
-    const preGainDb = -thresholdDb;
-    const truePeakHeadroomDb = truePeakEnabled ? 0.9 : 0;
+    const driveDb = Math.max(0, -thresholdDb);
+    const preGainDb = driveDb;
+    const compressorThresholdDb = -0.8;
+    const truePeakHeadroomDb = truePeakEnabled ? 0.3 : 0;
     const ceilingGain = Math.pow(10, (ceilingDb - truePeakHeadroomDb) / 20);
-    const attackSec = 0.001 + (1 - character) * 0.022;
-    const releaseSec = 0.035 + character * 0.34;
-    const kneeDb = modeConfig.knee + character * 3.2;
-    const ratio = modeConfig.ratio + (1 - character) * 4;
+    const attackSec =
+      modeConfig.attackFast +
+      character * (modeConfig.attackSlow - modeConfig.attackFast);
+    const releaseSec =
+      modeConfig.releaseFast +
+      character * (modeConfig.releaseSlow - modeConfig.releaseFast);
+    const kneeDb = modeConfig.knee + character * 1.6;
+    const ratio = modeConfig.ratio + (1 - character) * 6;
     const clipStrength = clamp(
-      0.2 +
-        character * 0.5 +
-        (truePeakEnabled ? 0.12 : 0) +
-        modeConfig.lookahead * 120,
-      0.2,
-      0.95,
+      (driveDb / 24) * (0.06 + (1 - character) * 0.12),
+      0,
+      0.18,
     );
 
     node.maximizerInput.gain.setValueAtTime(maximizerEnabled ? 1 : 0, 0);
@@ -790,14 +850,15 @@ function buildInsertInputNodes(audioCtx, mixerInserts) {
       maximizerEnabled ? Math.pow(10, preGainDb / 20) : 1,
       0,
     );
-    node.maximizerCompressor.threshold.setValueAtTime(-1.6, 0);
+    node.maximizerCompressor.threshold.setValueAtTime(compressorThresholdDb, 0);
     node.maximizerCompressor.ratio.setValueAtTime(ratio, 0);
     node.maximizerCompressor.knee.setValueAtTime(kneeDb, 0);
     node.maximizerCompressor.attack.setValueAtTime(attackSec, 0);
     node.maximizerCompressor.release.setValueAtTime(releaseSec, 0);
-    node.maximizerSoftClip.curve = buildSoftClipCurve(
-      maximizerEnabled ? clipStrength : 0,
-    );
+    node.maximizerSoftClip.curve =
+      maximizerEnabled && clipStrength > 0.001
+        ? buildSoftClipCurve(clipStrength)
+        : null;
     node.maximizerSoftClip.oversample = truePeakEnabled ? "4x" : "2x";
     node.maximizerCeilingGain.gain.setValueAtTime(
       maximizerEnabled ? ceilingGain : 1,
@@ -1004,7 +1065,14 @@ function getSafeWavEncoding(requestedBitDepth) {
   };
 }
 
-function audioBufferToWavBlob(audioBuffer, requestedBitDepth) {
+function audioBufferToWavBlob(audioBuffer, requestedBitDepth, options) {
+  const startFrame = Math.max(0, Math.floor(Number(options?.startFrame || 0)));
+  const maxFrames = Math.max(1, audioBuffer.length - startFrame);
+  const requestedFrames = Number(options?.frameLength || maxFrames);
+  const frameLength = Math.max(
+    1,
+    Math.min(maxFrames, Math.floor(requestedFrames)),
+  );
   const numChannels = audioBuffer.numberOfChannels;
   const sampleRate = audioBuffer.sampleRate;
   const wavEncoding = getSafeWavEncoding(requestedBitDepth);
@@ -1018,12 +1086,13 @@ function audioBufferToWavBlob(audioBuffer, requestedBitDepth) {
     },
   );
 
-  const length = channelData[0].length;
-  const interleaved = new Float32Array(length * numChannels);
+  const interleaved = new Float32Array(frameLength * numChannels);
 
-  for (let i = 0; i < length; i += 1) {
+  for (let i = 0; i < frameLength; i += 1) {
+    const sourceIndex = startFrame + i;
     for (let channel = 0; channel < numChannels; channel += 1) {
-      interleaved[i * numChannels + channel] = channelData[channel][i];
+      interleaved[i * numChannels + channel] =
+        channelData[channel][sourceIndex] || 0;
     }
   }
 
@@ -1084,7 +1153,15 @@ function audioBufferToWavBlob(audioBuffer, requestedBitDepth) {
   return new Blob([buffer], { type: "audio/wav" });
 }
 
-async function audioBufferToMp3Blob(audioBuffer, requestedBitrateKbps) {
+async function audioBufferToMp3Blob(audioBuffer, requestedBitrateKbps, options) {
+  const startFrame = Math.max(0, Math.floor(Number(options?.startFrame || 0)));
+  const maxFrames = Math.max(1, audioBuffer.length - startFrame);
+  const requestedFrames = Number(options?.frameLength || maxFrames);
+  const frameLength = Math.max(
+    1,
+    Math.min(maxFrames, Math.floor(requestedFrames)),
+  );
+
   const lamejsModule = await import("@breezystack/lamejs");
   const lamejs = lamejsModule?.default || lamejsModule;
   const Mp3Encoder = lamejs.Mp3Encoder;
@@ -1092,11 +1169,15 @@ async function audioBufferToMp3Blob(audioBuffer, requestedBitrateKbps) {
   const bitrateKbps = clamp(Math.round(requestedBitrateKbps), 96, 320);
 
   const sampleRate = audioBuffer.sampleRate;
-  const leftData = audioBuffer.getChannelData(0);
+  const leftData = audioBuffer
+    .getChannelData(0)
+    .subarray(startFrame, startFrame + frameLength);
   const rightData =
     audioBuffer.numberOfChannels > 1
-      ? audioBuffer.getChannelData(1)
-      : audioBuffer.getChannelData(0);
+      ? audioBuffer
+          .getChannelData(1)
+          .subarray(startFrame, startFrame + frameLength)
+      : leftData;
 
   const left = floatTo16BitPCM(leftData);
   const right = floatTo16BitPCM(rightData);
@@ -1153,11 +1234,13 @@ export async function renderPlaylistArrangementToFile(options) {
 
   const songLengthSteps = getSongLengthInSteps(project);
   const sixteenth = 60 / bpm / 4;
+  const renderStartOffsetSec = 0.12;
   const tailSeconds = 1.6;
-  const durationSeconds = Math.max(
+  const contentDurationSeconds = Math.max(
     0.5,
     songLengthSteps * sixteenth + tailSeconds,
   );
+  const durationSeconds = contentDurationSeconds + renderStartOffsetSec;
   const sampleRate = 44100;
   const totalFrames = Math.max(1, Math.ceil(durationSeconds * sampleRate));
   const audioCtx = new OfflineAudioContext(2, totalFrames, sampleRate);
@@ -1301,7 +1384,7 @@ export async function renderPlaylistArrangementToFile(options) {
 
     const noteStartTime = Math.max(
       0,
-      Number(event.offsetSteps || 0) * sixteenth,
+      Number(event.offsetSteps || 0) * sixteenth + renderStartOffsetSec,
     );
     const noteLengthSteps = Math.max(0.0625, Number(event.lengthSteps || 1));
 
@@ -1512,10 +1595,21 @@ export async function renderPlaylistArrangementToFile(options) {
   });
 
   const renderedBuffer = await audioCtx.startRendering();
+  const startFrame = Math.max(0, Math.floor(renderStartOffsetSec * sampleRate));
+  const frameLength = Math.max(
+    1,
+    Math.min(renderedBuffer.length - startFrame, Math.floor(contentDurationSeconds * sampleRate)),
+  );
   const blob =
     format === "mp3"
-      ? await audioBufferToMp3Blob(renderedBuffer, mp3BitrateKbps)
-      : audioBufferToWavBlob(renderedBuffer, wavEncoding.bitDepth);
+      ? await audioBufferToMp3Blob(renderedBuffer, mp3BitrateKbps, {
+          startFrame,
+          frameLength,
+        })
+      : audioBufferToWavBlob(renderedBuffer, wavEncoding.bitDepth, {
+          startFrame,
+          frameLength,
+        });
 
   const fileName = safeBaseName + "." + format;
   triggerBrowserDownload(blob, fileName);
@@ -1523,9 +1617,10 @@ export async function renderPlaylistArrangementToFile(options) {
   return {
     blob,
     fileName,
-    durationSeconds,
+    durationSeconds: contentDurationSeconds,
     mp3BitrateKbps,
     wavBitDepth: wavEncoding.bitDepth,
     wavBitDepthLabel: wavEncoding.label,
   };
 }
+
