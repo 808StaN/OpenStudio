@@ -11,6 +11,7 @@ import {
   pasteMidiPatternToChannel,
   setPianoRollScale,
   setPianoNoteLength,
+  setPianoNoteVelocity,
   togglePianoNote,
   toggleStep,
 } from "../store";
@@ -48,6 +49,10 @@ const MIN_FREE_LENGTH = 1 / 12;
 const SNAP_EPSILON = 0.0001;
 const MARQUEE_MIN_DRAG = 4;
 const DEFAULT_SAMPLE_MIDI_PITCH = 72;
+const DEFAULT_NOTE_VELOCITY = 95;
+const MIN_VELOCITY_LANE_HEIGHT = 72;
+const MAX_VELOCITY_LANE_HEIGHT = 2400;
+const MIDI_VELOCITY_MAX = 127;
 
 const SNAP_OPTIONS = [
   { key: "none", label: "(none)", stepSize: null },
@@ -109,6 +114,20 @@ const PITCH_CLASS_NAMES = [
 
 function clamp(value, min, max) {
   return Math.max(min, Math.min(max, value));
+}
+
+function midiVelocityToPercent(rawVelocity) {
+  const safeMidi = clamp(
+    Number(rawVelocity || DEFAULT_NOTE_VELOCITY),
+    1,
+    MIDI_VELOCITY_MAX,
+  );
+  return Math.round((safeMidi / MIDI_VELOCITY_MAX) * 100);
+}
+
+function percentToMidiVelocity(rawPercent) {
+  const safePercent = clamp(Number(rawPercent || 0), 0, 100);
+  return Math.max(1, Math.round((safePercent / 100) * MIDI_VELOCITY_MAX));
 }
 
 function quantizeBySnap(value, snapSize) {
@@ -230,11 +249,14 @@ export function PianoRollWindow() {
   const playheadStepRef = useRef(0);
   const playheadStepTimestampRef = useRef(0);
   const lastTouchedLengthRef = useRef(1);
+  const lastTouchedVelocityRef = useRef(DEFAULT_NOTE_VELOCITY);
   const isSyncingScrollRef = useRef(false);
+  const isSyncingHorizontalScrollRef = useRef(false);
   const initializedViewportRef = useRef(false);
   const snapMenuRef = useRef(null);
   const midiImportInputRef = useRef(null);
   const dragSelectionRef = useRef(null);
+  const velocityWrapRef = useRef(null);
   const previewAudioContextRef = useRef(null);
   const previewSampleBufferCacheRef = useRef(new Map());
   const previewSamplePendingRef = useRef(new Map());
@@ -246,6 +268,7 @@ export function PianoRollWindow() {
   const previewChannelKeyRef = useRef("");
   const previewTokenRef = useRef(0);
   const previewStopListenersRef = useRef(null);
+  const velocityBrushActiveRef = useRef(false);
   const rowHeight = DEFAULT_ROW_HEIGHT;
   const [stepWidth, setStepWidth] = useState(DEFAULT_STEP_WIDTH);
   const [snapKey, setSnapKey] = useState("1-2-beat");
@@ -253,6 +276,12 @@ export function PianoRollWindow() {
   const [editMode, setEditMode] = useState("add");
   const [selectedNoteIds, setSelectedNoteIds] = useState([]);
   const [selectionBox, setSelectionBox] = useState(null);
+  const [velocityLaneHeight, setVelocityLaneHeight] = useState(150);
+  const [velocityReadout, setVelocityReadout] = useState(
+    midiVelocityToPercent(DEFAULT_NOTE_VELOCITY),
+  );
+  const [isVelocityLaneHovered, setIsVelocityLaneHovered] = useState(false);
+  const [isVelocityEditing, setIsVelocityEditing] = useState(false);
 
   const activeSnap =
     SNAP_OPTIONS.find(function (option) {
@@ -865,12 +894,28 @@ export function PianoRollWindow() {
   );
 
   const onGridWrapScroll = function (event) {
+    if (velocityWrapRef.current && !isSyncingHorizontalScrollRef.current) {
+      isSyncingHorizontalScrollRef.current = true;
+      velocityWrapRef.current.scrollLeft = event.currentTarget.scrollLeft;
+      isSyncingHorizontalScrollRef.current = false;
+    }
+
     if (!keysRef.current || isSyncingScrollRef.current) {
       return;
     }
     isSyncingScrollRef.current = true;
     keysRef.current.scrollTop = event.currentTarget.scrollTop;
     isSyncingScrollRef.current = false;
+  };
+
+  const onVelocityWrapScroll = function (event) {
+    if (!gridWrapRef.current || isSyncingHorizontalScrollRef.current) {
+      return;
+    }
+
+    isSyncingHorizontalScrollRef.current = true;
+    gridWrapRef.current.scrollLeft = event.currentTarget.scrollLeft;
+    isSyncingHorizontalScrollRef.current = false;
   };
 
   const onKeysScroll = function (event) {
@@ -991,6 +1036,9 @@ export function PianoRollWindow() {
         start: note.start,
         pitch: note.pitch,
         length: note.length,
+        velocity: Math.round(
+          clamp(Number(note.velocity || DEFAULT_NOTE_VELOCITY), 1, 127),
+        ),
       }),
     );
 
@@ -1015,6 +1063,9 @@ export function PianoRollWindow() {
           start: note.start,
           pitch: note.pitch,
           length: note.length,
+          velocity: Math.round(
+            clamp(Number(note.velocity || DEFAULT_NOTE_VELOCITY), 1, 127),
+          ),
         };
       }),
     };
@@ -1106,6 +1157,9 @@ export function PianoRollWindow() {
         start,
         pitch,
         length,
+        velocity: Math.round(
+          clamp(Number(entry.velocity || DEFAULT_NOTE_VELOCITY), 1, 127),
+        ),
       });
       nextSelection.push("piano:" + newId);
     });
@@ -1446,6 +1500,7 @@ export function PianoRollWindow() {
               start: snappedStart,
               pitch,
               length: nextCreatedLength,
+              velocity: lastTouchedVelocityRef.current,
             }),
           );
           void startPreviewNote(pitch);
@@ -1492,6 +1547,7 @@ export function PianoRollWindow() {
           start: snappedStart,
           pitch,
           length: nextCreatedLength,
+          velocity: lastTouchedVelocityRef.current,
         }),
       );
       void startPreviewNote(pitch);
@@ -1704,10 +1760,18 @@ export function PianoRollWindow() {
     if (Number(note.length) > 0) {
       lastTouchedLengthRef.current = Number(note.length);
     }
+    if (Number(note.velocity) > 0) {
+      const touchedVelocity = Math.round(clamp(Number(note.velocity), 1, 127));
+      lastTouchedVelocityRef.current = touchedVelocity;
+      setVelocityReadout(midiVelocityToPercent(touchedVelocity));
+    }
 
     if (event.button === 0) {
       void startPreviewNote(note.pitch);
     }
+
+    const noteRect = event.currentTarget.getBoundingClientRect();
+    const clickedNearRightEdge = noteRect.right - event.clientX <= 8;
 
     if (editMode === "select") {
       if (!activeChannel) {
@@ -1735,6 +1799,121 @@ export function PianoRollWindow() {
       }
 
       if (event.button !== 0) {
+        return;
+      }
+
+      if (clickedNearRightEdge) {
+        const session = {
+          patternId: activePatternId,
+          channelId: activeChannel.id,
+          source: note.source,
+          mode: "resize",
+          start: note.start,
+          pitch: note.pitch,
+          length: note.length,
+          originStart: note.start,
+          originPitch: note.pitch,
+          originLength: note.length,
+          originX: event.clientX,
+          originY: event.clientY,
+          convertedStep: false,
+        };
+
+        resizeSessionRef.current = session;
+
+        const ensureStepConverted = function () {
+          const activeSession = resizeSessionRef.current;
+          if (!activeSession) {
+            return;
+          }
+
+          if (activeSession.source !== "step" || activeSession.convertedStep) {
+            return;
+          }
+
+          dispatch(
+            toggleStep({
+              patternId: activeSession.patternId,
+              channelId: activeSession.channelId,
+              stepIndex: activeSession.start,
+            }),
+          );
+
+          dispatch(
+            togglePianoNote({
+              patternId: activeSession.patternId,
+              channelId: activeSession.channelId,
+              start: activeSession.start,
+              pitch: activeSession.pitch,
+              length: activeSession.length,
+              velocity: Math.round(
+                clamp(Number(note.velocity || DEFAULT_NOTE_VELOCITY), 1, 127),
+              ),
+            }),
+          );
+
+          activeSession.source = "piano";
+          activeSession.convertedStep = true;
+        };
+
+        const onMouseMove = function (moveEvent) {
+          const activeSession = resizeSessionRef.current;
+          if (!activeSession) {
+            return;
+          }
+
+          const deltaStepsRaw =
+            (moveEvent.clientX - activeSession.originX) / stepWidth;
+          const maxLen = Math.max(
+            MIN_FREE_LENGTH,
+            patternLength - activeSession.start,
+          );
+          const minLen = Math.min(minNoteLength, maxLen);
+          const rawEnd =
+            activeSession.start + activeSession.originLength + deltaStepsRaw;
+          const snappedEnd = snapStepSize
+            ? quantizeBySnap(rawEnd, snapStepSize)
+            : rawEnd;
+          const nextLength = clamp(
+            snappedEnd - activeSession.start,
+            minLen,
+            maxLen,
+          );
+
+          if (activeSession.source === "step") {
+            if (nextLength <= 1) {
+              return;
+            }
+            ensureStepConverted();
+          }
+
+          if (Math.abs(nextLength - activeSession.length) <= SNAP_EPSILON) {
+            return;
+          }
+
+          dispatch(
+            setPianoNoteLength({
+              patternId: activeSession.patternId,
+              channelId: activeSession.channelId,
+              noteId: note.id,
+              start: activeSession.start,
+              pitch: activeSession.pitch,
+              length: nextLength,
+            }),
+          );
+
+          activeSession.length = nextLength;
+          lastTouchedLengthRef.current = nextLength;
+        };
+
+        const onMouseUp = function () {
+          resizeSessionRef.current = null;
+          window.removeEventListener("mousemove", onMouseMove);
+          window.removeEventListener("mouseup", onMouseUp);
+        };
+
+        window.addEventListener("mousemove", onMouseMove);
+        window.addEventListener("mouseup", onMouseUp);
         return;
       }
 
@@ -1932,9 +2111,6 @@ export function PianoRollWindow() {
       return;
     }
 
-    const noteRect = event.currentTarget.getBoundingClientRect();
-    const clickedNearRightEdge = noteRect.right - event.clientX <= 8;
-
     const session = {
       patternId: activePatternId,
       channelId: activeChannel.id,
@@ -1978,6 +2154,9 @@ export function PianoRollWindow() {
           start: activeSession.start,
           pitch: activeSession.pitch,
           length: activeSession.length,
+          velocity: Math.round(
+            clamp(Number(note.velocity || DEFAULT_NOTE_VELOCITY), 1, 127),
+          ),
         }),
       );
 
@@ -2089,6 +2268,254 @@ export function PianoRollWindow() {
 
     window.addEventListener("mousemove", onMouseMove);
     window.addEventListener("mouseup", onMouseUp);
+  };
+
+  const onVelocityResizeMouseDown = function (event) {
+    event.preventDefault();
+
+    const originY = event.clientY;
+    const originHeight = velocityLaneHeight;
+
+    const onMouseMove = function (moveEvent) {
+      const delta = originY - moveEvent.clientY;
+      setVelocityLaneHeight(
+        clamp(
+          originHeight + delta,
+          MIN_VELOCITY_LANE_HEIGHT,
+          MAX_VELOCITY_LANE_HEIGHT,
+        ),
+      );
+    };
+
+    const onMouseUp = function () {
+      window.removeEventListener("mousemove", onMouseMove);
+      window.removeEventListener("mouseup", onMouseUp);
+    };
+
+    window.addEventListener("mousemove", onMouseMove);
+    window.addEventListener("mouseup", onMouseUp);
+  };
+
+  const applyVelocityAtPointer = function (note, clientY) {
+    if (!activeChannel || !velocityWrapRef.current) {
+      return;
+    }
+
+    const rect = velocityWrapRef.current.getBoundingClientRect();
+    const laneHeight = Math.max(1, rect.height);
+    const y = clamp(clientY - rect.top, 0, laneHeight);
+    const ratio = 1 - y / laneHeight;
+    const nextVelocityPercent = Math.round(clamp(ratio * 100, 0, 100));
+    const nextVelocityMidi = percentToMidiVelocity(nextVelocityPercent);
+
+    const pianoTarget = ensureNoteIsPiano(note);
+    const currentVelocityPercent = midiVelocityToPercent(
+      Number(pianoTarget.velocity || DEFAULT_NOTE_VELOCITY),
+    );
+
+    setVelocityReadout(nextVelocityPercent);
+    if (currentVelocityPercent === nextVelocityPercent) {
+      return;
+    }
+
+    dispatch(
+      setPianoNoteVelocity({
+        patternId: activePatternId,
+        channelId: activeChannel.id,
+        noteId: pianoTarget.id,
+        start: pianoTarget.start,
+        pitch: pianoTarget.pitch,
+        velocity: nextVelocityMidi,
+      }),
+    );
+
+    lastTouchedVelocityRef.current = nextVelocityMidi;
+  };
+
+  const applyLockedVelocityPercent = function (note, lockedVelocityPercent) {
+    if (!activeChannel) {
+      return;
+    }
+
+    const safePercent = Math.round(clamp(lockedVelocityPercent, 0, 100));
+    const nextVelocityMidi = percentToMidiVelocity(safePercent);
+    const pianoTarget = ensureNoteIsPiano(note);
+    const currentVelocityPercent = midiVelocityToPercent(
+      Number(pianoTarget.velocity || DEFAULT_NOTE_VELOCITY),
+    );
+
+    setVelocityReadout(safePercent);
+    if (currentVelocityPercent === safePercent) {
+      return;
+    }
+
+    dispatch(
+      setPianoNoteVelocity({
+        patternId: activePatternId,
+        channelId: activeChannel.id,
+        noteId: pianoTarget.id,
+        start: pianoTarget.start,
+        pitch: pianoTarget.pitch,
+        velocity: nextVelocityMidi,
+      }),
+    );
+
+    lastTouchedVelocityRef.current = nextVelocityMidi;
+  };
+
+  const findVelocityCandidatesAtClientX = function (clientX, fallbackNote) {
+    if (!velocityWrapRef.current) {
+      return fallbackNote ? [fallbackNote] : [];
+    }
+
+    const candidateNotes = selectedNotes.length > 0 ? selectedNotes : pianoNotes;
+    if (candidateNotes.length === 0) {
+      return [];
+    }
+
+    const rect = velocityWrapRef.current.getBoundingClientRect();
+    const worldX =
+      clientX - rect.left + Number(velocityWrapRef.current.scrollLeft || 0);
+    const stepPosition = clamp(worldX / Math.max(1, stepWidth), 0, patternLength);
+
+    const covering = candidateNotes.filter(function (item) {
+      const noteStart = Number(item.start || 0);
+      const noteEnd = noteStart + Math.max(0.0625, Number(item.length || 1));
+      return stepPosition >= noteStart && stepPosition <= noteEnd;
+    });
+    if (covering.length > 0) {
+      return covering;
+    }
+
+    if (
+      fallbackNote &&
+      candidateNotes.some(function (item) {
+        return getNoteSelectionId(item) === getNoteSelectionId(fallbackNote);
+      })
+    ) {
+      return [fallbackNote];
+    }
+
+    const nearest = candidateNotes.reduce(function (best, item) {
+      const center = Number(item.start || 0) + Number(item.length || 1) * 0.5;
+      const distance = Math.abs(center - stepPosition);
+      if (!best || distance < best.distance) {
+        return {
+          note: item,
+          distance,
+        };
+      }
+      return best;
+    }, null);
+
+    return nearest ? [nearest.note] : [];
+  };
+
+  const applyVelocityByPointer = function (
+    clientX,
+    clientY,
+    fallbackNote,
+    isMultiBrush,
+    lockedVelocityPercent,
+  ) {
+    const targets = findVelocityCandidatesAtClientX(clientX, fallbackNote);
+    if (!targets || targets.length === 0) {
+      return;
+    }
+
+    const applyTargets = isMultiBrush ? targets : [targets[0]];
+    applyTargets.forEach(function (target) {
+      if (Number.isFinite(lockedVelocityPercent)) {
+        applyLockedVelocityPercent(target, lockedVelocityPercent);
+      } else {
+        applyVelocityAtPointer(target, clientY);
+      }
+    });
+  };
+
+  const startVelocityBrush = function (event, fallbackNote) {
+    event.preventDefault();
+    event.stopPropagation();
+
+    const isMultiBrush = Boolean(event.shiftKey);
+    const velocityRect = velocityWrapRef.current
+      ? velocityWrapRef.current.getBoundingClientRect()
+      : null;
+    let lockVelocityPercent =
+      isMultiBrush && velocityRect
+        ? Math.round(
+            clamp(
+              100 *
+                (1 -
+                  clamp(
+                    (event.clientY - velocityRect.top) /
+                      Math.max(1, velocityRect.height),
+                    0,
+                    1,
+                  )),
+              0,
+              100,
+            ),
+          )
+        : null;
+
+    velocityBrushActiveRef.current = true;
+    setIsVelocityEditing(true);
+
+    applyVelocityByPointer(
+      event.clientX,
+      event.clientY,
+      fallbackNote,
+      isMultiBrush,
+      lockVelocityPercent,
+    );
+
+    const onMouseMove = function (moveEvent) {
+      const moveWantsLock = Boolean(moveEvent.shiftKey);
+      if (moveWantsLock && !Number.isFinite(lockVelocityPercent)) {
+        const moveRect = velocityWrapRef.current
+          ? velocityWrapRef.current.getBoundingClientRect()
+          : null;
+        if (moveRect) {
+          lockVelocityPercent = Math.round(
+            clamp(
+              100 *
+                (1 -
+                  clamp(
+                    (moveEvent.clientY - moveRect.top) /
+                      Math.max(1, moveRect.height),
+                    0,
+                    1,
+                  )),
+              0,
+              100,
+            ),
+          );
+        }
+      }
+
+      applyVelocityByPointer(
+        moveEvent.clientX,
+        moveEvent.clientY,
+        null,
+        moveWantsLock || isMultiBrush,
+        lockVelocityPercent,
+      );
+    };
+
+    const onMouseUp = function () {
+      velocityBrushActiveRef.current = false;
+      setIsVelocityEditing(false);
+      window.removeEventListener("mousemove", onMouseMove);
+      window.removeEventListener("mouseup", onMouseUp);
+    };
+
+    window.addEventListener("mousemove", onMouseMove);
+    window.addEventListener("mouseup", onMouseUp);
+  };
+
+  const onVelocityBarMouseDown = function (event, note) {
+    startVelocityBrush(event, note);
   };
 
   return (
@@ -2252,165 +2679,274 @@ export function PianoRollWindow() {
       </header>
 
       <div className="piano-roll-body">
-        <aside
-          className="piano-keys"
-          ref={keysRef}
-          onWheel={onGridWheel}
-          onScroll={onKeysScroll}
-          style={{ height: "100%" }}
-        >
-          <div className="piano-keys-header" />
-          {pitchRows.map(function (pitch) {
-            const noteName = getNoteName(pitch);
-            const isSharp = noteName.includes("#");
-            const isC = noteName.startsWith("C");
+        <div className="piano-main-grid">
+          <aside
+            className="piano-keys"
+            ref={keysRef}
+            onWheel={onGridWheel}
+            onScroll={onKeysScroll}
+            style={{ height: "100%" }}
+          >
+            <div className="piano-keys-header" />
+            {pitchRows.map(function (pitch) {
+              const noteName = getNoteName(pitch);
+              const isSharp = noteName.includes("#");
+              const isC = noteName.startsWith("C");
 
-            return (
-              <div
-                key={pitch}
-                className={
-                  "piano-key-row" +
-                  (isSharp ? " sharp" : "") +
-                  (isC ? " marker" : "")
-                }
-                style={{ height: rowHeight }}
-              >
-                <span>{noteName}</span>
-              </div>
-            );
-          })}
-        </aside>
-
-        <div
-          className="piano-grid-wrap"
-          ref={gridWrapRef}
-          onWheel={onGridWheel}
-          onScroll={onGridWrapScroll}
-          onContextMenu={function (event) {
-            event.preventDefault();
-          }}
-        >
-          <div className="piano-grid-header" style={{ width: gridWidth }}>
-            {Array.from({ length: totalBars }).map(function (_, barIndex) {
-              const barStart = barIndex * STEPS_PER_BAR;
-              const barSteps = Math.min(
-                STEPS_PER_BAR,
-                patternLength - barStart,
-              );
               return (
                 <div
-                  key={barIndex}
-                  className="piano-bar-cell"
-                  style={{ width: barSteps * stepWidth }}
+                  key={pitch}
+                  className={
+                    "piano-key-row" +
+                    (isSharp ? " sharp" : "") +
+                    (isC ? " marker" : "")
+                  }
+                  style={{ height: rowHeight }}
                 >
-                  {barIndex + 1}
+                  <span>{noteName}</span>
                 </div>
               );
             })}
-          </div>
+          </aside>
 
           <div
-            className="piano-grid"
-            style={{
-              width: gridWidth,
-              height: gridHeight,
-              "--step-width": stepWidth + "px",
-              "--bar-width": stepWidth * 4 + "px",
-              "--row-height": rowHeight + "px",
-              "--snap-width": snapLineWidth + "px",
-              "--snap-opacity": String(snapLineOpacity),
-            }}
-            onDragOver={onPianoRollMidiDragOver}
-            onDrop={onPianoRollMidiDrop}
-            onMouseDown={onGridMouseDown}
+            className="piano-grid-wrap"
+            ref={gridWrapRef}
+            onWheel={onGridWheel}
+            onScroll={onGridWrapScroll}
             onContextMenu={function (event) {
               event.preventDefault();
             }}
           >
-            {selectionBox ? (
-              <span
-                className="piano-selection-box"
-                style={{
-                  left: Math.min(selectionBox.startX, selectionBox.endX),
-                  top: Math.min(selectionBox.startY, selectionBox.endY),
-                  width: Math.abs(selectionBox.endX - selectionBox.startX),
-                  height: Math.abs(selectionBox.endY - selectionBox.startY),
-                }}
-              />
-            ) : null}
+            <div className="piano-grid-header" style={{ width: gridWidth }}>
+              {Array.from({ length: totalBars }).map(function (_, barIndex) {
+                const barStart = barIndex * STEPS_PER_BAR;
+                const barSteps = Math.min(
+                  STEPS_PER_BAR,
+                  patternLength - barStart,
+                );
+                return (
+                  <div
+                    key={barIndex}
+                    className="piano-bar-cell"
+                    style={{ width: barSteps * stepWidth }}
+                  >
+                    {barIndex + 1}
+                  </div>
+                );
+              })}
+            </div>
 
-            {isPlaying ? (
-              <span ref={playheadRef} className="piano-playhead-line" />
-            ) : null}
+            <div
+              className="piano-grid"
+              style={{
+                width: gridWidth,
+                height: gridHeight,
+                "--step-width": stepWidth + "px",
+                "--bar-width": stepWidth * 4 + "px",
+                "--row-height": rowHeight + "px",
+                "--snap-width": snapLineWidth + "px",
+                "--snap-opacity": String(snapLineOpacity),
+              }}
+              onDragOver={onPianoRollMidiDragOver}
+              onDrop={onPianoRollMidiDrop}
+              onMouseDown={onGridMouseDown}
+              onContextMenu={function (event) {
+                event.preventDefault();
+              }}
+            >
+              {selectionBox ? (
+                <span
+                  className="piano-selection-box"
+                  style={{
+                    left: Math.min(selectionBox.startX, selectionBox.endX),
+                    top: Math.min(selectionBox.startY, selectionBox.endY),
+                    width: Math.abs(selectionBox.endX - selectionBox.startX),
+                    height: Math.abs(selectionBox.endY - selectionBox.startY),
+                  }}
+                />
+              ) : null}
 
-            {Array.from({ length: Math.max(0, totalBars - 1) }).map(
-              function (_, index) {
-                const boundaryStep = (index + 1) * STEPS_PER_BAR;
-                if (boundaryStep >= patternLength) {
+              {isPlaying ? (
+                <span ref={playheadRef} className="piano-playhead-line" />
+              ) : null}
+
+              {Array.from({ length: Math.max(0, totalBars - 1) }).map(
+                function (_, index) {
+                  const boundaryStep = (index + 1) * STEPS_PER_BAR;
+                  if (boundaryStep >= patternLength) {
+                    return null;
+                  }
+
+                  return (
+                    <span
+                      key={"major-line-" + boundaryStep}
+                      className="piano-major-line"
+                      style={{ left: boundaryStep * stepWidth }}
+                    />
+                  );
+                },
+              )}
+
+              {pitchRows.map(function (pitch, rowIndex) {
+                if (scalePitchClasses.has(toPitchClass(pitch))) {
                   return null;
                 }
 
                 return (
                   <span
-                    key={"major-line-" + boundaryStep}
-                    className="piano-major-line"
-                    style={{ left: boundaryStep * stepWidth }}
+                    key={"scale-row-" + pitch}
+                    className="piano-scale-row"
+                    style={{
+                      top: rowIndex * rowHeight,
+                      height: rowHeight,
+                    }}
                   />
                 );
-              },
-            )}
+              })}
 
-            {pitchRows.map(function (pitch, rowIndex) {
-              if (scalePitchClasses.has(toPitchClass(pitch))) {
-                return null;
-              }
+              {pianoNotes.map(function (note) {
+                const top = (PITCH_MAX - note.pitch) * rowHeight + 2;
+                const left = note.start * stepWidth + 1;
+                const width = Math.max(8, note.length * stepWidth - 2);
+                const velocityAlpha = clamp(
+                  midiVelocityToPercent(Number(note.velocity || DEFAULT_NOTE_VELOCITY)) /
+                    100,
+                  0.78,
+                  1,
+                );
 
-              return (
-                <span
-                  key={"scale-row-" + pitch}
-                  className="piano-scale-row"
-                  style={{
-                    top: rowIndex * rowHeight,
-                    height: rowHeight,
-                  }}
-                />
-              );
-            })}
-
-            {pianoNotes.map(function (note) {
-              const top = (PITCH_MAX - note.pitch) * rowHeight + 2;
-              const left = note.start * stepWidth + 1;
-              const width = Math.max(8, note.length * stepWidth - 2);
-
-              return (
-                <span
-                  key={note.id}
-                  className={
-                    "piano-note" +
-                    (note.source === "step" ? " from-step" : " from-piano") +
-                    (selectedNoteIdSet.has(getNoteSelectionId(note))
-                      ? " is-selected"
-                      : "")
-                  }
-                  onMouseDown={function (event) {
-                    onNoteMouseDown(event, note);
-                  }}
-                  onContextMenu={function (event) {
-                    event.preventDefault();
-                  }}
-                  style={{
-                    top,
-                    left,
-                    width,
-                    height: Math.max(6, rowHeight - 4),
-                  }}
-                >
-                  <span className="piano-note-label">
-                    {getPitchClassName(note.pitch)}
+                return (
+                  <span
+                    key={note.id}
+                    className={
+                      "piano-note" +
+                      (note.source === "step" ? " from-step" : " from-piano") +
+                      (selectedNoteIdSet.has(getNoteSelectionId(note))
+                        ? " is-selected"
+                        : "")
+                    }
+                    onMouseDown={function (event) {
+                      onNoteMouseDown(event, note);
+                    }}
+                    onContextMenu={function (event) {
+                      event.preventDefault();
+                    }}
+                    style={{
+                      top,
+                      left,
+                      width,
+                      height: Math.max(6, rowHeight - 4),
+                      opacity: velocityAlpha,
+                    }}
+                  >
+                    <span className="piano-note-label">
+                      {getPitchClassName(note.pitch)}
+                    </span>
                   </span>
-                </span>
-              );
-            })}
+                );
+              })}
+            </div>
+          </div>
+        </div>
+
+        <button
+          type="button"
+          className="piano-velocity-resize"
+          onMouseDown={onVelocityResizeMouseDown}
+          aria-label="Resize velocity lane"
+        />
+
+        <div className="piano-velocity-grid-shell" style={{ height: velocityLaneHeight }}>
+          <aside className="piano-velocity-label">
+            <strong>Control</strong>
+            <span>Velocity</span>
+            {isVelocityLaneHovered || isVelocityEditing ? (
+              <em>Vel {velocityReadout}%</em>
+            ) : null}
+          </aside>
+
+          <div
+            className="piano-velocity-wrap"
+            ref={velocityWrapRef}
+            onMouseEnter={function () {
+              setIsVelocityLaneHovered(true);
+            }}
+            onMouseLeave={function () {
+              if (!velocityBrushActiveRef.current) {
+                setIsVelocityLaneHovered(false);
+              }
+            }}
+            onScroll={onVelocityWrapScroll}
+            onContextMenu={function (event) {
+              event.preventDefault();
+            }}
+          >
+            <div
+              className="piano-velocity-grid"
+              onMouseDown={function (event) {
+                startVelocityBrush(event, null);
+              }}
+              style={{
+                width: gridWidth,
+                "--step-width": stepWidth + "px",
+                "--bar-width": stepWidth * 4 + "px",
+                "--snap-width": snapLineWidth + "px",
+                "--snap-opacity": String(snapLineOpacity),
+              }}
+            >
+              {Array.from({ length: Math.max(0, totalBars - 1) }).map(
+                function (_, index) {
+                  const boundaryStep = (index + 1) * STEPS_PER_BAR;
+                  if (boundaryStep >= patternLength) {
+                    return null;
+                  }
+
+                  return (
+                    <span
+                      key={"vel-major-line-" + boundaryStep}
+                      className="piano-major-line"
+                      style={{ left: boundaryStep * stepWidth }}
+                    />
+                  );
+                },
+              )}
+
+              {pianoNotes.map(function (note) {
+                const isSelected = selectedNoteIdSet.has(getNoteSelectionId(note));
+                const velocity = clamp(
+                  Number(note.velocity || DEFAULT_NOTE_VELOCITY),
+                  1,
+                  127,
+                );
+                const ratio = midiVelocityToPercent(velocity) / 100;
+                const selectedExpand = isSelected ? 2 : 0;
+                const barLeft = note.start * stepWidth + 2;
+                const barWidth = Math.max(3, note.length * stepWidth - 4);
+                const stemHeight = Math.max(1, ratio * velocityLaneHeight);
+
+                return (
+                  <span
+                    key={"velocity-" + note.id}
+                    className={
+                      "piano-velocity-bar" +
+                      (note.source === "step" ? " from-step" : " from-piano") +
+                      (isSelected ? " is-selected" : "")
+                    }
+                    style={{
+                      left: barLeft - selectedExpand,
+                      width: barWidth + selectedExpand * 2,
+                      height: stemHeight,
+                      "--velocity-stem-height": stemHeight + "px",
+                      zIndex: isSelected ? 4 : 2,
+                    }}
+                    onMouseDown={function (event) {
+                      onVelocityBarMouseDown(event, note);
+                    }}
+                  />
+                );
+              })}
+            </div>
           </div>
         </div>
       </div>

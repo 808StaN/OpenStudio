@@ -154,15 +154,16 @@ function App() {
 
   useAudioScheduler();
 
-  const initialMaxAppliedRef = useRef(false);
+  const autoMaxAppliedWindowsRef = useRef(new Set());
 
   useEffect(
     function () {
-      if (initialMaxAppliedRef.current) {
-        return;
-      }
-
-      initialMaxAppliedRef.current = true;
+      autoMaxAppliedWindowsRef.current.forEach(function (winId) {
+        const win = windows[winId];
+        if (!win || !win.open || !win.startMaximized) {
+          autoMaxAppliedWindowsRef.current.delete(winId);
+        }
+      });
 
       Object.keys(windows).forEach(function (winId) {
         const w = windows[winId];
@@ -170,8 +171,12 @@ function App() {
           return;
         }
 
+        if (autoMaxAppliedWindowsRef.current.has(winId)) {
+          return;
+        }
+
         if (w.isMaximized) {
-          // already maximized in state, skip toggling
+          autoMaxAppliedWindowsRef.current.add(winId);
           return;
         }
 
@@ -180,6 +185,7 @@ function App() {
           ? { width: workspace.clientWidth, height: workspace.clientHeight }
           : { width: window.innerWidth, height: window.innerHeight };
 
+        autoMaxAppliedWindowsRef.current.add(winId);
         dispatch(toggleWindowMaximize({ id: winId, viewport }));
       });
     },

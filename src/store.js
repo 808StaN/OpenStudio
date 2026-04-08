@@ -32,6 +32,7 @@ const GRAPHIC_EQ_BAND_TYPES = [
   "highpass",
 ];
 const DEFAULT_MIDI_PITCH = 72;
+const DEFAULT_NOTE_VELOCITY = 95;
 
 function getDefaultEqBandType(index) {
   if (index === 0) {
@@ -413,6 +414,13 @@ function clonePatternForCopy(sourcePattern, nextId, nextName) {
           Math.min(safeLength - 0.0625, Number(note.start || 0)),
         ),
         length: Math.max(0.0625, Number(note.length || 1)),
+        velocity: Math.max(
+          1,
+          Math.min(
+            127,
+            Math.round(Number(note.velocity || DEFAULT_NOTE_VELOCITY)),
+          ),
+        ),
       };
     });
 
@@ -487,6 +495,7 @@ const initialState = {
         width: 760,
         height: 360,
         isMaximized: false,
+        startMaximized: true,
         restoreRect: null,
       },
       mixer: {
@@ -948,7 +957,10 @@ function sanitizeLoadedDawState(currentState, rawLoadedState) {
               ),
               velocity: Math.max(
                 1,
-                Math.min(127, Math.round(Number(note.velocity || 100))),
+                Math.min(
+                  127,
+                  Math.round(Number(note.velocity || DEFAULT_NOTE_VELOCITY)),
+                ),
               ),
             };
           })
@@ -2140,6 +2152,15 @@ const dawSlice = createSlice({
         0.0625,
         Math.min(maxLen, Number(action.payload.length || 1)),
       );
+      const velocity = Math.max(
+        1,
+        Math.min(
+          127,
+          Math.round(
+            Number(action.payload.velocity || DEFAULT_NOTE_VELOCITY),
+          ),
+        ),
+      );
 
       const notes = pattern.pianoPreview[channelId];
       const existingIndex = notes.findIndex(function (note) {
@@ -2163,6 +2184,7 @@ const dawSlice = createSlice({
         start,
         length,
         pitch,
+        velocity,
       });
     },
 
@@ -2198,6 +2220,42 @@ const dawSlice = createSlice({
       note.length = Math.max(
         0.0625,
         Math.min(maxLen, Number(action.payload.length || note.length || 1)),
+      );
+    },
+
+    setPianoNoteVelocity(state, action) {
+      const pattern = state.project.patterns.find(function (item) {
+        return item.id === action.payload.patternId;
+      });
+      if (!pattern) {
+        return;
+      }
+
+      const channelId = action.payload.channelId;
+      const notes = pattern.pianoPreview?.[channelId];
+      if (!notes) {
+        return;
+      }
+
+      const start = Number(action.payload.start || 0);
+      const pitch = Math.round(action.payload.pitch || 72);
+      const note =
+        notes.find(function (item) {
+          return item.id === action.payload.noteId;
+        }) ||
+        notes.find(function (item) {
+          return nearlyEqual(item.start || 0, start) && item.pitch === pitch;
+        });
+      if (!note) {
+        return;
+      }
+
+      note.velocity = Math.max(
+        1,
+        Math.min(
+          127,
+          Math.round(Number(action.payload.velocity || DEFAULT_NOTE_VELOCITY)),
+        ),
       );
     },
 
@@ -2315,6 +2373,15 @@ const dawSlice = createSlice({
           start,
           length,
           pitch,
+          velocity: Math.max(
+            1,
+            Math.min(
+              127,
+              Math.round(
+                Number(inputNote?.velocity || DEFAULT_NOTE_VELOCITY),
+              ),
+            ),
+          ),
         });
       });
 
@@ -2550,7 +2617,10 @@ const dawSlice = createSlice({
           );
           const velocity = Math.max(
             1,
-            Math.min(127, Math.round(Number(note?.velocity || 100))),
+            Math.min(
+              127,
+              Math.round(Number(note?.velocity || DEFAULT_NOTE_VELOCITY)),
+            ),
           );
           const source = String(note?.source || "piano").toLowerCase();
 
@@ -3321,6 +3391,7 @@ export const {
   addChannel,
   togglePianoNote,
   setPianoNoteLength,
+  setPianoNoteVelocity,
   movePianoNote,
   addPianoNotesBatch,
   movePianoNotesBatch,

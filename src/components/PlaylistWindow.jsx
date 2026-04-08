@@ -20,7 +20,7 @@ import { getPatternDragSession } from "../utils/patternDragSession";
 import { C5_PITCH } from "../utils/patternNotes";
 import { toSafeSampleUrl } from "../utils/sampleUrl";
 
-const DEFAULT_PLAYLIST_BARS = 16;
+const DEFAULT_PLAYLIST_BARS = 256;
 const MIN_PLAYLIST_BARS = 4;
 const MAX_PLAYLIST_BARS = 512;
 const BASE_BAR_WIDTH = 56;

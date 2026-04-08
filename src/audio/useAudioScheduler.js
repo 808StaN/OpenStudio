@@ -28,6 +28,7 @@ const defaultSampleSettings = {
 };
 
 const DEFAULT_SAMPLE_MIDI_PITCH = 72;
+const DEFAULT_NOTE_VELOCITY = 95;
 const PLUGIN_INSTRUMENT_GAIN_BOOST = 1.5;
 const BASE_CHANNEL_TRIGGER_GAIN = 0.75;
 const MIXER_METER_RMS_GAIN = 4.2;
@@ -2794,6 +2795,13 @@ export function useAudioScheduler() {
 
               acc.push({
                 pitch: Math.round(note.pitch || DEFAULT_SAMPLE_MIDI_PITCH),
+                velocity: Math.max(
+                  1,
+                  Math.min(
+                    127,
+                    Math.round(note.velocity || DEFAULT_NOTE_VELOCITY),
+                  ),
+                ),
                 offsetSeconds: 0,
                 lengthSteps: Math.max(0.0625, noteEnd - sustainSourceStep),
               });
@@ -2803,6 +2811,13 @@ export function useAudioScheduler() {
             const stepOffset = noteStart - startStep;
             acc.push({
               pitch: Math.round(note.pitch || DEFAULT_SAMPLE_MIDI_PITCH),
+              velocity: Math.max(
+                1,
+                Math.min(
+                  127,
+                  Math.round(note.velocity || DEFAULT_NOTE_VELOCITY),
+                ),
+              ),
               offsetSeconds: Math.max(0, stepOffset * sixteenth),
               lengthSteps: noteLength,
             });
@@ -2827,14 +2842,26 @@ export function useAudioScheduler() {
           const outputNode = getInsertInputNodeForChannel(channel);
           const channelVolume = clamp(Number(channel.volume ?? 1), 0, 1);
 
-          const playOneHit = function (midiPitch, offsetSeconds, lengthSteps) {
+          const playOneHit = function (
+            midiPitch,
+            offsetSeconds,
+            lengthSteps,
+            velocity,
+          ) {
             const hitTime = noteTime + Math.max(0, Number(offsetSeconds || 0));
+            const velocityScale = clamp(
+              Number(velocity || DEFAULT_NOTE_VELOCITY) / 127,
+              1 / 127,
+              1,
+            );
+            const hitGain =
+              BASE_CHANNEL_TRIGGER_GAIN * channelVolume * velocityScale;
 
             if (hasPluginInstrument) {
               schedulePluginInstrument(
                 pluginRef,
                 hitTime,
-                BASE_CHANNEL_TRIGGER_GAIN * channelVolume,
+                hitGain,
                 channel.pan,
                 channel,
                 outputNode,
@@ -2851,7 +2878,7 @@ export function useAudioScheduler() {
               scheduleSample(
                 sampleBuffer,
                 hitTime,
-                BASE_CHANNEL_TRIGGER_GAIN * channelVolume,
+                hitGain,
                 channel.pan,
                 channel,
                 outputNode,
@@ -2867,11 +2894,16 @@ export function useAudioScheduler() {
           };
 
           if (stepHit) {
-            playOneHit(DEFAULT_SAMPLE_MIDI_PITCH, 0, 1);
+            playOneHit(DEFAULT_SAMPLE_MIDI_PITCH, 0, 1, DEFAULT_NOTE_VELOCITY);
           }
 
           noteHits.forEach(function (note) {
-            playOneHit(note.pitch, note.offsetSeconds, note.lengthSteps);
+            playOneHit(
+              note.pitch,
+              note.offsetSeconds,
+              note.lengthSteps,
+              note.velocity,
+            );
           });
         });
       };

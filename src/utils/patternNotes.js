@@ -1,6 +1,7 @@
 export const C5_PITCH = 72;
 export const PIANO_PITCH_MIN = 12; // C0
 export const PIANO_PITCH_MAX = 132; // C10
+const DEFAULT_NOTE_VELOCITY = 95;
 
 export function getChannelMergedNotes(pattern, channelId) {
   if (!pattern) {
@@ -21,6 +22,7 @@ export function getChannelMergedNotes(pattern, channelId) {
       start: index,
       length: 1,
       pitch: C5_PITCH,
+      velocity: DEFAULT_NOTE_VELOCITY,
       source: "step",
     });
   });
@@ -37,6 +39,13 @@ export function getChannelMergedNotes(pattern, channelId) {
       start,
       length: Math.max(0.0625, Math.min(maxLen, Number(note.length || 1))),
       pitch: Math.round(note.pitch || C5_PITCH),
+      velocity: Math.max(
+        1,
+        Math.min(
+          127,
+          Math.round(Number(note.velocity || DEFAULT_NOTE_VELOCITY)),
+        ),
+      ),
       source: "piano",
     });
   });

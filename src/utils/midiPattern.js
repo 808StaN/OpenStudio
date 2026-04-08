@@ -4,6 +4,7 @@ export const MIDI_PATTERN_DND_MIME = "application/x-openstudio-midi-pattern";
 
 const MIDI_PATTERN_TYPE = "openstudio-midi-pattern";
 const MIDI_PATTERN_VERSION = 1;
+const DEFAULT_NOTE_VELOCITY = 95;
 
 function clamp(value, min, max) {
   return Math.max(min, Math.min(max, value));
@@ -50,7 +51,7 @@ export function extractMidiPatternNotes(pattern, channelId) {
         start: note.start,
         length: note.length,
         pitch: note.pitch,
-        velocity: note.pitch === C5_PITCH ? 104 : 96,
+        velocity: Math.round(Number(note.velocity || DEFAULT_NOTE_VELOCITY)),
         source: note.source,
       });
     })
