@@ -518,28 +518,23 @@
   filter: drop-shadow(0 0 4px rgba(84, 180, 255, 0.35)) !important;
 }
 
-.theme-midnight .sample-time-select-row::after {
-  border-top-color: #74c2ff !important;
-  filter: drop-shadow(0 0 3px rgba(116, 194, 255, 0.35)) !important;
-}
-
-.theme-midnight .sample-time-select-row select {
+.theme-midnight .sample-time-select-control {
   color: #d9eaff !important;
   border-color: #5478a8 !important;
   background: linear-gradient(180deg, #223a5d 0%, #182c47 100%) !important;
 }
 
-.theme-midnight .sample-time-select-row select:focus {
+.theme-midnight .sample-time-select-control .rack-modern-select-caret {
+  color: #74c2ff !important;
+  filter: drop-shadow(0 0 3px rgba(116, 194, 255, 0.35)) !important;
+}
+
+.theme-midnight .sample-time-select-control.is-open {
   border-color: #68b9ff !important;
   box-shadow:
     0 0 0 1px rgba(104, 185, 255, 0.35),
     inset 0 1px 0 rgba(255, 255, 255, 0.08),
     inset 0 -1px 0 rgba(0, 0, 0, 0.35) !important;
-}
-
-.theme-midnight .sample-time-select-row select option {
-  color: #d9eaff !important;
-  background: #1a2e4b !important;
 }
 
 .theme-midnight .sample-time-knob-row input[type="range"],

@@ -372,14 +372,18 @@
   );
 }
 
-.clip-wave-bar {
-  position: absolute;
-  bottom: 2%;
-  transform: translateX(-50%);
-  border-radius: 2px;
-  min-width: 1px;
-  background: linear-gradient(180deg, #c9e8ff 0%, #73bcff 100%);
-  box-shadow: 0 0 4px rgba(125, 194, 255, 0.32);
+.clip-wave-svg {
+  width: 100%;
+  height: 100%;
+  display: block;
+}
+
+.clip-wave-fill {
+  fill: rgba(156, 211, 255, 0.8);
+  stroke: rgba(201, 232, 255, 0.9);
+  stroke-width: 0.35;
+  vector-effect: non-scaling-stroke;
+  filter: drop-shadow(0 0 4px rgba(125, 194, 255, 0.26));
 }
 
 .clip-mini-note {

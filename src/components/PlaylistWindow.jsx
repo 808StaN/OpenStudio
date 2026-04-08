@@ -36,8 +36,8 @@ const MIDI_PITCH_MIN = 0;
 const MIDI_PITCH_MAX = 127;
 const PLAYLIST_PLAYHEAD_STEP_PHASE_COMPENSATION = 1;
 const AUDIO_CLIP_FALLBACK_BAR_LENGTH = 2;
-const AUDIO_WAVEFORM_BINS = 88;
-const AUDIO_WAVEFORM_STEP_SECONDS = 0.02;
+const AUDIO_WAVEFORM_BINS = 2048;
+const AUDIO_WAVEFORM_DETAIL_DENSITY = 1.15;
 const AUDIO_WAVEFORM_MAX_BARS = 520;
 const SAMPLE_STRETCH_MODES = new Set(["none", "resample", "stretch", "realtime"]);
 const SAMPLE_STRETCH_TIME_MODES = new Set([
@@ -348,35 +348,191 @@ function withAlpha(hexColor, alpha) {
   return "rgba(" + rgb.r + ", " + rgb.g + ", " + rgb.b + ", " + alpha + ")";
 }
 
-function buildWaveformPeaks(audioBuffer, bins) {
-  const peaks = [];
+function buildWaveformEnvelope(audioBuffer, bins) {
+  const minValues = [];
+  const maxValues = [];
+  let peakAbs = 0;
   const sampleCount = Math.max(1, Number(audioBuffer?.length || 0));
   const channels = Math.max(1, Number(audioBuffer?.numberOfChannels || 1));
   const bucketCount = Math.max(
-    12,
+    64,
     Math.round(Number(bins || AUDIO_WAVEFORM_BINS)),
   );
   const bucketSize = Math.max(1, Math.floor(sampleCount / bucketCount));
+  const channelDataByIndex = Array.from({ length: channels }).map(function (
+    _,
+    index,
+  ) {
+    return audioBuffer.getChannelData(index);
+  });
 
   for (let bucketIndex = 0; bucketIndex < bucketCount; bucketIndex += 1) {
     const start = bucketIndex * bucketSize;
     const end = Math.min(sampleCount, start + bucketSize);
-    let peak = 0;
+    let minValue = 1;
+    let maxValue = -1;
 
-    for (let ch = 0; ch < channels; ch += 1) {
-      const channelData = audioBuffer.getChannelData(ch);
-      for (let i = start; i < end; i += 1) {
-        const value = Math.abs(channelData[i] || 0);
-        if (value > peak) {
-          peak = value;
+    for (let i = start; i < end; i += 1) {
+      let mono = 0;
+      for (let ch = 0; ch < channels; ch += 1) {
+        const sample = Number(channelDataByIndex[ch][i] || 0);
+        mono += sample;
+        const abs = Math.abs(sample);
+        if (abs > peakAbs) {
+          peakAbs = abs;
         }
+      }
+      mono /= channels;
+
+      if (mono < minValue) {
+        minValue = mono;
+      }
+      if (mono > maxValue) {
+        maxValue = mono;
       }
     }
 
-    peaks.push(Math.max(0.04, Math.min(1, peak)));
+    if (minValue > 0) {
+      minValue = 0;
+    }
+    if (maxValue < 0) {
+      maxValue = 0;
+    }
+
+    minValues.push(clamp(minValue, -1, 1));
+    maxValues.push(clamp(maxValue, -1, 1));
   }
 
-  return peaks;
+  return {
+    minValues,
+    maxValues,
+    peakAbs: clamp(peakAbs, 0, 1),
+  };
+}
+
+function getNormalizeGainFromPeak(peakAbs, enabled) {
+  if (!enabled) {
+    return 1;
+  }
+  const safePeak = Math.max(0, Number(peakAbs || 0));
+  if (safePeak <= 0.0001) {
+    return 1;
+  }
+  return clamp(0.9 / safePeak, 0.25, 4);
+}
+
+function getEnvelopePeakAbs(envelope) {
+  const directPeak = Number(envelope?.peakAbs);
+  if (Number.isFinite(directPeak) && directPeak > 0) {
+    return clamp(directPeak, 0, 1);
+  }
+
+  const minValues = Array.isArray(envelope?.minValues) ? envelope.minValues : [];
+  const maxValues = Array.isArray(envelope?.maxValues) ? envelope.maxValues : [];
+  const sampleCount = Math.min(minValues.length, maxValues.length);
+  if (sampleCount <= 0) {
+    return 0;
+  }
+
+  let peak = 0;
+  for (let index = 0; index < sampleCount; index += 1) {
+    const minAbs = Math.abs(Number(minValues[index] || 0));
+    const maxAbs = Math.abs(Number(maxValues[index] || 0));
+    if (minAbs > peak) {
+      peak = minAbs;
+    }
+    if (maxAbs > peak) {
+      peak = maxAbs;
+    }
+  }
+
+  return clamp(peak, 0, 1);
+}
+
+function sampleEnvelopeAtRatio(envelope, ratio) {
+  const minValues = Array.isArray(envelope?.minValues) ? envelope.minValues : [];
+  const maxValues = Array.isArray(envelope?.maxValues) ? envelope.maxValues : [];
+  const sampleCount = Math.min(minValues.length, maxValues.length);
+  if (sampleCount <= 0) {
+    return { min: 0, max: 0 };
+  }
+
+  const safeRatio = clamp(Number(ratio || 0), 0, 1);
+  const indexFloat = safeRatio * Math.max(0, sampleCount - 1);
+  const indexA = Math.max(0, Math.min(sampleCount - 1, Math.floor(indexFloat)));
+  const indexB = Math.max(0, Math.min(sampleCount - 1, indexA + 1));
+  const mix = clamp(indexFloat - indexA, 0, 1);
+  const minA = Number(minValues[indexA] || 0);
+  const minB = Number(minValues[indexB] || 0);
+  const maxA = Number(maxValues[indexA] || 0);
+  const maxB = Number(maxValues[indexB] || 0);
+
+  return {
+    min: minA + (minB - minA) * mix,
+    max: maxA + (maxB - maxA) * mix,
+  };
+}
+
+function buildWaveformPathData(params) {
+  const {
+    envelope,
+    pointCount,
+    sourceStartSec,
+    sourceDurationSec,
+    sourcePerClipSecond,
+    visibleDurationSec,
+    clipDurationSec,
+    waveformGain,
+  } = params;
+  const safePointCount = Math.max(4, Math.round(Number(pointCount || 0)));
+  const topPoints = [];
+  const bottomPoints = [];
+  const usableVisibleDurationSec = Math.max(0.0001, Number(visibleDurationSec || 0));
+  const safeClipDurationSec = Math.max(0.0001, Number(clipDurationSec || 0));
+  const safeSourceDurationSec = Math.max(0.0001, Number(sourceDurationSec || 0));
+  const safeSourceStartSec = Math.max(0, Number(sourceStartSec || 0));
+  const safeSourcePerClipSecond = Math.max(0.0001, Number(sourcePerClipSecond || 0));
+  const safeWaveformGain = Math.max(0.25, Number(waveformGain || 1));
+  const amplitudeScale = 0.49;
+
+  for (let index = 0; index < safePointCount; index += 1) {
+    const progress = safePointCount > 1 ? index / (safePointCount - 1) : 0;
+    const timeSec = progress * usableVisibleDurationSec;
+    const sourceTimeSec = safeSourceStartSec + timeSec * safeSourcePerClipSecond;
+    const sourceRatio = clamp(sourceTimeSec / safeSourceDurationSec, 0, 1);
+    const sample = sampleEnvelopeAtRatio(envelope, sourceRatio);
+    const scaledMax = clamp(sample.max * safeWaveformGain, -1, 1);
+    const scaledMin = clamp(sample.min * safeWaveformGain, -1, 1);
+    const x = clamp((timeSec / safeClipDurationSec) * 100, 0, 100);
+    const topY = clamp((0.5 - scaledMax * amplitudeScale) * 100, 1, 99);
+    const bottomY = clamp((0.5 - scaledMin * amplitudeScale) * 100, 1, 99);
+    topPoints.push({ x, y: topY });
+    bottomPoints.push({ x, y: bottomY });
+  }
+
+  if (topPoints.length === 0) {
+    return "";
+  }
+
+  const topPath = topPoints
+    .map(function (point, index) {
+      return (
+        (index === 0 ? "M " : "L ") +
+        point.x.toFixed(3) +
+        " " +
+        point.y.toFixed(3)
+      );
+    })
+    .join(" ");
+  const bottomPath = bottomPoints
+    .slice()
+    .reverse()
+    .map(function (point) {
+      return "L " + point.x.toFixed(3) + " " + point.y.toFixed(3);
+    })
+    .join(" ");
+
+  return topPath + " " + bottomPath + " Z";
 }
 
 function getPatternPreviewNotes(pattern) {
@@ -638,7 +794,7 @@ export function PlaylistWindow() {
       const buffer = await audioCtx.decodeAudioData(data.slice(0));
       const analysis = {
         durationSec: Math.max(0.01, Number(buffer.duration || 0.01)),
-        waveformPeaks: buildWaveformPeaks(buffer, AUDIO_WAVEFORM_BINS),
+        waveformEnvelope: buildWaveformEnvelope(buffer, AUDIO_WAVEFORM_BINS),
       };
 
       audioAnalysisCacheRef.current.set(safePath, analysis);
@@ -2092,11 +2248,11 @@ export function PlaylistWindow() {
                         toSafeSampleUrl(clip.samplePath),
                       )
                     : null;
-                  const waveformPeaks = Array.isArray(
-                    audioAnalysis?.waveformPeaks,
-                  )
-                    ? audioAnalysis.waveformPeaks
-                    : [];
+                  const waveformEnvelope = audioAnalysis?.waveformEnvelope || null;
+                  const waveformNormalizeGain = getNormalizeGainFromPeak(
+                    getEnvelopePeakAbs(waveformEnvelope),
+                    Boolean(clipChannel?.sampleSettings?.normalize),
+                  );
                   const clipColor = isAudioClip
                     ? "#69b5ff"
                     : pattern?.color || DEFAULT_PATTERN_COLOR;
@@ -2133,17 +2289,32 @@ export function PlaylistWindow() {
                   const sourceStartSec = waveformWindow.sourceStartSec;
                   const visibleDurationSec = waveformWindow.visibleClipDurationSec;
                   const sourcePerClipSecond = waveformWindow.sourcePerClipSecond;
-                  const waveformBarCount = isAudioClip
+                  const clipWidthPx = Math.max(
+                    1,
+                    Number(clip.barLength || 1) * barWidth,
+                  );
+                  const waveformPointCount = isAudioClip
                     ? Math.max(
-                        1,
+                        32,
                         Math.min(
-                          AUDIO_WAVEFORM_MAX_BARS,
-                          Math.floor(
-                            visibleDurationSec / AUDIO_WAVEFORM_STEP_SECONDS,
-                          ),
+                          AUDIO_WAVEFORM_MAX_BARS * 3,
+                          Math.round(clipWidthPx * AUDIO_WAVEFORM_DETAIL_DENSITY),
                         ),
                       )
                     : 0;
+                  const waveformPathData =
+                    isAudioClip && waveformEnvelope
+                      ? buildWaveformPathData({
+                          envelope: waveformEnvelope,
+                          pointCount: waveformPointCount,
+                          sourceStartSec,
+                          sourceDurationSec,
+                          sourcePerClipSecond,
+                          visibleDurationSec,
+                          clipDurationSec,
+                          waveformGain: waveformNormalizeGain,
+                        })
+                      : "";
 
                   return (
                     <div
@@ -2218,49 +2389,23 @@ export function PlaylistWindow() {
                     >
                       {isAudioClip ? (
                         <div className="clip-audio-preview">
-                          {Array.from({ length: waveformBarCount }).map(
-                            function (_, index) {
-                              const timeSec =
-                                (index / Math.max(1, waveformBarCount)) *
-                                visibleDurationSec;
-                              const sourceTimeSec =
-                                sourceStartSec + timeSec * sourcePerClipSecond;
-                              const sourceRatio =
-                                sourceDurationSec > 0
-                                  ? sourceTimeSec / sourceDurationSec
-                                  : 0;
-                              const sourceIndex = Math.max(
-                                0,
-                                Math.min(
-                                  waveformPeaks.length - 1,
-                                  Math.floor(
-                                    sourceRatio * waveformPeaks.length,
-                                  ),
-                                ),
-                              );
-                              const peak = waveformPeaks[sourceIndex] || 0.04;
-
-                              return (
-                                <span
-                                  key={clip.id + "-wave-" + index}
-                                  className="clip-wave-bar"
-                                  style={{
-                                    left:
-                                      (timeSec /
-                                        Math.max(0.0001, clipDurationSec)) *
-                                        100 +
-                                      "%",
-                                    width:
-                                      (AUDIO_WAVEFORM_STEP_SECONDS /
-                                        Math.max(0.0001, clipDurationSec)) *
-                                        100 +
-                                      "%",
-                                    height: clamp(peak * 96, 6, 96) + "%",
-                                  }}
-                                />
-                              );
-                            },
-                          )}
+                          <svg
+                            className="clip-wave-svg"
+                            viewBox="0 0 100 100"
+                            preserveAspectRatio="none"
+                            aria-hidden="true"
+                          >
+                            {waveformPathData ? (
+                              <path
+                                className="clip-wave-fill"
+                                d={waveformPathData}
+                                style={{
+                                  fill: withAlpha(clipColor, 0.58),
+                                  stroke: withAlpha(clipColor, 0.94),
+                                }}
+                              />
+                            ) : null}
+                          </svg>
                         </div>
                       ) : (
                         <ClipPreviewNotes

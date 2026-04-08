@@ -3040,6 +3040,40 @@ export function useAudioScheduler() {
           return;
         }
 
+        const getNormalizeGain = function () {
+          if (!settings.normalize) {
+            return 1;
+          }
+
+          const cached = sampleNormalizeGainRef.current.get(sampleBuffer);
+          if (Number.isFinite(cached)) {
+            return cached;
+          }
+
+          let peak = 0;
+          const channelsCount = Math.max(
+            1,
+            Number(sampleBuffer.numberOfChannels || 1),
+          );
+
+          for (let ch = 0; ch < channelsCount; ch += 1) {
+            const channelData = sampleBuffer.getChannelData(ch);
+            const step = Math.max(1, Math.floor(channelData.length / 64000));
+
+            for (let i = 0; i < channelData.length; i += step) {
+              const abs = Math.abs(channelData[i]);
+              if (abs > peak) {
+                peak = abs;
+              }
+            }
+          }
+
+          const normalized =
+            peak > 0.0001 ? Math.max(0.25, Math.min(4, 0.9 / peak)) : 1;
+          sampleNormalizeGainRef.current.set(sampleBuffer, normalized);
+          return normalized;
+        };
+
         let scheduledBuffer = sampleBuffer;
         let maxReadableDuration = sampleReadDuration;
         if (stretchProfile.useGranularStretch) {
@@ -3106,7 +3140,10 @@ export function useAudioScheduler() {
         );
 
         const fadeOutAt = time + Math.max(0, playDuration - 0.012);
-        const clipGain = clamp(Number(channel?.volume ?? 0.75) * 0.36, 0.04, 1);
+        const clipGain = Math.max(
+          0.01,
+          Number(channel?.volume ?? 0.75) * 0.36 * getNormalizeGain(),
+        );
         const clipPan = clamp(Number(channel?.pan ?? 0), -1, 1);
 
         source.buffer = scheduledBuffer;

@@ -94,6 +94,36 @@ function computeWaveformPeaks(channelData, bucketCount) {
   return peaks;
 }
 
+function computePeakAbs(channelData) {
+  if (!channelData || channelData.length === 0) {
+    return 0;
+  }
+
+  let peak = 0;
+  const step = Math.max(1, Math.floor(channelData.length / 64000));
+  for (let index = 0; index < channelData.length; index += step) {
+    const abs = Math.abs(Number(channelData[index] || 0));
+    if (abs > peak) {
+      peak = abs;
+    }
+  }
+
+  return Math.max(0, Math.min(1, peak));
+}
+
+function getNormalizeGainFromPeakAbs(peakAbs, enabled) {
+  if (!enabled) {
+    return 1;
+  }
+
+  const safePeak = Math.max(0, Number(peakAbs || 0));
+  if (safePeak <= 0.0001) {
+    return 1;
+  }
+
+  return Math.max(0.25, Math.min(4, 0.9 / safePeak));
+}
+
 function clampSettingValue(rawValue, min, max, step) {
   if (!Number.isFinite(rawValue)) {
     return min;
@@ -546,11 +576,14 @@ export function SampleSettingsDialog({ channel }) {
   }
 
   const [peaks, setPeaks] = useState([]);
+  const [waveformPeakAbs, setWaveformPeakAbs] = useState(0);
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState("");
   const [isDropTargetActive, setIsDropTargetActive] = useState(false);
   const [isPreviewPlaying, setIsPreviewPlaying] = useState(false);
   const [activeSampleTab, setActiveSampleTab] = useState("sample");
+  const [openStretchSelect, setOpenStretchSelect] = useState(null);
+  const stretchSelectsRef = useRef(null);
   const previewSampleContextRef = useRef(null);
   const previewSampleBufferCacheRef = useRef(new Map());
   const previewSamplePendingRef = useRef(new Map());
@@ -744,6 +777,7 @@ export function SampleSettingsDialog({ channel }) {
 
       if (isPluginChannel) {
         setPeaks([]);
+        setWaveformPeakAbs(0);
         setError("");
         setIsLoading(false);
         setIsDropTargetActive(false);
@@ -756,6 +790,7 @@ export function SampleSettingsDialog({ channel }) {
 
       if (!sampleRef) {
         setPeaks([]);
+        setWaveformPeakAbs(0);
         setError("Drop sample here from Browser");
         setIsLoading(false);
         return function () {
@@ -784,12 +819,14 @@ export function SampleSettingsDialog({ channel }) {
 
           const primaryChannel = decoded.getChannelData(0);
           const waveformPeaks = computeWaveformPeaks(primaryChannel, 180);
+          const peakAbs = computePeakAbs(primaryChannel);
 
           if (cancelled) {
             return;
           }
 
           setPeaks(waveformPeaks);
+          setWaveformPeakAbs(peakAbs);
           setIsLoading(false);
         } catch {
           if (cancelled) {
@@ -797,6 +834,7 @@ export function SampleSettingsDialog({ channel }) {
           }
           setIsLoading(false);
           setPeaks([]);
+          setWaveformPeakAbs(0);
           setError("Cannot read waveform for this sample");
         }
       };
@@ -813,8 +851,34 @@ export function SampleSettingsDialog({ channel }) {
   useEffect(
     function () {
       setActiveSampleTab("sample");
+      setOpenStretchSelect(null);
     },
     [channel.id, isPluginChannel],
+  );
+
+  useEffect(
+    function () {
+      if (!openStretchSelect) {
+        return;
+      }
+
+      const onPointerDown = function (event) {
+        const root = stretchSelectsRef.current;
+        if (!root) {
+          return;
+        }
+
+        if (!root.contains(event.target)) {
+          setOpenStretchSelect(null);
+        }
+      };
+
+      window.addEventListener("mousedown", onPointerDown);
+      return function () {
+        window.removeEventListener("mousedown", onPointerDown);
+      };
+    },
+    [openStretchSelect],
   );
 
   const fadeInWidthPct = useMemo(
@@ -832,6 +896,10 @@ export function SampleSettingsDialog({ channel }) {
   );
 
   const fadeOutStartPct = Math.max(0, settings.lengthPct - fadeOutWidthPct);
+  const waveformNormalizeGain = getNormalizeGainFromPeakAbs(
+    waveformPeakAbs,
+    Boolean(settings.normalize),
+  );
 
   const onSettingChange = function (changes) {
     dispatch(
@@ -840,6 +908,14 @@ export function SampleSettingsDialog({ channel }) {
         changes,
       }),
     );
+  };
+
+  const getOptionLabel = function (options, value) {
+    const safeValue = String(value || "");
+    const match = options.find(function (option) {
+      return option.value === safeValue;
+    });
+    return match?.label || safeValue;
   };
 
   const onWaveformDragOver = function (event) {
@@ -1025,7 +1101,10 @@ export function SampleSettingsDialog({ channel }) {
                 preserveAspectRatio="none"
               >
                 {peaks.map(function (peak, index) {
-                  const normalized = Math.max(0.02, Math.min(1, peak));
+                  const normalized = Math.max(
+                    0.02,
+                    Math.min(1, Number(peak || 0) * waveformNormalizeGain),
+                  );
                   const halfHeight = normalized * 22;
                   const x = index + 0.5;
                   return (
@@ -1538,50 +1617,124 @@ export function SampleSettingsDialog({ channel }) {
                     </label>
                   </div>
 
-                  <div className="sample-time-stretch-selects">
+                  <div className="sample-time-stretch-selects" ref={stretchSelectsRef}>
                     <label className="sample-time-select-row">
                       <span>TIME</span>
-                      <select
-                        value={String(settings.stretchTimeMode || "none")}
-                        onChange={function (event) {
-                          const nextMode = event.target.value;
-                          const changes = {
-                            stretchTimeMode: nextMode,
-                          };
-
-                          if (nextMode === "project-tempo") {
-                            changes.stretchProjectTempoBpm = Number(bpm || 120);
-                          }
-
-                          onSettingChange(changes);
-                        }}
+                      <div
+                        className={
+                          "sample-time-select-control rack-modern-select" +
+                          (openStretchSelect === "time" ? " is-open" : "")
+                        }
                       >
-                        {STRETCH_TIME_MODE_OPTIONS.map(function (option) {
-                          return (
-                            <option key={option.value} value={option.value}>
-                              {option.label}
-                            </option>
-                          );
-                        })}
-                      </select>
+                        <button
+                          type="button"
+                          className="rack-modern-select-trigger"
+                          aria-label="Time stretch mode"
+                          onClick={function () {
+                            setOpenStretchSelect(function (value) {
+                              return value === "time" ? null : "time";
+                            });
+                          }}
+                        >
+                          <span className="rack-modern-select-value">
+                            {getOptionLabel(
+                              STRETCH_TIME_MODE_OPTIONS,
+                              String(settings.stretchTimeMode || "none"),
+                            )}
+                          </span>
+                          <span className="rack-modern-select-caret">v</span>
+                        </button>
+                        {openStretchSelect === "time" ? (
+                          <div className="rack-modern-select-dropdown">
+                            {STRETCH_TIME_MODE_OPTIONS.map(function (option) {
+                              const isActive =
+                                option.value ===
+                                String(settings.stretchTimeMode || "none");
+                              return (
+                                <button
+                                  key={option.value}
+                                  type="button"
+                                  className={
+                                    "rack-modern-select-option" +
+                                    (isActive ? " is-active" : "")
+                                  }
+                                  onClick={function () {
+                                    const nextMode = option.value;
+                                    const changes = {
+                                      stretchTimeMode: nextMode,
+                                    };
+
+                                    if (nextMode === "project-tempo") {
+                                      changes.stretchProjectTempoBpm = Number(
+                                        bpm || 120,
+                                      );
+                                    }
+
+                                    onSettingChange(changes);
+                                    setOpenStretchSelect(null);
+                                  }}
+                                >
+                                  {option.label}
+                                </button>
+                              );
+                            })}
+                          </div>
+                        ) : null}
+                      </div>
                     </label>
 
                     <label className="sample-time-select-row">
                       <span>Mode</span>
-                      <select
-                        value={String(settings.stretchMode || "resample")}
-                        onChange={function (event) {
-                          onSettingChange({ stretchMode: event.target.value });
-                        }}
+                      <div
+                        className={
+                          "sample-time-select-control rack-modern-select" +
+                          (openStretchSelect === "mode" ? " is-open" : "")
+                        }
                       >
-                        {STRETCH_MODE_OPTIONS.map(function (option) {
-                          return (
-                            <option key={option.value} value={option.value}>
-                              {option.label}
-                            </option>
-                          );
-                        })}
-                      </select>
+                        <button
+                          type="button"
+                          className="rack-modern-select-trigger"
+                          aria-label="Time stretch algorithm"
+                          onClick={function () {
+                            setOpenStretchSelect(function (value) {
+                              return value === "mode" ? null : "mode";
+                            });
+                          }}
+                        >
+                          <span className="rack-modern-select-value">
+                            {getOptionLabel(
+                              STRETCH_MODE_OPTIONS,
+                              String(settings.stretchMode || "resample"),
+                            )}
+                          </span>
+                          <span className="rack-modern-select-caret">v</span>
+                        </button>
+                        {openStretchSelect === "mode" ? (
+                          <div className="rack-modern-select-dropdown">
+                            {STRETCH_MODE_OPTIONS.map(function (option) {
+                              const isActive =
+                                option.value ===
+                                String(settings.stretchMode || "resample");
+                              return (
+                                <button
+                                  key={option.value}
+                                  type="button"
+                                  className={
+                                    "rack-modern-select-option" +
+                                    (isActive ? " is-active" : "")
+                                  }
+                                  onClick={function () {
+                                    onSettingChange({ stretchMode: option.value });
+                                    setOpenStretchSelect(null);
+                                  }}
+                                >
+                                  {option.label}
+                                </button>
+                              );
+                            })}
+                          </div>
+                        ) : null}
+                      </div>
                     </label>
                   </div>
 
