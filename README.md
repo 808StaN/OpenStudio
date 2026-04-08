@@ -41,27 +41,27 @@ The product goal is to feel close to desktop music production tools while remain
 ### Sound and Mixing
 
 - per-channel sample settings:
-	- Cut itself
-	- normalize
-	- fade in/out
-	- envelope (ADSR-style controls)
-	- pitch controls
-	- time-stretch controls
+  - Cut itself
+  - normalize
+  - fade in/out
+  - envelope (ADSR-style controls)
+  - pitch controls
+  - time-stretch controls
 - mixer insert routing to master/other inserts
 - insert FX slots with built-in effects:
-	- Graphic EQ
-	- Reverb
+  - Graphic EQ
+  - Reverb
 - live insert metering and spectrum data
 
 ### Render and Export
 
 - render full arrangement from playlist
 - WAV output:
-	- 16-bit integer
-	- 24-bit integer
-	- 32-bit float
+  - 16-bit integer
+  - 24-bit integer
+  - 32-bit float
 - MP3 output:
-	- selectable bitrate (96-320 kbps)
+  - selectable bitrate (96-320 kbps)
 
 ## Tech Stack
 

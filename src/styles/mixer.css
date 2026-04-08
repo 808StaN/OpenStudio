@@ -1113,7 +1113,7 @@
   );
   top: 0;
   bottom: auto;
-  min-height: 3px;
+  min-height: 0;
   border-radius: 0;
 }
 
@@ -1124,6 +1124,8 @@
   right: 0;
   height: 3px;
   border-radius: 2px;
+  z-index: 5;
+  pointer-events: none;
 }
 
 .fx-max-threshold-line {

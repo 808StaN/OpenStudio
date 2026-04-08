@@ -1237,8 +1237,12 @@ export function FxPluginWindow() {
 
   if (activeSlot.effectType === FX_EFFECT_MAXIMIZER) {
     const thresholdPosition =
-      ((maximizerParams.thresholdDb + 24) / 24) * 100;
-    const ceilingPosition = ((maximizerParams.ceilingDb + 18) / 18) * 100;
+      clamp(((maximizerParams.thresholdDb + 24) / 24) * 100, 0, 98.05);
+    const ceilingPosition = clamp(
+      ((maximizerParams.ceilingDb + 18) / 18) * 100,
+      0,
+      98.05,
+    );
     const characterDisplay = (Number(maximizerParams.character || 0) * 10)
       .toFixed(2)
       .replace(".", ",");
