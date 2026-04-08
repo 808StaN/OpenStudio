@@ -1183,10 +1183,6 @@ export function PianoRollWindow() {
   /* eslint-disable react-hooks/exhaustive-deps */
   useEffect(
     function () {
-      if (editMode !== "select") {
-        return;
-      }
-
       const onKeyDown = function (event) {
         const target = event.target;
         if (
@@ -1200,6 +1196,21 @@ export function PianoRollWindow() {
         const hasSelection = selectedNotes.length > 0;
         const key = event.key.toLowerCase();
         const ctrlOrMeta = event.ctrlKey || event.metaKey;
+
+        if (ctrlOrMeta && key === "a") {
+          event.preventDefault();
+          setEditMode("select");
+          setSelectedNoteIds(
+            pianoNotes.map(function (note) {
+              return getNoteSelectionId(note);
+            }),
+          );
+          return;
+        }
+
+        if (editMode !== "select") {
+          return;
+        }
 
         if (ctrlOrMeta && key === "c") {
           event.preventDefault();
@@ -1304,6 +1315,7 @@ export function PianoRollWindow() {
       activePatternId,
       dispatch,
       editMode,
+      pianoNotes,
       patternLength,
       playheadStep,
       scalePitchClasses,
