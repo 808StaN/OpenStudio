@@ -194,21 +194,41 @@ function sanitizeMaximizerMode(rawMode) {
 }
 
 function getSafeMaximizerParams(raw) {
+  const legacyThreshold = Number(raw?.thresholdDb);
+  const legacyCeiling = Number(raw?.ceilingDb);
+  const legacyCharacter = Number(raw?.character);
+  const legacyMode = sanitizeMaximizerMode(raw?.mode);
+  const isLegacyDefault =
+    Number.isFinite(legacyThreshold) &&
+    Number.isFinite(legacyCeiling) &&
+    Number.isFinite(legacyCharacter) &&
+    Math.abs(legacyThreshold + 6) < 0.001 &&
+    Math.abs(legacyCeiling + 0.1) < 0.001 &&
+    Math.abs(legacyCharacter - 0.58) < 0.001 &&
+    legacyMode === "irc-ii" &&
+    Boolean(raw?.truePeakEnabled ?? true);
+
   const base = {
     mode: "irc-ii",
     truePeakEnabled: true,
-    thresholdDb: -6,
-    ceilingDb: -0.1,
-    character: 0.58,
+    thresholdDb: 0,
+    ceilingDb: -1,
+    character: 0.5,
     ...(raw || {}),
   };
+
+  if (isLegacyDefault) {
+    base.thresholdDb = 0;
+    base.ceilingDb = -1;
+    base.character = 0.5;
+  }
 
   return {
     mode: sanitizeMaximizerMode(base.mode),
     truePeakEnabled: Boolean(base.truePeakEnabled),
-    thresholdDb: clamp(Number(base.thresholdDb ?? -6), -24, 0),
-    ceilingDb: clamp(Number(base.ceilingDb ?? -0.1), -18, 0),
-    character: clamp(Number(base.character ?? 0.58), 0, 1),
+    thresholdDb: clamp(Number(base.thresholdDb ?? 0), -24, 0),
+    ceilingDb: clamp(Number(base.ceilingDb ?? -1), -18, 0),
+    character: clamp(Number(base.character ?? 0.5), 0, 1),
   };
 }
 
@@ -708,6 +728,18 @@ function areMixerSettingsEqual(prev, next) {
           return false;
         }
       }
+
+      if (aSlot.effectType === FX_EFFECT_MAXIMIZER) {
+        if (
+          aParams.mode !== bParams.mode ||
+          aParams.truePeakEnabled !== bParams.truePeakEnabled ||
+          aParams.thresholdDb !== bParams.thresholdDb ||
+          aParams.ceilingDb !== bParams.ceilingDb ||
+          aParams.character !== bParams.character
+        ) {
+          return false;
+        }
+      }
     }
 
     const aRoutes = a.routesTo || [];
@@ -941,6 +973,10 @@ export function useAudioScheduler() {
   const lastMeterSpectrumRef = useRef(new Map());
   const lastMeterWaveformRef = useRef(new Map());
   const lastMaximizerReductionRef = useRef(new Map());
+  const lastMaximizerOutputDbRef = useRef(new Map());
+  const lastMaximizerStereoMeterRef = useRef(new Map());
+  const maximizerTraceHistoryRef = useRef(new Map());
+  const lastMaximizerVisualKeyRef = useRef(new Map());
   const spectrumTargetInsertIdRef = useRef(
     String(fxEditorTarget?.insertId || selectedInsertId || ""),
   );
@@ -1120,8 +1156,19 @@ export function useAudioScheduler() {
           safeDisconnect(node.reverbWetGain);
           safeDisconnect(node.maximizerInput);
           safeDisconnect(node.maximizerPreGain);
+          safeDisconnect(node.maximizerPreAnalyser);
           safeDisconnect(node.maximizerCompressor);
           safeDisconnect(node.maximizerSoftClip);
+          safeDisconnect(node.maximizerPostAnalyser);
+          safeDisconnect(node.maximizerPreSplit);
+          safeDisconnect(node.maximizerPostSplit);
+          safeDisconnect(node.maximizerOutSplit);
+          safeDisconnect(node.maximizerPreLeftAnalyser);
+          safeDisconnect(node.maximizerPreRightAnalyser);
+          safeDisconnect(node.maximizerPostLeftAnalyser);
+          safeDisconnect(node.maximizerPostRightAnalyser);
+          safeDisconnect(node.maximizerOutLeftAnalyser);
+          safeDisconnect(node.maximizerOutRightAnalyser);
           safeDisconnect(node.maximizerCeilingGain);
           safeDisconnect(node.maximizerAnalyser);
           safeDisconnect(node.outputGain);
@@ -1174,8 +1221,19 @@ export function useAudioScheduler() {
         const reverbWetGain = audioCtx.createGain();
         const maximizerInput = audioCtx.createGain();
         const maximizerPreGain = audioCtx.createGain();
+        const maximizerPreAnalyser = audioCtx.createAnalyser();
         const maximizerCompressor = audioCtx.createDynamicsCompressor();
         const maximizerSoftClip = audioCtx.createWaveShaper();
+        const maximizerPostAnalyser = audioCtx.createAnalyser();
+        const maximizerPreSplit = audioCtx.createChannelSplitter(2);
+        const maximizerPostSplit = audioCtx.createChannelSplitter(2);
+        const maximizerOutSplit = audioCtx.createChannelSplitter(2);
+        const maximizerPreLeftAnalyser = audioCtx.createAnalyser();
+        const maximizerPreRightAnalyser = audioCtx.createAnalyser();
+        const maximizerPostLeftAnalyser = audioCtx.createAnalyser();
+        const maximizerPostRightAnalyser = audioCtx.createAnalyser();
+        const maximizerOutLeftAnalyser = audioCtx.createAnalyser();
+        const maximizerOutRightAnalyser = audioCtx.createAnalyser();
         const maximizerCeilingGain = audioCtx.createGain();
         const maximizerAnalyser = audioCtx.createAnalyser();
         const outputGain = audioCtx.createGain();
@@ -1189,6 +1247,27 @@ export function useAudioScheduler() {
         maximizerAnalyser.minDecibels = -96;
         maximizerAnalyser.maxDecibels = -12;
         maximizerAnalyser.smoothingTimeConstant = 0.35;
+        maximizerPreAnalyser.fftSize = 1024;
+        maximizerPreAnalyser.minDecibels = -96;
+        maximizerPreAnalyser.maxDecibels = -12;
+        maximizerPreAnalyser.smoothingTimeConstant = 0.25;
+        maximizerPostAnalyser.fftSize = 1024;
+        maximizerPostAnalyser.minDecibels = -96;
+        maximizerPostAnalyser.maxDecibels = -12;
+        maximizerPostAnalyser.smoothingTimeConstant = 0.25;
+        [
+          maximizerPreLeftAnalyser,
+          maximizerPreRightAnalyser,
+          maximizerPostLeftAnalyser,
+          maximizerPostRightAnalyser,
+          maximizerOutLeftAnalyser,
+          maximizerOutRightAnalyser,
+        ].forEach(function (nodeRef) {
+          nodeRef.fftSize = 1024;
+          nodeRef.minDecibels = -96;
+          nodeRef.maxDecibels = -12;
+          nodeRef.smoothingTimeConstant = 0.22;
+        });
 
         inputGain.connect(splitter);
 
@@ -1275,10 +1354,21 @@ export function useAudioScheduler() {
         reverbWetGain.connect(fxWetGain);
 
         maximizerInput.connect(maximizerPreGain);
-        maximizerPreGain.connect(maximizerCompressor);
+        maximizerPreGain.connect(maximizerPreAnalyser);
+        maximizerPreGain.connect(maximizerPreSplit);
+        maximizerPreSplit.connect(maximizerPreLeftAnalyser, 0);
+        maximizerPreSplit.connect(maximizerPreRightAnalyser, 1);
+        maximizerPreAnalyser.connect(maximizerCompressor);
         maximizerCompressor.connect(maximizerSoftClip);
-        maximizerSoftClip.connect(maximizerCeilingGain);
+        maximizerSoftClip.connect(maximizerPostAnalyser);
+        maximizerSoftClip.connect(maximizerPostSplit);
+        maximizerPostSplit.connect(maximizerPostLeftAnalyser, 0);
+        maximizerPostSplit.connect(maximizerPostRightAnalyser, 1);
+        maximizerPostAnalyser.connect(maximizerCeilingGain);
         maximizerCeilingGain.connect(maximizerAnalyser);
+        maximizerCeilingGain.connect(maximizerOutSplit);
+        maximizerOutSplit.connect(maximizerOutLeftAnalyser, 0);
+        maximizerOutSplit.connect(maximizerOutRightAnalyser, 1);
         maximizerAnalyser.connect(fxWetGain);
 
         const reverbModulators = [
@@ -1339,14 +1429,34 @@ export function useAudioScheduler() {
           reverbWetGain,
           maximizerInput,
           maximizerPreGain,
+          maximizerPreAnalyser,
           maximizerCompressor,
           maximizerSoftClip,
+          maximizerPostAnalyser,
+          maximizerPreSplit,
+          maximizerPostSplit,
+          maximizerOutSplit,
+          maximizerPreLeftAnalyser,
+          maximizerPreRightAnalyser,
+          maximizerPostLeftAnalyser,
+          maximizerPostRightAnalyser,
+          maximizerOutLeftAnalyser,
+          maximizerOutRightAnalyser,
           maximizerCeilingGain,
           maximizerAnalyser,
           outputGain,
           analyser,
           meterData: new Uint8Array(analyser.fftSize),
           spectrumData: new Uint8Array(analyser.frequencyBinCount),
+          maximizerMeterWaveform: new Uint8Array(maximizerAnalyser.fftSize),
+          maximizerPreWaveform: new Uint8Array(maximizerPreAnalyser.fftSize),
+          maximizerPostWaveform: new Uint8Array(maximizerPostAnalyser.fftSize),
+          maximizerPreLeftWaveform: new Uint8Array(maximizerPreLeftAnalyser.fftSize),
+          maximizerPreRightWaveform: new Uint8Array(maximizerPreRightAnalyser.fftSize),
+          maximizerPostLeftWaveform: new Uint8Array(maximizerPostLeftAnalyser.fftSize),
+          maximizerPostRightWaveform: new Uint8Array(maximizerPostRightAnalyser.fftSize),
+          maximizerOutLeftWaveform: new Uint8Array(maximizerOutLeftAnalyser.fftSize),
+          maximizerOutRightWaveform: new Uint8Array(maximizerOutRightAnalyser.fftSize),
           maximizerWaveform: new Uint8Array(maximizerAnalyser.fftSize),
           meterLevel: 0,
         });
@@ -1449,6 +1559,7 @@ export function useAudioScheduler() {
 
       smoothTo(node.fxDryGain.gain, dryMix, now);
       smoothTo(node.fxWetGain.gain, wetMix, now);
+      smoothTo(node.eqInput.gain, eqEnabled ? 1 : 0, now);
       smoothTo(node.eqLowCut.frequency, 20, now);
       node.eqLowCut.Q.setValueAtTime(0.707, now);
 
@@ -1513,12 +1624,12 @@ export function useAudioScheduler() {
             0.82,
           );
       const earlyLevel = isFreeze ? 0 : earlyMix;
-      const reverbInputLevel = isFreeze ? 0 : 1;
+      const reverbInputLevel = reverbEnabled ? (isFreeze ? 0 : 1) : 0;
       const dampFreq = Math.max(900, hiCutHz * (1 - reverbDamping * 0.55));
       const directWidth = 0.5 * (1 + widthValue);
       const crossWidth = 0.5 * (1 - widthValue);
 
-      node.reverbInput.gain.setValueAtTime(reverbInputLevel, now);
+      smoothTo(node.reverbInput.gain, reverbInputLevel, now);
       node.reverbPreDelay.delayTime.setValueAtTime(preDelaySec, now);
       node.reverbLoCut.frequency.setValueAtTime(loCutHz, now);
       node.reverbLoCut.Q.setValueAtTime(0.707, now);
@@ -1575,34 +1686,72 @@ export function useAudioScheduler() {
 
       const mode = sanitizeMaximizerMode(maximizerParams.mode);
       const modeConfigById = {
-        "irc-ll": { ratio: 20, knee: 1, lookahead: 0.0008 },
-        "irc-i": { ratio: 24, knee: 1.5, lookahead: 0.0012 },
-        "irc-ii": { ratio: 30, knee: 2.2, lookahead: 0.0017 },
-        "irc-iii": { ratio: 42, knee: 3.2, lookahead: 0.0022 },
-        "irc-iv": { ratio: 60, knee: 4.8, lookahead: 0.0028 },
+        "irc-ll": {
+          ratio: 12,
+          knee: 1.2,
+          attackFast: 0.0015,
+          attackSlow: 0.006,
+          releaseFast: 0.04,
+          releaseSlow: 0.16,
+        },
+        "irc-i": {
+          ratio: 16,
+          knee: 1.8,
+          attackFast: 0.001,
+          attackSlow: 0.005,
+          releaseFast: 0.05,
+          releaseSlow: 0.2,
+        },
+        "irc-ii": {
+          ratio: 18,
+          knee: 2.3,
+          attackFast: 0.0006,
+          attackSlow: 0.004,
+          releaseFast: 0.06,
+          releaseSlow: 0.24,
+        },
+        "irc-iii": {
+          ratio: 24,
+          knee: 3.1,
+          attackFast: 0.0008,
+          attackSlow: 0.0045,
+          releaseFast: 0.07,
+          releaseSlow: 0.28,
+        },
+        "irc-iv": {
+          ratio: 28,
+          knee: 4.2,
+          attackFast: 0.0012,
+          attackSlow: 0.006,
+          releaseFast: 0.08,
+          releaseSlow: 0.32,
+        },
       };
       const modeConfig = modeConfigById[mode] || modeConfigById["irc-ii"];
       const thresholdDb = clamp(maximizerParams.thresholdDb, -24, 0);
       const ceilingDb = clamp(maximizerParams.ceilingDb, -18, 0);
       const character = clamp(maximizerParams.character, 0, 1);
       const truePeakEnabled = Boolean(maximizerParams.truePeakEnabled);
-      const preGainDb = -thresholdDb;
-      const truePeakHeadroomDb = truePeakEnabled ? 0.9 : 0;
+      const driveDb = Math.max(0, -thresholdDb);
+      const preGainDb = driveDb;
+      const compressorThresholdDb = -0.8;
+      const truePeakHeadroomDb = truePeakEnabled ? 0.3 : 0;
       const ceilingGain = Math.pow(
         10,
         (ceilingDb - truePeakHeadroomDb) / 20,
       );
-      const attackSec = 0.001 + (1 - character) * 0.022;
-      const releaseSec = 0.035 + character * 0.34;
-      const kneeDb = modeConfig.knee + character * 3.2;
-      const ratio = modeConfig.ratio + (1 - character) * 4;
+      const attackSec =
+        modeConfig.attackFast +
+        character * (modeConfig.attackSlow - modeConfig.attackFast);
+      const releaseSec =
+        modeConfig.releaseFast +
+        character * (modeConfig.releaseSlow - modeConfig.releaseFast);
+      const kneeDb = modeConfig.knee + character * 1.6;
+      const ratio = modeConfig.ratio + (1 - character) * 6;
       const clipStrength = clamp(
-        0.2 +
-          character * 0.5 +
-          (truePeakEnabled ? 0.12 : 0) +
-          modeConfig.lookahead * 120,
-        0.2,
-        0.95,
+        (driveDb / 24) * (0.06 + (1 - character) * 0.12),
+        0,
+        0.18,
       );
 
       smoothTo(
@@ -1615,14 +1764,18 @@ export function useAudioScheduler() {
         maximizerEnabled ? Math.pow(10, preGainDb / 20) : 1,
         now,
       );
-      node.maximizerCompressor.threshold.setValueAtTime(-1.6, now);
+      node.maximizerCompressor.threshold.setValueAtTime(
+        compressorThresholdDb,
+        now,
+      );
       node.maximizerCompressor.ratio.setValueAtTime(ratio, now);
       node.maximizerCompressor.knee.setValueAtTime(kneeDb, now);
       node.maximizerCompressor.attack.setValueAtTime(attackSec, now);
       node.maximizerCompressor.release.setValueAtTime(releaseSec, now);
-      node.maximizerSoftClip.curve = buildSoftClipCurve(
-        maximizerEnabled ? clipStrength : 0,
-      );
+      node.maximizerSoftClip.curve =
+        maximizerEnabled && clipStrength > 0.001
+          ? buildSoftClipCurve(clipStrength)
+          : null;
       node.maximizerSoftClip.oversample = truePeakEnabled ? "4x" : "2x";
       smoothTo(
         node.maximizerCeilingGain.gain,
@@ -2109,10 +2262,14 @@ export function useAudioScheduler() {
         lastMeterSpectrumRef.current.clear();
         lastMeterWaveformRef.current.clear();
         lastMaximizerReductionRef.current.clear();
+        lastMaximizerOutputDbRef.current.clear();
+        lastMaximizerStereoMeterRef.current.clear();
+        maximizerTraceHistoryRef.current.clear();
+        lastMaximizerVisualKeyRef.current.clear();
       };
 
       const updateMixerMeters = function (now) {
-        if (now - lastMeterDispatchAtRef.current < 1 / 30) {
+        if (now - lastMeterDispatchAtRef.current < 1 / 45) {
           return;
         }
         lastMeterDispatchAtRef.current = now;
@@ -2160,7 +2317,123 @@ export function useAudioScheduler() {
           let nextWaveform = null;
           let waveformChanged = false;
           let maximizerReduction = 0;
+          let maximizerOutputDb = -96;
+          let maximizerStereoMeter = {
+            leftVolumeDb: -96,
+            leftReductionDb: 0,
+            rightReductionDb: 0,
+            rightVolumeDb: -96,
+          };
           let reductionChanged = false;
+          let outputDbChanged = false;
+          let stereoChanged = false;
+
+          if (
+            node.maximizerCompressor &&
+            Number.isFinite(Number(node.maximizerCompressor.reduction))
+          ) {
+            maximizerReduction = clamp(
+              Math.max(0, -Number(node.maximizerCompressor.reduction)),
+              0,
+              36,
+            );
+          }
+
+          if (node.maximizerAnalyser && node.maximizerMeterWaveform) {
+            node.maximizerAnalyser.getByteTimeDomainData(node.maximizerMeterWaveform);
+            let meterPeak = 0;
+            for (
+              let meterIndex = 0;
+              meterIndex < node.maximizerMeterWaveform.length;
+              meterIndex += 1
+            ) {
+              const normalized = Math.abs(
+                (Number(node.maximizerMeterWaveform[meterIndex] || 128) - 128) /
+                  128,
+              );
+              if (normalized > meterPeak) {
+                meterPeak = normalized;
+              }
+            }
+            maximizerOutputDb = clamp(
+              20 * Math.log10(Math.max(meterPeak, 0.0001)),
+              -96,
+              6,
+            );
+          }
+
+          const calcPeakFromWaveform = function (waveform) {
+            let peak = 0;
+            for (let index = 0; index < waveform.length; index += 1) {
+              const normalized = Math.abs(
+                (Number(waveform[index] || 128) - 128) / 128,
+              );
+              if (normalized > peak) {
+                peak = normalized;
+              }
+            }
+            return peak;
+          };
+
+          if (
+            node.maximizerPreLeftAnalyser &&
+            node.maximizerPreRightAnalyser &&
+            node.maximizerPostLeftAnalyser &&
+            node.maximizerPostRightAnalyser &&
+            node.maximizerOutLeftAnalyser &&
+            node.maximizerOutRightAnalyser &&
+            node.maximizerPreLeftWaveform &&
+            node.maximizerPreRightWaveform &&
+            node.maximizerPostLeftWaveform &&
+            node.maximizerPostRightWaveform &&
+            node.maximizerOutLeftWaveform &&
+            node.maximizerOutRightWaveform
+          ) {
+            node.maximizerPreLeftAnalyser.getByteTimeDomainData(
+              node.maximizerPreLeftWaveform,
+            );
+            node.maximizerPreRightAnalyser.getByteTimeDomainData(
+              node.maximizerPreRightWaveform,
+            );
+            node.maximizerPostLeftAnalyser.getByteTimeDomainData(
+              node.maximizerPostLeftWaveform,
+            );
+            node.maximizerPostRightAnalyser.getByteTimeDomainData(
+              node.maximizerPostRightWaveform,
+            );
+            node.maximizerOutLeftAnalyser.getByteTimeDomainData(
+              node.maximizerOutLeftWaveform,
+            );
+            node.maximizerOutRightAnalyser.getByteTimeDomainData(
+              node.maximizerOutRightWaveform,
+            );
+
+            const preLeftDb = 20 * Math.log10(
+              Math.max(calcPeakFromWaveform(node.maximizerPreLeftWaveform), 0.0001),
+            );
+            const preRightDb = 20 * Math.log10(
+              Math.max(calcPeakFromWaveform(node.maximizerPreRightWaveform), 0.0001),
+            );
+            const postLeftDb = 20 * Math.log10(
+              Math.max(calcPeakFromWaveform(node.maximizerPostLeftWaveform), 0.0001),
+            );
+            const postRightDb = 20 * Math.log10(
+              Math.max(calcPeakFromWaveform(node.maximizerPostRightWaveform), 0.0001),
+            );
+            const outLeftDb = 20 * Math.log10(
+              Math.max(calcPeakFromWaveform(node.maximizerOutLeftWaveform), 0.0001),
+            );
+            const outRightDb = 20 * Math.log10(
+              Math.max(calcPeakFromWaveform(node.maximizerOutRightWaveform), 0.0001),
+            );
+
+            maximizerStereoMeter = {
+              leftVolumeDb: clamp(outLeftDb, -96, 6),
+              leftReductionDb: clamp(preLeftDb - postLeftDb, 0, 36),
+              rightReductionDb: clamp(preRightDb - postRightDb, 0, 36),
+              rightVolumeDb: clamp(outRightDb, -96, 6),
+            };
+          }
 
           if (isSpectrumTarget && node.spectrumData) {
             node.analyser.getByteFrequencyData(node.spectrumData);
@@ -2195,58 +2468,221 @@ export function useAudioScheduler() {
             }
           }
 
-          if (isSpectrumTarget && node.maximizerAnalyser && node.maximizerWaveform) {
+          if (
+            isSpectrumTarget &&
+            node.maximizerAnalyser &&
+            node.maximizerWaveform
+          ) {
+            const fxInsert = mixerSettingsRef.current.find(function (item) {
+              return item.id === insertId;
+            });
+            const activeFxState = getActiveFxState(fxInsert);
+            const visualKey = JSON.stringify({
+              thresholdDb: Number(activeFxState.maximizerParams?.thresholdDb ?? 0),
+              ceilingDb: Number(activeFxState.maximizerParams?.ceilingDb ?? -1),
+              character: Number(activeFxState.maximizerParams?.character ?? 0.5),
+              truePeakEnabled: Boolean(
+                activeFxState.maximizerParams?.truePeakEnabled,
+              ),
+              enabled: Boolean(activeFxState.maximizerEnabled),
+            });
+            const prevVisualKey = lastMaximizerVisualKeyRef.current.get(insertId);
+            if (prevVisualKey !== visualKey) {
+              maximizerTraceHistoryRef.current.set(insertId, []);
+              lastMeterWaveformRef.current.delete(insertId);
+              lastMaximizerVisualKeyRef.current.set(insertId, visualKey);
+            }
+
             node.maximizerAnalyser.getByteTimeDomainData(node.maximizerWaveform);
-            const bins = 96;
-            const step = Math.max(1, Math.floor(node.maximizerWaveform.length / bins));
-            nextWaveform = Array.from({ length: bins }).map(function (_, index) {
+
+            if (node.maximizerPreAnalyser && node.maximizerPreWaveform) {
+              node.maximizerPreAnalyser.getByteTimeDomainData(
+                node.maximizerPreWaveform,
+              );
+            }
+            if (node.maximizerPostAnalyser && node.maximizerPostWaveform) {
+              node.maximizerPostAnalyser.getByteTimeDomainData(
+                node.maximizerPostWaveform,
+              );
+            }
+
+            const tracePointsPerFrame = 24;
+            const nextTraceSamples = [];
+            const traceStep = Math.max(
+              1,
+              Math.floor(node.maximizerWaveform.length / tracePointsPerFrame),
+            );
+            for (
+              let traceIndex = 0;
+              traceIndex < tracePointsPerFrame;
+              traceIndex += 1
+            ) {
               const sourceIndex = Math.min(
                 node.maximizerWaveform.length - 1,
-                index * step,
+                traceIndex * traceStep,
               );
-              return clamp(
-                (Number(node.maximizerWaveform[sourceIndex] || 128) - 128) / 128,
-                -1,
-                1,
+              nextTraceSamples.push(
+                clamp(
+                  (Number(node.maximizerWaveform[sourceIndex] || 128) - 128) /
+                    128,
+                  -1,
+                  1,
+                ),
               );
-            });
+            }
 
-            const prevWaveform = lastMeterWaveformRef.current.get(insertId);
+            const previousTrace =
+              maximizerTraceHistoryRef.current.get(insertId) || [];
+            const maxTraceLength = 18000;
+            const nextTrace = previousTrace
+              .concat(nextTraceSamples)
+              .slice(-maxTraceLength);
+            maximizerTraceHistoryRef.current.set(insertId, nextTrace);
+
+            const bins = 220;
+            const prevDisplayWaveform =
+              lastMeterWaveformRef.current.get(insertId);
+            const shiftBins = 2;
+
+            const buildInjectedBins = function () {
+              const samplesPerInjectedBin = Math.max(
+                1,
+                Math.floor(nextTraceSamples.length / shiftBins),
+              );
+
+              return Array.from({ length: shiftBins }).map(function (_, index) {
+                const start = index * samplesPerInjectedBin;
+                const end = Math.min(
+                  nextTraceSamples.length,
+                  start + samplesPerInjectedBin,
+                );
+                if (end <= start) {
+                  return 0;
+                }
+
+                let strongest = 0;
+                for (let sampleIndex = start; sampleIndex < end; sampleIndex += 1) {
+                  const sample = Number(nextTraceSamples[sampleIndex] || 0);
+                  if (Math.abs(sample) > Math.abs(strongest)) {
+                    strongest = sample;
+                  }
+                }
+                return clamp(strongest, -1, 1);
+              });
+            };
+
             if (
-              !Array.isArray(prevWaveform) ||
-              prevWaveform.length !== nextWaveform.length
+              Array.isArray(prevDisplayWaveform) &&
+              prevDisplayWaveform.length === bins
             ) {
-              waveformChanged = true;
+              const injected = buildInjectedBins();
+              nextWaveform = injected.concat(
+                prevDisplayWaveform.slice(0, bins - shiftBins),
+              );
             } else {
-              for (let waveformIndex = 0; waveformIndex < nextWaveform.length; waveformIndex += 1) {
-                if (
-                  Math.abs(nextWaveform[waveformIndex] - prevWaveform[waveformIndex]) >
-                  0.025
-                ) {
-                  waveformChanged = true;
-                  break;
+              const chunkSize = Math.max(1, Math.floor(nextTrace.length / bins));
+              const seeded = Array.from({ length: bins }).map(function (_, index) {
+                const start = index * chunkSize;
+                const end = Math.min(nextTrace.length, start + chunkSize);
+                if (start >= nextTrace.length || end <= start) {
+                  return 0;
+                }
+
+                let strongest = 0;
+                for (let sampleIndex = start; sampleIndex < end; sampleIndex += 1) {
+                  const sample = Number(nextTrace[sampleIndex] || 0);
+                  if (Math.abs(sample) > Math.abs(strongest)) {
+                    strongest = sample;
+                  }
+                }
+                return clamp(strongest, -1, 1);
+              });
+
+              nextWaveform = seeded.map(function (value, index) {
+                const prev = seeded[Math.max(0, index - 1)];
+                const next = seeded[Math.min(seeded.length - 1, index + 1)];
+                return clamp(prev * 0.08 + value * 0.84 + next * 0.08, -1, 1);
+              });
+            }
+
+            const calcPeak = function (buffer) {
+              let peak = 0;
+              for (let sampleIndex = 0; sampleIndex < buffer.length; sampleIndex += 1) {
+                const normalized = Math.abs(
+                  (Number(buffer[sampleIndex] || 128) - 128) / 128,
+                );
+                if (normalized > peak) {
+                  peak = normalized;
                 }
               }
-            }
-          }
+              return peak;
+            };
 
-          if (
-            node.maximizerCompressor &&
-            typeof node.maximizerCompressor.reduction === "number"
-          ) {
-            maximizerReduction = Math.max(0, -node.maximizerCompressor.reduction);
+            const postPeak = calcPeak(node.maximizerWaveform);
+            const postDb = 20 * Math.log10(Math.max(postPeak, 0.0001));
+            const compressorReduction = maximizerReduction;
+
+            if (node.maximizerPreWaveform && node.maximizerPostWaveform) {
+              const prePeak = calcPeak(node.maximizerPreWaveform);
+              const postLimiterPeak = calcPeak(node.maximizerPostWaveform);
+              const preDb = 20 * Math.log10(Math.max(prePeak, 0.0001));
+              const postLimiterDb = 20 * Math.log10(
+                Math.max(postLimiterPeak, 0.0001),
+              );
+              const peakReduction = clamp(preDb - postLimiterDb, 0, 36);
+              maximizerReduction = clamp(
+                compressorReduction * 0.75 + peakReduction * 0.25,
+                0,
+                36,
+              );
+            } else {
+              maximizerReduction = clamp(compressorReduction, 0, 36);
+            }
+            maximizerOutputDb = clamp(postDb, -96, 6);
+
+            waveformChanged = true;
           }
           const prevReduction = lastMaximizerReductionRef.current.get(insertId);
           reductionChanged =
             prevReduction === undefined ||
             Math.abs((prevReduction || 0) - maximizerReduction) > 0.14;
+          const prevOutputDb = lastMaximizerOutputDbRef.current.get(insertId);
+          outputDbChanged =
+            prevOutputDb === undefined ||
+            Math.abs((prevOutputDb || -96) - maximizerOutputDb) > 0.2;
+          const prevStereo = lastMaximizerStereoMeterRef.current.get(insertId);
+          stereoChanged =
+            !prevStereo ||
+            Math.abs(
+              Number(prevStereo.leftVolumeDb || -96) -
+                Number(maximizerStereoMeter.leftVolumeDb || -96),
+            ) > 0.2 ||
+            Math.abs(
+              Number(prevStereo.leftReductionDb || 0) -
+                Number(maximizerStereoMeter.leftReductionDb || 0),
+            ) > 0.15 ||
+            Math.abs(
+              Number(prevStereo.rightReductionDb || 0) -
+                Number(maximizerStereoMeter.rightReductionDb || 0),
+            ) > 0.15 ||
+            Math.abs(
+              Number(prevStereo.rightVolumeDb || -96) -
+                Number(maximizerStereoMeter.rightVolumeDb || -96),
+            ) > 0.2;
 
           const meterChanged =
             prevMeter === undefined ||
             Math.abs(prevMeter - node.meterLevel) > 0.018 ||
             (node.meterLevel < 0.01 && prevMeter >= 0.01);
 
-          if (meterChanged || spectrumChanged || waveformChanged || reductionChanged) {
+          if (
+            meterChanged ||
+            spectrumChanged ||
+            waveformChanged ||
+            reductionChanged ||
+            outputDbChanged ||
+            stereoChanged
+          ) {
             lastMeterLevelsRef.current.set(insertId, node.meterLevel);
             if (isSpectrumTarget && nextSpectrum) {
               lastMeterSpectrumRef.current.set(insertId, nextSpectrum);
@@ -2255,6 +2691,11 @@ export function useAudioScheduler() {
               lastMeterWaveformRef.current.set(insertId, nextWaveform);
             }
             lastMaximizerReductionRef.current.set(insertId, maximizerReduction);
+            lastMaximizerOutputDbRef.current.set(insertId, maximizerOutputDb);
+            lastMaximizerStereoMeterRef.current.set(
+              insertId,
+              maximizerStereoMeter,
+            );
 
             dispatch(
               setInsertMeter({
@@ -2265,6 +2706,8 @@ export function useAudioScheduler() {
                 waveform:
                   isSpectrumTarget && nextWaveform ? nextWaveform : undefined,
                 maximizerReduction,
+                maximizerOutputDb,
+                maximizerStereoMeter,
               }),
             );
           }
@@ -3362,3 +3805,4 @@ export function useAudioScheduler() {
     ],
   );
 }
+

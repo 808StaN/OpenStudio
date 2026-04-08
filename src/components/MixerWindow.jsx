@@ -35,7 +35,7 @@ function getFxSlotName(slot, fallbackIndex) {
     return "Reverb";
   }
   if (slot?.effectType === FX_EFFECT_MAXIMIZER) {
-    return "Maximizer";
+    return "Limiter";
   }
   return String(slot?.name || "").trim() || "Slot " + (fallbackIndex + 1);
 }

@@ -11,7 +11,7 @@ export const PLUGIN_EFFECTS = [
   },
   {
     effectType: "maximizer",
-    name: "Maximizer",
+    name: "Limiter",
     description: "Mastering limiter with threshold, ceiling and character",
   },
 ];

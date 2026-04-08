@@ -144,7 +144,7 @@ function sanitizeMaximizerMode(rawMode) {
 function clampMaximizerThresholdDb(rawValue) {
   const value = Number(rawValue);
   if (!Number.isFinite(value)) {
-    return -6;
+    return 0;
   }
   return Math.max(-24, Math.min(0, value));
 }
@@ -152,7 +152,7 @@ function clampMaximizerThresholdDb(rawValue) {
 function clampMaximizerCeilingDb(rawValue) {
   const value = Number(rawValue);
   if (!Number.isFinite(value)) {
-    return -0.1;
+    return -1;
   }
   return Math.max(-18, Math.min(0, value));
 }
@@ -160,7 +160,7 @@ function clampMaximizerCeilingDb(rawValue) {
 function clampMaximizerCharacter(rawValue) {
   const value = Number(rawValue);
   if (!Number.isFinite(value)) {
-    return 0.58;
+    return 0.5;
   }
   return Math.max(0, Math.min(1, value));
 }
@@ -169,17 +169,37 @@ function makeMaximizerParams() {
   return {
     mode: "irc-ii",
     truePeakEnabled: true,
-    thresholdDb: -6,
-    ceilingDb: -0.1,
-    character: 0.58,
+    thresholdDb: 0,
+    ceilingDb: -1,
+    character: 0.5,
   };
 }
 
 function getSafeMaximizerParams(raw) {
+  const legacyThreshold = Number(raw?.thresholdDb);
+  const legacyCeiling = Number(raw?.ceilingDb);
+  const legacyCharacter = Number(raw?.character);
+  const legacyMode = sanitizeMaximizerMode(raw?.mode);
+  const isLegacyDefault =
+    Number.isFinite(legacyThreshold) &&
+    Number.isFinite(legacyCeiling) &&
+    Number.isFinite(legacyCharacter) &&
+    Math.abs(legacyThreshold + 6) < 0.001 &&
+    Math.abs(legacyCeiling + 0.1) < 0.001 &&
+    Math.abs(legacyCharacter - 0.58) < 0.001 &&
+    legacyMode === "irc-ii" &&
+    Boolean(raw?.truePeakEnabled ?? true);
+
   const base = {
     ...makeMaximizerParams(),
     ...(raw || {}),
   };
+
+  if (isLegacyDefault) {
+    base.thresholdDb = 0;
+    base.ceilingDb = -1;
+    base.character = 0.5;
+  }
 
   return {
     mode: sanitizeMaximizerMode(base.mode),
@@ -220,9 +240,18 @@ function makeInsertSpectrum() {
 }
 
 function makeInsertWaveform() {
-  return Array.from({ length: 96 }).map(function () {
+  return Array.from({ length: 220 }).map(function () {
     return 0;
   });
+}
+
+function makeMaximizerStereoMeter() {
+  return {
+    leftVolumeDb: -96,
+    leftReductionDb: 0,
+    rightReductionDb: 0,
+    rightVolumeDb: -96,
+  };
 }
 
 function getSafeGraphicEqParams(raw) {
@@ -274,7 +303,7 @@ function normalizeFxSlot(slot, index) {
       : effectType === FX_SLOT_EFFECT_REVERB
         ? "Reverb"
         : effectType === FX_SLOT_EFFECT_MAXIMIZER
-          ? "Maximizer"
+          ? "Limiter"
         : getFxSlotDefaultName(index);
 
   return {
@@ -726,6 +755,8 @@ const initialState = {
         meterSpectrum: makeInsertSpectrum(),
         meterWaveform: makeInsertWaveform(),
         maximizerReduction: 0,
+        maximizerOutputDb: -96,
+        maximizerStereoMeter: makeMaximizerStereoMeter(),
         routesTo: [],
         fxSlots: makeFxSlots(),
       },
@@ -741,6 +772,8 @@ const initialState = {
         meterSpectrum: makeInsertSpectrum(),
         meterWaveform: makeInsertWaveform(),
         maximizerReduction: 0,
+        maximizerOutputDb: -96,
+        maximizerStereoMeter: makeMaximizerStereoMeter(),
         routesTo: ["master"],
         fxSlots: makeFxSlots(),
       },
@@ -756,6 +789,8 @@ const initialState = {
         meterSpectrum: makeInsertSpectrum(),
         meterWaveform: makeInsertWaveform(),
         maximizerReduction: 0,
+        maximizerOutputDb: -96,
+        maximizerStereoMeter: makeMaximizerStereoMeter(),
         routesTo: ["master"],
         fxSlots: makeFxSlots(),
       },
@@ -771,6 +806,8 @@ const initialState = {
         meterSpectrum: makeInsertSpectrum(),
         meterWaveform: makeInsertWaveform(),
         maximizerReduction: 0,
+        maximizerOutputDb: -96,
+        maximizerStereoMeter: makeMaximizerStereoMeter(),
         routesTo: ["master"],
         fxSlots: makeFxSlots(),
       },
@@ -786,6 +823,8 @@ const initialState = {
         meterSpectrum: makeInsertSpectrum(),
         meterWaveform: makeInsertWaveform(),
         maximizerReduction: 0,
+        maximizerOutputDb: -96,
+        maximizerStereoMeter: makeMaximizerStereoMeter(),
         routesTo: ["master"],
         fxSlots: makeFxSlots(),
       },
@@ -801,6 +840,8 @@ const initialState = {
         meterSpectrum: makeInsertSpectrum(),
         meterWaveform: makeInsertWaveform(),
         maximizerReduction: 0,
+        maximizerOutputDb: -96,
+        maximizerStereoMeter: makeMaximizerStereoMeter(),
         routesTo: ["master"],
         fxSlots: makeFxSlots(),
       },
@@ -1286,6 +1327,8 @@ function sanitizeLoadedDawState(currentState, rawLoadedState) {
         meterSpectrum: makeInsertSpectrum(),
         meterWaveform: makeInsertWaveform(),
         maximizerReduction: 0,
+        maximizerOutputDb: -96,
+        maximizerStereoMeter: makeMaximizerStereoMeter(),
         routesTo: ["master"],
         fxSlots: makeFxSlots(),
       });
@@ -3087,6 +3130,10 @@ const dawSlice = createSlice({
         fader: 1,
         meter: 0,
         meterSpectrum: makeInsertSpectrum(),
+        meterWaveform: makeInsertWaveform(),
+        maximizerReduction: 0,
+        maximizerOutputDb: -96,
+        maximizerStereoMeter: makeMaximizerStereoMeter(),
         routesTo: ["master"],
         fxSlots: makeFxSlots(),
       });
@@ -3197,7 +3244,7 @@ const dawSlice = createSlice({
 
       if (requestedType === FX_SLOT_EFFECT_MAXIMIZER) {
         slot.effectType = FX_SLOT_EFFECT_MAXIMIZER;
-        slot.name = "Maximizer";
+        slot.name = "Limiter";
         slot.params = getSafeMaximizerParams(slot.params);
         return;
       }
@@ -3442,7 +3489,7 @@ const dawSlice = createSlice({
 
       if (Array.isArray(action.payload.waveform)) {
         const nextWaveform = action.payload.waveform
-          .slice(0, 160)
+          .slice(0, 220)
           .map(function (value) {
             const numeric = Number(value || 0);
             return Math.max(-1, Math.min(1, numeric));
@@ -3460,6 +3507,37 @@ const dawSlice = createSlice({
         insert.maximizerReduction = Math.max(0, Math.min(36, numericReduction));
       } else if (!Number.isFinite(Number(insert.maximizerReduction))) {
         insert.maximizerReduction = 0;
+      }
+
+      if (Object.hasOwn(action.payload, "maximizerOutputDb")) {
+        const numericOutput = Number(action.payload.maximizerOutputDb ?? -96);
+        insert.maximizerOutputDb = Math.max(-96, Math.min(6, numericOutput));
+      } else if (!Number.isFinite(Number(insert.maximizerOutputDb))) {
+        insert.maximizerOutputDb = -96;
+      }
+
+      if (isObjectLike(action.payload.maximizerStereoMeter)) {
+        const meter = action.payload.maximizerStereoMeter;
+        insert.maximizerStereoMeter = {
+          leftVolumeDb: Math.max(
+            -96,
+            Math.min(6, Number(meter.leftVolumeDb ?? -96)),
+          ),
+          leftReductionDb: Math.max(
+            0,
+            Math.min(36, Number(meter.leftReductionDb ?? 0)),
+          ),
+          rightReductionDb: Math.max(
+            0,
+            Math.min(36, Number(meter.rightReductionDb ?? 0)),
+          ),
+          rightVolumeDb: Math.max(
+            -96,
+            Math.min(6, Number(meter.rightVolumeDb ?? -96)),
+          ),
+        };
+      } else if (!isObjectLike(insert.maximizerStereoMeter)) {
+        insert.maximizerStereoMeter = makeMaximizerStereoMeter();
       }
     },
   },
@@ -3589,3 +3667,4 @@ export const store = configureStore({
     daw: dawReducerWithUndo,
   },
 });
+

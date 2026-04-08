@@ -290,21 +290,41 @@ function sanitizeMaximizerMode(rawMode) {
 }
 
 function getSafeMaximizerParams(raw) {
+  const legacyThreshold = Number(raw?.thresholdDb);
+  const legacyCeiling = Number(raw?.ceilingDb);
+  const legacyCharacter = Number(raw?.character);
+  const legacyMode = sanitizeMaximizerMode(raw?.mode);
+  const isLegacyDefault =
+    Number.isFinite(legacyThreshold) &&
+    Number.isFinite(legacyCeiling) &&
+    Number.isFinite(legacyCharacter) &&
+    Math.abs(legacyThreshold + 6) < 0.001 &&
+    Math.abs(legacyCeiling + 0.1) < 0.001 &&
+    Math.abs(legacyCharacter - 0.58) < 0.001 &&
+    legacyMode === "irc-ii" &&
+    Boolean(raw?.truePeakEnabled ?? true);
+
   const base = {
     mode: "irc-ii",
     truePeakEnabled: true,
-    thresholdDb: -6,
-    ceilingDb: -0.1,
-    character: 0.58,
+    thresholdDb: 0,
+    ceilingDb: -1,
+    character: 0.5,
     ...(raw || {}),
   };
+
+  if (isLegacyDefault) {
+    base.thresholdDb = 0;
+    base.ceilingDb = -1;
+    base.character = 0.5;
+  }
 
   return {
     mode: sanitizeMaximizerMode(base.mode),
     truePeakEnabled: Boolean(base.truePeakEnabled),
-    thresholdDb: clamp(Number(base.thresholdDb ?? -6), -24, 0),
-    ceilingDb: clamp(Number(base.ceilingDb ?? -0.1), -18, 0),
-    character: clamp(Number(base.character ?? 0.58), 0, 1),
+    thresholdDb: clamp(Number(base.thresholdDb ?? 0), -24, 0),
+    ceilingDb: clamp(Number(base.ceilingDb ?? -1), -18, 0),
+    character: clamp(Number(base.character ?? 0.5), 0, 1),
   };
 }
 
@@ -524,11 +544,69 @@ function buildWaveformPath(waveform, width, height) {
   return values
     .map(function (value, index) {
       const x =
-        values.length > 1 ? (index / (values.length - 1)) * width : width * 0.5;
+        values.length > 1
+          ? (1 - index / (values.length - 1)) * width
+          : width * 0.5;
       const normalized = clamp(Number(value || 0), -1, 1);
       const y = centerY - normalized * amplitude;
       const prefix = index === 0 ? "M" : "L";
       return prefix + " " + x.toFixed(2) + " " + y.toFixed(2);
+    })
+    .join(" ");
+}
+
+function buildWaveformReductionPath(waveform, width, height, limitAmplitude) {
+  const values = Array.isArray(waveform)
+    ? waveform.filter(function (value) {
+        return Number.isFinite(Number(value));
+      })
+    : [];
+
+  if (values.length < 2) {
+    return "";
+  }
+
+  const centerY = height * 0.5;
+  const amplitude = Math.max(1, height * 0.44);
+  const threshold = clamp(Number(limitAmplitude || 1), 0, 1);
+  const segments = [];
+  let active = [];
+
+  values.forEach(function (value, index) {
+    const normalized = clamp(Number(value || 0), -1, 1);
+    const x =
+      values.length > 1
+        ? (1 - index / (values.length - 1)) * width
+        : width * 0.5;
+    const y = centerY - normalized * amplitude;
+    const isReduced = Math.abs(normalized) >= threshold;
+
+    if (isReduced) {
+      active.push({
+        x,
+        y,
+      });
+      return;
+    }
+
+    if (active.length >= 2) {
+      segments.push(active);
+    }
+    active = [];
+  });
+
+  if (active.length >= 2) {
+    segments.push(active);
+  }
+
+  return segments
+    .map(function (segment) {
+      return segment
+        .map(function (point, index) {
+          const prefix = index === 0 ? "M" : "L";
+          return prefix + " " + point.x.toFixed(2) + " " + point.y.toFixed(2);
+        })
+        .join(" ");
     })
     .join(" ");
 }
@@ -767,9 +845,38 @@ export function FxPluginWindow() {
 
   const maximizerTransferPath = useMemo(
     function () {
-      return buildMaximizerTransferPath(maximizerParams, 220, 120);
+      return buildMaximizerTransferPath(maximizerParams, 520, 152);
     },
     [maximizerParams],
+  );
+
+  const maximizerThresholdWavePath = useMemo(
+    function () {
+      const thresholdAmplitude = clamp(
+        Math.pow(10, Number(maximizerParams.thresholdDb || 0) / 20),
+        0,
+        1,
+      );
+      return buildWaveformReductionPath(
+        Array.isArray(activeInsert?.meterWaveform)
+          ? activeInsert.meterWaveform
+          : null,
+        520,
+        152,
+        thresholdAmplitude,
+      );
+    },
+    [activeInsert, maximizerParams.thresholdDb],
+  );
+
+  const maximizerOutDb = useMemo(
+    function () {
+      if (Number.isFinite(Number(activeInsert?.maximizerOutputDb))) {
+        return clamp(Number(activeInsert.maximizerOutputDb), -96, 6);
+      }
+      return -96;
+    },
+    [activeInsert],
   );
 
   const pointCoordinates = useMemo(
@@ -1132,12 +1239,34 @@ export function FxPluginWindow() {
     const thresholdPosition =
       ((maximizerParams.thresholdDb + 24) / 24) * 100;
     const ceilingPosition = ((maximizerParams.ceilingDb + 18) / 18) * 100;
-    const characterPercent = Math.round(maximizerParams.character * 100);
+    const characterDisplay = (Number(maximizerParams.character || 0) * 10)
+      .toFixed(2)
+      .replace(".", ",");
     const reductionDb = Math.max(
       0,
       Number(activeInsert?.maximizerReduction || 0),
     );
-    const reductionBarHeight = Math.min(100, (reductionDb / 12) * 100);
+    const stereoMeter = activeInsert?.maximizerStereoMeter || {};
+    const toVolumeHeight = function (db) {
+      const safeDb = clamp(Number(db ?? -96), -96, 0);
+      return ((safeDb + 96) / 96) * 100;
+    };
+    const toReductionHeight = function (db) {
+      const safeDb = clamp(Number(db ?? 0), 0, 24);
+      const normalized = clamp(safeDb / 12, 0, 1);
+      const shaped = Math.pow(normalized, 0.75);
+      return shaped * 100;
+    };
+    const leftVolumeHeight = toVolumeHeight(stereoMeter.leftVolumeDb);
+    const rightVolumeHeight = toVolumeHeight(stereoMeter.rightVolumeDb);
+    const leftReductionRaw = Number(stereoMeter.leftReductionDb ?? reductionDb);
+    const rightReductionRaw = Number(stereoMeter.rightReductionDb ?? reductionDb);
+    const leftReductionHeight = toReductionHeight(
+      Math.max(leftReductionRaw, reductionDb * 0.9),
+    );
+    const rightReductionHeight = toReductionHeight(
+      Math.max(rightReductionRaw, reductionDb * 0.9),
+    );
 
     return (
       <section className="fx-plugin-panel fx-window-panel">
@@ -1147,7 +1276,7 @@ export function FxPluginWindow() {
               <span>Limiter Trace</span>
               <span>
                 Reduction: {reductionDb.toFixed(1)} dB | Out:{" "}
-                {toDbLabel((Number(activeInsert?.meter || 0) - 1) * 18)}
+                {toDbLabel(maximizerOutDb)}
               </span>
             </div>
             <svg
@@ -1160,46 +1289,18 @@ export function FxPluginWindow() {
               {maximizerWaveformPath ? (
                 <path d={maximizerWaveformPath} className="fx-max-wave-input" />
               ) : null}
-              <path
-                d={
-                  "M 0 146 L 220 146 L 220 26 L 0 26 Z M 260 16 L 480 16 L 480 136 L 260 136 Z"
-                }
-                className="fx-max-transfer-bg"
-              />
-              <path
-                d={maximizerTransferPath}
-                transform="translate(260 16)"
-                className="fx-max-transfer-line"
-              />
+              {maximizerThresholdWavePath ? (
+                <path
+                  d={maximizerThresholdWavePath}
+                  className="fx-max-wave-reduction"
+                />
+              ) : null}
+              <path d={maximizerTransferPath} className="fx-max-transfer-line" />
             </svg>
           </div>
 
           <div className="fx-maximizer-controls">
-            <section className="fx-max-mode-panel">
-              <h4>Mode</h4>
-              <div className="fx-max-mode-list">
-                {MAXIMIZER_MODES.map(function (mode) {
-                  return (
-                    <button
-                      key={mode.value}
-                      type="button"
-                      className={
-                        "fx-max-mode-btn" +
-                        (maximizerParams.mode === mode.value ? " is-active" : "")
-                      }
-                      onClick={function () {
-                        setMaximizerValue("mode", mode.value);
-                      }}
-                    >
-                      {mode.label}
-                    </button>
-                  );
-                })}
-              </div>
-            </section>
-
             <section className="fx-max-limiter-panel">
-              <h4>Limiter</h4>
               <label className="fx-max-true-peak">
                 <input
                   type="checkbox"
@@ -1212,11 +1313,31 @@ export function FxPluginWindow() {
               </label>
 
               <div className="fx-max-limiter-meter">
-                <div className="fx-max-limiter-track">
-                  <div
-                    className="fx-max-limiter-reduction"
-                    style={{ height: reductionBarHeight + "%" }}
-                  />
+                <div className="fx-max-limiter-combined">
+                  <div className="fx-max-combined-cell" title="Left Volume">
+                    <div
+                      className="fx-max-combined-fill is-volume"
+                      style={{ height: leftVolumeHeight + "%" }}
+                    />
+                  </div>
+                  <div className="fx-max-combined-cell" title="Left Reduction">
+                    <div
+                      className="fx-max-combined-fill is-reduction"
+                      style={{ height: leftReductionHeight + "%" }}
+                    />
+                  </div>
+                  <div className="fx-max-combined-cell" title="Right Reduction">
+                    <div
+                      className="fx-max-combined-fill is-reduction"
+                      style={{ height: rightReductionHeight + "%" }}
+                    />
+                  </div>
+                  <div className="fx-max-combined-cell" title="Right Volume">
+                    <div
+                      className="fx-max-combined-fill is-volume"
+                      style={{ height: rightVolumeHeight + "%" }}
+                    />
+                  </div>
                   <div
                     className="fx-max-threshold-line"
                     style={{ bottom: thresholdPosition + "%" }}
@@ -1262,20 +1383,21 @@ export function FxPluginWindow() {
 
             <section className="fx-max-character-panel">
               <h4>Character</h4>
-              <input
-                type="range"
-                min="0"
-                max="1"
-                step="0.01"
-                value={maximizerParams.character}
-                onChange={function (event) {
-                  setMaximizerValue("character", Number(event.target.value));
-                }}
-              />
+              <div className="fx-max-character-slider">
+                <input
+                  type="range"
+                  min="0"
+                  max="1"
+                  step="0.01"
+                  value={maximizerParams.character}
+                  onChange={function (event) {
+                    setMaximizerValue("character", Number(event.target.value));
+                  }}
+                  className="fx-max-character-vertical"
+                />
+              </div>
               <div className="fx-max-character-scale">
-                <span>Fast</span>
-                <strong>{characterPercent}%</strong>
-                <span>Slow</span>
+                <strong>{characterDisplay}</strong>
               </div>
             </section>
           </div>
@@ -1791,3 +1913,4 @@ export function FxPluginWindow() {
     </section>
   );
 }
+
