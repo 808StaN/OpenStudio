@@ -1,4 +1,4 @@
-import { useEffect, useRef } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { useDispatch, useSelector } from "react-redux";
 import {
   addChannel,
@@ -38,6 +38,7 @@ const PREVIEW_TOP_MAX_PERCENT = 91;
 const STEP_CELL_WIDTH_PX = 24;
 const STEP_CELL_GAP_PX = 5;
 const STEPS_PER_BEAT = 4;
+const DEFAULT_PATTERN_COLOR = "#4bef9f";
 
 function clamp(value, min, max) {
   return Math.max(min, Math.min(max, value));
@@ -55,6 +56,8 @@ export function ChannelRackWindow() {
   const rackShellRef = useRef(null);
   const playheadStepRef = useRef(0);
   const playheadStepTimestampRef = useRef(0);
+  const [isPatternMenuOpen, setIsPatternMenuOpen] = useState(false);
+  const [openInsertMenuChannelId, setOpenInsertMenuChannelId] = useState(null);
 
   const activePatternId = useSelector(function (state) {
     return state.daw.project.activePatternId;
@@ -67,6 +70,7 @@ export function ChannelRackWindow() {
       return item.id === activePatternId;
     });
   });
+  const activePatternColor = String(activePattern?.color || DEFAULT_PATTERN_COLOR);
   const channels = useSelector(function (state) {
     return state.daw.project.channels;
   });
@@ -169,6 +173,58 @@ export function ChannelRackWindow() {
 
     return "Insert " + (index + 1);
   };
+
+  const insertLabelById = useMemo(
+    function () {
+      return mixerInserts.reduce(function (acc, insert, index) {
+        acc[insert.id] = getInsertLabel(insert, index);
+        return acc;
+      }, {});
+    },
+    [mixerInserts],
+  );
+
+  useEffect(
+    function () {
+      if (!isPatternMenuOpen && !openInsertMenuChannelId) {
+        return;
+      }
+
+      const onPointerDown = function (event) {
+        const target = event.target;
+        if (!(target instanceof HTMLElement)) {
+          setIsPatternMenuOpen(false);
+          setOpenInsertMenuChannelId(null);
+          return;
+        }
+
+        if (target.closest(".rack-modern-select")) {
+          return;
+        }
+
+        setIsPatternMenuOpen(false);
+        setOpenInsertMenuChannelId(null);
+      };
+
+      const onKeyDown = function (event) {
+        if (event.key !== "Escape") {
+          return;
+        }
+
+        setIsPatternMenuOpen(false);
+        setOpenInsertMenuChannelId(null);
+      };
+
+      window.addEventListener("mousedown", onPointerDown);
+      window.addEventListener("keydown", onKeyDown);
+
+      return function () {
+        window.removeEventListener("mousedown", onPointerDown);
+        window.removeEventListener("keydown", onKeyDown);
+      };
+    },
+    [isPatternMenuOpen, openInsertMenuChannelId],
+  );
 
   const onMidiPatternDragOver = function (event) {
     const hasMidiPatternType = dataTransferHasMidiPatternPayload(
@@ -297,23 +353,61 @@ export function ChannelRackWindow() {
     <section className="rack-shell" ref={rackShellRef}>
       <header className="rack-topbar">
         <div className="rack-pattern-picker-wrap">
-          <label className="rack-pattern-picker">
-            <select
-              value={activePatternId}
+          <div
+            className={
+              "rack-pattern-picker rack-modern-select" +
+              (isPatternMenuOpen ? " is-open" : "")
+            }
+          >
+            <button
+              type="button"
+              className="rack-modern-select-trigger"
               aria-label="Active pattern"
-              onChange={function (event) {
-                dispatch(setActivePattern(event.target.value));
+              onClick={function () {
+                setIsPatternMenuOpen(function (value) {
+                  const next = !value;
+                  if (next) {
+                    setOpenInsertMenuChannelId(null);
+                  }
+                  return next;
+                });
               }}
             >
-              {patterns.map(function (pattern) {
-                return (
-                  <option key={pattern.id} value={pattern.id}>
-                    {pattern.name}
-                  </option>
-                );
-              })}
-            </select>
-          </label>
+              <span className="rack-modern-select-value">
+                <span style={{ color: activePatternColor }}>
+                  {activePattern?.name || "Pattern"}
+                </span>
+              </span>
+              <span className="rack-modern-select-caret">v</span>
+            </button>
+            {isPatternMenuOpen ? (
+              <div className="rack-modern-select-dropdown">
+                {patterns.map(function (pattern) {
+                  const isActive = pattern.id === activePatternId;
+                  return (
+                    <button
+                      key={pattern.id}
+                      type="button"
+                      className={
+                        "rack-modern-select-option" + (isActive ? " is-active" : "")
+                      }
+                      style={
+                        isActive
+                          ? null
+                          : { color: String(pattern.color || DEFAULT_PATTERN_COLOR) }
+                      }
+                      onClick={function () {
+                        dispatch(setActivePattern(pattern.id));
+                        setIsPatternMenuOpen(false);
+                      }}
+                    >
+                      {pattern.name}
+                    </button>
+                  );
+                })}
+              </div>
+            ) : null}
+          </div>
           <button
             className="rack-pattern-add"
             title="Add pattern"
@@ -447,7 +541,10 @@ export function ChannelRackWindow() {
 
             return (
               <article
-                className="rack-row"
+                className={
+                  "rack-row" +
+                  (openInsertMenuChannelId === channel.id ? " is-menu-open" : "")
+                }
                 key={channel.id}
                 onMouseDown={function () {
                   dispatch(setActiveChannel(channel.id));
@@ -603,27 +700,63 @@ export function ChannelRackWindow() {
                   </button>
 
                   <label className="channel-insert">
-                    <select
-                      className="channel-insert-select"
-                      aria-label="Insert assignment"
-                      value={channel.mixerInsertId || ""}
-                      onChange={function (event) {
-                        dispatch(
-                          setChannelMixerInsert({
-                            channelId: channel.id,
-                            insertId: event.target.value,
-                          }),
-                        );
-                      }}
+                    <div
+                      className={
+                        "channel-insert-select rack-modern-select" +
+                        (openInsertMenuChannelId === channel.id ? " is-open" : "")
+                      }
                     >
-                      {mixerInserts.map(function (insert, index) {
-                        return (
-                          <option key={insert.id} value={insert.id}>
-                            {getInsertLabel(insert, index)}
-                          </option>
-                        );
-                      })}
-                    </select>
+                      <button
+                        type="button"
+                        className="rack-modern-select-trigger"
+                        aria-label="Insert assignment"
+                        onClick={function (event) {
+                          event.stopPropagation();
+                          setOpenInsertMenuChannelId(function (value) {
+                            const next = value === channel.id ? null : channel.id;
+                            if (next) {
+                              setIsPatternMenuOpen(false);
+                            }
+                            return next;
+                          });
+                        }}
+                      >
+                        <span className="rack-modern-select-value">
+                          {insertLabelById[channel.mixerInsertId] || "Insert 1"}
+                        </span>
+                        <span className="rack-modern-select-caret">v</span>
+                      </button>
+                      {openInsertMenuChannelId === channel.id ? (
+                        <div className="rack-modern-select-dropdown">
+                          {mixerInserts.map(function (insert, index) {
+                            const label = getInsertLabel(insert, index);
+                            const isActive = insert.id === channel.mixerInsertId;
+                            return (
+                              <button
+                                key={insert.id}
+                                type="button"
+                                className={
+                                  "rack-modern-select-option" +
+                                  (isActive ? " is-active" : "")
+                                }
+                                onClick={function (event) {
+                                  event.stopPropagation();
+                                  dispatch(
+                                    setChannelMixerInsert({
+                                      channelId: channel.id,
+                                      insertId: insert.id,
+                                    }),
+                                  );
+                                  setOpenInsertMenuChannelId(null);
+                                }}
+                              >
+                                {label}
+                              </button>
+                            );
+                          })}
+                        </div>
+                      ) : null}
+                    </div>
                   </label>
                 </div>
 

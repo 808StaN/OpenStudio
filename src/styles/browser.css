@@ -143,6 +143,30 @@
   margin-top: 1px;
 }
 
+.tree-collapse {
+  display: grid;
+  grid-template-rows: 0fr;
+  opacity: 0;
+  transform: translateY(-3px);
+  pointer-events: none;
+  transition:
+    grid-template-rows 180ms ease,
+    opacity 150ms ease,
+    transform 180ms ease;
+}
+
+.tree-collapse.is-open {
+  grid-template-rows: 1fr;
+  opacity: 1;
+  transform: translateY(0);
+  pointer-events: auto;
+}
+
+.tree-collapse-inner {
+  min-height: 0;
+  overflow: hidden;
+}
+
 .tree-list {
   list-style: none;
   margin: 0;

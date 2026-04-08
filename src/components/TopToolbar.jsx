@@ -13,7 +13,7 @@ import {
   SlidersHorizontal,
   Square,
 } from "lucide-react";
-import { useRef } from "react";
+import { useEffect, useRef, useState } from "react";
 import { useDispatch, useSelector } from "react-redux";
 import {
   loadProjectFromFile,
@@ -73,6 +73,8 @@ function DraggableBpm({ value, onChange, min, max }) {
 export function TopToolbar() {
   const dispatch = useDispatch();
   const projectFileInputRef = useRef(null);
+  const themeMenuRef = useRef(null);
+  const [isThemeMenuOpen, setIsThemeMenuOpen] = useState(false);
   const transport = useSelector(function (state) {
     return state.daw.transport;
   });
@@ -172,6 +174,42 @@ export function TopToolbar() {
 
     input.value = "";
   };
+
+  useEffect(
+    function () {
+      if (!isThemeMenuOpen) {
+        return;
+      }
+
+      const onPointerDown = function (event) {
+        const root = themeMenuRef.current;
+        if (!root) {
+          return;
+        }
+
+        if (!root.contains(event.target)) {
+          setIsThemeMenuOpen(false);
+        }
+      };
+
+      const onKeyDown = function (event) {
+        if (event.key !== "Escape") {
+          return;
+        }
+
+        setIsThemeMenuOpen(false);
+      };
+
+      window.addEventListener("mousedown", onPointerDown);
+      window.addEventListener("keydown", onKeyDown);
+
+      return function () {
+        window.removeEventListener("mousedown", onPointerDown);
+        window.removeEventListener("keydown", onKeyDown);
+      };
+    },
+    [isThemeMenuOpen],
+  );
 
   return (
     <header className="transport-shell">
@@ -290,24 +328,53 @@ export function TopToolbar() {
           </button>
         </div>
 
-        <label className="theme-picker" title="App theme">
-          <Palette size={14} />
-          <select
-            className="theme-picker-select"
-            value={activeTheme}
-            onChange={function (event) {
-              dispatch(setTheme(event.target.value));
+        <div
+          ref={themeMenuRef}
+          className={
+            "theme-picker rack-modern-select" + (isThemeMenuOpen ? " is-open" : "")
+          }
+          title="App theme"
+        >
+          <button
+            type="button"
+            className="rack-modern-select-trigger"
+            onClick={function () {
+              setIsThemeMenuOpen(function (value) {
+                return !value;
+              });
             }}
           >
-            {THEME_OPTIONS.map(function (option) {
-              return (
-                <option key={option.value} value={option.value}>
-                  {option.label}
-                </option>
-              );
-            })}
-          </select>
-        </label>
+            <Palette size={14} />
+            <span className="rack-modern-select-value">
+              {THEME_OPTIONS.find(function (option) {
+                return option.value === activeTheme;
+              })?.label || "Theme"}
+            </span>
+            <span className="rack-modern-select-caret">v</span>
+          </button>
+          {isThemeMenuOpen ? (
+            <div className="rack-modern-select-dropdown">
+              {THEME_OPTIONS.map(function (option) {
+                const isActive = option.value === activeTheme;
+                return (
+                  <button
+                    key={option.value}
+                    type="button"
+                    className={
+                      "rack-modern-select-option" + (isActive ? " is-active" : "")
+                    }
+                    onClick={function () {
+                      dispatch(setTheme(option.value));
+                      setIsThemeMenuOpen(false);
+                    }}
+                  >
+                    {option.label}
+                  </button>
+                );
+              })}
+            </div>
+          ) : null}
+        </div>
         <input
           ref={projectFileInputRef}
           type="file"

@@ -529,70 +529,74 @@ export function BrowserPanel() {
           {node.name}
         </button>
 
-        {isOpen ? (
-          <div className="tree-children">
-            {node.children.map(function (childNode) {
-              return renderFolderNode(childNode, depth + 1);
-            })}
+        <div className={"tree-collapse" + (isOpen ? " is-open" : "")}>
+          <div className="tree-collapse-inner">
+            <div className="tree-children">
+              {node.children.map(function (childNode) {
+                return renderFolderNode(childNode, depth + 1);
+              })}
 
-            {node.samples.length > 0 ? (
-              <ul className="tree-list">
-                {node.samples.map(function (sampleItem) {
-                  return (
-                    <li
-                      key={node.path + "-" + sampleItem.name}
-                      className="tree-item"
-                      style={{ marginLeft: 16 + depth * 14 + "px" }}
-                      draggable
-                      onClick={function () {
-                        if (sampleItem.type === "audio") {
-                          void playSamplePreview(sampleItem.path);
-                        }
-                      }}
-                      onDragStart={function (event) {
-                        if (sampleItem.type === "midi") {
-                          const payload = buildMidiFileDragPayload({
-                            fileName: sampleItem.name,
-                            midiPath: sampleItem.path,
+              {node.samples.length > 0 ? (
+                <ul className="tree-list">
+                  {node.samples.map(function (sampleItem) {
+                    return (
+                      <li
+                        key={node.path + "-" + sampleItem.name}
+                        className="tree-item"
+                        style={{ marginLeft: 16 + depth * 14 + "px" }}
+                        draggable
+                        onClick={function () {
+                          if (sampleItem.type === "audio") {
+                            void playSamplePreview(sampleItem.path);
+                          }
+                        }}
+                        onDragStart={function (event) {
+                          if (sampleItem.type === "midi") {
+                            const payload = buildMidiFileDragPayload({
+                              fileName: sampleItem.name,
+                              midiPath: sampleItem.path,
+                            });
+
+                            event.dataTransfer.effectAllowed = "copy";
+                            writeMidiFileToDataTransfer(
+                              event.dataTransfer,
+                              payload,
+                            );
+                            return;
+                          }
+
+                          const safeSamplePath = toSafeSampleUrl(
+                            sampleItem.path,
+                          );
+                          if (!safeSamplePath) {
+                            event.preventDefault();
+                            return;
+                          }
+
+                          const payload = JSON.stringify({
+                            tab: "drumkits",
+                            folder: node.path,
+                            file: sampleItem.name,
+                            samplePath: safeSamplePath,
                           });
 
                           event.dataTransfer.effectAllowed = "copy";
-                          writeMidiFileToDataTransfer(
-                            event.dataTransfer,
+                          event.dataTransfer.setData(
+                            "application/x-daw-sample",
                             payload,
                           );
-                          return;
-                        }
-
-                        const safeSamplePath = toSafeSampleUrl(sampleItem.path);
-                        if (!safeSamplePath) {
-                          event.preventDefault();
-                          return;
-                        }
-
-                        const payload = JSON.stringify({
-                          tab: "drumkits",
-                          folder: node.path,
-                          file: sampleItem.name,
-                          samplePath: safeSamplePath,
-                        });
-
-                        event.dataTransfer.effectAllowed = "copy";
-                        event.dataTransfer.setData(
-                          "application/x-daw-sample",
-                          payload,
-                        );
-                        event.dataTransfer.setData("text/plain", payload);
-                      }}
-                    >
-                      {sampleItem.name}
-                    </li>
-                  );
-                })}
-              </ul>
-            ) : null}
+                          event.dataTransfer.setData("text/plain", payload);
+                        }}
+                      >
+                        {sampleItem.name}
+                      </li>
+                    );
+                  })}
+                </ul>
+              ) : null}
+            </div>
           </div>
-        ) : null}
+        </div>
       </section>
     );
   };
@@ -657,56 +661,61 @@ export function BrowserPanel() {
                     {group.folder}
                   </button>
 
-                  {isOpen ? (
-                    <ul className="tree-list">
-                      {group.items.map(function (item) {
-                        const isInstrument = group.type === "instrument";
-                        const key = isInstrument
-                          ? group.folder + "-" + item.pluginRef
-                          : group.folder + "-" + item.effectType;
-                        const payload = isInstrument
-                          ? {
-                              tab: "plugins",
-                              type: "instrument",
-                              pluginRef: item.pluginRef,
-                              pluginName: item.name,
-                            }
-                          : {
-                              tab: "plugins",
-                              type: "effect",
-                              effectType: item.effectType,
-                              effectName: item.name,
-                            };
-                        const mimeType = isInstrument
-                          ? "application/x-daw-plugin"
-                          : "application/x-daw-effect";
+                  <div className={"tree-collapse" + (isOpen ? " is-open" : "")}>
+                    <div className="tree-collapse-inner">
+                      <ul className="tree-list">
+                        {group.items.map(function (item) {
+                          const isInstrument = group.type === "instrument";
+                          const key = isInstrument
+                            ? group.folder + "-" + item.pluginRef
+                            : group.folder + "-" + item.effectType;
+                          const payload = isInstrument
+                            ? {
+                                tab: "plugins",
+                                type: "instrument",
+                                pluginRef: item.pluginRef,
+                                pluginName: item.name,
+                              }
+                            : {
+                                tab: "plugins",
+                                type: "effect",
+                                effectType: item.effectType,
+                                effectName: item.name,
+                              };
+                          const mimeType = isInstrument
+                            ? "application/x-daw-plugin"
+                            : "application/x-daw-effect";
 
-                        return (
-                          <li
-                            key={key}
-                            className={
-                              "tree-item plugin-item" +
-                              (isInstrument
-                                ? " instrument-item"
-                                : " effect-item")
-                            }
-                            title={item.description}
-                            draggable
-                            onDragStart={function (event) {
-                              const payloadText = JSON.stringify(payload);
-                              event.dataTransfer.setData(mimeType, payloadText);
-                              event.dataTransfer.setData(
-                                "text/plain",
-                                payloadText,
-                              );
-                            }}
-                          >
-                            {item.name}
-                          </li>
-                        );
-                      })}
-                    </ul>
-                  ) : null}
+                          return (
+                            <li
+                              key={key}
+                              className={
+                                "tree-item plugin-item" +
+                                (isInstrument
+                                  ? " instrument-item"
+                                  : " effect-item")
+                              }
+                              title={item.description}
+                              draggable
+                              onDragStart={function (event) {
+                                const payloadText = JSON.stringify(payload);
+                                event.dataTransfer.setData(
+                                  mimeType,
+                                  payloadText,
+                                );
+                                event.dataTransfer.setData(
+                                  "text/plain",
+                                  payloadText,
+                                );
+                              }}
+                            >
+                              {item.name}
+                            </li>
+                          );
+                        })}
+                      </ul>
+                    </div>
+                  </div>
                 </section>
               );
             })

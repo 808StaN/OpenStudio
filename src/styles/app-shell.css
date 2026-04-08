@@ -17,6 +17,9 @@
 }
 
 .transport-shell {
+  position: relative;
+  z-index: 10000;
+  overflow: visible;
   height: 48px;
   border-bottom: 1px solid #40444f;
   background: linear-gradient(180deg, #232933 0%, #151922 100%);
@@ -31,6 +34,9 @@
 }
 
 .transport-main {
+  position: relative;
+  z-index: 2;
+  overflow: visible;
   display: flex;
   align-items: center;
   gap: 8px;
@@ -38,6 +44,7 @@
 
 .theme-picker {
   height: 30px;
+  width: 140px;
   border: 1px solid #4b5462;
   border-radius: 6px;
   color: #dbe3ef;
@@ -47,27 +54,56 @@
     inset 0 -2px 5px rgba(0, 0, 0, 0.55);
   display: inline-flex;
   align-items: center;
-  gap: 6px;
-  padding: 0 9px 0 8px;
+  gap: 0;
+  padding: 0;
 }
 
-.theme-picker-select {
+.theme-picker .rack-modern-select-trigger {
+  width: 100%;
   height: 100%;
-  min-width: 122px;
-  border: 0;
+  padding: 0 8px;
   color: inherit;
-  background: transparent;
   font-size: 13px;
-  cursor: pointer;
+  gap: 6px;
 }
 
-.theme-picker-select:focus {
-  outline: none;
+.theme-picker .rack-modern-select-caret {
+  margin-left: auto;
 }
 
-.theme-picker-select option {
-  color: #dbe3ef;
-  background: #101827;
+.theme-picker .rack-modern-select-dropdown {
+  left: auto;
+  right: 0;
+  width: 100%;
+  min-width: 140px;
+  z-index: 10020;
+}
+
+.rack-modern-select-dropdown,
+.snap-dropdown,
+.playlist-snap-dropdown {
+  transform-origin: top;
+  animation: dropdown-expand 140ms ease;
+}
+
+@keyframes dropdown-expand {
+  from {
+    opacity: 0;
+    transform: translateY(-5px) scaleY(0.95);
+  }
+
+  to {
+    opacity: 1;
+    transform: translateY(0) scaleY(1);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .rack-modern-select-dropdown,
+  .snap-dropdown,
+  .playlist-snap-dropdown {
+    animation: none;
+  }
 }
 
 .transport-btn {
@@ -87,6 +123,74 @@
   gap: 6px;
   padding: 0 10px;
   cursor: pointer;
+}
+
+.transport-btn,
+.theme-picker,
+.window-control-btn,
+.browser-tabs button,
+.browser-rescan,
+.rack-pattern-add,
+.rack-channel-add,
+.pattern-list-header button,
+.render-window-button,
+.playlist-add-track-btn,
+.playlist-loop-btn,
+.snap-trigger,
+.playlist-snap-trigger,
+.rack-mode-toggle button,
+.mode-toggle button,
+.small-toggle,
+.pattern-length-control button,
+.fx-plugin-action {
+  transition:
+    transform 120ms ease,
+    filter 120ms ease,
+    border-color 120ms ease,
+    box-shadow 120ms ease;
+}
+
+.transport-btn:hover,
+.theme-picker:hover,
+.window-control-btn:hover,
+.browser-tabs button:hover,
+.browser-rescan:hover,
+.rack-pattern-add:hover,
+.rack-channel-add:hover,
+.pattern-list-header button:hover,
+.render-window-button:hover,
+.playlist-add-track-btn:hover,
+.playlist-loop-btn:hover,
+.snap-trigger:hover,
+.playlist-snap-trigger:hover,
+.rack-mode-toggle button:hover,
+.mode-toggle button:hover,
+.small-toggle:hover,
+.pattern-length-control button:hover,
+.fx-plugin-action:hover {
+  transform: translateY(-1px);
+  filter: brightness(1.04);
+}
+
+.transport-btn:active,
+.theme-picker:active,
+.window-control-btn:active,
+.browser-tabs button:active,
+.browser-rescan:active,
+.rack-pattern-add:active,
+.rack-channel-add:active,
+.pattern-list-header button:active,
+.render-window-button:active,
+.playlist-add-track-btn:active,
+.playlist-loop-btn:active,
+.snap-trigger:active,
+.playlist-snap-trigger:active,
+.rack-mode-toggle button:active,
+.mode-toggle button:active,
+.small-toggle:active,
+.pattern-length-control button:active,
+.fx-plugin-action:active {
+  transform: translateY(0);
 }
 
 .transport-btn.small {

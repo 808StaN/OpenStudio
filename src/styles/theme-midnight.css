@@ -466,6 +466,11 @@
   transform: none;
 }
 
+.theme-midnight .rack-modern-select-option.is-active {
+  background: linear-gradient(180deg, #6bb8ff 0%, #3f87df 100%) !important;
+  color: #031c33 !important;
+}
+
 .theme-midnight .piano-playhead-line,
 .theme-midnight .playlist-playhead-line,
 .theme-midnight .piano-preview-playhead {
@@ -476,6 +481,76 @@
 .theme-midnight .step.is-playhead {
   outline: 1px solid #58c9ff !important;
   outline-offset: 1px;
+}
+
+.theme-midnight .sample-settings-header h3 {
+  color: #d9e9ff !important;
+}
+
+.theme-midnight .sample-preview-btn.is-playing {
+  border-color: #3d82d6 !important;
+  background: linear-gradient(180deg, #8cc9ff 0%, #3f87df 100%) !important;
+  color: #041528 !important;
+}
+
+.theme-midnight .sample-settings-tab.is-active {
+  color: #031629 !important;
+  border-color: #3d82d6 !important;
+  background: linear-gradient(180deg, #86c6ff 0%, #3f87df 100%) !important;
+  text-shadow: none !important;
+}
+
+.theme-midnight .browser-tabs button.is-active {
+  color: #041528 !important;
+  border-color: #4a9aee !important;
+  background: linear-gradient(180deg, #8fcaff 0%, #4f95e6 100%) !important;
+  box-shadow:
+    inset 0 1px 0 rgba(255, 255, 255, 0.3),
+    0 0 10px rgba(79, 149, 230, 0.35) !important;
+}
+
+.theme-midnight .sample-envelope-header,
+.theme-midnight .sample-time-stretch-header {
+  color: #93c8ff !important;
+}
+
+.theme-midnight .sample-envelope-graph path {
+  stroke: #54b4ff !important;
+  filter: drop-shadow(0 0 4px rgba(84, 180, 255, 0.35)) !important;
+}
+
+.theme-midnight .sample-time-select-row::after {
+  border-top-color: #74c2ff !important;
+  filter: drop-shadow(0 0 3px rgba(116, 194, 255, 0.35)) !important;
+}
+
+.theme-midnight .sample-time-select-row select {
+  color: #d9eaff !important;
+  border-color: #5478a8 !important;
+  background: linear-gradient(180deg, #223a5d 0%, #182c47 100%) !important;
+}
+
+.theme-midnight .sample-time-select-row select:focus {
+  border-color: #68b9ff !important;
+  box-shadow:
+    0 0 0 1px rgba(104, 185, 255, 0.35),
+    inset 0 1px 0 rgba(255, 255, 255, 0.08),
+    inset 0 -1px 0 rgba(0, 0, 0, 0.35) !important;
+}
+
+.theme-midnight .sample-time-select-row select option {
+  color: #d9eaff !important;
+  background: #1a2e4b !important;
+}
+
+.theme-midnight .sample-time-knob-row input[type="range"],
+.theme-midnight .sample-setting-row input[type="range"] {
+  accent-color: #55b2ff !important;
+}
+
+.theme-midnight .sample-settings-panel input[type="checkbox"]:checked {
+  border-color: #3f87df !important;
+  background: linear-gradient(180deg, #86c6ff 0%, #3f87df 100%) !important;
 }
 
 .render-window-error {

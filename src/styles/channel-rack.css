@@ -74,6 +74,7 @@
 
 .rack-pattern-picker {
   height: 30px;
+  width: 138px;
   border: 1px solid #5d6370;
   border-radius: 6px;
   background: linear-gradient(180deg, #3f4656 0%, #2a313f 100%);
@@ -82,6 +83,98 @@
   gap: 6px;
   padding: 0 6px;
   min-width: 0;
+}
+
+.rack-pattern-picker .rack-modern-select-trigger {
+  color: #7ff8cc;
+  font-size: 13px;
+  font-weight: 600;
+}
+
+.rack-modern-select {
+  position: relative;
+}
+
+.rack-modern-select-trigger {
+  width: 100%;
+  height: 100%;
+  border: 0;
+  border-radius: inherit;
+  color: inherit;
+  background: transparent;
+  display: inline-flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  padding: 0 10px 0 8px;
+  cursor: pointer;
+}
+
+.rack-modern-select-value {
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.rack-modern-select-caret {
+  flex: 0 0 auto;
+  color: #b8c7de;
+  font-size: 11px;
+  line-height: 1;
+}
+
+.rack-modern-select.is-open {
+  border-color: #7f8fae;
+  box-shadow:
+    0 0 0 1px rgba(127, 143, 174, 0.35),
+    inset 0 0 0 1px rgba(0, 0, 0, 0.24);
+}
+
+.rack-modern-select-dropdown {
+  position: absolute;
+  top: calc(100% + 4px);
+  left: 0;
+  right: auto;
+  width: 100%;
+  min-width: 132px;
+  max-width: 220px;
+  max-height: 260px;
+  overflow: auto;
+  border: 1px solid #5d6a84;
+  border-radius: 8px;
+  background: linear-gradient(180deg, #27364c 0%, #1b273b 100%);
+  color: #e6efff;
+  box-shadow:
+    0 14px 24px rgba(4, 10, 20, 0.62),
+    inset 0 1px 0 rgba(255, 255, 255, 0.08);
+  padding: 6px;
+  z-index: 35;
+}
+
+.rack-modern-select-option {
+  width: 100%;
+  min-width: 116px;
+  box-sizing: border-box;
+  border: 0;
+  border-radius: 6px;
+  color: #d6e4fb;
+  background: transparent;
+  text-align: left;
+  font-size: 12px;
+  padding: 7px 8px;
+  cursor: pointer;
+}
+
+.rack-modern-select-option:hover {
+  background: linear-gradient(180deg, rgba(112, 152, 202, 0.28) 0%, rgba(72, 108, 154, 0.24) 100%);
+  color: #f2f8ff;
+}
+
+.rack-modern-select-option.is-active {
+  background: linear-gradient(180deg, #66ffad 0%, #1cd470 100%);
+  color: #0f1a10;
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.2);
 }
 
 .rack-pattern-picker-prefix {
@@ -219,6 +312,8 @@
 }
 
 .rack-row {
+  position: relative;
+  z-index: 0;
   border: 1px solid #4a505a;
   border-radius: 9px;
   background: linear-gradient(180deg, #252b38 0%, #181d27 100%);
@@ -231,6 +326,10 @@
   gap: 8px;
   width: max-content;
   min-width: 100%;
+}
+
+.rack-row.is-menu-open {
+  z-index: 50;
 }
 
 .rack-controls {
@@ -303,21 +402,25 @@
   border-radius: 6px;
   border: 1px solid #5d6a84;
   color: #f3f6fb;
-  background:
-    url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 12 8'%3E%3Cpath fill='%23c8d7ef' d='M6 8 0 0h12z'/%3E%3C/svg%3E")
-      no-repeat right 8px center / 9px 6px,
-    linear-gradient(180deg, #223146 0%, #162131 100%);
-  padding: 0 24px 0 8px;
+  background: linear-gradient(180deg, #223146 0%, #162131 100%);
+  padding: 0;
   font-size: 12px;
-  appearance: none;
-  -webkit-appearance: none;
-  -moz-appearance: none;
-  color-scheme: dark;
-  cursor: pointer;
   transition:
     border-color 120ms ease,
     box-shadow 120ms ease,
     filter 120ms ease;
+}
+
+.channel-insert-select .rack-modern-select-dropdown {
+  width: 100%;
+  min-width: 100%;
+  max-width: 100%;
+  padding: 6px;
+}
+
+.channel-insert-select .rack-modern-select-option {
+  min-width: 0;
+  width: 100%;
 }
 
 .channel-insert-select:hover {

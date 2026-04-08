@@ -198,10 +198,6 @@ const ClipPreviewNotes = memo(function ClipPreviewNotes(props) {
         visiblePatternStart,
         Math.min(patternLength, visiblePatternStart + clipLengthSteps),
       );
-      const visiblePatternSteps = Math.max(
-        1,
-        visiblePatternEnd - visiblePatternStart,
-      );
       let minPitch = Infinity;
       let maxPitch = -Infinity;
 
@@ -1921,9 +1917,17 @@ export function PlaylistWindow() {
                         />
                       )}
                       <span className="clip-label">
-                        {isAudioClip
-                          ? clip.audioName || "Audio"
-                          : pattern?.name || "Pattern"}
+                        <span
+                          style={
+                            isAudioClip
+                              ? null
+                              : { color: pattern?.color || DEFAULT_PATTERN_COLOR }
+                          }
+                        >
+                          {isAudioClip
+                            ? clip.audioName || "Audio"
+                            : pattern?.name || "Pattern"}
+                        </span>
                       </span>
                       <button
                         type="button"
