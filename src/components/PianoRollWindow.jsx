@@ -2368,7 +2368,8 @@ export function PianoRollWindow() {
       return fallbackNote ? [fallbackNote] : [];
     }
 
-    const candidateNotes = selectedNotes.length > 0 ? selectedNotes : pianoNotes;
+    const candidateNotes =
+      selectedNotes.length > 0 ? selectedNotes : pianoNotes;
     if (candidateNotes.length === 0) {
       return [];
     }
@@ -2376,7 +2377,11 @@ export function PianoRollWindow() {
     const rect = velocityWrapRef.current.getBoundingClientRect();
     const worldX =
       clientX - rect.left + Number(velocityWrapRef.current.scrollLeft || 0);
-    const stepPosition = clamp(worldX / Math.max(1, stepWidth), 0, patternLength);
+    const stepPosition = clamp(
+      worldX / Math.max(1, stepWidth),
+      0,
+      patternLength,
+    );
 
     const covering = candidateNotes.filter(function (item) {
       const noteStart = Number(item.start || 0);
@@ -2810,8 +2815,9 @@ export function PianoRollWindow() {
                 const left = note.start * stepWidth + 1;
                 const width = Math.max(8, note.length * stepWidth - 2);
                 const velocityAlpha = clamp(
-                  midiVelocityToPercent(Number(note.velocity || DEFAULT_NOTE_VELOCITY)) /
-                    100,
+                  midiVelocityToPercent(
+                    Number(note.velocity || DEFAULT_NOTE_VELOCITY),
+                  ) / 100,
                   0.78,
                   1,
                 );
@@ -2857,7 +2863,10 @@ export function PianoRollWindow() {
           aria-label="Resize velocity lane"
         />
 
-        <div className="piano-velocity-grid-shell" style={{ height: velocityLaneHeight }}>
+        <div
+          className="piano-velocity-grid-shell"
+          style={{ height: velocityLaneHeight }}
+        >
           <aside className="piano-velocity-label">
             <strong>Control</strong>
             <span>Velocity</span>
@@ -2913,7 +2922,9 @@ export function PianoRollWindow() {
               )}
 
               {pianoNotes.map(function (note) {
-                const isSelected = selectedNoteIdSet.has(getNoteSelectionId(note));
+                const isSelected = selectedNoteIdSet.has(
+                  getNoteSelectionId(note),
+                );
                 const velocity = clamp(
                   Number(note.velocity || DEFAULT_NOTE_VELOCITY),
                   1,

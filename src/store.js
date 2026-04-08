@@ -2156,9 +2156,7 @@ const dawSlice = createSlice({
         1,
         Math.min(
           127,
-          Math.round(
-            Number(action.payload.velocity || DEFAULT_NOTE_VELOCITY),
-          ),
+          Math.round(Number(action.payload.velocity || DEFAULT_NOTE_VELOCITY)),
         ),
       );
 
@@ -2377,9 +2375,7 @@ const dawSlice = createSlice({
             1,
             Math.min(
               127,
-              Math.round(
-                Number(inputNote?.velocity || DEFAULT_NOTE_VELOCITY),
-              ),
+              Math.round(Number(inputNote?.velocity || DEFAULT_NOTE_VELOCITY)),
             ),
           ),
         });
