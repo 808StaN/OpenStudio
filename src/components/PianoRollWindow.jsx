@@ -18,7 +18,6 @@ import {
 import { toSafeSampleUrl } from "../utils/sampleUrl";
 import { triggerMidiDownload } from "../utils/midiExport";
 import {
-  buildMidiPatternDragPayload,
   dataTransferHasMidiPatternPayload,
   extractMidiPatternNotes,
   readMidiPatternFromDataTransfer,
@@ -254,6 +253,9 @@ export function PianoRollWindow() {
   const isSyncingHorizontalScrollRef = useRef(false);
   const initializedViewportRef = useRef(false);
   const snapMenuRef = useRef(null);
+  const channelMenuRef = useRef(null);
+  const scaleRootMenuRef = useRef(null);
+  const scaleTypeMenuRef = useRef(null);
   const midiImportInputRef = useRef(null);
   const dragSelectionRef = useRef(null);
   const velocityWrapRef = useRef(null);
@@ -273,6 +275,9 @@ export function PianoRollWindow() {
   const [stepWidth, setStepWidth] = useState(DEFAULT_STEP_WIDTH);
   const [snapKey, setSnapKey] = useState("1-2-beat");
   const [isSnapMenuOpen, setIsSnapMenuOpen] = useState(false);
+  const [isChannelMenuOpen, setIsChannelMenuOpen] = useState(false);
+  const [isScaleRootMenuOpen, setIsScaleRootMenuOpen] = useState(false);
+  const [isScaleTypeMenuOpen, setIsScaleTypeMenuOpen] = useState(false);
   const [editMode, setEditMode] = useState("add");
   const [selectedNoteIds, setSelectedNoteIds] = useState([]);
   const [selectionBox, setSelectionBox] = useState(null);
@@ -870,17 +875,47 @@ export function PianoRollWindow() {
 
   useEffect(
     function () {
-      if (!isSnapMenuOpen) {
+      if (
+        !isSnapMenuOpen &&
+        !isChannelMenuOpen &&
+        !isScaleRootMenuOpen &&
+        !isScaleTypeMenuOpen
+      ) {
         return;
       }
 
       const onPointerDown = function (event) {
-        const root = snapMenuRef.current;
-        if (!root) {
-          return;
-        }
-        if (!root.contains(event.target)) {
+        const target = event.target;
+        if (
+          snapMenuRef.current &&
+          !snapMenuRef.current.contains(target) &&
+          isSnapMenuOpen
+        ) {
           setIsSnapMenuOpen(false);
+        }
+
+        if (
+          channelMenuRef.current &&
+          !channelMenuRef.current.contains(target) &&
+          isChannelMenuOpen
+        ) {
+          setIsChannelMenuOpen(false);
+        }
+
+        if (
+          scaleRootMenuRef.current &&
+          !scaleRootMenuRef.current.contains(target) &&
+          isScaleRootMenuOpen
+        ) {
+          setIsScaleRootMenuOpen(false);
+        }
+
+        if (
+          scaleTypeMenuRef.current &&
+          !scaleTypeMenuRef.current.contains(target) &&
+          isScaleTypeMenuOpen
+        ) {
+          setIsScaleTypeMenuOpen(false);
         }
       };
 
@@ -890,7 +925,7 @@ export function PianoRollWindow() {
         window.removeEventListener("mousedown", onPointerDown);
       };
     },
-    [isSnapMenuOpen],
+    [isSnapMenuOpen, isChannelMenuOpen, isScaleRootMenuOpen, isScaleTypeMenuOpen],
   );
 
   const onGridWrapScroll = function (event) {
@@ -2538,21 +2573,43 @@ export function PianoRollWindow() {
   return (
     <section className="piano-roll-shell">
       <header className="piano-roll-toolbar">
-        <span>Channel:</span>
-        <select
-          value={activeChannel?.id || ""}
-          onChange={function (event) {
-            dispatch(setActiveChannel(event.target.value));
-          }}
-        >
-          {channels.map(function (channel) {
-            return (
-              <option key={channel.id} value={channel.id}>
-                {channel.name}
-              </option>
-            );
-          })}
-        </select>
+        <div className="snap-menu channel-menu" ref={channelMenuRef}>
+          <button
+            type="button"
+            className="snap-trigger"
+            onClick={function () {
+              setIsChannelMenuOpen(function (value) {
+                const next = !value;
+                setIsSnapMenuOpen(false);
+                setIsScaleRootMenuOpen(false);
+                setIsScaleTypeMenuOpen(false);
+                return next;
+              });
+            }}
+          >
+            Channel: {activeChannel?.name || "-"}
+          </button>
+          {isChannelMenuOpen ? (
+            <div className="snap-dropdown">
+              {channels.map(function (channel) {
+                return (
+                  <label key={channel.id} className="snap-option">
+                    <input
+                      type="radio"
+                      name="piano-roll-channel"
+                      checked={(activeChannel?.id || "") === channel.id}
+                      onChange={function () {
+                        dispatch(setActiveChannel(channel.id));
+                        setIsChannelMenuOpen(false);
+                      }}
+                    />
+                    <span>{channel.name}</span>
+                  </label>
+                );
+              })}
+            </div>
+          ) : null}
+        </div>
         <button
           type="button"
           className="snap-trigger"
@@ -2603,7 +2660,11 @@ export function PianoRollWindow() {
             className="snap-trigger"
             onClick={function () {
               setIsSnapMenuOpen(function (value) {
-                return !value;
+                const next = !value;
+                setIsChannelMenuOpen(false);
+                setIsScaleRootMenuOpen(false);
+                setIsScaleTypeMenuOpen(false);
+                return next;
               });
             }}
           >
@@ -2632,58 +2693,90 @@ export function PianoRollWindow() {
         </div>
         <div className="scale-controls">
           <span>Scale:</span>
-          <select
-            className="scale-select"
-            value={scaleRoot}
-            onKeyDown={function (event) {
-              if (event.code === "Space") {
-                event.preventDefault();
-                event.stopPropagation();
-              }
-            }}
-            onChange={function (event) {
-              dispatch(
-                setPianoRollScale({
-                  root: event.target.value,
-                  type: scaleType,
-                }),
-              );
-            }}
-          >
-            {SCALE_ROOTS.map(function (noteName) {
-              return (
-                <option key={noteName} value={noteName}>
-                  {noteName}
-                </option>
-              );
-            })}
-          </select>
-          <select
-            className="scale-select"
-            value={scaleType}
-            onKeyDown={function (event) {
-              if (event.code === "Space") {
-                event.preventDefault();
-                event.stopPropagation();
-              }
-            }}
-            onChange={function (event) {
-              dispatch(
-                setPianoRollScale({
-                  root: scaleRoot,
-                  type: event.target.value,
-                }),
-              );
-            }}
-          >
-            {SCALE_TYPES.map(function (item) {
-              return (
-                <option key={item.key} value={item.key}>
-                  {item.label}
-                </option>
-              );
-            })}
-          </select>
+          <div className="snap-menu scale-menu" ref={scaleRootMenuRef}>
+            <button
+              type="button"
+              className="snap-trigger"
+              onClick={function () {
+                setIsScaleRootMenuOpen(function (value) {
+                  const next = !value;
+                  setIsScaleTypeMenuOpen(false);
+                  setIsChannelMenuOpen(false);
+                  setIsSnapMenuOpen(false);
+                  return next;
+                });
+              }}
+            >
+              {scaleRoot}
+            </button>
+            {isScaleRootMenuOpen ? (
+              <div className="snap-dropdown">
+                {SCALE_ROOTS.map(function (noteName) {
+                  return (
+                    <label key={noteName} className="snap-option">
+                      <input
+                        type="radio"
+                        name="piano-roll-scale-root"
+                        checked={scaleRoot === noteName}
+                        onChange={function () {
+                          dispatch(
+                            setPianoRollScale({
+                              root: noteName,
+                              type: scaleType,
+                            }),
+                          );
+                          setIsScaleRootMenuOpen(false);
+                        }}
+                      />
+                      <span>{noteName}</span>
+                    </label>
+                  );
+                })}
+              </div>
+            ) : null}
+          </div>
+          <div className="snap-menu scale-menu" ref={scaleTypeMenuRef}>
+            <button
+              type="button"
+              className="snap-trigger"
+              onClick={function () {
+                setIsScaleTypeMenuOpen(function (value) {
+                  const next = !value;
+                  setIsScaleRootMenuOpen(false);
+                  setIsChannelMenuOpen(false);
+                  setIsSnapMenuOpen(false);
+                  return next;
+                });
+              }}
+            >
+              {activeScale.label}
+            </button>
+            {isScaleTypeMenuOpen ? (
+              <div className="snap-dropdown">
+                {SCALE_TYPES.map(function (item) {
+                  return (
+                    <label key={item.key} className="snap-option">
+                      <input
+                        type="radio"
+                        name="piano-roll-scale-type"
+                        checked={scaleType === item.key}
+                        onChange={function () {
+                          dispatch(
+                            setPianoRollScale({
+                              root: scaleRoot,
+                              type: item.key,
+                            }),
+                          );
+                          setIsScaleTypeMenuOpen(false);
+                        }}
+                      />
+                      <span>{item.label}</span>
+                    </label>
+                  );
+                })}
+              </div>
+            ) : null}
+          </div>
         </div>
         <small>
           {editMode === "add"

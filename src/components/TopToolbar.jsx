@@ -6,6 +6,7 @@ import {
   Grid2X2,
   ListMusic,
   Music2,
+  Palette,
   Play,
   Rows3,
   Save,
@@ -21,11 +22,17 @@ import {
   setBpm,
   setPlaying,
   setRecording,
+  setTheme,
   setTransportMode,
   setWindowRect,
   store,
   toggleWindowMaximize,
 } from "../store";
+
+const THEME_OPTIONS = [
+  { value: "default", label: "Default" },
+  { value: "midnight", label: "Midnight" },
+];
 
 function DraggableBpm({ value, onChange, min, max }) {
   const dragStartYRef = useRef(0);
@@ -68,6 +75,9 @@ export function TopToolbar() {
   const projectFileInputRef = useRef(null);
   const transport = useSelector(function (state) {
     return state.daw.transport;
+  });
+  const activeTheme = useSelector(function (state) {
+    return state.daw.ui.theme || "default";
   });
   const suppressModeToggleSpace = function (event) {
     if (event.code !== "Space") {
@@ -279,6 +289,25 @@ export function TopToolbar() {
             Song
           </button>
         </div>
+
+        <label className="theme-picker" title="App theme">
+          <Palette size={14} />
+          <select
+            className="theme-picker-select"
+            value={activeTheme}
+            onChange={function (event) {
+              dispatch(setTheme(event.target.value));
+            }}
+          >
+            {THEME_OPTIONS.map(function (option) {
+              return (
+                <option key={option.value} value={option.value}>
+                  {option.label}
+                </option>
+              );
+            })}
+          </select>
+        </label>
         <input
           ref={projectFileInputRef}
           type="file"
@@ -340,3 +369,4 @@ export function TopToolbar() {
     </header>
   );
 }
+

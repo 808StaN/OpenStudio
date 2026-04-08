@@ -1,0 +1,527 @@
+.theme-midnight {
+  --font-main: "Rajdhani", "Segoe UI", sans-serif;
+  --font-mono: "Share Tech Mono", Consolas, monospace;
+  --text-main: #e8f1ff;
+  --text-soft: #9fb3d6;
+  --bg-a: #070d17;
+  --bg-b: #0c1424;
+  --modern-bg-0: #07111f;
+  --modern-bg-1: #0b1728;
+  --modern-bg-2: #102036;
+  --modern-surface-0: #111f34;
+  --modern-surface-1: #15263d;
+  --modern-surface-2: #1a2f4a;
+  --modern-border: rgba(138, 170, 214, 0.24);
+  --modern-border-strong: rgba(140, 196, 255, 0.5);
+  --modern-text: #e8f1ff;
+  --modern-text-soft: #9cb3d7;
+  --modern-accent: #5ac8ff;
+  --modern-accent-2: #39d99b;
+  --modern-danger: #ff7e91;
+  --modern-shadow-lg: 0 18px 45px rgba(2, 9, 18, 0.55);
+  --modern-shadow-md: 0 10px 28px rgba(4, 11, 22, 0.4);
+  letter-spacing: 0.05px;
+}
+
+.theme-midnight,
+.theme-midnight button,
+.theme-midnight input,
+.theme-midnight select,
+.theme-midnight textarea {
+  font-family: var(--font-main);
+}
+
+.app-shell {
+  background:
+    radial-gradient(110% 120% at 8% -5%, #1a3559 0%, transparent 42%),
+    radial-gradient(80% 70% at 100% 0%, rgba(90, 200, 255, 0.08), transparent 55%),
+    linear-gradient(180deg, var(--modern-bg-1) 0%, var(--modern-bg-0) 100%);
+}
+
+.workspace-surface {
+  background:
+    radial-gradient(120% 100% at 15% 0%, rgba(97, 176, 255, 0.14) 0%, transparent 45%),
+    linear-gradient(180deg, #0d1828 0%, #08111e 100%) !important;
+}
+
+.workspace-surface::before {
+  content: "";
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  background-image:
+    linear-gradient(rgba(147, 181, 228, 0.05) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(147, 181, 228, 0.045) 1px, transparent 1px);
+  background-size: 34px 34px, 34px 34px;
+  opacity: 0.4;
+}
+
+.transport-shell {
+  border-bottom: 1px solid var(--modern-border) !important;
+  background: linear-gradient(180deg, #18273c 0%, #101b2d 100%) !important;
+  box-shadow: 0 10px 25px rgba(4, 11, 21, 0.45) !important;
+}
+
+.transport-btn,
+.theme-picker,
+.window-control-btn,
+.browser-tabs button,
+.browser-rescan,
+.rack-pattern-add,
+.rack-channel-add,
+.pattern-list-header button,
+.render-window-button,
+.playlist-add-track-btn,
+.playlist-loop-btn,
+.snap-trigger,
+.playlist-snap-trigger,
+.rack-mode-toggle button,
+.mode-toggle button,
+.small-toggle,
+.pattern-length-control button,
+.fx-plugin-action {
+  border: 1px solid var(--modern-border) !important;
+  border-radius: 9px !important;
+  color: var(--modern-text) !important;
+  background: linear-gradient(180deg, #223754 0%, #172a43 100%) !important;
+  box-shadow:
+    inset 0 1px 0 rgba(255, 255, 255, 0.08),
+    0 4px 12px rgba(4, 12, 24, 0.34) !important;
+  transition:
+    transform 120ms ease,
+    filter 120ms ease,
+    border-color 120ms ease,
+    box-shadow 120ms ease;
+}
+
+.transport-btn:hover,
+.theme-picker:hover,
+.window-control-btn:hover,
+.browser-tabs button:hover,
+.browser-rescan:hover,
+.rack-pattern-add:hover,
+.rack-channel-add:hover,
+.pattern-list-header button:hover,
+.render-window-button:hover,
+.playlist-add-track-btn:hover,
+.playlist-loop-btn:hover,
+.snap-trigger:hover,
+.playlist-snap-trigger:hover,
+.rack-mode-toggle button:hover,
+.mode-toggle button:hover,
+.small-toggle:hover,
+.pattern-length-control button:hover,
+.fx-plugin-action:hover {
+  transform: translateY(-1px);
+  border-color: var(--modern-border-strong) !important;
+  filter: brightness(1.04);
+}
+
+.transport-btn:active,
+.theme-picker:active,
+.window-control-btn:active,
+.browser-tabs button:active,
+.browser-rescan:active,
+.rack-pattern-add:active,
+.rack-channel-add:active,
+.pattern-list-header button:active,
+.render-window-button:active,
+.playlist-add-track-btn:active,
+.playlist-loop-btn:active,
+.snap-trigger:active,
+.playlist-snap-trigger:active,
+.rack-mode-toggle button:active,
+.mode-toggle button:active,
+.small-toggle:active,
+.pattern-length-control button:active,
+.fx-plugin-action:active {
+  transform: translateY(0);
+}
+
+.mode-toggle button.is-active,
+.rack-mode-toggle button.is-active,
+.edit-mode-toggle button.is-active,
+.playlist-loop-btn.is-active {
+  color: #06121d !important;
+  border-color: rgba(86, 212, 255, 0.95) !important;
+  background: linear-gradient(180deg, #7dddff 0%, #36b7ff 100%) !important;
+  text-shadow: none !important;
+}
+
+.theme-midnight .mode-toggle {
+  border-radius: 6px !important;
+  overflow: hidden;
+}
+
+.theme-midnight .mode-toggle button {
+  border: 0 !important;
+  border-radius: 0 !important;
+  min-width: 72px;
+}
+
+.theme-midnight .mode-toggle button + button {
+  border-left: 1px solid var(--modern-border) !important;
+}
+
+.theme-midnight .mode-toggle button:hover,
+.theme-midnight .mode-toggle button:active {
+  transform: none;
+}
+
+.theme-midnight .edit-mode-toggle {
+  border: 1px solid #4a4f59 !important;
+  border-radius: 6px !important;
+  overflow: hidden;
+}
+
+.theme-midnight .edit-mode-toggle button {
+  border: 0 !important;
+  border-radius: 0 !important;
+  min-width: 74px;
+}
+
+.theme-midnight .edit-mode-toggle button + button {
+  border-left: 1px solid #4a4f59 !important;
+}
+
+.theme-midnight .edit-mode-toggle button:hover,
+.theme-midnight .edit-mode-toggle button:active {
+  transform: none;
+}
+
+.transport-btn.is-rec {
+  color: #fff4f6 !important;
+  border-color: rgba(255, 132, 150, 0.65) !important;
+  background: linear-gradient(180deg, #ff7f96 0%, #df4968 100%) !important;
+}
+
+.transport-bpm,
+.rack-pattern-picker,
+.rack-pattern-picker select,
+.channel-name,
+.channel-insert-select,
+.render-window-input,
+.render-window-select,
+.pattern-list-name,
+.pattern-list-select,
+.playlist-length-input,
+.piano-roll-toolbar select,
+.scale-select,
+.snap-trigger,
+.playlist-snap-trigger,
+.sample-setting-inline-input,
+.sample-time-select-row select,
+.sample-time-knob-row input[type="range"] {
+  border: 1px solid var(--modern-border) !important;
+  border-radius: 9px !important;
+  color: var(--modern-text) !important;
+  background: linear-gradient(180deg, #14263d 0%, #101f34 100%) !important;
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.06);
+}
+
+.transport-bpm:focus,
+.channel-name:focus,
+.channel-insert-select:focus,
+.render-window-input:focus,
+.render-window-select:focus,
+.pattern-list-name:focus,
+.pattern-list-select:focus,
+.playlist-length-input:focus,
+.piano-roll-toolbar select:focus,
+.scale-select:focus,
+.snap-trigger:focus,
+.playlist-snap-trigger:focus,
+.sample-setting-inline-input:focus,
+.sample-time-select-row select:focus {
+  outline: none;
+  border-color: var(--modern-border-strong) !important;
+  box-shadow: 0 0 0 2px rgba(90, 200, 255, 0.24) !important;
+}
+
+.window-frame {
+  border: 1px solid var(--modern-border) !important;
+  border-radius: 14px !important;
+  background: linear-gradient(180deg, #101d30 0%, #0d1829 100%) !important;
+  box-shadow: var(--modern-shadow-lg) !important;
+}
+
+.window-title {
+  height: 34px !important;
+  border-bottom: 1px solid var(--modern-border) !important;
+  background: linear-gradient(180deg, #1d304b 0%, #15253c 100%) !important;
+  color: var(--modern-text) !important;
+}
+
+.window-content {
+  padding: 8px !important;
+}
+
+.browser-shell,
+.mixer-root,
+.playlist-shell,
+.piano-roll-shell,
+.pattern-list-shell,
+.sample-settings-panel,
+.fx-plugin-panel,
+.fx-window-panel,
+.render-window-shell {
+  border-color: var(--modern-border) !important;
+  background: linear-gradient(180deg, #111f34 0%, #0d1a2b 100%) !important;
+}
+
+.rack-topbar,
+.rack-row,
+.mixer-track,
+.mixer-right,
+.fx-row,
+.pattern-list-row,
+.playlist-toolbar,
+.piano-roll-toolbar {
+  border-color: var(--modern-border) !important;
+  background: linear-gradient(180deg, #1b2f4b 0%, #13253e 100%) !important;
+  box-shadow: var(--modern-shadow-md) !important;
+}
+
+.mixer-track.is-selected,
+.fx-row.is-selected,
+.pattern-list-row.is-active,
+.pattern-list-row.is-selected {
+  border-color: var(--modern-border-strong) !important;
+  box-shadow: 0 0 0 1px rgba(90, 200, 255, 0.35), var(--modern-shadow-md) !important;
+}
+
+.track-led {
+  border-color: #1d3d2f !important;
+  background: radial-gradient(circle at 35% 35%, #1f3e32 0%, #0b1b14 78%) !important;
+}
+
+.track-led.is-on {
+  background: radial-gradient(circle at 35% 35%, #98ffd2 0%, #2fd88f 48%, #0c472c 100%) !important;
+}
+
+.mixer-value-readout,
+.fx-proq-readout,
+.sample-waveform-card,
+.sample-envelope-panel,
+.sample-time-stretch-panel,
+.browser-hint,
+.fx-empty-slot {
+  border-color: var(--modern-border) !important;
+  background: linear-gradient(180deg, #162943 0%, #101f34 100%) !important;
+}
+
+.fader-groove,
+.meter-column,
+.fx-maximizer-graph-wrap,
+.piano-grid,
+.piano-velocity-grid,
+.track-grid {
+  border-color: var(--modern-border) !important;
+  background-color: #112340 !important;
+}
+
+.meter-seg {
+  background: rgba(137, 161, 196, 0.22) !important;
+}
+
+.meter-seg.is-on {
+  background: linear-gradient(180deg, #74dcff 0%, #31b8ff 100%) !important;
+  box-shadow: 0 0 8px rgba(64, 186, 255, 0.44) !important;
+}
+
+.clip {
+  border: 1px solid rgba(75, 239, 159, 0.9) !important;
+  box-shadow: none !important;
+}
+
+.clip.is-active {
+  box-shadow: none !important;
+}
+
+.piano-note.from-step,
+.piano-note.from-piano,
+.step.is-on {
+  filter: saturate(1.05) brightness(1.04);
+}
+
+.theme-midnight .rack-knob {
+  accent-color: #56caff;
+}
+
+.theme-midnight .step.is-on {
+  border-color: #1b5f8d;
+  background: linear-gradient(180deg, #67c9ee 0%, #2997cf 58%, #236eaa 100%);
+  box-shadow:
+    inset 0 1px 0 rgba(221, 245, 255, 0.28),
+    0 0 8px rgba(64, 173, 232, 0.26);
+}
+
+.theme-midnight .step.group-b.is-on {
+  border-color: #2271a3;
+  background: linear-gradient(180deg, #84d6f3 0%, #3aa8db 58%, #2b7fbb 100%);
+}
+
+.theme-midnight .mini-note,
+.theme-midnight .clip-mini-note {
+  background: linear-gradient(180deg, #73d2f1 0%, #2b9fd2 100%);
+  box-shadow:
+    0 0 5px rgba(53, 163, 219, 0.3),
+    inset 0 1px 0 rgba(225, 247, 255, 0.3);
+}
+
+.theme-midnight .piano-note.from-step,
+.theme-midnight .piano-note.from-piano {
+  background: linear-gradient(180deg, #6bcdec 0%, #2e9fce 100%);
+  border-color: #1f6d9f;
+  box-shadow: 0 0 6px rgba(49, 153, 205, 0.33);
+}
+
+.theme-midnight .piano-note-label {
+  color: #052b44;
+}
+
+.theme-midnight .piano-note.is-selected,
+.theme-midnight .piano-note.from-step.is-selected,
+.theme-midnight .piano-note.from-piano.is-selected {
+  background: linear-gradient(180deg, #ff8588 0%, #d72e36 100%) !important;
+  border-color: #7d141a !important;
+  box-shadow: 0 0 9px rgba(255, 82, 82, 0.5) !important;
+}
+
+.theme-midnight .piano-note.is-selected .piano-note-label {
+  color: #fff0f0 !important;
+  text-shadow: 0 1px 0 rgba(53, 10, 12, 0.6) !important;
+}
+
+.theme-midnight .piano-velocity-bar::before {
+  background: #34bcff;
+  box-shadow: 0 0 3px rgba(52, 188, 255, 0.35);
+}
+
+.theme-midnight .piano-velocity-bar::after {
+  background: #b6edff;
+}
+
+.theme-midnight .piano-velocity-bar.is-selected::before {
+  background: #d72e36 !important;
+  box-shadow: 0 0 6px rgba(215, 46, 54, 0.35) !important;
+}
+
+.theme-midnight .piano-velocity-bar.is-selected::after {
+  background: #d72e36 !important;
+}
+
+.theme-midnight .piano-grid,
+.theme-midnight .piano-velocity-grid {
+  background:
+    repeating-linear-gradient(
+      to right,
+      rgba(122, 152, 176, var(--snap-opacity, 0)) 0,
+      rgba(122, 152, 176, var(--snap-opacity, 0)) 1px,
+      transparent 1px,
+      transparent var(--snap-width, 24px)
+    ),
+    repeating-linear-gradient(
+      to bottom,
+      rgba(36, 56, 71, 0.52) 0,
+      rgba(36, 56, 71, 0.52) 1px,
+      transparent 1px,
+      transparent var(--row-height, 20px)
+    ),
+    #1d3358 !important;
+  filter: brightness(1.08);
+}
+
+.theme-midnight .piano-velocity-grid-shell {
+  background: #1d3358 !important;
+}
+
+.theme-midnight .piano-major-line {
+  background: rgba(20, 33, 45, 0.9) !important;
+}
+
+.theme-midnight .piano-bar-cell {
+  color: #dce8ff !important;
+}
+
+.theme-midnight .rack-mode-toggle {
+  border: 1px solid #4a4f59 !important;
+  border-radius: 6px !important;
+  overflow: hidden;
+}
+
+.theme-midnight .rack-mode-toggle button {
+  border: 0 !important;
+  border-radius: 0 !important;
+  height: 28px;
+  min-width: 104px;
+}
+
+.theme-midnight .rack-mode-toggle button + button {
+  border-left: 1px solid #4a4f59 !important;
+}
+
+.theme-midnight .rack-mode-toggle button:hover,
+.theme-midnight .rack-mode-toggle button:active {
+  transform: none;
+}
+
+.theme-midnight .piano-playhead-line,
+.theme-midnight .playlist-playhead-line,
+.theme-midnight .piano-preview-playhead {
+  background: linear-gradient(180deg, #a7ebff 0%, #4bc8ff 100%) !important;
+  box-shadow: 0 0 8px rgba(83, 199, 255, 0.42) !important;
+}
+
+.theme-midnight .step.is-playhead {
+  outline: 1px solid #58c9ff !important;
+  outline-offset: 1px;
+}
+
+.render-window-error {
+  color: #ff9baa !important;
+}
+
+.render-window-status {
+  color: #9debc1 !important;
+}
+
+.window-modal-backdrop {
+  background: rgba(4, 9, 16, 0.46) !important;
+  backdrop-filter: blur(7px);
+  -webkit-backdrop-filter: blur(7px);
+}
+
+.browser-tree,
+.rack-scroll-area,
+.playlist-body,
+.piano-grid-wrap,
+.pattern-list-body,
+.mixer-left,
+.sample-settings-panel {
+  scrollbar-width: thin;
+  scrollbar-color: rgba(131, 170, 220, 0.7) rgba(12, 24, 39, 0.65) !important;
+}
+
+.browser-tree::-webkit-scrollbar-track,
+.rack-scroll-area::-webkit-scrollbar-track,
+.playlist-body::-webkit-scrollbar-track,
+.piano-grid-wrap::-webkit-scrollbar-track,
+.pattern-list-body::-webkit-scrollbar-track,
+.mixer-left::-webkit-scrollbar-track,
+.sample-settings-panel::-webkit-scrollbar-track {
+  background: rgba(8, 18, 30, 0.85) !important;
+  border: 1px solid rgba(122, 154, 196, 0.22) !important;
+}
+
+.browser-tree::-webkit-scrollbar-thumb,
+.rack-scroll-area::-webkit-scrollbar-thumb,
+.playlist-body::-webkit-scrollbar-thumb,
+.piano-grid-wrap::-webkit-scrollbar-thumb,
+.pattern-list-body::-webkit-scrollbar-thumb,
+.mixer-left::-webkit-scrollbar-thumb,
+.sample-settings-panel::-webkit-scrollbar-thumb {
+  border: 1px solid rgba(158, 198, 248, 0.54) !important;
+  background: linear-gradient(180deg, #8fc8ff 0%, #5e9fde 100%) !important;
+}
+

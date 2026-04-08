@@ -34,6 +34,21 @@ const GRAPHIC_EQ_BAND_TYPES = [
 ];
 const DEFAULT_MIDI_PITCH = 72;
 const DEFAULT_NOTE_VELOCITY = 95;
+const UI_THEME_DEFAULT = "default";
+const UI_THEME_MIDNIGHT = "midnight";
+const UI_THEMES = new Set([UI_THEME_DEFAULT, UI_THEME_MIDNIGHT]);
+
+function sanitizeUiTheme(rawTheme) {
+  const requested = String(rawTheme || "")
+    .trim()
+    .toLowerCase();
+
+  if (UI_THEMES.has(requested)) {
+    return requested;
+  }
+
+  return UI_THEME_DEFAULT;
+}
 
 function getDefaultEqBandType(index) {
   if (index === 0) {
@@ -550,6 +565,7 @@ const initialState = {
     currentStep16: 0,
   },
   ui: {
+    theme: UI_THEME_DEFAULT,
     browserTab: "drumkits",
     channelRackMode: "sequencer",
     patternClipboardIds: [],
@@ -861,6 +877,7 @@ const nonUndoableActionTypes = new Set([
   "daw/setPlaying",
   "daw/setRecording",
   "daw/setTransportMode",
+  "daw/setTheme",
   "daw/bringWindowToFront",
   "daw/setPianoRollScale",
   LOAD_PROJECT_FROM_FILE_ACTION,
@@ -963,6 +980,9 @@ function sanitizeLoadedDawState(currentState, rawLoadedState) {
     ? scaleRoot
     : "C";
   nextUi.pianoRollScaleType = scaleType === "major" ? "major" : "minor";
+  nextUi.theme = Object.hasOwn(uiRaw, "theme")
+    ? sanitizeUiTheme(uiRaw.theme)
+    : UI_THEME_DEFAULT;
 
   const projectRaw = isObjectLike(loadedState.project)
     ? loadedState.project
@@ -1517,6 +1537,10 @@ const dawSlice = createSlice({
 
     setBrowserTab(state, action) {
       state.ui.browserTab = action.payload;
+    },
+
+    setTheme(state, action) {
+      state.ui.theme = sanitizeUiTheme(action.payload);
     },
 
     setPatternClipboard(state, action) {
@@ -3604,6 +3628,7 @@ export const {
   bringWindowToFront,
   setWindowRect,
   toggleWindowMaximize,
+  setTheme,
   setBrowserTab,
   setPatternClipboard,
   setPianoRollScale,
@@ -3667,4 +3692,5 @@ export const store = configureStore({
     daw: dawReducerWithUndo,
   },
 });
+
 

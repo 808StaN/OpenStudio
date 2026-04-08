@@ -23,6 +23,7 @@ import "./styles/playlist.css";
 import "./styles/mixer.css";
 import "./styles/pattern-list.css";
 import "./styles/render-window.css";
+import midnightThemeCss from "./styles/theme-midnight.css?raw";
 
 function shouldIgnoreSpaceShortcut(target) {
   if (!(target instanceof HTMLElement)) {
@@ -136,6 +137,9 @@ function App() {
   });
   const fxEditorTarget = useSelector(function (state) {
     return state.daw.ui.fxEditorTarget;
+  });
+  const activeTheme = useSelector(function (state) {
+    return state.daw.ui.theme || "default";
   });
 
   const activeChannel = channels.find(function (channel) {
@@ -278,7 +282,14 @@ function App() {
   };
 
   return (
-    <div className="app-shell" onContextMenu={onAppContextMenu}>
+    <div
+      className={
+        "app-shell " +
+        (activeTheme === "midnight" ? "theme-midnight" : "theme-default")
+      }
+      onContextMenu={onAppContextMenu}
+    >
+      {activeTheme === "midnight" ? <style>{midnightThemeCss}</style> : null}
       <TopToolbar />
 
       <div className="app-body">
@@ -369,3 +380,4 @@ function App() {
 }
 
 export default App;
+

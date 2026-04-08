@@ -301,12 +301,12 @@
   height: 30px;
   min-width: 120px;
   border-radius: 6px;
-  border: 1px solid #586072;
+  border: 1px solid #5d6a84;
   color: #f3f6fb;
   background:
     url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 12 8'%3E%3Cpath fill='%23c8d7ef' d='M6 8 0 0h12z'/%3E%3C/svg%3E")
       no-repeat right 8px center / 9px 6px,
-    linear-gradient(180deg, #394354 0%, #232b39 100%);
+    linear-gradient(180deg, #223146 0%, #162131 100%);
   padding: 0 24px 0 8px;
   font-size: 12px;
   appearance: none;
@@ -326,25 +326,25 @@
 
 .channel-insert-select:focus {
   outline: none;
-  border-color: #6ff2b8;
+  border-color: #7f8fae;
   box-shadow:
-    0 0 0 1px rgba(80, 235, 168, 0.52),
-    0 0 14px rgba(80, 235, 168, 0.24);
+    0 0 0 1px rgba(127, 143, 174, 0.35),
+    inset 0 0 0 1px rgba(0, 0, 0, 0.24);
 }
 
 .channel-insert-select option {
-  color: #e7f0ff;
-  background-color: #1a2435;
+  color: #101722;
+  background-color: #c4ccd6;
 }
 
 .channel-insert-select option:checked {
-  background-color: #2f8d67;
-  color: #f6fffb;
+  background-color: #9eb6d8;
+  color: #101722;
 }
 
 .channel-insert-select option:hover {
-  background-color: #2a5a49;
-  color: #f0fff9;
+  background-color: #b7c5db;
+  color: #101722;
 }
 
 .mode-toggle.compact button {

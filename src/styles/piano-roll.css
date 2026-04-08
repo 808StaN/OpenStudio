@@ -40,6 +40,16 @@
   position: relative;
 }
 
+.channel-menu .snap-trigger {
+  min-width: 168px;
+  max-width: 220px;
+}
+
+.scale-menu .snap-trigger {
+  min-width: 74px;
+  max-width: 92px;
+}
+
 .edit-mode-toggle {
   display: inline-flex;
   border: 1px solid #5d6a84;
@@ -84,11 +94,16 @@
   height: 24px;
   border-radius: 5px;
   border: 1px solid #5d6a84;
-  background: #162131;
+  background: linear-gradient(180deg, #223146 0%, #162131 100%);
   color: #e6efff;
-  padding: 0 6px;
+  padding: 0 9px;
   font-size: 11px;
   min-width: 58px;
+  cursor: pointer;
+  max-width: 150px;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
 }
 
 .snap-trigger {
@@ -104,6 +119,15 @@
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
+}
+
+.scale-select:hover {
+  filter: brightness(1.05);
+}
+
+.piano-roll-toolbar select option {
+  color: #101722;
+  background: #c4ccd6;
 }
 
 .snap-dropdown {
@@ -531,4 +555,13 @@
   background: linear-gradient(180deg, #7dffb7 0%, #2edb74 100%);
   border-color: #0f6a33;
   box-shadow: 0 0 7px rgba(46, 219, 116, 0.45);
+}
+
+/* Keep selected notes red even after base note styles defined above. */
+.piano-note.from-step.is-selected,
+.piano-note.from-piano.is-selected,
+.piano-note.is-selected {
+  background: linear-gradient(180deg, #ff8588 0%, #d72e36 100%);
+  border-color: #7d141a;
+  box-shadow: 0 0 9px rgba(255, 82, 82, 0.5);
 }
