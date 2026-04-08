@@ -12,6 +12,7 @@ const CUT_ITSELF_STOP_PADDING_SEC = 0.003;
 const CUT_ITSELF_RETRIGGER_FADE_IN_SEC = 0.0025;
 const FX_EFFECT_GRAPHIC_EQ = "graphic-eq";
 const FX_EFFECT_REVERB = "reverb";
+const FX_EFFECT_MAXIMIZER = "maximizer";
 const GRAPHIC_EQ_DEFAULT_POINT_FREQUENCIES = [
   50, 100, 250, 500, 1000, 3000, 8000,
 ];
@@ -22,6 +23,7 @@ const GRAPHIC_EQ_BAND_TYPES = [
   "lowpass",
   "highpass",
 ];
+const MAXIMIZER_MODES = ["irc-ll", "irc-i", "irc-ii", "irc-iii", "irc-iv"];
 
 const defaultSampleSettings = {
   cutItself: false,
@@ -163,40 +165,85 @@ function getSafeReverbParams(raw) {
   };
 }
 
-function getActiveFxState(insert) {
-  const fxSlots = Array.isArray(insert?.fxSlots) ? insert.fxSlots : [];
-  const enabledSlots = fxSlots.filter(function (slot) {
-    return Boolean(slot?.enabled);
-  });
-
-  if (enabledSlots.length === 0) {
-    return {
-      effectType: "none",
-      params: null,
-    };
+function sanitizeMaximizerMode(rawMode) {
+  const requested = String(rawMode || "")
+    .trim()
+    .toLowerCase();
+  if (MAXIMIZER_MODES.includes(requested)) {
+    return requested;
   }
+  return "irc-ii";
+}
 
-  const activeSlot = enabledSlots[enabledSlots.length - 1];
-  const effectType = String(activeSlot?.effectType || "none");
-
-  if (effectType === FX_EFFECT_GRAPHIC_EQ) {
-    return {
-      effectType,
-      params: getSafeGraphicEqParams(activeSlot?.params),
-    };
-  }
-
-  if (effectType === FX_EFFECT_REVERB) {
-    return {
-      effectType,
-      params: getSafeReverbParams(activeSlot?.params),
-    };
-  }
+function getSafeMaximizerParams(raw) {
+  const base = {
+    mode: "irc-ii",
+    truePeakEnabled: true,
+    thresholdDb: -6,
+    ceilingDb: -0.1,
+    character: 0.58,
+    ...(raw || {}),
+  };
 
   return {
-    effectType: "none",
-    params: null,
+    mode: sanitizeMaximizerMode(base.mode),
+    truePeakEnabled: Boolean(base.truePeakEnabled),
+    thresholdDb: clamp(Number(base.thresholdDb ?? -6), -24, 0),
+    ceilingDb: clamp(Number(base.ceilingDb ?? -0.1), -18, 0),
+    character: clamp(Number(base.character ?? 0.58), 0, 1),
   };
+}
+
+function buildSoftClipCurve(strength) {
+  const safeStrength = clamp(Number(strength || 0), 0, 1);
+  const samples = 4096;
+  const curve = new Float32Array(samples);
+  const drive = 1 + safeStrength * 6;
+
+  for (let index = 0; index < samples; index += 1) {
+    const x = (index / (samples - 1)) * 2 - 1;
+    curve[index] = Math.tanh(x * drive) / Math.tanh(drive);
+  }
+
+  return curve;
+}
+
+function getActiveFxState(insert) {
+  const fxSlots = Array.isArray(insert?.fxSlots) ? insert.fxSlots : [];
+  const state = {
+    eqEnabled: false,
+    eqParams: getSafeGraphicEqParams(null),
+    reverbEnabled: false,
+    reverbParams: getSafeReverbParams(null),
+    maximizerEnabled: false,
+    maximizerParams: getSafeMaximizerParams(null),
+  };
+
+  fxSlots.forEach(function (slot) {
+    if (!slot?.enabled) {
+      return;
+    }
+
+    const effectType = String(slot.effectType || "none");
+    if (effectType === FX_EFFECT_GRAPHIC_EQ) {
+      state.eqEnabled = true;
+      state.eqParams = getSafeGraphicEqParams(slot.params);
+      return;
+    }
+
+    if (effectType === FX_EFFECT_REVERB) {
+      state.reverbEnabled = true;
+      state.reverbParams = getSafeReverbParams(slot.params);
+      return;
+    }
+
+    if (effectType === FX_EFFECT_MAXIMIZER) {
+      state.maximizerEnabled = true;
+      state.maximizerParams = getSafeMaximizerParams(slot.params);
+    }
+  });
+
+  return state;
 }
 
 function midiPitchToPlaybackRate(midiPitch) {
@@ -368,6 +415,11 @@ function buildInsertInputNodes(audioCtx, mixerInserts) {
     const reverbRightToRight = audioCtx.createGain();
     const reverbWidthMerger = audioCtx.createChannelMerger(2);
     const reverbWetGain = audioCtx.createGain();
+    const maximizerInput = audioCtx.createGain();
+    const maximizerPreGain = audioCtx.createGain();
+    const maximizerCompressor = audioCtx.createDynamicsCompressor();
+    const maximizerSoftClip = audioCtx.createWaveShaper();
+    const maximizerCeilingGain = audioCtx.createGain();
     const outputGain = audioCtx.createGain();
 
     inputGain.connect(splitter);
@@ -386,6 +438,7 @@ function buildInsertInputNodes(audioCtx, mixerInserts) {
     panner.connect(fxDryGain);
     panner.connect(eqInput);
     panner.connect(reverbInput);
+    panner.connect(maximizerInput);
 
     eqLowCut.type = "highpass";
     eqLowCut.frequency.value = 20;
@@ -451,6 +504,12 @@ function buildInsertInputNodes(audioCtx, mixerInserts) {
     reverbWidthMerger.connect(reverbWetGain);
     reverbWetGain.connect(fxWetGain);
 
+    maximizerInput.connect(maximizerPreGain);
+    maximizerPreGain.connect(maximizerCompressor);
+    maximizerCompressor.connect(maximizerSoftClip);
+    maximizerSoftClip.connect(maximizerCeilingGain);
+    maximizerCeilingGain.connect(fxWetGain);
+
     const reverbModulators = [reverbLateLeftDelay, reverbLateRightDelay].map(
       function (targetDelay, index) {
         const lfo = audioCtx.createOscillator();
@@ -500,6 +559,11 @@ function buildInsertInputNodes(audioCtx, mixerInserts) {
       reverbRightToRight,
       reverbModulators,
       reverbWetGain,
+      maximizerInput,
+      maximizerPreGain,
+      maximizerCompressor,
+      maximizerSoftClip,
+      maximizerCeilingGain,
       outputGain,
     });
   });
@@ -547,12 +611,13 @@ function buildInsertInputNodes(audioCtx, mixerInserts) {
       Math.min(1, Number(insert.stereoSeparation || 0)),
     );
     const activeFx = getActiveFxState(insert);
-    const eqEnabled = activeFx.effectType === FX_EFFECT_GRAPHIC_EQ;
-    const reverbEnabled = activeFx.effectType === FX_EFFECT_REVERB;
-    const eqParams = eqEnabled ? activeFx.params : getSafeGraphicEqParams(null);
-    const reverbParams = reverbEnabled
-      ? activeFx.params
-      : getSafeReverbParams(null);
+    const eqEnabled = activeFx.eqEnabled;
+    const reverbEnabled = activeFx.reverbEnabled;
+    const maximizerEnabled = activeFx.maximizerEnabled;
+    const eqParams = activeFx.eqParams;
+    const reverbParams = activeFx.reverbParams;
+    const maximizerParams = activeFx.maximizerParams;
+    const hasInsertFx = eqEnabled || maximizerEnabled;
 
     const width = 1 - targetSeparation;
     const directGain = 0.5 * (1 + width);
@@ -564,16 +629,14 @@ function buildInsertInputNodes(audioCtx, mixerInserts) {
     node.leftToRight.gain.setValueAtTime(crossGain, 0);
     node.panner.pan.setValueAtTime(targetPan, 0);
 
-    const dryMix = reverbEnabled
-      ? clamp(1 - reverbParams.dryWet, 0, 1)
-      : eqEnabled
-        ? 0
+    const dryMix = hasInsertFx
+      ? 0
+      : reverbEnabled
+        ? clamp(1 - reverbParams.dryWet, 0, 1)
         : 1;
-    const wetMix = reverbEnabled
-      ? clamp(reverbParams.dryWet, 0, 1)
-      : eqEnabled
-        ? 1
-        : 0;
+    const wetMix = hasInsertFx || reverbEnabled
+      ? 1
+      : 0;
 
     node.fxDryGain.gain.setValueAtTime(dryMix, 0);
     node.fxWetGain.gain.setValueAtTime(wetMix, 0);
@@ -671,7 +734,14 @@ function buildInsertInputNodes(audioCtx, mixerInserts) {
     node.reverbRightToRight.gain.setValueAtTime(directWidth, 0);
     node.reverbRightToLeft.gain.setValueAtTime(crossWidth, 0);
     node.reverbLeftToRight.gain.setValueAtTime(crossWidth, 0);
-    node.reverbWetGain.gain.setValueAtTime(reverbEnabled ? 1 : 0, 0);
+    node.reverbWetGain.gain.setValueAtTime(
+      reverbEnabled
+        ? hasInsertFx
+          ? clamp(reverbParams.dryWet, 0, 1)
+          : 1
+        : 0,
+      0,
+    );
 
     if (Array.isArray(node.reverbModulators)) {
       node.reverbModulators.forEach(function (modNode, index) {
@@ -685,6 +755,54 @@ function buildInsertInputNodes(audioCtx, mixerInserts) {
         );
       });
     }
+
+    const mode = sanitizeMaximizerMode(maximizerParams.mode);
+    const modeConfigById = {
+      "irc-ll": { ratio: 20, knee: 1, lookahead: 0.0008 },
+      "irc-i": { ratio: 24, knee: 1.5, lookahead: 0.0012 },
+      "irc-ii": { ratio: 30, knee: 2.2, lookahead: 0.0017 },
+      "irc-iii": { ratio: 42, knee: 3.2, lookahead: 0.0022 },
+      "irc-iv": { ratio: 60, knee: 4.8, lookahead: 0.0028 },
+    };
+    const modeConfig = modeConfigById[mode] || modeConfigById["irc-ii"];
+    const thresholdDb = clamp(maximizerParams.thresholdDb, -24, 0);
+    const ceilingDb = clamp(maximizerParams.ceilingDb, -18, 0);
+    const character = clamp(maximizerParams.character, 0, 1);
+    const truePeakEnabled = Boolean(maximizerParams.truePeakEnabled);
+    const preGainDb = -thresholdDb;
+    const truePeakHeadroomDb = truePeakEnabled ? 0.9 : 0;
+    const ceilingGain = Math.pow(10, (ceilingDb - truePeakHeadroomDb) / 20);
+    const attackSec = 0.001 + (1 - character) * 0.022;
+    const releaseSec = 0.035 + character * 0.34;
+    const kneeDb = modeConfig.knee + character * 3.2;
+    const ratio = modeConfig.ratio + (1 - character) * 4;
+    const clipStrength = clamp(
+      0.2 +
+        character * 0.5 +
+        (truePeakEnabled ? 0.12 : 0) +
+        modeConfig.lookahead * 120,
+      0.2,
+      0.95,
+    );
+
+    node.maximizerInput.gain.setValueAtTime(maximizerEnabled ? 1 : 0, 0);
+    node.maximizerPreGain.gain.setValueAtTime(
+      maximizerEnabled ? Math.pow(10, preGainDb / 20) : 1,
+      0,
+    );
+    node.maximizerCompressor.threshold.setValueAtTime(-1.6, 0);
+    node.maximizerCompressor.ratio.setValueAtTime(ratio, 0);
+    node.maximizerCompressor.knee.setValueAtTime(kneeDb, 0);
+    node.maximizerCompressor.attack.setValueAtTime(attackSec, 0);
+    node.maximizerCompressor.release.setValueAtTime(releaseSec, 0);
+    node.maximizerSoftClip.curve = buildSoftClipCurve(
+      maximizerEnabled ? clipStrength : 0,
+    );
+    node.maximizerSoftClip.oversample = truePeakEnabled ? "4x" : "2x";
+    node.maximizerCeilingGain.gain.setValueAtTime(
+      maximizerEnabled ? ceilingGain : 1,
+      0,
+    );
 
     node.outputGain.gain.setValueAtTime(targetFader, 0);
   });

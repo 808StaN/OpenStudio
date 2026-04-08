@@ -9,6 +9,11 @@ export const PLUGIN_EFFECTS = [
     name: "Reverb",
     description: "Algorithmic stereo reverb with freeze and modulation",
   },
+  {
+    effectType: "maximizer",
+    name: "Maximizer",
+    description: "Mastering limiter with threshold, ceiling and character",
+  },
 ];
 
 const effectByType = PLUGIN_EFFECTS.reduce(function (acc, effect) {

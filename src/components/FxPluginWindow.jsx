@@ -3,12 +3,14 @@ import { useDispatch, useSelector } from "react-redux";
 import {
   setFxSlotEffectType,
   setFxSlotGraphicEqPoint,
+  setFxSlotMaximizerParam,
   setFxSlotReverbParam,
   toggleFxSlot,
 } from "../store";
 
 const FX_EFFECT_GRAPHIC_EQ = "graphic-eq";
 const FX_EFFECT_REVERB = "reverb";
+const FX_EFFECT_MAXIMIZER = "maximizer";
 const GRAPHIC_EQ_DEFAULT_POINT_FREQUENCIES = [
   50, 100, 250, 500, 1000, 3000, 8000,
 ];
@@ -41,7 +43,11 @@ const GRAPH_PADDING = {
 };
 
 function isSupportedEffectType(effectType) {
-  return effectType === FX_EFFECT_GRAPHIC_EQ || effectType === FX_EFFECT_REVERB;
+  return (
+    effectType === FX_EFFECT_GRAPHIC_EQ ||
+    effectType === FX_EFFECT_REVERB ||
+    effectType === FX_EFFECT_MAXIMIZER
+  );
 }
 
 function clamp(value, min, max) {
@@ -263,6 +269,45 @@ function getSafeReverbParams(raw) {
   };
 }
 
+const MAXIMIZER_MODES = [
+  { value: "irc-ll", label: "IRC LL" },
+  { value: "irc-i", label: "IRC I" },
+  { value: "irc-ii", label: "IRC II" },
+  { value: "irc-iii", label: "IRC III" },
+  { value: "irc-iv", label: "IRC IV" },
+];
+
+function sanitizeMaximizerMode(rawMode) {
+  const requested = String(rawMode || "")
+    .trim()
+    .toLowerCase();
+
+  const supported = MAXIMIZER_MODES.some(function (mode) {
+    return mode.value === requested;
+  });
+
+  return supported ? requested : "irc-ii";
+}
+
+function getSafeMaximizerParams(raw) {
+  const base = {
+    mode: "irc-ii",
+    truePeakEnabled: true,
+    thresholdDb: -6,
+    ceilingDb: -0.1,
+    character: 0.58,
+    ...(raw || {}),
+  };
+
+  return {
+    mode: sanitizeMaximizerMode(base.mode),
+    truePeakEnabled: Boolean(base.truePeakEnabled),
+    thresholdDb: clamp(Number(base.thresholdDb ?? -6), -24, 0),
+    ceilingDb: clamp(Number(base.ceilingDb ?? -0.1), -18, 0),
+    character: clamp(Number(base.character ?? 0.58), 0, 1),
+  };
+}
+
 function formatPercent(value) {
   return Math.round(Number(value || 0) * 100) + "%";
 }
@@ -462,6 +507,63 @@ function buildSpectrumPaths(spectrum, width, height) {
   };
 }
 
+function buildWaveformPath(waveform, width, height) {
+  const values = Array.isArray(waveform)
+    ? waveform.filter(function (value) {
+        return Number.isFinite(Number(value));
+      })
+    : [];
+
+  if (values.length < 2) {
+    return "";
+  }
+
+  const centerY = height * 0.5;
+  const amplitude = Math.max(1, height * 0.44);
+
+  return values
+    .map(function (value, index) {
+      const x =
+        values.length > 1 ? (index / (values.length - 1)) * width : width * 0.5;
+      const normalized = clamp(Number(value || 0), -1, 1);
+      const y = centerY - normalized * amplitude;
+      const prefix = index === 0 ? "M" : "L";
+      return prefix + " " + x.toFixed(2) + " " + y.toFixed(2);
+    })
+    .join(" ");
+}
+
+function buildMaximizerTransferPath(params, width, height) {
+  const safe = getSafeMaximizerParams(params);
+  const thresholdNorm = (safe.thresholdDb + 24) / 24;
+  const ceilingNorm = (safe.ceilingDb + 18) / 18;
+  const knee = 0.08 + safe.character * 0.18;
+  const points = [];
+
+  for (let i = 0; i <= 120; i += 1) {
+    const xNorm = i / 120;
+    let yNorm = xNorm;
+    if (xNorm > thresholdNorm) {
+      const over = xNorm - thresholdNorm;
+      const compressed = thresholdNorm + over * (0.14 + (1 - safe.character) * 0.52);
+      const t = clamp(over / Math.max(0.0001, 1 - thresholdNorm), 0, 1);
+      yNorm = compressed * (1 - knee * t) + ceilingNorm * knee * t;
+    }
+    yNorm = Math.min(yNorm, ceilingNorm);
+    points.push({
+      x: xNorm * width,
+      y: height - yNorm * height,
+    });
+  }
+
+  return points
+    .map(function (point, index) {
+      const prefix = index === 0 ? "M" : "L";
+      return prefix + " " + point.x.toFixed(2) + " " + point.y.toFixed(2);
+    })
+    .join(" ");
+}
+
 export function FxPluginWindow() {
   const dispatch = useDispatch();
   const graphRef = useRef(null);
@@ -623,6 +725,13 @@ export function FxPluginWindow() {
     [activeSlot?.params],
   );
 
+  const maximizerParams = useMemo(
+    function () {
+      return getSafeMaximizerParams(activeSlot?.params);
+    },
+    [activeSlot?.params],
+  );
+
   const eqCurvePath = useMemo(
     function () {
       return buildGraphicEqPath(eqParams, GRAPH_WIDTH, GRAPH_HEIGHT);
@@ -640,7 +749,27 @@ export function FxPluginWindow() {
         GRAPH_HEIGHT,
       );
     },
-    [activeInsert?.meterSpectrum],
+    [activeInsert],
+  );
+
+  const maximizerWaveformPath = useMemo(
+    function () {
+      return buildWaveformPath(
+        Array.isArray(activeInsert?.meterWaveform)
+          ? activeInsert.meterWaveform
+          : null,
+        520,
+        152,
+      );
+    },
+    [activeInsert],
+  );
+
+  const maximizerTransferPath = useMemo(
+    function () {
+      return buildMaximizerTransferPath(maximizerParams, 220, 120);
+    },
+    [maximizerParams],
   );
 
   const pointCoordinates = useMemo(
@@ -762,6 +891,21 @@ export function FxPluginWindow() {
 
     dispatch(
       setFxSlotReverbParam({
+        insertId: activeInsertId,
+        slotId: activeSlotId,
+        param,
+        value,
+      }),
+    );
+  };
+
+  const setMaximizerValue = function (param, value) {
+    if (!activeInsertId || !activeSlotId) {
+      return;
+    }
+
+    dispatch(
+      setFxSlotMaximizerParam({
         insertId: activeInsertId,
         slotId: activeSlotId,
         param,
@@ -979,6 +1123,162 @@ export function FxPluginWindow() {
         <div className="fx-empty-slot">
           <p>No FX slot selected.</p>
           <p>Click a slot in the Mixer to open the effect editor.</p>
+        </div>
+      </section>
+    );
+  }
+
+  if (activeSlot.effectType === FX_EFFECT_MAXIMIZER) {
+    const thresholdPosition =
+      ((maximizerParams.thresholdDb + 24) / 24) * 100;
+    const ceilingPosition = ((maximizerParams.ceilingDb + 18) / 18) * 100;
+    const characterPercent = Math.round(maximizerParams.character * 100);
+    const reductionDb = Math.max(
+      0,
+      Number(activeInsert?.maximizerReduction || 0),
+    );
+    const reductionBarHeight = Math.min(100, (reductionDb / 12) * 100);
+
+    return (
+      <section className="fx-plugin-panel fx-window-panel">
+        <div className="fx-maximizer-shell">
+          <div className="fx-maximizer-graph-wrap">
+            <div className="fx-maximizer-graph-header">
+              <span>Limiter Trace</span>
+              <span>
+                Reduction: {reductionDb.toFixed(1)} dB | Out:{" "}
+                {toDbLabel((Number(activeInsert?.meter || 0) - 1) * 18)}
+              </span>
+            </div>
+            <svg
+              className="fx-maximizer-graph"
+              viewBox="0 0 520 152"
+              preserveAspectRatio="none"
+              aria-label="Maximizer waveform and limiting graph"
+            >
+              <line x1="0" y1="76" x2="520" y2="76" className="fx-max-center" />
+              {maximizerWaveformPath ? (
+                <path d={maximizerWaveformPath} className="fx-max-wave-input" />
+              ) : null}
+              <path
+                d={
+                  "M 0 146 L 220 146 L 220 26 L 0 26 Z M 260 16 L 480 16 L 480 136 L 260 136 Z"
+                }
+                className="fx-max-transfer-bg"
+              />
+              <path
+                d={maximizerTransferPath}
+                transform="translate(260 16)"
+                className="fx-max-transfer-line"
+              />
+            </svg>
+          </div>
+
+          <div className="fx-maximizer-controls">
+            <section className="fx-max-mode-panel">
+              <h4>Mode</h4>
+              <div className="fx-max-mode-list">
+                {MAXIMIZER_MODES.map(function (mode) {
+                  return (
+                    <button
+                      key={mode.value}
+                      type="button"
+                      className={
+                        "fx-max-mode-btn" +
+                        (maximizerParams.mode === mode.value ? " is-active" : "")
+                      }
+                      onClick={function () {
+                        setMaximizerValue("mode", mode.value);
+                      }}
+                    >
+                      {mode.label}
+                    </button>
+                  );
+                })}
+              </div>
+            </section>
+
+            <section className="fx-max-limiter-panel">
+              <h4>Limiter</h4>
+              <label className="fx-max-true-peak">
+                <input
+                  type="checkbox"
+                  checked={maximizerParams.truePeakEnabled}
+                  onChange={function (event) {
+                    setMaximizerValue("truePeakEnabled", event.target.checked);
+                  }}
+                />
+                <span>True Peak</span>
+              </label>
+
+              <div className="fx-max-limiter-meter">
+                <div className="fx-max-limiter-track">
+                  <div
+                    className="fx-max-limiter-reduction"
+                    style={{ height: reductionBarHeight + "%" }}
+                  />
+                  <div
+                    className="fx-max-threshold-line"
+                    style={{ bottom: thresholdPosition + "%" }}
+                  />
+                  <div
+                    className="fx-max-ceiling-line"
+                    style={{ bottom: ceilingPosition + "%" }}
+                  />
+                </div>
+                <div className="fx-max-limiter-sliders">
+                  <input
+                    type="range"
+                    min="-24"
+                    max="0"
+                    step="0.1"
+                    value={maximizerParams.thresholdDb}
+                    onChange={function (event) {
+                      setMaximizerValue("thresholdDb", Number(event.target.value));
+                    }}
+                    className="fx-max-vertical"
+                    title="Threshold"
+                  />
+                  <input
+                    type="range"
+                    min="-18"
+                    max="0"
+                    step="0.1"
+                    value={maximizerParams.ceilingDb}
+                    onChange={function (event) {
+                      setMaximizerValue("ceilingDb", Number(event.target.value));
+                    }}
+                    className="fx-max-vertical"
+                    title="Ceiling"
+                  />
+                </div>
+              </div>
+
+              <div className="fx-max-limiter-readouts">
+                <span>Threshold {maximizerParams.thresholdDb.toFixed(1)} dB</span>
+                <span>Ceiling {maximizerParams.ceilingDb.toFixed(1)} dB</span>
+              </div>
+            </section>
+
+            <section className="fx-max-character-panel">
+              <h4>Character</h4>
+              <input
+                type="range"
+                min="0"
+                max="1"
+                step="0.01"
+                value={maximizerParams.character}
+                onChange={function (event) {
+                  setMaximizerValue("character", Number(event.target.value));
+                }}
+              />
+              <div className="fx-max-character-scale">
+                <span>Fast</span>
+                <strong>{characterPercent}%</strong>
+                <span>Slow</span>
+              </div>
+            </section>
+          </div>
         </div>
       </section>
     );

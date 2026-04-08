@@ -3,6 +3,7 @@ import { configureStore, createAction, createSlice } from "@reduxjs/toolkit";
 const FX_SLOT_EFFECT_NONE = "none";
 const FX_SLOT_EFFECT_GRAPHIC_EQ = "graphic-eq";
 const FX_SLOT_EFFECT_REVERB = "reverb";
+const FX_SLOT_EFFECT_MAXIMIZER = "maximizer";
 const SAMPLE_STRETCH_MODES = new Set([
   "none",
   "resample",
@@ -128,6 +129,67 @@ function makeReverbParams() {
   };
 }
 
+const MAXIMIZER_MODES = ["irc-ll", "irc-i", "irc-ii", "irc-iii", "irc-iv"];
+
+function sanitizeMaximizerMode(rawMode) {
+  const requested = String(rawMode || "")
+    .trim()
+    .toLowerCase();
+  if (MAXIMIZER_MODES.includes(requested)) {
+    return requested;
+  }
+  return "irc-ii";
+}
+
+function clampMaximizerThresholdDb(rawValue) {
+  const value = Number(rawValue);
+  if (!Number.isFinite(value)) {
+    return -6;
+  }
+  return Math.max(-24, Math.min(0, value));
+}
+
+function clampMaximizerCeilingDb(rawValue) {
+  const value = Number(rawValue);
+  if (!Number.isFinite(value)) {
+    return -0.1;
+  }
+  return Math.max(-18, Math.min(0, value));
+}
+
+function clampMaximizerCharacter(rawValue) {
+  const value = Number(rawValue);
+  if (!Number.isFinite(value)) {
+    return 0.58;
+  }
+  return Math.max(0, Math.min(1, value));
+}
+
+function makeMaximizerParams() {
+  return {
+    mode: "irc-ii",
+    truePeakEnabled: true,
+    thresholdDb: -6,
+    ceilingDb: -0.1,
+    character: 0.58,
+  };
+}
+
+function getSafeMaximizerParams(raw) {
+  const base = {
+    ...makeMaximizerParams(),
+    ...(raw || {}),
+  };
+
+  return {
+    mode: sanitizeMaximizerMode(base.mode),
+    truePeakEnabled: Boolean(base.truePeakEnabled),
+    thresholdDb: clampMaximizerThresholdDb(base.thresholdDb),
+    ceilingDb: clampMaximizerCeilingDb(base.ceilingDb),
+    character: clampMaximizerCharacter(base.character),
+  };
+}
+
 function getSafeReverbParams(raw) {
   const base = {
     ...makeReverbParams(),
@@ -153,6 +215,12 @@ function getSafeReverbParams(raw) {
 
 function makeInsertSpectrum() {
   return Array.from({ length: DEFAULT_INSERT_SPECTRUM_BINS }).map(function () {
+    return 0;
+  });
+}
+
+function makeInsertWaveform() {
+  return Array.from({ length: 96 }).map(function () {
     return 0;
   });
 }
@@ -197,12 +265,16 @@ function normalizeFxSlot(slot, index) {
       ? FX_SLOT_EFFECT_GRAPHIC_EQ
       : rawEffectType === FX_SLOT_EFFECT_REVERB
         ? FX_SLOT_EFFECT_REVERB
+        : rawEffectType === FX_SLOT_EFFECT_MAXIMIZER
+          ? FX_SLOT_EFFECT_MAXIMIZER
         : FX_SLOT_EFFECT_NONE;
   const defaultName =
     effectType === FX_SLOT_EFFECT_GRAPHIC_EQ
       ? "Graphic EQ"
       : effectType === FX_SLOT_EFFECT_REVERB
         ? "Reverb"
+        : effectType === FX_SLOT_EFFECT_MAXIMIZER
+          ? "Maximizer"
         : getFxSlotDefaultName(index);
 
   return {
@@ -216,6 +288,8 @@ function normalizeFxSlot(slot, index) {
         ? getSafeGraphicEqParams(slot?.params)
         : effectType === FX_SLOT_EFFECT_REVERB
           ? getSafeReverbParams(slot?.params)
+          : effectType === FX_SLOT_EFFECT_MAXIMIZER
+            ? getSafeMaximizerParams(slot?.params)
           : null,
   };
 }
@@ -650,6 +724,8 @@ const initialState = {
         fader: 1,
         meter: 0,
         meterSpectrum: makeInsertSpectrum(),
+        meterWaveform: makeInsertWaveform(),
+        maximizerReduction: 0,
         routesTo: [],
         fxSlots: makeFxSlots(),
       },
@@ -663,6 +739,8 @@ const initialState = {
         fader: 1,
         meter: 0,
         meterSpectrum: makeInsertSpectrum(),
+        meterWaveform: makeInsertWaveform(),
+        maximizerReduction: 0,
         routesTo: ["master"],
         fxSlots: makeFxSlots(),
       },
@@ -676,6 +754,8 @@ const initialState = {
         fader: 1,
         meter: 0,
         meterSpectrum: makeInsertSpectrum(),
+        meterWaveform: makeInsertWaveform(),
+        maximizerReduction: 0,
         routesTo: ["master"],
         fxSlots: makeFxSlots(),
       },
@@ -689,6 +769,8 @@ const initialState = {
         fader: 1,
         meter: 0,
         meterSpectrum: makeInsertSpectrum(),
+        meterWaveform: makeInsertWaveform(),
+        maximizerReduction: 0,
         routesTo: ["master"],
         fxSlots: makeFxSlots(),
       },
@@ -702,6 +784,8 @@ const initialState = {
         fader: 1,
         meter: 0,
         meterSpectrum: makeInsertSpectrum(),
+        meterWaveform: makeInsertWaveform(),
+        maximizerReduction: 0,
         routesTo: ["master"],
         fxSlots: makeFxSlots(),
       },
@@ -715,6 +799,8 @@ const initialState = {
         fader: 1,
         meter: 0,
         meterSpectrum: makeInsertSpectrum(),
+        meterWaveform: makeInsertWaveform(),
+        maximizerReduction: 0,
         routesTo: ["master"],
         fxSlots: makeFxSlots(),
       },
@@ -1198,6 +1284,8 @@ function sanitizeLoadedDawState(currentState, rawLoadedState) {
         fader: 1,
         meter: 0,
         meterSpectrum: makeInsertSpectrum(),
+        meterWaveform: makeInsertWaveform(),
+        maximizerReduction: 0,
         routesTo: ["master"],
         fxSlots: makeFxSlots(),
       });
@@ -3107,6 +3195,13 @@ const dawSlice = createSlice({
         return;
       }
 
+      if (requestedType === FX_SLOT_EFFECT_MAXIMIZER) {
+        slot.effectType = FX_SLOT_EFFECT_MAXIMIZER;
+        slot.name = "Maximizer";
+        slot.params = getSafeMaximizerParams(slot.params);
+        return;
+      }
+
       slot.effectType = FX_SLOT_EFFECT_NONE;
       slot.enabled = false;
       slot.name = getFxSlotDefaultName(slotIndex);
@@ -3274,6 +3369,53 @@ const dawSlice = createSlice({
       }
     },
 
+    setFxSlotMaximizerParam(state, action) {
+      const insert = state.mixer.inserts.find(function (item) {
+        return item.id === action.payload.insertId;
+      });
+      if (!insert) {
+        return;
+      }
+
+      ensureInsertFxSlots(insert);
+
+      const slot = insert.fxSlots.find(function (item) {
+        return item.id === action.payload.slotId;
+      });
+      if (!slot || slot.effectType !== FX_SLOT_EFFECT_MAXIMIZER) {
+        return;
+      }
+
+      slot.params = getSafeMaximizerParams(slot.params);
+
+      const param = String(action.payload.param || "").trim();
+      const value = action.payload.value;
+
+      if (param === "mode") {
+        slot.params.mode = sanitizeMaximizerMode(value);
+        return;
+      }
+
+      if (param === "truePeakEnabled") {
+        slot.params.truePeakEnabled = Boolean(value);
+        return;
+      }
+
+      if (param === "thresholdDb") {
+        slot.params.thresholdDb = clampMaximizerThresholdDb(value);
+        return;
+      }
+
+      if (param === "ceilingDb") {
+        slot.params.ceilingDb = clampMaximizerCeilingDb(value);
+        return;
+      }
+
+      if (param === "character") {
+        slot.params.character = clampMaximizerCharacter(value);
+      }
+    },
+
     setInsertMeter(state, action) {
       const insert = state.mixer.inserts.find(function (item) {
         return item.id === action.payload.insertId;
@@ -3296,6 +3438,28 @@ const dawSlice = createSlice({
         }
       } else if (!Array.isArray(insert.meterSpectrum)) {
         insert.meterSpectrum = makeInsertSpectrum();
+      }
+
+      if (Array.isArray(action.payload.waveform)) {
+        const nextWaveform = action.payload.waveform
+          .slice(0, 160)
+          .map(function (value) {
+            const numeric = Number(value || 0);
+            return Math.max(-1, Math.min(1, numeric));
+          });
+
+        if (nextWaveform.length > 0) {
+          insert.meterWaveform = nextWaveform;
+        }
+      } else if (!Array.isArray(insert.meterWaveform)) {
+        insert.meterWaveform = makeInsertWaveform();
+      }
+
+      if (Object.hasOwn(action.payload, "maximizerReduction")) {
+        const numericReduction = Number(action.payload.maximizerReduction || 0);
+        insert.maximizerReduction = Math.max(0, Math.min(36, numericReduction));
+      } else if (!Number.isFinite(Number(insert.maximizerReduction))) {
+        insert.maximizerReduction = 0;
       }
     },
   },
@@ -3414,6 +3578,7 @@ export const {
   setFxSlotGraphicEqLowCut,
   setFxSlotGraphicEqPoint,
   setFxSlotReverbParam,
+  setFxSlotMaximizerParam,
   setInsertMeter,
 } = dawSlice.actions;
 

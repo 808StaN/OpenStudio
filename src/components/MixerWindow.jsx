@@ -16,10 +16,15 @@ import {
 
 const FX_EFFECT_GRAPHIC_EQ = "graphic-eq";
 const FX_EFFECT_REVERB = "reverb";
+const FX_EFFECT_MAXIMIZER = "maximizer";
 const FX_EFFECT_NONE = "none";
 
 function isSupportedEffectType(effectType) {
-  return effectType === FX_EFFECT_GRAPHIC_EQ || effectType === FX_EFFECT_REVERB;
+  return (
+    effectType === FX_EFFECT_GRAPHIC_EQ ||
+    effectType === FX_EFFECT_REVERB ||
+    effectType === FX_EFFECT_MAXIMIZER
+  );
 }
 
 function getFxSlotName(slot, fallbackIndex) {
@@ -28,6 +33,9 @@ function getFxSlotName(slot, fallbackIndex) {
   }
   if (slot?.effectType === FX_EFFECT_REVERB) {
     return "Reverb";
+  }
+  if (slot?.effectType === FX_EFFECT_MAXIMIZER) {
+    return "Maximizer";
   }
   return String(slot?.name || "").trim() || "Slot " + (fallbackIndex + 1);
 }
