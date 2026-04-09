@@ -214,6 +214,9 @@ export function TopToolbar() {
   return (
     <header className="transport-shell">
       <div className="transport-main">
+        <div className="transport-brand" title="OpenStudio">
+          <img src="/openstudio-logo.png" alt="OpenStudio logo" />
+        </div>
         <button
           className="transport-btn small"
           onClick={function () {

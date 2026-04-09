@@ -42,6 +42,26 @@
   gap: 8px;
 }
 
+.transport-brand {
+  width: 30px;
+  height: 30px;
+  border-radius: 7px;
+  overflow: hidden;
+  border: 1px solid #4b5462;
+  background: linear-gradient(180deg, #101a29 0%, #0b111b 100%);
+  box-shadow:
+    inset 0 1px 0 rgba(255, 255, 255, 0.08),
+    0 1px 2px rgba(0, 0, 0, 0.4);
+  flex: 0 0 auto;
+}
+
+.transport-brand img {
+  width: 100%;
+  height: 100%;
+  display: block;
+  object-fit: cover;
+}
+
 .theme-picker {
   height: 30px;
   width: 140px;
