@@ -1,5 +1,6 @@
 {
   "name": "openstudio-daw",
+  "main": "electron/main.mjs",
   "private": true,
   "version": "0.0.0",
   "type": "module",
@@ -10,7 +11,9 @@
     "dev": "vite",
     "build": "vite build",
     "desktop:dev": "node scripts/electron-dev.mjs",
-    "desktop:start": "npm run build && electron electron/main.mjs",
+    "electron:icon": "node scripts/generate-electron-icon.mjs",
+    "desktop:pack": "npm run build && npm run electron:icon && electron-builder --win --dir",
+    "desktop:start": "npm run desktop:pack && .\\release\\win-unpacked\\OpenStudio.exe",
     "lint": "eslint .",
     "preview": "vite preview"
   },
@@ -30,11 +33,30 @@
     "@types/react-dom": "^19.2.3",
     "@vitejs/plugin-react": "^6.0.1",
     "electron": "^41.2.0",
-    "electron": "^37.3.0",
+    "electron-builder": "^25.1.8",
     "eslint": "^9.39.4",
     "eslint-plugin-react-hooks": "^7.0.1",
     "eslint-plugin-react-refresh": "^0.5.2",
     "globals": "^17.4.0",
+    "png-to-ico": "^2.1.8",
     "vite": "^8.0.1"
+  },
+  "build": {
+    "appId": "com.openstudio.app",
+    "productName": "OpenStudio",
+    "directories": {
+      "output": "release"
+    },
+    "files": [
+      "dist/**/*",
+      "electron/**/*",
+      "package.json"
+    ],
+    "win": {
+      "target": [
+        "dir"
+      ],
+      "icon": "build/icon.ico"
+    }
   }
 }

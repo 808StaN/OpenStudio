@@ -6,7 +6,7 @@ OpenStudio lets you create beats and arrangements with a workflow inspired by mo
 
 ## Live Demo
 
-- Web: `https://<twoj-link-vercel>.vercel.app`
+- Web: `https://openstudio-daw.vercel.app`
 - Desktop: `npm run desktop:dev` (development), `npm run desktop:start` (production desktop run)
 
 ## Why This Project

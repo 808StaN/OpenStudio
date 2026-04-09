@@ -5,6 +5,9 @@ import { fileURLToPath } from "node:url";
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 const isDev = Boolean(process.env.ELECTRON_RENDERER_URL);
+const appIconPath = isDev
+  ? path.resolve(__dirname, "..", "public", "favicon.png")
+  : path.resolve(__dirname, "..", "dist", "favicon.png");
 
 function createMainWindow() {
   const window = new BrowserWindow({
@@ -16,6 +19,7 @@ function createMainWindow() {
     autoHideMenuBar: true,
     frame: false,
     titleBarStyle: "hidden",
+    icon: appIconPath,
     webPreferences: {
       nodeIntegration: false,
       contextIsolation: true,
@@ -79,6 +83,12 @@ ipcMain.handle("window:is-maximized", function (event) {
 });
 
 app.whenReady().then(function () {
+  app.setName("OpenStudio");
+
+  if (process.platform === "win32") {
+    app.setAppUserModelId("com.openstudio.app");
+  }
+
   createMainWindow();
 
   app.on("activate", function () {

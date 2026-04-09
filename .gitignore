@@ -11,6 +11,8 @@ node_modules
 dist
 dist-ssr
 *.local
+release/
+build/icon.ico
 
 # Editor directories and files
 .vscode/*
