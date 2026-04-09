@@ -1,11 +1,53 @@
 import { spawn } from "node:child_process";
+import { createRequire } from "node:module";
 
 const DEV_URL = "http://127.0.0.1:5173";
+const IS_WINDOWS = process.platform === "win32";
+const NPM_CMD = IS_WINDOWS ? "npm.cmd" : "npm";
+const require = createRequire(import.meta.url);
+const ELECTRON_BINARY = require("electron");
 
 function wait(ms) {
   return new Promise(function (resolve) {
     setTimeout(resolve, ms);
   });
+}
+
+function terminateProcessTree(childProcess) {
+  if (!childProcess?.pid) {
+    return Promise.resolve();
+  }
+
+  if (IS_WINDOWS) {
+    return new Promise(function (resolve) {
+      const killer = spawn(
+        "taskkill",
+        ["/PID", String(childProcess.pid), "/T", "/F"],
+        {
+          stdio: "ignore",
+          windowsHide: true,
+        },
+      );
+      killer.on("exit", function () {
+        resolve();
+      });
+      killer.on("error", function () {
+        resolve();
+      });
+    });
+  }
+
+  try {
+    process.kill(-childProcess.pid, "SIGTERM");
+  } catch {
+    try {
+      childProcess.kill("SIGTERM");
+    } catch {
+      // Ignore termination errors.
+    }
+  }
+
+  return Promise.resolve();
 }
 
 async function waitForVite(maxAttempts = 100) {
@@ -24,62 +66,76 @@ async function waitForVite(maxAttempts = 100) {
   throw new Error("Vite dev server did not start in time.");
 }
 
-const vite = spawn("npm", ["run", "dev", "--", "--host", "127.0.0.1", "--port", "5173"], {
-  stdio: "inherit",
-  shell: true,
-  env: process.env,
-});
+const vite = IS_WINDOWS
+  ? spawn(
+      "cmd.exe",
+      [
+        "/d",
+        "/s",
+        "/c",
+        `${NPM_CMD} run dev -- --host 127.0.0.1 --port 5173`,
+      ],
+      {
+        stdio: "inherit",
+        env: process.env,
+      },
+    )
+  : spawn(
+      NPM_CMD,
+      ["run", "dev", "--", "--host", "127.0.0.1", "--port", "5173"],
+      {
+        stdio: "inherit",
+        env: process.env,
+        detached: true,
+      },
+    );
 
 let electron = null;
 let stopping = false;
 
-function stopAll(code = 0) {
+async function stopAll(code = 0) {
   if (stopping) {
     return;
   }
   stopping = true;
 
-  if (electron && !electron.killed) {
-    electron.kill();
-  }
-  if (vite && !vite.killed) {
-    vite.kill();
-  }
-
+  await Promise.all([terminateProcessTree(electron), terminateProcessTree(vite)]);
   process.exit(code);
 }
 
 process.on("SIGINT", function () {
-  stopAll(0);
+  void stopAll(0);
 });
 process.on("SIGTERM", function () {
-  stopAll(0);
+  void stopAll(0);
 });
 
 vite.on("exit", function (code) {
   if (!stopping) {
-    stopAll(code || 0);
+    void stopAll(code || 0);
   }
 });
 
 try {
   await waitForVite();
+  const electronEnv = {
+    ...process.env,
+    ELECTRON_RENDERER_URL: DEV_URL,
+  };
+  delete electronEnv.ELECTRON_RUN_AS_NODE;
 
-  electron = spawn("npx", ["electron", "electron/main.mjs"], {
+  electron = spawn(ELECTRON_BINARY, ["electron/main.mjs"], {
     stdio: "inherit",
-    shell: true,
-    env: {
-      ...process.env,
-      ELECTRON_RENDERER_URL: DEV_URL,
-    },
+    env: electronEnv,
+    detached: !IS_WINDOWS,
   });
 
   electron.on("exit", function (code) {
     if (!stopping) {
-      stopAll(code || 0);
+      void stopAll(code || 0);
     }
   });
 } catch (error) {
   console.error(String(error?.message || error));
-  stopAll(1);
+  void stopAll(1);
 }
