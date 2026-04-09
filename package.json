@@ -13,7 +13,7 @@
     "desktop:dev": "node scripts/electron-dev.mjs",
     "electron:icon": "node scripts/generate-electron-icon.mjs",
     "desktop:pack": "npm run build && npm run electron:icon && electron-builder --win --dir",
-    "desktop:start": "npm run desktop:pack && .\\release\\win-unpacked\\OpenStudio.exe",
+    "desktop:start": "npm run desktop:pack && start \"\" \".\\release\\win-unpacked\\OpenStudio.exe\"",
     "lint": "eslint .",
     "preview": "vite preview"
   },
