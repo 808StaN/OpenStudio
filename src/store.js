@@ -1224,6 +1224,7 @@ function sanitizeLoadedDawState(currentState, rawLoadedState) {
           }
 
           const maybeChannelId = String(clip.channelId || "").trim();
+          const autoStretchSync = clip.autoStretchSync === false ? false : true;
           return {
             id: String(clip.id || "").trim() || "clip-load-" + (index + 1),
             clipType,
@@ -1236,6 +1237,7 @@ function sanitizeLoadedDawState(currentState, rawLoadedState) {
             barStart,
             barLength,
             sourceOffsetSteps: Math.max(0, Number(clip.sourceOffsetSteps || 0)),
+            autoStretchSync,
           };
         })
         .filter(Boolean)
