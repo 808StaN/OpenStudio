@@ -2,6 +2,7 @@ import { useEffect, useRef } from "react";
 import { useDispatch, useSelector } from "react-redux";
 import { useAudioScheduler } from "./audio/useAudioScheduler";
 import { BrowserPanel } from "./components/BrowserPanel";
+import { AppTitleBar } from "./components/AppTitleBar";
 import { ChannelRackWindow } from "./components/ChannelRackWindow";
 import { FxPluginWindow } from "./components/FxPluginWindow";
 import { FloatingWindow } from "./components/FloatingWindow";
@@ -290,6 +291,7 @@ function App() {
       onContextMenu={onAppContextMenu}
     >
       {activeTheme === "midnight" ? <style>{midnightThemeCss}</style> : null}
+      <AppTitleBar />
       <TopToolbar />
 
       <div className="app-body">

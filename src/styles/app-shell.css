@@ -16,6 +16,78 @@
   user-select: text;
 }
 
+.app-titlebar {
+  position: relative;
+  z-index: 11000;
+  height: 34px;
+  border-bottom: 1px solid #3f4552;
+  background: linear-gradient(180deg, #2a313d 0%, #1a212d 100%);
+  box-shadow:
+    inset 0 1px 0 rgba(255, 255, 255, 0.1),
+    0 2px 8px rgba(0, 0, 0, 0.35);
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 0 8px;
+  -webkit-app-region: drag;
+}
+
+.app-titlebar-brand {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  min-width: 0;
+}
+
+.app-titlebar-logo {
+  width: 16px;
+  height: 16px;
+  object-fit: contain;
+  border-radius: 4px;
+}
+
+.app-titlebar-name {
+  font-size: 13px;
+  color: #e4eaf6;
+  letter-spacing: 0.3px;
+  font-weight: 600;
+  white-space: nowrap;
+}
+
+.app-titlebar-caption {
+  justify-self: center;
+  font-size: 11px;
+  letter-spacing: 0.9px;
+  text-transform: uppercase;
+  color: #98a6bc;
+  pointer-events: none;
+}
+
+.app-titlebar-controls {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  -webkit-app-region: no-drag;
+}
+
+.app-titlebar-control {
+  width: 24px;
+  height: 24px;
+  border: 1px solid #5a6478;
+  border-radius: 6px;
+  background: linear-gradient(180deg, #44506a 0%, #30394d 100%);
+  color: #e8eef8;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+}
+
+.app-titlebar-control.close {
+  border-color: #8f4c55;
+  background: linear-gradient(180deg, #8b4a55 0%, #703540 100%);
+}
+
 .transport-shell {
   position: relative;
   z-index: 10000;

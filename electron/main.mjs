@@ -1,4 +1,4 @@
-import { app, BrowserWindow, shell } from "electron";
+import { app, BrowserWindow, ipcMain, shell } from "electron";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
 
@@ -14,12 +14,17 @@ function createMainWindow() {
     minHeight: 640,
     backgroundColor: "#0d1320",
     autoHideMenuBar: true,
+    frame: false,
+    titleBarStyle: "hidden",
     webPreferences: {
       nodeIntegration: false,
       contextIsolation: true,
-      sandbox: true,
+      sandbox: false,
+      preload: path.resolve(__dirname, "preload.mjs"),
     },
   });
+
+  window.maximize();
 
   window.webContents.setWindowOpenHandler(function (details) {
     void shell.openExternal(details.url);
@@ -32,7 +37,46 @@ function createMainWindow() {
     const indexPath = path.resolve(__dirname, "..", "dist", "index.html");
     void window.loadFile(indexPath);
   }
+
+  window.on("maximize", function () {
+    window.webContents.send("window:maximized", true);
+  });
+
+  window.on("unmaximize", function () {
+    window.webContents.send("window:maximized", false);
+  });
 }
+
+ipcMain.on("window:control", function (event, action) {
+  const targetWindow = BrowserWindow.fromWebContents(event.sender);
+  if (!targetWindow) {
+    return;
+  }
+
+  if (action === "minimize") {
+    targetWindow.minimize();
+    return;
+  }
+
+  if (action === "toggle-maximize") {
+    if (targetWindow.isMaximized()) {
+      targetWindow.unmaximize();
+      return;
+    }
+
+    targetWindow.maximize();
+    return;
+  }
+
+  if (action === "close") {
+    targetWindow.close();
+  }
+});
+
+ipcMain.handle("window:is-maximized", function (event) {
+  const targetWindow = BrowserWindow.fromWebContents(event.sender);
+  return Boolean(targetWindow?.isMaximized());
+});
 
 app.whenReady().then(function () {
   createMainWindow();

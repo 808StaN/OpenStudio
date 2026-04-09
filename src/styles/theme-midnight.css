@@ -62,6 +62,36 @@
   box-shadow: 0 10px 25px rgba(4, 11, 21, 0.45) !important;
 }
 
+.theme-midnight .app-titlebar {
+  border-bottom: 1px solid var(--modern-border) !important;
+  background: linear-gradient(180deg, #15253a 0%, #0f1c30 100%) !important;
+  box-shadow: 0 8px 20px rgba(2, 8, 16, 0.5) !important;
+}
+
+.theme-midnight .app-titlebar-name {
+  color: #e7f1ff !important;
+}
+
+.theme-midnight .app-titlebar-caption {
+  color: #8db4db !important;
+}
+
+.theme-midnight .app-titlebar-control {
+  border: 1px solid var(--modern-border) !important;
+  border-radius: 8px !important;
+  color: #dff2ff !important;
+  background: linear-gradient(180deg, #254061 0%, #1b314e 100%) !important;
+  box-shadow:
+    inset 0 1px 0 rgba(255, 255, 255, 0.09),
+    0 3px 10px rgba(4, 10, 20, 0.33) !important;
+}
+
+.theme-midnight .app-titlebar-control.close {
+  border-color: rgba(255, 130, 146, 0.66) !important;
+  background: linear-gradient(180deg, #ff7e92 0%, #d84a69 100%) !important;
+  color: #1c0822 !important;
+}
+
 .transport-btn,
 .theme-picker,
 .window-control-btn,
