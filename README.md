@@ -1,114 +1,95 @@
 # OpenStudio
 
-OpenStudio is a browser-based Digital Audio Workstation (DAW) focused on fast pattern workflow, piano-roll editing, playlist arrangement, mixer routing, and high-quality project export.
+Browser + desktop DAW built with React, Web Audio API and Electron.
 
-## Table of Contents
+OpenStudio lets you create beats and arrangements with a workflow inspired by modern production tools: Channel Rack, Piano Roll, Playlist, Mixer, built-in FX, sample time-stretch and project rendering.
 
-- [Overview](#overview)
-- [Core Features](#core-features)
-- [Tech Stack](#tech-stack)
-- [Project Structure](#project-structure)
-- [Getting Started](#getting-started)
-- [Available Scripts](#available-scripts)
-- [Audio Architecture](#audio-architecture)
-- [Export Pipeline](#export-pipeline)
-- [Development Workflow](#development-workflow)
-- [Testing Checklist](#testing-checklist)
-- [Known Notes](#known-notes)
-- [Roadmap Ideas](#roadmap-ideas)
+## Live Demo
 
-## Overview
+- Web: `https://<twoj-link-vercel>.vercel.app`
+- Desktop: `npm run desktop:dev` (development), `npm run desktop:start` (production desktop run)
 
-OpenStudio combines a modern web UI with a DAW-style workflow:
+## Why This Project
 
-- channel-based sequencing
-- piano roll note editing with velocity
-- playlist clip arrangement
-- mixer inserts with routing and built-in FX
-- realtime playback and offline export (WAV/MP3)
+This project was built to prove practical skills in:
 
-The product goal is to feel close to desktop music production tools while remaining lightweight and browser-native.
+- complex UI architecture (multi-window DAW interface),
+- real-time audio scheduling,
+- offline rendering/export pipeline,
+- state management for large interactive apps,
+- shipping the same product as Web + Desktop app.
 
-## Core Features
+## Key Features
 
-### Composition and Arrangement
+- Channel Rack (step sequencing)
+- Piano Roll (notes, velocity, selection tools)
+- Playlist arrangement (patterns + audio clips)
+- Mixer with inserts, routing and FX slots
+- Built-in effects (including EQ, Reverb, Limiter)
+- Sample settings (normalize, envelope, pitch, time stretching)
+- Theme system (`Default`, `Midnight`)
+- Audio export (WAV/MP3)
+- Electron desktop app mode
 
-- step sequencer for pattern creation
-- piano roll for melodic programming
-- editable pattern length and pattern management
-- playlist timeline with track-based clips
+## Screenshots / Media
 
-### Sound and Mixing
+Add these files to `docs/media/` (names below), then README will render them automatically.
 
-- per-channel sample settings:
-  - Cut itself
-  - normalize
-  - fade in/out
-  - envelope (ADSR-style controls)
-  - pitch controls
-  - time-stretch controls
-- mixer insert routing to master/other inserts
-- insert FX slots with built-in effects:
-  - Graphic EQ
-  - Reverb
-- live insert metering and spectrum data
+### 1) Main workspace
 
-### Render and Export
+![OpenStudio Workspace](docs/media/workspace-overview.png)
 
-- render full arrangement from playlist
-- WAV output:
-  - 16-bit integer
-  - 24-bit integer
-  - 32-bit float
-- MP3 output:
-  - selectable bitrate (96-320 kbps)
+### 2) Piano Roll
+
+![Piano Roll](docs/media/piano-roll.png)
+
+### 3) Mixer + FX
+
+![Mixer and FX](docs/media/mixer-fx.png)
+
+### 4) Limiter plugin
+
+![Limiter Plugin](docs/media/limiter-plugin.png)
+
+### 5) Theme comparison (`Default` vs `Midnight`)
+
+![Theme Default](docs/media/theme-default.png)
+![Theme Midnight](docs/media/theme-midnight.png)
+
+### 6) Short GIF (recommended)
+Paste 10-20s GIF showing: play -> edit note -> adjust FX -> render.
+
+```md
+![OpenStudio Demo](docs/media/openstudio-demo.gif)
+```
 
 ## Tech Stack
 
-### Frontend
-
 - React 19
-- React DOM 19
-- Redux Toolkit
-- React Redux
-- react-rnd
-- lucide-react
-
-### Audio and Export
-
+- Redux Toolkit + React Redux
 - Web Audio API
 - soundfont-player
 - @breezystack/lamejs
-
-### Tooling
-
 - Vite 8
-- ESLint 9
+- Electron
 
 ## Project Structure
 
 ```text
-OpenStudio/
-	src/
-		audio/                 # Realtime scheduler, offline renderer, stretch utility
-		components/            # Window/panel components (Playlist, Mixer, Piano Roll, etc.)
-		styles/                # Feature-oriented styles
-		utils/                 # Helper modules (import, note handling, DnD helpers)
-		data/                  # Static metadata, instrument definitions
-		App.jsx                # Top-level app shell and window orchestration
-		store.js               # Redux state and reducers
-		main.jsx               # React entrypoint
-	public/
-		packs/              # Packs assets + generated manifest
-	scripts/
-		generate-packs-manifest.mjs
-	vite.config.js
-	package.json
+src/
+  audio/         realtime scheduler + offline renderer
+  components/    windows and DAW UI components
+  styles/        app and theme styles
+  data/          plugin/instrument metadata
+  utils/         helpers (midi, dnd, patterns, sample urls)
+electron/        desktop process + preload bridge
+scripts/         tooling scripts (e.g. packs manifest)
+public/packs/    packs assets + generated manifest
 ```
 
-## Getting Started
+## Run Locally
 
-### Prerequisites
+### Requirements
 
 - Node.js 18+
 - npm 9+
@@ -119,99 +100,42 @@ OpenStudio/
 npm install
 ```
 
-### Run Development Server
+### Web app (dev)
 
 ```bash
 npm run dev
 ```
 
-The project runs a predev step that refreshes the packs manifest automatically.
+### Desktop app (dev + hot reload)
 
-### Build Production Bundle
+```bash
+npm run desktop:dev
+```
+
+### Desktop app (prod build + run)
+
+```bash
+npm run desktop:start
+```
+
+### Build web production
 
 ```bash
 npm run build
 ```
 
-The build also runs packs manifest refresh before bundling.
-
-## Available Scripts
+## Scripts
 
 - `npm run refresh:packs` - regenerate packs manifest
-- `npm run dev` - start Vite dev server
-- `npm run build` - production build
+- `npm run dev` - run web dev server
+- `npm run build` - build web production bundle
+- `npm run desktop:dev` - run Electron with Vite dev server
+- `npm run desktop:start` - build app and run Electron in production mode
 - `npm run lint` - run ESLint
-- `npm run preview` - preview production build locally
 
-## Audio Architecture
+## What To Improve Next
 
-OpenStudio uses two audio paths that are designed to stay consistent:
-
-### Realtime Playback
-
-Implemented in `src/audio/useAudioScheduler.js`.
-
-Responsibilities:
-
-- initialize and maintain audio context and mixer graph
-- schedule sample and plugin voices
-- apply per-channel sample settings
-- apply insert routing and FX
-- publish meter/spectrum data to UI
-
-### Offline Render
-
-Implemented in `src/audio/exportProjectAudio.js`.
-
-Responsibilities:
-
-- collect playlist and pattern events
-- load sample/plugin resources
-- build offline insert graph and routing
-- render to audio buffer and encode output format
-
-## Export Pipeline
-
-Render flow from the Render window:
-
-1. Collect project state (playlist, channels, inserts, BPM)
-2. Build timeline events from playlist clips and pattern data
-3. Create OfflineAudioContext for total duration + tail
-4. Schedule channel events with velocity, fades, envelopes, and routing
-5. Render full buffer
-6. Encode to WAV or MP3 and trigger download
-
-## Development Workflow
-
-Recommended workflow for safe iteration:
-
-1. Make small, focused changes
-2. Verify the exact UI/audio scenario you changed
-3. Run `npm run build` before commit
-4. Run `npm run lint` for non-audio refactors
-5. Commit in clear, topic-based commits
-
-## Testing Checklist
-
-For audio-related changes, validate both live playback and offline render:
-
-- loudness parity (live vs render)
-- note velocity behavior
-- Cut itself + Out interaction (no clicks, no unwanted overlap)
-- envelope behavior for short and long notes
-- normalize on/off behavior
-- insert routing and master fader behavior
-- Graphic EQ / Reverb behavior in both paths
-
-## Known Notes
-
-- `public/packs/manifest.json` may change automatically after dev/build due to pre-scripts.
-- Keep this in mind when reviewing git diffs.
-
-## Roadmap Ideas
-
-- automated parity tests for realtime vs offline render
-- explicit architecture decision records for audio pipeline changes
-- versioned changelog and release process
-- expanded user-facing documentation and tutorials
-
+- automated tests for realtime vs offline render parity
+- packaging Electron app (`.exe`, installer)
+- performance profiling for bigger projects
+- project templates and onboarding tutorial
