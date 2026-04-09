@@ -1172,6 +1172,7 @@ export function PlaylistWindow() {
           clipId: clip.id,
           trackId,
           barLength: nextLength,
+          manualResize: true,
         }),
       );
     };
@@ -1232,6 +1233,7 @@ export function PlaylistWindow() {
           barStart: normalizedStart,
           barLength: nextLength,
           sourceOffsetSteps: nextOffsetSteps,
+          manualResize: true,
         }),
       );
     };
@@ -1585,6 +1587,10 @@ export function PlaylistWindow() {
           }
 
           const clip = audioClips[index];
+          if (clip.autoStretchSync === false) {
+            continue;
+          }
+
           const channel = channelsById[String(clip.channelId || "").trim()];
           if (!channel) {
             continue;

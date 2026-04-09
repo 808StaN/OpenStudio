@@ -1961,6 +1961,7 @@ const dawSlice = createSlice({
         barStart,
         barLength,
         sourceOffsetSteps,
+        autoStretchSync: true,
       });
 
       const trackOrderById = state.project.playlistTracks.reduce(function (
@@ -2067,6 +2068,7 @@ const dawSlice = createSlice({
         barStart,
         barLength,
         sourceOffsetSteps: 0,
+        autoStretchSync: true,
       });
 
       const trackOrderById = state.project.playlistTracks.reduce(function (
@@ -2144,6 +2146,13 @@ const dawSlice = createSlice({
         MIN_CLIP_BAR_LENGTH,
         maxLengthByTimeline,
       );
+
+      if (
+        String(clip.clipType || "").toLowerCase() === "audio" &&
+        action.payload.manualResize === true
+      ) {
+        clip.autoStretchSync = false;
+      }
     },
 
     setPlaylistClipPlacement(state, action) {
@@ -2230,6 +2239,13 @@ const dawSlice = createSlice({
         0,
         Number(action.payload.sourceOffsetSteps || 0),
       );
+
+      if (
+        String(clip.clipType || "").toLowerCase() === "audio" &&
+        action.payload.manualResize === true
+      ) {
+        clip.autoStretchSync = false;
+      }
     },
 
     setActiveChannel(state, action) {
