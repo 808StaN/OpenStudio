@@ -42,6 +42,12 @@ const defaultSampleSettings = {
   releaseMs: 420,
   pitchCents: 0,
   monoMode: false,
+  stretchMode: "resample",
+  stretchPitchSemitones: 0,
+  stretchMultiplier: 1,
+  stretchSourceBpm: 120,
+  stretchProjectTempoBpm: 120,
+  stretchTimeMode: "none",
 };
 
 function clamp(value, min, max) {
@@ -308,6 +314,50 @@ function getSafeSampleSettings(raw) {
       Math.min(100, Math.round(Number(base.pitchCents ?? 0))),
     ),
     monoMode: Boolean(base.monoMode),
+    stretchMode: ["none", "resample", "stretch", "realtime"].includes(
+      String(base.stretchMode || "")
+        .trim()
+        .toLowerCase(),
+    )
+      ? String(base.stretchMode || "none")
+          .trim()
+          .toLowerCase()
+      : "none",
+    stretchPitchSemitones: Math.max(
+      -24,
+      Math.min(24, Number(base.stretchPitchSemitones ?? 0)),
+    ),
+    stretchMultiplier: Math.max(
+      0.25,
+      Math.min(8, Number(base.stretchMultiplier ?? 1)),
+    ),
+    stretchSourceBpm: Math.max(
+      20,
+      Math.min(300, Number(base.stretchSourceBpm ?? 120)),
+    ),
+    stretchProjectTempoBpm: Math.max(
+      20,
+      Math.min(300, Number(base.stretchProjectTempoBpm ?? 120)),
+    ),
+    stretchTimeMode: [
+      "none",
+      "set-bpm",
+      "project-tempo",
+      "beat-1",
+      "beat-2",
+      "bar-1",
+      "bar-2",
+      "bar-3",
+      "bar-4",
+    ].includes(
+      String(base.stretchTimeMode || "")
+        .trim()
+        .toLowerCase(),
+    )
+      ? String(base.stretchTimeMode || "none")
+          .trim()
+          .toLowerCase()
+      : "none",
   };
 
   const fadeTotal = next.fadeInPct + next.fadeOutPct;
@@ -318,6 +368,104 @@ function getSafeSampleSettings(raw) {
   }
 
   return next;
+}
+
+function getStretchTargetDurationSeconds(settings, sampleReadDuration, bpm) {
+  const safeDuration = Math.max(0.01, Number(sampleReadDuration || 0.01));
+  const safeBpm = Math.max(1, Number(bpm || 120));
+  const quarterSec = 60 / safeBpm;
+  const timeMode = String(settings.stretchTimeMode || "none")
+    .trim()
+    .toLowerCase();
+  const mul = Math.max(
+    0.25,
+    Math.min(8, Number(settings.stretchMultiplier || 1)),
+  );
+
+  if (timeMode === "set-bpm") {
+    const sourceBpm = Math.max(
+      20,
+      Math.min(300, Number(settings.stretchSourceBpm || 120)),
+    );
+    return Math.max(0.01, safeDuration * (sourceBpm / safeBpm) * mul);
+  }
+
+  if (timeMode === "project-tempo") {
+    const projectLockBpm = Math.max(
+      20,
+      Math.min(300, Number(settings.stretchProjectTempoBpm || safeBpm)),
+    );
+    return Math.max(0.01, safeDuration * (projectLockBpm / safeBpm) * mul);
+  }
+
+  if (timeMode === "beat-1") {
+    return quarterSec * mul;
+  }
+  if (timeMode === "beat-2") {
+    return quarterSec * 2 * mul;
+  }
+  if (timeMode === "bar-1") {
+    return quarterSec * 4 * mul;
+  }
+  if (timeMode === "bar-2") {
+    return quarterSec * 8 * mul;
+  }
+  if (timeMode === "bar-3") {
+    return quarterSec * 12 * mul;
+  }
+  if (timeMode === "bar-4") {
+    return quarterSec * 16 * mul;
+  }
+
+  return Math.max(0.01, safeDuration * mul);
+}
+
+function getTimeStretchProfile(settings, sampleReadDuration, bpm, baseRate) {
+  const stretchMode = String(settings.stretchMode || "none")
+    .trim()
+    .toLowerCase();
+  const safeBaseRate = Math.max(0.125, Math.min(8, Number(baseRate || 1)));
+  const targetDurationSec = getStretchTargetDurationSeconds(
+    settings,
+    sampleReadDuration,
+    bpm,
+  );
+
+  if (stretchMode === "none") {
+    return {
+      playbackRate: safeBaseRate,
+      targetDurationSec: Math.max(0.01, sampleReadDuration / safeBaseRate),
+      useGranularStretch: false,
+    };
+  }
+
+  const pitchShiftSemitones = Math.max(
+    -24,
+    Math.min(24, Number(settings.stretchPitchSemitones || 0)),
+  );
+  const pitchShiftRate = Math.pow(2, pitchShiftSemitones / 12);
+
+  if (stretchMode === "stretch") {
+    return {
+      playbackRate: Math.max(0.125, Math.min(8, safeBaseRate * pitchShiftRate)),
+      targetDurationSec: Math.max(0.01, targetDurationSec),
+      useGranularStretch: false,
+    };
+  }
+
+  const durationRate = Math.max(
+    0.125,
+    Math.min(8, sampleReadDuration / targetDurationSec),
+  );
+
+  return {
+    playbackRate: Math.max(
+      0.125,
+      Math.min(8, safeBaseRate * pitchShiftRate * durationRate),
+    ),
+    targetDurationSec: Math.max(0.01, sampleReadDuration / durationRate),
+    useGranularStretch: false,
+  };
 }
 
 function applyVolumeEnvelopeToGain(
@@ -916,6 +1064,8 @@ function getSongLengthInSteps(project) {
 
   let maxSongStep = 16;
   clips.forEach(function (clip) {
+    const clipType = String(clip?.clipType || "pattern").toLowerCase();
+    const isAudioClip = clipType === "audio";
     const pattern = patternsById[clip.patternId];
     const clipStartStep = Math.max(
       0,
@@ -926,7 +1076,9 @@ function getSongLengthInSteps(project) {
       Math.round(Number(clip.barLength || 1) * 16),
     );
     const patternLengthSteps = Math.max(1, Number(pattern?.lengthSteps || 16));
-    const effectiveLength = Math.min(clipLengthSteps, patternLengthSteps);
+    const effectiveLength = isAudioClip
+      ? clipLengthSteps
+      : Math.min(clipLengthSteps, patternLengthSteps);
     maxSongStep = Math.max(maxSongStep, clipStartStep + effectiveLength);
   });
 
@@ -952,6 +1104,11 @@ function collectEvents(project) {
   const events = [];
 
   clips.forEach(function (clip) {
+    const clipType = String(clip?.clipType || "pattern").toLowerCase();
+    if (clipType === "audio") {
+      return;
+    }
+
     const pattern = patternsById[clip.patternId];
     if (!pattern) {
       return;
@@ -1247,6 +1404,9 @@ export async function renderPlaylistArrangementToFile(options) {
 
   const inserts = buildInsertInputNodes(audioCtx, mixerInserts);
   const channels = Array.isArray(project?.channels) ? project.channels : [];
+  const playlistClips = Array.isArray(project?.playlistClips)
+    ? project.playlistClips
+    : [];
   const events = collectEvents(project);
 
   const uniqueSampleRefs = Array.from(
@@ -1255,6 +1415,11 @@ export async function renderPlaylistArrangementToFile(options) {
         .map(function (channel) {
           return String(channel?.sampleRef || "").trim();
         })
+        .concat(
+          playlistClips.map(function (clip) {
+            return String(clip?.samplePath || "").trim();
+          }),
+        )
         .filter(Boolean),
     ),
   );
@@ -1277,6 +1442,7 @@ export async function renderPlaylistArrangementToFile(options) {
           arrayBuffer.slice(0),
         );
         sampleBufferByRef.set(sampleRef, audioBuffer);
+        sampleBufferByRef.set(safeSampleRef, audioBuffer);
       } catch {
         return;
       }
@@ -1592,6 +1758,148 @@ export async function renderPlaylistArrangementToFile(options) {
         }
       };
     }
+  });
+
+  const soloChannels = channels.filter(function (channel) {
+    return Boolean(channel?.solo);
+  });
+  const channelsById = channels.reduce(function (acc, channel) {
+    if (channel?.id) {
+      acc[channel.id] = channel;
+    }
+    return acc;
+  }, {});
+
+  playlistClips.forEach(function (clip) {
+    const clipType = String(clip?.clipType || "pattern").toLowerCase();
+    if (clipType !== "audio") {
+      return;
+    }
+
+    const channelId = String(clip.channelId || "").trim();
+    const channel = channelId ? channelsById[channelId] : null;
+    if (channel?.muted) {
+      return;
+    }
+    if (soloChannels.length > 0 && channel && !channel.solo) {
+      return;
+    }
+
+    const sampleRef = String(clip.samplePath || channel?.sampleRef || "").trim();
+    const safeSampleRef = toSafeSampleUrl(sampleRef);
+    if (!sampleRef || !safeSampleRef) {
+      return;
+    }
+
+    const sampleBuffer =
+      sampleBufferByRef.get(safeSampleRef) || sampleBufferByRef.get(sampleRef);
+    if (!sampleBuffer) {
+      return;
+    }
+
+    const settings = getSafeSampleSettings(channel?.sampleSettings);
+    const insertNode = channel
+      ? inserts.insertMap.get(channel.mixerInsertId)
+      : null;
+    const insertInput = insertNode?.inputGain || inserts.fallbackInsertInput;
+
+    const clipStartStep = Math.max(
+      0,
+      Math.round((Number(clip.barStart || 1) - 1) * 16),
+    );
+    const clipLengthSteps = Math.max(
+      1,
+      Math.round(Number(clip.barLength || 1) * 16),
+    );
+    const clipOffsetSteps = Math.max(0, Number(clip.sourceOffsetSteps || 0));
+
+    const clipStartTime = clipStartStep * sixteenth + renderStartOffsetSec;
+    const clipOffsetSec = clipOffsetSteps * sixteenth;
+    const clipTotalDurationSec = Math.max(0.01, clipLengthSteps * sixteenth);
+    const clipRemainingDurationSec = Math.max(
+      0,
+      clipTotalDurationSec - clipOffsetSec,
+    );
+    if (clipRemainingDurationSec <= 0.0001) {
+      return;
+    }
+
+    const sampleReadDuration = Math.max(
+      0.01,
+      Number(sampleBuffer.duration || 0) * (settings.lengthPct / 100),
+    );
+    const basePlaybackRate = Math.max(
+      0.125,
+      Math.min(8, Math.pow(2, Number(settings.pitchCents || 0) / 1200)),
+    );
+    const stretchProfile = getTimeStretchProfile(
+      settings,
+      sampleReadDuration,
+      bpm,
+      basePlaybackRate,
+    );
+    const playbackRate = stretchProfile.playbackRate;
+    const naturalPlayableDuration = Math.max(
+      0.01,
+      sampleReadDuration / playbackRate,
+    );
+    const totalPlayableDuration = Math.max(
+      0.01,
+      stretchProfile.useGranularStretch
+        ? stretchProfile.targetDurationSec
+        : naturalPlayableDuration,
+    );
+    const remainingPlayableDuration = Math.max(
+      0,
+      totalPlayableDuration - clipOffsetSec,
+    );
+    const playDuration = Math.max(
+      0,
+      Math.min(clipRemainingDurationSec, remainingPlayableDuration),
+    );
+    if (playDuration <= 0.0001) {
+      return;
+    }
+
+    const maxReadableDuration = sampleReadDuration;
+    const sourceOffsetSec = clipOffsetSec * playbackRate;
+    if (sourceOffsetSec >= maxReadableDuration) {
+      return;
+    }
+
+    const sourceReadDuration = Math.max(
+      0.01,
+      Math.min(
+        maxReadableDuration - sourceOffsetSec,
+        playDuration * playbackRate,
+      ),
+    );
+    const fadeOutAt = clipStartTime + Math.max(0, playDuration - 0.012);
+    const clipGain = Math.max(
+      0.01,
+      Number(channel?.volume ?? 0.75) *
+        0.36 *
+        (settings.normalize ? getNormalizeGain(sampleBuffer) : 1),
+    );
+    const clipPan = clamp(Number(channel?.pan ?? 0), -1, 1);
+
+    const source = audioCtx.createBufferSource();
+    const gain = audioCtx.createGain();
+    const panner = audioCtx.createStereoPanner();
+
+    source.buffer = sampleBuffer;
+    source.playbackRate.setValueAtTime(playbackRate, clipStartTime);
+    gain.gain.setValueAtTime(clipGain, clipStartTime);
+    gain.gain.setValueAtTime(clipGain, fadeOutAt);
+    gain.gain.linearRampToValueAtTime(0.0001, clipStartTime + playDuration);
+    panner.pan.setValueAtTime(clipPan, clipStartTime);
+
+    source.connect(gain);
+    gain.connect(panner);
+    panner.connect(insertInput);
+
+    source.start(clipStartTime, sourceOffsetSec, sourceReadDuration);
+    source.stop(clipStartTime + playDuration + 0.005);
   });
 
   const renderedBuffer = await audioCtx.startRendering();
