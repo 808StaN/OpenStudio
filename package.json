@@ -10,10 +10,12 @@
     "prebuild": "npm run refresh:packs",
     "dev": "vite",
     "build": "vite build",
+    "build:desktop": "vite build --base ./",
     "desktop:dev": "node scripts/electron-dev.mjs",
     "electron:icon": "node scripts/generate-electron-icon.mjs",
-    "desktop:pack": "npm run build && npm run electron:icon && electron-builder --win --dir",
+    "desktop:pack": "npm run build:desktop && npm run electron:icon && electron-builder --win --dir",
     "desktop:start": "npm run desktop:pack && start \"\" \".\\release\\win-unpacked\\OpenStudio.exe\"",
+    "desktop:installer": "npm run build:desktop && npm run electron:icon && electron-builder --win nsis --config.win.signAndEditExecutable=false",
     "lint": "eslint .",
     "preview": "vite preview"
   },
@@ -49,13 +51,27 @@
     },
     "files": [
       "dist/**/*",
+      "!dist/packs/**",
       "electron/**/*",
       "package.json"
+    ],
+    "extraFiles": [
+      {
+        "from": "dist/packs",
+        "to": "Packs",
+        "filter": [
+          "**/*",
+          "!**/manifest.json",
+          "!**/__safe__",
+          "!**/__safe__/**"
+        ]
+      }
     ],
     "win": {
       "target": [
         "dir"
       ],
+      "signAndEditExecutable": false,
       "icon": "build/icon.ico"
     }
   }

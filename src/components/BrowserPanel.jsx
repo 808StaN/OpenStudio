@@ -60,6 +60,35 @@ const browserData = {
 
 export function BrowserPanel() {
   const dispatch = useDispatch();
+  const isFileProtocol =
+    typeof window !== "undefined" && window.location.protocol === "file:";
+  const makePacksPath = useCallback(
+    function (relativePath) {
+      const cleanRelative = String(relativePath || "")
+        .replace(/^\/+/, "")
+        .trim();
+      if (!cleanRelative) {
+        return isFileProtocol ? "openstudio://packs/" : "/packs/";
+      }
+
+      if (isFileProtocol) {
+        const normalized = cleanRelative.replace(/^packs\/?/i, "");
+        return (
+          "openstudio://packs/" +
+          normalized
+            .split("/")
+            .filter(Boolean)
+            .map(function (segment) {
+              return encodeURIComponent(segment);
+            })
+            .join("/")
+        );
+      }
+
+      return "/" + cleanRelative;
+    },
+    [isFileProtocol],
+  );
   const [packGroups, setPackGroups] = useState([]);
   const [manifestStatus, setManifestStatus] = useState("loading");
   const [expandedByParent, setExpandedByParent] = useState({});
@@ -99,66 +128,70 @@ export function BrowserPanel() {
     return folderPath;
   };
 
-  const buildGroupsFromRelativePaths = function (relativePaths) {
-    const folderMap = new Map();
+  const buildGroupsFromRelativePaths = useCallback(
+    function (relativePaths) {
+      const folderMap = new Map();
 
-    relativePaths.forEach(function (relativePath) {
-      const cleanRelative = String(relativePath || "")
-        .replace(/^\/+/, "")
-        .trim();
-      if (!cleanRelative) {
-        return;
-      }
+      relativePaths.forEach(function (relativePath) {
+        const cleanRelative = String(relativePath || "")
+          .replace(/^\/+/, "")
+          .trim();
+        if (!cleanRelative) {
+          return;
+        }
 
-      const segments = cleanRelative.split("/").filter(Boolean);
-      const fileName = segments[segments.length - 1];
-      if (!fileName) {
-        return;
-      }
+        const segments = cleanRelative.split("/").filter(Boolean);
+        const fileName = segments[segments.length - 1];
+        if (!fileName) {
+          return;
+        }
 
-      const folderSegments = segments.slice(0, -1);
-      if (folderSegments[0] === "__safe__") {
-        return;
-      }
+        const folderSegments = segments.slice(0, -1);
+        if (folderSegments[0] === "__safe__") {
+          return;
+        }
 
-      const folder =
-        folderSegments.length > 0 ? folderSegments.join("/") : "Root";
-      const encodedPath =
-        "/packs/" +
-        segments
-          .map(function (segment) {
-            return encodeURIComponent(segment);
-          })
-          .join("/");
+        const folder =
+          folderSegments.length > 0 ? folderSegments.join("/") : "Root";
+        const encodedPath = makePacksPath(
+          "packs/" +
+            segments
+              .map(function (segment) {
+                return encodeURIComponent(segment);
+              })
+              .join("/"),
+        );
 
-      if (!folderMap.has(folder)) {
-        folderMap.set(folder, []);
-      }
+        if (!folderMap.has(folder)) {
+          folderMap.set(folder, []);
+        }
 
-      folderMap.get(folder).push({
-        name: fileName,
-        path: encodedPath,
-      });
-    });
-
-    return Array.from(folderMap.entries())
-      .map(function (entry) {
-        const folder = entry[0];
-        const items = entry[1];
-
-        items.sort(function (a, b) {
-          return a.name.localeCompare(b.name);
+        folderMap.get(folder).push({
+          name: fileName,
+          path: encodedPath,
         });
-
-        return {
-          folder,
-          items,
-        };
-      })
-      .sort(function (a, b) {
-        return a.folder.localeCompare(b.folder);
       });
-  };
+
+      return Array.from(folderMap.entries())
+        .map(function (entry) {
+          const folder = entry[0];
+          const items = entry[1];
+
+          items.sort(function (a, b) {
+            return a.name.localeCompare(b.name);
+          });
+
+          return {
+            folder,
+            items,
+          };
+        })
+        .sort(function (a, b) {
+          return a.folder.localeCompare(b.folder);
+        });
+    },
+    [makePacksPath],
+  );
 
   const mergeGroups = function (manifestFolders, discoveredFolders) {
     const mergedMap = new Map();
@@ -211,6 +244,10 @@ export function BrowserPanel() {
   };
 
   const discoverPacksFromDirectoryIndex = useCallback(async function () {
+    if (isFileProtocol) {
+      return [];
+    }
+
     const queue = ["/packs/"];
     const visited = new Set();
     const mediaRelativePaths = new Set();
@@ -305,7 +342,7 @@ export function BrowserPanel() {
     }
 
     return buildGroupsFromRelativePaths(Array.from(mediaRelativePaths));
-  }, []);
+  }, [buildGroupsFromRelativePaths, isFileProtocol]);
 
   const buildPackTree = function (folders) {
     const root = {
@@ -341,10 +378,9 @@ export function BrowserPanel() {
           typeof item === "string"
             ? ""
             : item.path ||
-              "/packs/" +
-                normalizeFolderPath(group.folder) +
-                "/" +
-                item.name;
+              makePacksPath(
+                "packs/" + normalizeFolderPath(group.folder) + "/" + item.name,
+              );
         const itemType = isMidiFileName(sampleName) ? "midi" : "audio";
 
         currentNode.samples.push({
@@ -431,8 +467,26 @@ export function BrowserPanel() {
     async function () {
       setManifestStatus("loading");
       try {
+        const normalizePackItemPath = function (rawPath) {
+          const input = String(rawPath || "").trim();
+          if (!input) {
+            return "";
+          }
+
+          if (/^(https?:|file:|openstudio:)/i.test(input)) {
+            return input;
+          }
+
+          const noLeadingSlash = input.replace(/^\/+/, "");
+          if (noLeadingSlash.startsWith("packs/")) {
+            return makePacksPath(noLeadingSlash);
+          }
+
+          return makePacksPath("packs/" + noLeadingSlash);
+        };
+
         const response = await fetch(
-          "/packs/manifest.json?ts=" + Date.now(),
+          makePacksPath("packs/manifest.json") + "?ts=" + Date.now(),
           {
             cache: "no-store",
           },
@@ -451,7 +505,23 @@ export function BrowserPanel() {
 
         const manifest = await response.json();
         const manifestFolders = Array.isArray(manifest.folders)
-          ? manifest.folders
+          ? manifest.folders.map(function (group) {
+              return {
+                ...group,
+                items: (Array.isArray(group?.items) ? group.items : []).map(
+                  function (item) {
+                    if (typeof item === "string") {
+                      return item;
+                    }
+
+                    return {
+                      ...item,
+                      path: normalizePackItemPath(item?.path),
+                    };
+                  },
+                ),
+              };
+            })
           : [];
         const discoveredFolders = await discoverPacksFromDirectoryIndex();
         const merged = mergeGroups(manifestFolders, discoveredFolders);
@@ -463,7 +533,7 @@ export function BrowserPanel() {
         setManifestStatus("missing");
       }
     },
-    [discoverPacksFromDirectoryIndex],
+    [discoverPacksFromDirectoryIndex, makePacksPath],
   );
 
   const triggerPacksRescan = useCallback(
