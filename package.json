@@ -2,7 +2,9 @@
   "name": "openstudio-daw",
   "main": "electron/main.mjs",
   "private": true,
-  "version": "0.0.0",
+  "version": "1.0.0",
+  "description": "OpenStudio is a browser and desktop DAW built with React, Web Audio API, and Electron.",
+  "author": "808StaN",
   "type": "module",
   "scripts": {
     "refresh:packs": "node scripts/generate-packs-manifest.mjs",
