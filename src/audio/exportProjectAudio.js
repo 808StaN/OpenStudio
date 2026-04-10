@@ -1629,15 +1629,7 @@ export async function renderPlaylistArrangementToFile(options) {
       sampleReadDuration / playbackRate,
     );
     const noteGateDuration = Math.max(0.01, noteLengthSteps * sixteenth);
-    const hasAudibleEnvelopeShape =
-      Number(settings.envDelayMs || 0) > 0 ||
-      Number(settings.envAttackMs || 0) > 0 ||
-      Number(settings.envHoldMs || 0) > 0 ||
-      Number(settings.envDecayMs || 0) > 0 ||
-      Number(settings.envReleaseMs || 0) > 0 ||
-      Number(settings.envSustainPct ?? 100) < 100;
-    const shouldApplyEnvelope =
-      Boolean(settings.envEnabled) && hasAudibleEnvelopeShape;
+    const shouldApplyEnvelope = Boolean(settings.envEnabled);
     const envReleaseSec = shouldApplyEnvelope
       ? Math.max(0, Number(settings.envReleaseMs ?? 0) / 1000)
       : 0;

@@ -16,6 +16,26 @@
   user-select: text;
 }
 
+.app-shell :where(
+    button,
+    input,
+    select,
+    textarea,
+    [role="button"],
+    [tabindex]
+  ):focus,
+.app-shell :where(
+    button,
+    input,
+    select,
+    textarea,
+    [role="button"],
+    [tabindex]
+  ):focus-visible {
+  outline: none !important;
+  box-shadow: none;
+}
+
 .app-titlebar {
   position: relative;
   z-index: 11000;

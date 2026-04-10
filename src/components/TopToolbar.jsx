@@ -81,18 +81,6 @@ export function TopToolbar() {
   const activeTheme = useSelector(function (state) {
     return state.daw.ui.theme || "default";
   });
-  const suppressModeToggleSpace = function (event) {
-    if (event.code !== "Space") {
-      return;
-    }
-
-    event.preventDefault();
-    event.stopPropagation();
-
-    if (event.currentTarget instanceof HTMLElement) {
-      event.currentTarget.blur();
-    }
-  };
 
   const onSaveProjectClick = function () {
     const dawState = store.getState().daw;
@@ -308,8 +296,6 @@ export function TopToolbar() {
         <div className="mode-toggle">
           <button
             className={transport.mode === "pattern" ? "is-active" : ""}
-            onKeyDown={suppressModeToggleSpace}
-            onKeyUp={suppressModeToggleSpace}
             onClick={function () {
               dispatch(setTransportMode("pattern"));
             }}
@@ -318,8 +304,6 @@ export function TopToolbar() {
           </button>
           <button
             className={transport.mode === "song" ? "is-active" : ""}
-            onKeyDown={suppressModeToggleSpace}
-            onKeyUp={suppressModeToggleSpace}
             onClick={function () {
               dispatch(setTransportMode("song"));
             }}

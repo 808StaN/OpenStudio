@@ -35,17 +35,14 @@ function shouldIgnoreSpaceShortcut(target) {
     return true;
   }
 
-  if (target.closest("textarea, select, [contenteditable='true']")) {
+  if (
+    target.closest(
+      "input, textarea, select, button, [role='button'], [contenteditable='true']",
+    )
+  ) {
     return true;
   }
-
-  const inputElement = target.closest("input");
-  if (!inputElement) {
-    return false;
-  }
-
-  const inputType = inputElement.getAttribute("type");
-  return inputType !== "range" && inputType !== "checkbox";
+  return false;
 }
 
 function getSampleWindowTitle(activeChannel) {
@@ -230,6 +227,7 @@ function App() {
         }
 
         if (shouldIgnoreSpaceShortcut(event.target)) {
+          event.preventDefault();
           return;
         }
 
