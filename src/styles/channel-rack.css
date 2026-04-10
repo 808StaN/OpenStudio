@@ -1,5 +1,6 @@
 .rack-shell {
   --rack-playhead-ratio: 0;
+  position: relative;
   width: 100%;
   height: 100%;
   display: flex;
@@ -323,7 +324,7 @@
   padding: 8px;
   display: grid;
   grid-template-columns: 470px auto;
-  gap: 8px;
+  gap: 0;
   width: max-content;
   min-width: 100%;
 }
@@ -336,6 +337,91 @@
   display: flex;
   align-items: center;
   gap: 6px;
+}
+
+.rack-channel-context-menu {
+  position: absolute;
+  z-index: 12000;
+  min-width: 156px;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  padding: 6px;
+  border: 1px solid #5d6a84;
+  border-radius: 8px;
+  background: linear-gradient(180deg, #27364c 0%, #1b273b 100%);
+  box-shadow:
+    0 14px 24px rgba(4, 10, 20, 0.62),
+    inset 0 1px 0 rgba(255, 255, 255, 0.08);
+}
+
+.rack-channel-context-menu button {
+  width: 100%;
+  border: 0;
+  border-radius: 6px;
+  color: #d6e4fb;
+  background: transparent;
+  text-align: left;
+  font-size: 12px;
+  padding: 7px 8px;
+  cursor: pointer;
+}
+
+.rack-channel-context-menu button:hover:not(:disabled) {
+  background: linear-gradient(
+    180deg,
+    rgba(112, 152, 202, 0.28) 0%,
+    rgba(72, 108, 154, 0.24) 100%
+  );
+  color: #f2f8ff;
+}
+
+.rack-channel-context-menu button:disabled {
+  opacity: 0.45;
+  cursor: not-allowed;
+}
+
+.rack-channel-rename-panel {
+  position: absolute;
+  z-index: 12100;
+  min-width: 196px;
+  display: grid;
+  gap: 6px;
+  padding: 8px;
+  border: 1px solid #5d6a84;
+  border-radius: 8px;
+  background: linear-gradient(180deg, #27364c 0%, #1b273b 100%);
+  box-shadow:
+    0 14px 24px rgba(4, 10, 20, 0.62),
+    inset 0 1px 0 rgba(255, 255, 255, 0.08);
+}
+
+.rack-channel-rename-panel input {
+  height: 30px;
+  border: 1px solid #5d6a84;
+  border-radius: 6px;
+  color: #eaf2ff;
+  background: linear-gradient(180deg, #172234 0%, #111a28 100%);
+  padding: 0 8px;
+}
+
+.rack-channel-rename-actions {
+  display: flex;
+  gap: 6px;
+}
+
+.rack-channel-rename-actions button {
+  flex: 1;
+  height: 26px;
+  border: 1px solid #5d6a84;
+  border-radius: 6px;
+  color: #d6e4fb;
+  background: linear-gradient(180deg, #3a4963 0%, #243146 100%);
+  cursor: pointer;
+}
+
+.rack-channel-rename-actions button:hover {
+  filter: brightness(1.05);
 }
 
 .small-toggle {
@@ -456,7 +542,10 @@
 }
 
 .rack-input {
+  display: flex;
+  align-items: center;
   min-width: 0;
+  margin-left: -6px;
 }
 
 .rack-input-steps {
@@ -471,10 +560,11 @@
   width: max-content;
   display: grid;
   gap: 5px;
+  margin-top: 1px;
 }
 
 .step {
-  height: 28px;
+  height: 27px;
   border-radius: 5px;
   border: 1px solid #2f3844;
   background: linear-gradient(180deg, #2f3945 0%, #1b222b 100%);

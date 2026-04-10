@@ -2,6 +2,8 @@ import { useEffect, useMemo, useRef, useState } from "react";
 import { useDispatch, useSelector } from "react-redux";
 import {
   addChannel,
+  renameChannel,
+  duplicateChannel,
   assignPluginToChannel,
   createPattern,
   assignSampleToChannel,
@@ -16,6 +18,7 @@ import {
   pasteMidiPatternToChannel,
   setChannelSolo,
   setChannelVolume,
+  removeChannel,
   toggleStep,
 } from "../store";
 import { getPluginInstrument } from "../data/pluginInstruments";
@@ -58,6 +61,8 @@ export function ChannelRackWindow() {
   const playheadStepTimestampRef = useRef(0);
   const [isPatternMenuOpen, setIsPatternMenuOpen] = useState(false);
   const [openInsertMenuChannelId, setOpenInsertMenuChannelId] = useState(null);
+  const [channelContextMenu, setChannelContextMenu] = useState(null);
+  const [channelRenamePanel, setChannelRenamePanel] = useState(null);
 
   const activePatternId = useSelector(function (state) {
     return state.daw.project.activePatternId;
@@ -186,7 +191,12 @@ export function ChannelRackWindow() {
 
   useEffect(
     function () {
-      if (!isPatternMenuOpen && !openInsertMenuChannelId) {
+      if (
+        !isPatternMenuOpen &&
+        !openInsertMenuChannelId &&
+        !channelContextMenu &&
+        !channelRenamePanel
+      ) {
         return;
       }
 
@@ -201,9 +211,17 @@ export function ChannelRackWindow() {
         if (target.closest(".rack-modern-select")) {
           return;
         }
+        if (target.closest(".rack-channel-context-menu")) {
+          return;
+        }
+        if (target.closest(".rack-channel-rename-panel")) {
+          return;
+        }
 
         setIsPatternMenuOpen(false);
         setOpenInsertMenuChannelId(null);
+        setChannelContextMenu(null);
+        setChannelRenamePanel(null);
       };
 
       const onKeyDown = function (event) {
@@ -213,6 +231,8 @@ export function ChannelRackWindow() {
 
         setIsPatternMenuOpen(false);
         setOpenInsertMenuChannelId(null);
+        setChannelContextMenu(null);
+        setChannelRenamePanel(null);
       };
 
       window.addEventListener("mousedown", onPointerDown);
@@ -223,7 +243,7 @@ export function ChannelRackWindow() {
         window.removeEventListener("keydown", onKeyDown);
       };
     },
-    [isPatternMenuOpen, openInsertMenuChannelId],
+    [isPatternMenuOpen, openInsertMenuChannelId, channelContextMenu, channelRenamePanel],
   );
 
   const onMidiPatternDragOver = function (event) {
@@ -679,8 +699,45 @@ export function ChannelRackWindow() {
                     }
                     onClick={function (event) {
                       event.stopPropagation();
+                      setChannelContextMenu(null);
                       dispatch(setActiveChannel(channel.id));
                       dispatch(openWindow("sampleSettings"));
+                    }}
+                    onContextMenu={function (event) {
+                      event.preventDefault();
+                      event.stopPropagation();
+                      const buttonRect = event.currentTarget.getBoundingClientRect();
+                      const shellRect =
+                        rackShellRef.current?.getBoundingClientRect() || {
+                          left: 0,
+                          top: 0,
+                          width: window.innerWidth,
+                          height: window.innerHeight,
+                        };
+                      const estimatedMenuWidth = 176;
+                      const estimatedMenuHeight = 132;
+                      const preferredX = buttonRect.right - shellRect.left + 3;
+                      const preferredY = buttonRect.top - shellRect.top;
+                      const maxX = Math.max(
+                        8,
+                        shellRect.width - estimatedMenuWidth - 8,
+                      );
+                      const maxY = Math.max(
+                        8,
+                        shellRect.height - estimatedMenuHeight - 8,
+                      );
+                      const safeX = Math.max(8, Math.min(preferredX, maxX));
+                      const safeY = Math.max(8, Math.min(preferredY, maxY));
+
+                      dispatch(setActiveChannel(channel.id));
+                      setIsPatternMenuOpen(false);
+                      setOpenInsertMenuChannelId(null);
+                      setChannelRenamePanel(null);
+                      setChannelContextMenu({
+                        channelId: channel.id,
+                        x: safeX,
+                        y: safeY,
+                      });
                     }}
                   >
                     {channel.name}
@@ -873,6 +930,138 @@ export function ChannelRackWindow() {
           })}
         </div>
       </div>
+      {channelContextMenu ? (
+        <div
+          className="rack-channel-context-menu"
+          style={{
+            left: channelContextMenu.x + "px",
+            top: channelContextMenu.y + "px",
+          }}
+        >
+          <button
+            type="button"
+            onClick={function () {
+              dispatch(duplicateChannel(channelContextMenu.channelId));
+              setChannelContextMenu(null);
+            }}
+          >
+            Clone Channel
+          </button>
+          <button
+            type="button"
+            disabled={channels.length <= 1}
+            onClick={function () {
+              if (channels.length <= 1) {
+                return;
+              }
+              dispatch(removeChannel(channelContextMenu.channelId));
+              setChannelContextMenu(null);
+            }}
+          >
+            Remove Channel
+          </button>
+          <button
+            type="button"
+            onClick={function () {
+              const channel = channels.find(function (item) {
+                return item.id === channelContextMenu.channelId;
+              });
+              const currentName =
+                String(channel?.name || "").trim() || "Channel";
+              setChannelRenamePanel({
+                channelId: channelContextMenu.channelId,
+                x: channelContextMenu.x + 12,
+                y: channelContextMenu.y + 8,
+                value: currentName,
+              });
+              setChannelContextMenu(null);
+            }}
+          >
+            Rename Channel
+          </button>
+        </div>
+      ) : null}
+      {channelRenamePanel ? (
+        <div
+          className="rack-channel-rename-panel"
+          style={{
+            left: channelRenamePanel.x + "px",
+            top: channelRenamePanel.y + "px",
+          }}
+        >
+          <input
+            autoFocus
+            value={channelRenamePanel.value}
+            maxLength={14}
+            onChange={function (event) {
+              const nextValue = String(event.target.value || "");
+              setChannelRenamePanel(function (previous) {
+                if (!previous) {
+                  return previous;
+                }
+                return {
+                  ...previous,
+                  value: nextValue,
+                };
+              });
+            }}
+            onKeyDown={function (event) {
+              if (event.key === "Escape") {
+                event.preventDefault();
+                setChannelRenamePanel(null);
+                return;
+              }
+
+              if (event.key !== "Enter") {
+                return;
+              }
+
+              event.preventDefault();
+              const nextName = String(channelRenamePanel.value || "").trim();
+              if (!nextName) {
+                setChannelRenamePanel(null);
+                return;
+              }
+              dispatch(
+                renameChannel({
+                  channelId: channelRenamePanel.channelId,
+                  name: nextName,
+                }),
+              );
+              setChannelRenamePanel(null);
+            }}
+          />
+          <div className="rack-channel-rename-actions">
+            <button
+              type="button"
+              onClick={function () {
+                const nextName = String(channelRenamePanel.value || "").trim();
+                if (!nextName) {
+                  setChannelRenamePanel(null);
+                  return;
+                }
+                dispatch(
+                  renameChannel({
+                    channelId: channelRenamePanel.channelId,
+                    name: nextName,
+                  }),
+                );
+                setChannelRenamePanel(null);
+              }}
+            >
+              Save
+            </button>
+            <button
+              type="button"
+              onClick={function () {
+                setChannelRenamePanel(null);
+              }}
+            >
+              Cancel
+            </button>
+          </div>
+        </div>
+      ) : null}
     </section>
   );
 }

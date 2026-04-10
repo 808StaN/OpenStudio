@@ -2298,6 +2298,138 @@ const dawSlice = createSlice({
       state.project.activeChannelId = newChannelId;
     },
 
+    renameChannel(state, action) {
+      const channelId = String(action.payload?.channelId || "").trim();
+      if (!channelId) {
+        return;
+      }
+
+      const channel = state.project.channels.find(function (item) {
+        return item.id === channelId;
+      });
+      if (!channel) {
+        return;
+      }
+
+      const nextName = String(action.payload?.name || "").trim();
+      if (!nextName) {
+        return;
+      }
+
+      channel.name = nextName.slice(0, 14);
+    },
+
+    duplicateChannel(state, action) {
+      const sourceChannelId = String(action.payload || "").trim();
+      if (!sourceChannelId) {
+        return;
+      }
+
+      const sourceIndex = state.project.channels.findIndex(function (channel) {
+        return channel.id === sourceChannelId;
+      });
+      if (sourceIndex < 0) {
+        return;
+      }
+
+      const sourceChannel = state.project.channels[sourceIndex];
+      const newChannelId = makeChannelId();
+      const baseName = String(sourceChannel.name || "Channel").trim() || "Channel";
+      const duplicateName = (baseName + " Copy").slice(0, 14);
+
+      const duplicatedChannel = {
+        ...sourceChannel,
+        id: newChannelId,
+        name: duplicateName,
+        sampleSettings:
+          cloneSerializable(sourceChannel.sampleSettings) || makeSampleSettings(),
+      };
+
+      state.project.channels.splice(sourceIndex + 1, 0, duplicatedChannel);
+
+      state.project.patterns.forEach(function (pattern) {
+        if (!pattern.stepGrid) {
+          pattern.stepGrid = {};
+        }
+        if (!pattern.pianoPreview) {
+          pattern.pianoPreview = {};
+        }
+
+        const patternLength = Math.max(1, pattern.lengthSteps || 16);
+        const sourceRow = Array.isArray(pattern.stepGrid[sourceChannelId])
+          ? pattern.stepGrid[sourceChannelId]
+          : [];
+        const nextRow = sourceRow
+          .slice(0, patternLength)
+          .map(Boolean)
+          .concat(Array(Math.max(0, patternLength - sourceRow.length)).fill(false))
+          .slice(0, patternLength);
+        pattern.stepGrid[newChannelId] = nextRow;
+
+        const sourceNotes = Array.isArray(pattern.pianoPreview[sourceChannelId])
+          ? pattern.pianoPreview[sourceChannelId]
+          : [];
+        pattern.pianoPreview[newChannelId] = sourceNotes.map(function (note) {
+          const clonedNote = cloneSerializable(note) || {};
+          return {
+            ...clonedNote,
+            id: makeMidiPatternNoteId("n-" + newChannelId),
+          };
+        });
+      });
+
+      state.project.activeChannelId = newChannelId;
+    },
+
+    removeChannel(state, action) {
+      const channelId = String(action.payload || "").trim();
+      if (!channelId) {
+        return;
+      }
+
+      if (state.project.channels.length <= 1) {
+        return;
+      }
+
+      const removeIndex = state.project.channels.findIndex(function (channel) {
+        return channel.id === channelId;
+      });
+      if (removeIndex < 0) {
+        return;
+      }
+
+      state.project.channels.splice(removeIndex, 1);
+
+      state.project.patterns.forEach(function (pattern) {
+        if (pattern.stepGrid && Object.hasOwn(pattern.stepGrid, channelId)) {
+          delete pattern.stepGrid[channelId];
+        }
+        if (
+          pattern.pianoPreview &&
+          Object.hasOwn(pattern.pianoPreview, channelId)
+        ) {
+          delete pattern.pianoPreview[channelId];
+        }
+      });
+
+      state.project.playlistClips = state.project.playlistClips.filter(function (
+        clip,
+      ) {
+        return String(clip.channelId || "").trim() !== channelId;
+      });
+
+      if (state.project.activeChannelId === channelId) {
+        const fallbackIndex = Math.max(
+          0,
+          Math.min(removeIndex, state.project.channels.length - 1),
+        );
+        state.project.activeChannelId =
+          state.project.channels[fallbackIndex]?.id ||
+          state.project.channels[0]?.id ||
+          "";
+      }
+    },
+
     togglePianoNote(state, action) {
       const pattern = state.project.patterns.find(function (item) {
         return item.id === action.payload.patternId;
@@ -3705,6 +3837,9 @@ export const {
   setPlaylistClipTrimStart,
   setActiveChannel,
   addChannel,
+  renameChannel,
+  duplicateChannel,
+  removeChannel,
   togglePianoNote,
   setPianoNoteLength,
   setPianoNoteVelocity,
