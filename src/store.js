@@ -3118,6 +3118,12 @@ const dawSlice = createSlice({
       if (!channel) {
         return;
       }
+      const previousSampleRef = String(channel.sampleRef || "").trim();
+      const nextSampleRef = String(action.payload.sampleRef || "").trim();
+      if (!nextSampleRef) {
+        return;
+      }
+
       channel.sampleRef = action.payload.sampleRef;
       channel.pluginRef = "";
       const sourceName = action.payload.sampleName || action.payload.sampleRef;
@@ -3126,6 +3132,35 @@ const dawSlice = createSlice({
         .pop()
         .replace(/\.[^.]+$/, "")
         .slice(0, 14);
+
+      const nextAudioName = String(sourceName || "")
+        .split("/")
+        .pop()
+        .trim();
+
+      state.project.playlistClips.forEach(function (clip) {
+        if (String(clip?.clipType || "").toLowerCase() !== "audio") {
+          return;
+        }
+        if (String(clip?.channelId || "").trim() !== channel.id) {
+          return;
+        }
+
+        const clipSamplePath = String(clip.samplePath || "").trim();
+        const shouldSyncClipSample =
+          !clipSamplePath ||
+          clipSamplePath === previousSampleRef ||
+          clipSamplePath === channel.sampleRef;
+
+        if (!shouldSyncClipSample) {
+          return;
+        }
+
+        clip.samplePath = nextSampleRef;
+        if (nextAudioName) {
+          clip.audioName = nextAudioName;
+        }
+      });
     },
 
     assignPluginToChannel(state, action) {
