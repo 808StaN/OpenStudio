@@ -12,7 +12,8 @@ dist
 dist-ssr
 *.local
 release/
-build/icon.ico
+build/installerSidebar.bmp
+build/uninstallerSidebar.bmp
 
 # Editor directories and files
 .vscode/*

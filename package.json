@@ -12,10 +12,10 @@
     "build": "vite build",
     "build:desktop": "vite build --base ./",
     "desktop:dev": "node scripts/electron-dev.mjs",
-    "electron:icon": "node scripts/generate-electron-icon.mjs",
-    "desktop:pack": "npm run build:desktop && npm run electron:icon && electron-builder --win --dir",
+    "installer:assets": "node scripts/generate-installer-assets.mjs",
+    "desktop:pack": "npm run build:desktop && electron-builder --win --dir --config.win.signAndEditExecutable=false && node scripts/patch-windows-exe-icon.mjs",
     "desktop:start": "npm run desktop:pack && start \"\" \".\\release\\win-unpacked\\OpenStudio.exe\"",
-    "desktop:installer": "npm run build:desktop && npm run electron:icon && electron-builder --win nsis --config.win.signAndEditExecutable=false",
+    "desktop:installer": "npm run desktop:pack && npm run installer:assets && electron-builder --win nsis --prepackaged release/win-unpacked --config.win.signAndEditExecutable=false",
     "lint": "eslint .",
     "preview": "vite preview"
   },
@@ -40,7 +40,7 @@
     "eslint-plugin-react-hooks": "^7.0.1",
     "eslint-plugin-react-refresh": "^0.5.2",
     "globals": "^17.4.0",
-    "png-to-ico": "^2.1.8",
+    "rcedit": "^4.0.1",
     "vite": "^8.0.1"
   },
   "build": {
@@ -71,8 +71,20 @@
       "target": [
         "dir"
       ],
-      "signAndEditExecutable": false,
-      "icon": "build/icon.ico"
+      "icon": "public/favicon.ico"
+    },
+    "nsis": {
+      "oneClick": false,
+      "allowToChangeInstallationDirectory": true,
+      "runAfterFinish": true,
+      "installerLanguages": "en_US",
+      "multiLanguageInstaller": false,
+      "language": "1033",
+      "installerIcon": "public/favicon.ico",
+      "uninstallerIcon": "public/favicon.ico",
+      "installerHeaderIcon": "public/favicon.ico",
+      "installerSidebar": "build/installerSidebar.bmp",
+      "uninstallerSidebar": "build/uninstallerSidebar.bmp"
     }
   }
 }

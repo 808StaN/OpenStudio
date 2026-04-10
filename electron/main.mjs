@@ -18,9 +18,18 @@ protocol.registerSchemesAsPrivileged([
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 const isDev = Boolean(process.env.ELECTRON_RENDERER_URL);
+
+app.setName("OpenStudio");
+if (process.platform === "win32") {
+  app.setAppUserModelId("com.openstudio.app");
+  app.commandLine.appendSwitch("application-name", "OpenStudio");
+}
+
+const iconFileName =
+  process.platform === "win32" ? "favicon.ico" : "favicon.png";
 const appIconPath = isDev
-  ? path.resolve(__dirname, "..", "public", "favicon.png")
-  : path.resolve(__dirname, "..", "dist", "favicon.png");
+  ? path.resolve(__dirname, "..", "public", iconFileName)
+  : path.resolve(__dirname, "..", "dist", iconFileName);
 
 const PACK_MEDIA_EXTENSIONS = new Set([
   ".wav",
@@ -269,12 +278,6 @@ ipcMain.handle("window:is-maximized", function (event) {
 });
 
 app.whenReady().then(function () {
-  app.setName("OpenStudio");
-
-  if (process.platform === "win32") {
-    app.setAppUserModelId("com.openstudio.app");
-  }
-
   registerPacksProtocol();
   createMainWindow();
 
