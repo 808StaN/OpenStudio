@@ -81,11 +81,30 @@
   align-items: center;
   justify-content: center;
   cursor: pointer;
+  transition:
+    transform 120ms ease,
+    filter 120ms ease,
+    border-color 120ms ease,
+    box-shadow 120ms ease;
 }
 
 .app-titlebar-control.close {
   border-color: #8f4c55;
   background: linear-gradient(180deg, #8b4a55 0%, #703540 100%);
+}
+
+.app-titlebar-control:hover {
+  transform: translateY(-1px);
+  filter: brightness(1.06);
+}
+
+.app-titlebar-control:active {
+  transform: translateY(0);
+}
+
+.app-titlebar-control.close:hover {
+  filter: brightness(1.08);
+  border-color: #a45f69;
 }
 
 .transport-shell {

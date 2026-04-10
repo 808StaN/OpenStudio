@@ -84,12 +84,31 @@
   box-shadow:
     inset 0 1px 0 rgba(255, 255, 255, 0.09),
     0 3px 10px rgba(4, 10, 20, 0.33) !important;
+  transition:
+    transform 120ms ease,
+    filter 120ms ease,
+    border-color 120ms ease,
+    box-shadow 120ms ease !important;
 }
 
 .theme-midnight .app-titlebar-control.close {
-  border-color: rgba(255, 130, 146, 0.66) !important;
-  background: linear-gradient(180deg, #ff7e92 0%, #d84a69 100%) !important;
-  color: #1c0822 !important;
+  border: 1px solid var(--modern-border) !important;
+  border-radius: 8px !important;
+  color: #dff2ff !important;
+  background: linear-gradient(180deg, #254061 0%, #1b314e 100%) !important;
+  box-shadow:
+    inset 0 1px 0 rgba(255, 255, 255, 0.09),
+    0 3px 10px rgba(4, 10, 20, 0.33) !important;
+}
+
+.theme-midnight .app-titlebar-control:hover {
+  transform: translateY(-1px);
+  border-color: var(--modern-border-strong) !important;
+  filter: brightness(1.04);
+}
+
+.theme-midnight .app-titlebar-control:active {
+  transform: translateY(0);
 }
 
 .transport-btn,
