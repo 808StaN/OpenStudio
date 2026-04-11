@@ -32,12 +32,13 @@ It combines a Channel Rack, Piano Roll, Playlist, Mixer, built-in FX, and projec
 
 ## Why OpenStudio
 
-OpenStudio was built to validate production-level frontend/audio engineering skills in a real creative tool:
+OpenStudio was built as a practical, accessible beatmaking environment focused on speed, clarity, and a smooth production workflow:
 
 - multi-window DAW interface with large interactive state,
 - real-time Web Audio scheduling and transport logic,
-- offline export/render pipeline (WAV / MP3),
-- one shared product delivered for both web and desktop.
+- quick idea-to-arrangement workflow with Channel Rack, Piano Roll, Playlist, and Mixer,
+- reliable offline export/render pipeline (WAV / MP3),
+- one consistent experience across both web and desktop.
 
 ## Highlights
 
@@ -64,7 +65,11 @@ OpenStudio includes **20 built-in instrument plugins**. Core examples:
 - and more.
 
 Instrument definitions are mapped in [`src/data/pluginInstruments.js`](src/data/pluginInstruments.js).
-Playback is powered by [`soundfont-player`](https://github.com/danigb/soundfont-player) with General MIDI soundfont-style instrument mappings.
+
+Source of these instruments:
+- Loaded via [`soundfont-player`](https://github.com/danigb/soundfont-player)
+- Uses General MIDI soundfont instrument names (e.g. `acoustic_grand_piano`, `violin`, `flute`)
+- By default, `soundfont-player` uses the **MusyngKite** soundfont set and Benjamin Gleitzman's pre-rendered MIDI.js soundfonts
 
 ## Screenshots
 
@@ -99,13 +104,6 @@ Use these example `.os` files to quickly test loading, instruments, and arrangem
 
 ## Installation
 
-### Requirements
-
-```bash
-node -v   # 18+
-npm -v    # 9+
-```
-
 ### 1) Clone repository
 
 ```bash
@@ -119,19 +117,19 @@ cd OpenStudio
 npm install
 ```
 
-### 3) Run web version (development)
+### 3) Run web (development)
 
 ```bash
 npm run dev
 ```
 
-### 4) Run desktop version (development + hot reload)
+### 4) Run desktop (development + hot reload)
 
 ```bash
 npm run desktop:dev
 ```
 
-### 5) Run desktop production mode locally
+### 5) Run desktop (production mode)
 
 ```bash
 npm run desktop:start
