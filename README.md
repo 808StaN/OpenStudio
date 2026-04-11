@@ -5,74 +5,66 @@
 ![Electron](https://img.shields.io/badge/Electron-Desktop-47848F?logo=electron&logoColor=white)
 ![Vite 8](https://img.shields.io/badge/Vite-8-646CFF?logo=vite&logoColor=white)
 
-Browser + desktop DAW built with React, Web Audio API and Electron.
-
-OpenStudio lets you create beats and arrangements with a workflow inspired by modern production tools: Channel Rack, Piano Roll, Playlist, Mixer, built-in FX, sample time-stretch and project rendering.
+OpenStudio is a browser + desktop DAW focused on fast beat creation, arrangement, and final bounce in one workflow.
+It combines a Channel Rack, Piano Roll, Playlist, Mixer, built-in FX, and project save/load into a single React + Web Audio + Electron app.
 
 ![OpenStudio Preview](docs/media/openstudio-preview.gif)
 
 ## Table of Contents
 
-- [Live Demo](#live-demo)
+- [Links](#links)
+- [Why OpenStudio](#why-openstudio)
 - [Highlights](#highlights)
-- [Built-in Instruments (20)](#built-in-instruments-20)
+- [Built-in Instruments](#built-in-instruments)
 - [Screenshots](#screenshots)
 - [Sample Projects (Download)](#sample-projects-download)
 - [Installation](#installation)
+- [Build and Packaging](#build-and-packaging)
 - [Scripts](#scripts)
 - [Project Structure](#project-structure)
 - [Tech Stack](#tech-stack)
 - [License](#license)
 
-## Live Demo
+## Links
 
-- Web: `https://openstudio-daw.vercel.app`
-- Desktop dev: `npm run desktop:dev`
-- Desktop production run: `npm run desktop:start`
+- Web App: `https://openstudio-daw.vercel.app`
+- Desktop Releases: `https://github.com/808StaN/OpenStudio/releases`
+
+## Why OpenStudio
+
+OpenStudio was built to validate production-level frontend/audio engineering skills in a real creative tool:
+
+- multi-window DAW interface with large interactive state,
+- real-time Web Audio scheduling and transport logic,
+- offline export/render pipeline (WAV / MP3),
+- one shared product delivered for both web and desktop.
 
 ## Highlights
 
-- Channel Rack (step sequencing + melody mode)
-- Piano Roll (notes, velocity, drag/drop MIDI)
-- Playlist arrangement (patterns + audio clips)
-- Mixer with inserts, routing and FX slots
+- Channel Rack with sequencer + melody mode
+- Piano Roll with note editing, velocity lane, MIDI import/export
+- Playlist arrangement with patterns and audio clips
+- Mixer inserts with FX slots and routing
 - Built-in effects: Graphic EQ, Reverb, Limiter/Maximizer
-- Sample settings: normalize, envelope, pitch, time-stretch
-- Theme system: `Default`, `Midnight`
-- Audio export: WAV / MP3
-- Web + Electron desktop app in one codebase
+- Sample controls: normalize, envelope, pitch, time-stretch
+- Theme system: `Default` and `Midnight`
+- Project save/load (`.os`) and export-ready workflow
 
-## Built-in Instruments (20)
+## Built-in Instruments
 
-OpenStudio includes 20 instrument plugins:
+OpenStudio includes **20 built-in instrument plugins**. Core examples:
 
 - Piano
-- Bright Piano
 - E-Piano
-- E-Piano 2
 - Organ
-- Rock Organ
 - Nylon Guitar
-- Steel Guitar
-- Clean Guitar
-- Electric Bass
-- Synth Bass 1
-- Synth Bass 2
 - Strings
-- Violin
-- Cello
 - Brass Section
-- Trumpet
-- Alto Sax
-- Lead Saw
 - Flute
+- and more.
 
-Instrument mapping is defined in [`src/data/pluginInstruments.js`](src/data/pluginInstruments.js).
-
-Source of these instruments:
-- Loaded via [`soundfont-player`](https://github.com/danigb/soundfont-player)
-- Uses General MIDI soundfont instrument names (e.g. `acoustic_grand_piano`, `violin`, `flute`)
-- By default, `soundfont-player` uses the **MusyngKite** soundfont set and Benjamin Gleitzman's pre-rendered MIDI.js soundfonts
+Instrument definitions are mapped in [`src/data/pluginInstruments.js`](src/data/pluginInstruments.js).
+Playback is powered by [`soundfont-player`](https://github.com/danigb/soundfont-player) with General MIDI soundfont-style instrument mappings.
 
 ## Screenshots
 
@@ -99,6 +91,8 @@ Source of these instruments:
 
 ## Sample Projects (Download)
 
+Use these example `.os` files to quickly test loading, instruments, and arrangement behavior:
+
 - [example1.os](docs/projects/example1.os)
 - [example2.os](docs/projects/example2.os)
 - [example_instrument.os](docs/projects/example_instrument.os)
@@ -112,42 +106,61 @@ node -v   # 18+
 npm -v    # 9+
 ```
 
-### Clone repository
+### 1) Clone repository
 
 ```bash
 git clone https://github.com/808StaN/OpenStudio.git
 cd OpenStudio
 ```
 
-### Install dependencies
+### 2) Install dependencies
 
 ```bash
 npm install
 ```
 
-### Run web version (development)
+### 3) Run web version (development)
 
 ```bash
 npm run dev
 ```
 
-### Run desktop version (development + hot reload)
+### 4) Run desktop version (development + hot reload)
 
 ```bash
 npm run desktop:dev
 ```
 
-### Run desktop version (production mode)
+### 5) Run desktop production mode locally
 
 ```bash
 npm run desktop:start
 ```
+
+## Build and Packaging
 
 ### Build web production bundle
 
 ```bash
 npm run build
 ```
+
+### Build Windows unpacked app
+
+```bash
+npm run desktop:pack
+```
+
+Output:
+- `release/win-unpacked/OpenStudio.exe`
+
+### Build Windows installer (NSIS)
+
+```bash
+npm run desktop:installer
+```
+
+Installer artifacts are generated in `release/`.
 
 ## Scripts
 
