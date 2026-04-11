@@ -4,10 +4,18 @@ Browser + desktop DAW built with React, Web Audio API and Electron.
 
 OpenStudio lets you create beats and arrangements with a workflow inspired by modern production tools: Channel Rack, Piano Roll, Playlist, Mixer, built-in FX, sample time-stretch and project rendering.
 
+![OpenStudio Preview](docs/media/openstudio-preview.gif)
+
 ## Live Demo
 
 - Web: `https://openstudio-daw.vercel.app`
 - Desktop: `npm run desktop:dev` (development), `npm run desktop:start` (production desktop run)
+
+## Sample Projects (Download)
+
+- [example1.os](docs/projects/example1.os)
+- [example2.os](docs/projects/example2.os)
+- [example_instrument.os](docs/projects/example_instrument.os)
 
 ## Why This Project
 
@@ -56,13 +64,6 @@ Add these files to `docs/media/` (names below), then README will render them aut
 ![Theme Default](docs/media/theme-default.png)
 ![Theme Midnight](docs/media/theme-midnight.png)
 
-### 6) Short GIF (recommended)
-Paste 10-20s GIF showing: play -> edit note -> adjust FX -> render.
-
-```md
-![OpenStudio Demo](docs/media/openstudio-demo.gif)
-```
-
 ## Tech Stack
 
 - React 19
@@ -91,8 +92,10 @@ public/packs/    packs assets + generated manifest
 
 ### Requirements
 
-- Node.js 18+
-- npm 9+
+```bash
+node -v   # 18+
+npm -v    # 9+
+```
 
 ### Install
 
@@ -100,25 +103,25 @@ public/packs/    packs assets + generated manifest
 npm install
 ```
 
-### Web app (dev)
+### Run web (dev)
 
 ```bash
 npm run dev
 ```
 
-### Desktop app (dev + hot reload)
+### Run desktop (dev + hot reload)
 
 ```bash
 npm run desktop:dev
 ```
 
-### Desktop app (prod build + run)
+### Run desktop (production mode)
 
 ```bash
 npm run desktop:start
 ```
 
-### Build web production
+### Build web (production bundle)
 
 ```bash
 npm run build
@@ -132,10 +135,3 @@ npm run build
 - `npm run desktop:dev` - run Electron with Vite dev server
 - `npm run desktop:start` - build app and run Electron in production mode
 - `npm run lint` - run ESLint
-
-## What To Improve Next
-
-- automated tests for realtime vs offline render parity
-- packaging Electron app (`.exe`, installer)
-- performance profiling for bigger projects
-- project templates and onboarding tutorial
