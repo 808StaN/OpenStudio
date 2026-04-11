@@ -88,7 +88,7 @@ scripts/         tooling scripts (e.g. packs manifest)
 public/packs/    packs assets + generated manifest
 ```
 
-## Run Locally
+## Installation
 
 ### Requirements
 
@@ -97,31 +97,38 @@ node -v   # 18+
 npm -v    # 9+
 ```
 
-### Install
+### Clone repository
+
+```bash
+git clone https://github.com/808StaN/OpenStudio.git
+cd OpenStudio
+```
+
+### Install dependencies
 
 ```bash
 npm install
 ```
 
-### Run web (dev)
+### Run web version (development)
 
 ```bash
 npm run dev
 ```
 
-### Run desktop (dev + hot reload)
+### Run desktop version (development + hot reload)
 
 ```bash
 npm run desktop:dev
 ```
 
-### Run desktop (production mode)
+### Run desktop version (production mode)
 
 ```bash
 npm run desktop:start
 ```
 
-### Build web (production bundle)
+### Build web production bundle
 
 ```bash
 npm run build
@@ -135,3 +142,7 @@ npm run build
 - `npm run desktop:dev` - run Electron with Vite dev server
 - `npm run desktop:start` - build app and run Electron in production mode
 - `npm run lint` - run ESLint
+
+## License
+
+Licensed under `GPL-3.0-only`. See [LICENSE](LICENSE).
