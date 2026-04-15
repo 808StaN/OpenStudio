@@ -789,19 +789,16 @@ export function PianoRollWindow() {
           0,
           Math.min(0.4, Number(settings.attackMs ?? 8) / 1000),
         );
+        // Keep preview release short to avoid overlap "echo" on quick clicks.
         const releaseSec = Math.max(
           0.01,
-          Math.min(1, Number(settings.releaseMs ?? 420) / 1000),
+          Math.min(0.08, Number(settings.releaseMs ?? 420) / 1000),
         );
 
         source.buffer = sampleBuffer;
         source.playbackRate.setValueAtTime(playbackRate, context.currentTime);
-        source.loop = true;
-        source.loopStart = 0;
-        source.loopEnd = Math.max(
-          0.01,
-          Math.min(readDuration, sampleBuffer.duration),
-        );
+        // Piano Roll preview should be one-shot while pressed, not looped.
+        source.loop = false;
 
         if (attackSec > 0.001) {
           gain.gain.setValueAtTime(0.0001, context.currentTime);
