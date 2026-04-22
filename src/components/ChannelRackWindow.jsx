@@ -36,6 +36,8 @@ import {
   ChannelContextMenuPanel,
   ChannelRenamePanel,
 } from "./channel-rack/ChannelRackContextPanels";
+import { useChannelRackMidiDrop } from "./channel-rack/useChannelRackMidiDrop";
+import { useChannelRackOverlayDismiss } from "./channel-rack/useChannelRackOverlayDismiss";
 import {
   DEFAULT_PATTERN_COLOR,
   STEPS_PER_BEAT,
@@ -165,174 +167,28 @@ export function ChannelRackWindow() {
     [mixerInserts],
   );
 
-  useEffect(
-    function () {
-      if (
-        !isPatternMenuOpen &&
-        !openInsertMenuChannelId &&
-        !channelContextMenu &&
-        !channelRenamePanel
-      ) {
-        return;
-      }
+  useChannelRackOverlayDismiss({
+    isPatternMenuOpen,
+    openInsertMenuChannelId,
+    channelContextMenu,
+    channelRenamePanel,
+    setIsPatternMenuOpen,
+    setOpenInsertMenuChannelId,
+    setChannelContextMenu,
+    setChannelRenamePanel,
+  });
 
-      const onPointerDown = function (event) {
-        const target = event.target;
-        if (!(target instanceof HTMLElement)) {
-          setIsPatternMenuOpen(false);
-          setOpenInsertMenuChannelId(null);
-          return;
-        }
-
-        if (target.closest(".rack-modern-select")) {
-          return;
-        }
-        if (target.closest(".rack-channel-context-menu")) {
-          return;
-        }
-        if (target.closest(".rack-channel-rename-panel")) {
-          return;
-        }
-
-        setIsPatternMenuOpen(false);
-        setOpenInsertMenuChannelId(null);
-        setChannelContextMenu(null);
-        setChannelRenamePanel(null);
-      };
-
-      const onKeyDown = function (event) {
-        if (event.key !== "Escape") {
-          return;
-        }
-
-        setIsPatternMenuOpen(false);
-        setOpenInsertMenuChannelId(null);
-        setChannelContextMenu(null);
-        setChannelRenamePanel(null);
-      };
-
-      window.addEventListener("mousedown", onPointerDown);
-      window.addEventListener("keydown", onKeyDown);
-
-      return function () {
-        window.removeEventListener("mousedown", onPointerDown);
-        window.removeEventListener("keydown", onKeyDown);
-      };
-    },
-    [isPatternMenuOpen, openInsertMenuChannelId, channelContextMenu, channelRenamePanel],
-  );
-
-  const onMidiPatternDragOver = function (event) {
-    const hasMidiPatternType = dataTransferHasMidiPatternPayload(
-      event.dataTransfer,
-    );
-    const hasMidiFileType = dataTransferHasMidiFilePayload(event.dataTransfer);
-    const payload = readMidiPatternFromDataTransfer(event.dataTransfer);
-    const midiFilePayload = readMidiFilePayloadFromDataTransfer(
-      event.dataTransfer,
-    );
-    const droppedFile = Array.from(event.dataTransfer?.files || []).find(
-      function (file) {
-        return isMidiFileName(file?.name);
-      },
-    );
-
-    if (
-      hasMidiPatternType ||
-      hasMidiFileType ||
-      payload ||
-      midiFilePayload ||
-      droppedFile
-    ) {
-      event.preventDefault();
-      event.dataTransfer.dropEffect = "copy";
-    }
-  };
-
-  const onMidiPatternDrop = async function (event, channel) {
-    if (!channel) {
-      return;
-    }
-
-    const payload = readMidiPatternFromDataTransfer(event.dataTransfer);
-    const midiFilePayload = readMidiFilePayloadFromDataTransfer(
-      event.dataTransfer,
-    );
-    const droppedFile = Array.from(event.dataTransfer?.files || []).find(
-      function (file) {
-        return isMidiFileName(file?.name);
-      },
-    );
-
-    if (!payload && !midiFilePayload && !droppedFile) {
-      return;
-    }
-
-    event.preventDefault();
-    event.stopPropagation();
-
-    if (payload) {
-      dispatch(
-        pasteMidiPatternToChannel({
-          patternId: activePatternId,
-          channelId: channel.id,
-          notes: payload.notes,
-        }),
-      );
-      return;
-    }
-
-    if (midiFilePayload?.midiPath) {
-      try {
-        const response = await fetch(midiFilePayload.midiPath, {
-          cache: "no-store",
-        });
-        if (!response.ok) {
-          return;
-        }
-
-        const bytes = await response.arrayBuffer();
-        const notes = parseMidiArrayBufferToStepNotes(bytes);
-        if (notes.length === 0) {
-          return;
-        }
-
-        dispatch(
-          pasteMidiPatternToChannel({
-            patternId: activePatternId,
-            channelId: channel.id,
-            notes,
-          }),
-        );
-      } catch {
-        return;
-      }
-
-      return;
-    }
-
-    if (!droppedFile) {
-      return;
-    }
-
-    try {
-      const bytes = await droppedFile.arrayBuffer();
-      const notes = parseMidiArrayBufferToStepNotes(bytes);
-      if (notes.length === 0) {
-        return;
-      }
-
-      dispatch(
-        pasteMidiPatternToChannel({
-          patternId: activePatternId,
-          channelId: channel.id,
-          notes,
-        }),
-      );
-    } catch {
-      return;
-    }
-  };
+  const { onMidiPatternDragOver, onMidiPatternDrop } = useChannelRackMidiDrop({
+    activePatternId,
+    dispatch,
+    dataTransferHasMidiPatternPayloadFn: dataTransferHasMidiPatternPayload,
+    dataTransferHasMidiFilePayloadFn: dataTransferHasMidiFilePayload,
+    readMidiPatternFromDataTransferFn: readMidiPatternFromDataTransfer,
+    readMidiFilePayloadFromDataTransferFn: readMidiFilePayloadFromDataTransfer,
+    parseMidiArrayBufferToStepNotesFn: parseMidiArrayBufferToStepNotes,
+    isMidiFileNameFn: isMidiFileName,
+    pasteMidiPatternToChannelAction: pasteMidiPatternToChannel,
+  });
 
   const onAssignPluginToChannel = function (channelId, payload) {
     dispatch(
