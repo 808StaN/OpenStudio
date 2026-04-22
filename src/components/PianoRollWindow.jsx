@@ -30,8 +30,6 @@ import {
 } from "../utils/midiImport";
 import {
   C5_PITCH,
-  PIANO_PITCH_MAX,
-  PIANO_PITCH_MIN,
   getChannelMergedNotes,
 } from "../utils/patternNotes";
 import {
@@ -45,75 +43,32 @@ import {
   percentToMidiVelocity,
   quantizeBySnap,
 } from "./piano-roll/pianoRollUtils";
+import {
+  DEFAULT_NOTE_VELOCITY,
+  DEFAULT_ROW_HEIGHT,
+  DEFAULT_SAMPLE_MIDI_PITCH,
+  DEFAULT_STEP_WIDTH,
+  GRID_HEADER_HEIGHT,
+  MARQUEE_MIN_DRAG,
+  MAX_STEP_WIDTH,
+  MAX_VELOCITY_LANE_HEIGHT,
+  MIN_FREE_LENGTH,
+  MIN_STEP_WIDTH,
+  MIN_VELOCITY_LANE_HEIGHT,
+  PITCH_MAX,
+  PITCH_MIN,
+  SCALE_ROOTS,
+  SCALE_TYPES,
+  SNAP_EPSILON,
+  SNAP_OPTIONS,
+  STEPS_PER_BAR,
+} from "./piano-roll/pianoRollConstants";
+import {
+  buildClipboardPastePayload,
+  copySelectedNotesToClipboard,
+} from "./piano-roll/pianoRollClipboard";
 import { PianoRollToolbar } from "./piano-roll/PianoRollToolbar";
 import { PianoRollEditorBody } from "./piano-roll/PianoRollEditorBody";
-
-const PITCH_MIN = PIANO_PITCH_MIN;
-const PITCH_MAX = PIANO_PITCH_MAX;
-const DEFAULT_ROW_HEIGHT = 20;
-const DEFAULT_STEP_WIDTH = 24;
-const MIN_STEP_WIDTH = 10;
-const MAX_STEP_WIDTH = 72;
-const GRID_HEADER_HEIGHT = 28;
-const STEPS_PER_BEAT = 4;
-const STEPS_PER_BAR = STEPS_PER_BEAT * 4;
-const MIN_FREE_LENGTH = 1 / 12;
-const SNAP_EPSILON = 0.0001;
-const MARQUEE_MIN_DRAG = 4;
-const DEFAULT_SAMPLE_MIDI_PITCH = 72;
-const DEFAULT_NOTE_VELOCITY = 95;
-const MIN_VELOCITY_LANE_HEIGHT = 72;
-const MAX_VELOCITY_LANE_HEIGHT = 2400;
-
-const SNAP_OPTIONS = [
-  { key: "none", label: "(none)", stepSize: null },
-  { key: "1-6-step", label: "1/6 step", stepSize: 1 / 6 },
-  { key: "1-4-step", label: "1/4 step", stepSize: 1 / 4 },
-  { key: "1-3-step", label: "1/3 step", stepSize: 1 / 3 },
-  { key: "1-2-step", label: "1/2 step", stepSize: 1 / 2 },
-  { key: "step", label: "Step", stepSize: 1 },
-  { key: "1-6-beat", label: "1/6 beat", stepSize: 2 / 3 },
-  { key: "1-4-beat", label: "1/4 beat", stepSize: 1 },
-  { key: "1-3-beat", label: "1/3 beat", stepSize: 4 / 3 },
-  { key: "1-2-beat", label: "1/2 beat", stepSize: 2 },
-  { key: "beat", label: "Beat", stepSize: 4 },
-  { key: "bar", label: "Bar", stepSize: 16 },
-];
-
-const SCALE_ROOTS = [
-  "C",
-  "C#",
-  "D",
-  "D#",
-  "E",
-  "F",
-  "F#",
-  "G",
-  "G#",
-  "A",
-  "A#",
-  "B",
-];
-
-const SCALE_TYPES = [
-  {
-    key: "minor",
-    label: "Minor",
-    intervals: [0, 2, 3, 5, 7, 8, 10],
-  },
-  {
-    key: "major",
-    label: "Major",
-    intervals: [0, 2, 4, 5, 7, 9, 11],
-  },
-];
-
-let sharedPianoClipboard = {
-  sourcePatternId: null,
-  sourceChannelId: null,
-  entries: [],
-  pasteCountInSource: 0,
-};
 
 export function PianoRollWindow() {
   const dispatch = useDispatch();
@@ -996,25 +951,13 @@ export function PianoRollWindow() {
   };
 
   const copySelectedNotes = function () {
-    if (!selectedNotes.length) {
-      return;
-    }
-
-    sharedPianoClipboard = {
-      sourcePatternId: activePatternId,
-      sourceChannelId: activeChannel?.id || null,
-      pasteCountInSource: 0,
-      entries: selectedNotes.map(function (note) {
-        return {
-          start: note.start,
-          pitch: note.pitch,
-          length: note.length,
-          velocity: Math.round(
-            clamp(Number(note.velocity || DEFAULT_NOTE_VELOCITY), 1, 127),
-          ),
-        };
-      }),
-    };
+    copySelectedNotesToClipboard({
+      selectedNotes,
+      activePatternId,
+      activeChannelId: activeChannel?.id || null,
+      defaultVelocity: DEFAULT_NOTE_VELOCITY,
+      clampFn: clamp,
+    });
   };
 
   const deleteSelectedNotes = function () {
@@ -1051,63 +994,22 @@ export function PianoRollWindow() {
   };
 
   const pasteClipboardNotes = function () {
-    if (
-      !activePattern ||
-      !activeChannel ||
-      !sharedPianoClipboard.entries ||
-      sharedPianoClipboard.entries.length === 0
-    ) {
+    if (!activePattern || !activeChannel) {
       return;
     }
 
-    const isSamePianoRollContext =
-      sharedPianoClipboard.sourcePatternId === activePatternId &&
-      sharedPianoClipboard.sourceChannelId === activeChannel.id;
-
-    if (isSamePianoRollContext) {
-      sharedPianoClipboard.pasteCountInSource += 1;
-    }
-
-    const pasteShift = isSamePianoRollContext
-      ? sharedPianoClipboard.pasteCountInSource
-      : 0;
     const channelNotes = activePattern.pianoPreview?.[activeChannel.id] || [];
-    const occupied = new Set(
-      channelNotes.map(function (note) {
-        return Math.round((note.start || 0) * 1000) + ":" + note.pitch;
-      }),
-    );
-
-    const notesToAdd = [];
-    const nextSelection = [];
-
-    sharedPianoClipboard.entries.forEach(function (entry) {
-      const start = clamp(
-        entry.start + pasteShift,
-        0,
-        patternLength - MIN_FREE_LENGTH,
-      );
-      const maxLen = Math.max(MIN_FREE_LENGTH, patternLength - start);
-      const length = clamp(entry.length, MIN_FREE_LENGTH, maxLen);
-      const pitch = clamp(entry.pitch, PITCH_MIN, PITCH_MAX);
-      const key = Math.round(start * 1000) + ":" + pitch;
-
-      if (occupied.has(key)) {
-        return;
-      }
-
-      occupied.add(key);
-      const newId = makeGeneratedNoteId("paste");
-      notesToAdd.push({
-        id: newId,
-        start,
-        pitch,
-        length,
-        velocity: Math.round(
-          clamp(Number(entry.velocity || DEFAULT_NOTE_VELOCITY), 1, 127),
-        ),
-      });
-      nextSelection.push("piano:" + newId);
+    const { notesToAdd, nextSelection } = buildClipboardPastePayload({
+      activePatternId,
+      activeChannelId: activeChannel.id,
+      patternLength,
+      minFreeLength: MIN_FREE_LENGTH,
+      pitchMin: PITCH_MIN,
+      pitchMax: PITCH_MAX,
+      channelNotes,
+      defaultVelocity: DEFAULT_NOTE_VELOCITY,
+      clampFn: clamp,
+      makeIdFn: makeGeneratedNoteId,
     });
 
     if (notesToAdd.length > 0) {
