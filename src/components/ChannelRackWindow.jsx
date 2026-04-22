@@ -1,5 +1,5 @@
-import { useEffect, useMemo, useRef, useState } from "react";
-import { useDispatch, useSelector } from "react-redux";
+import { useEffect, useRef, useState } from "react";
+import { useDispatch } from "react-redux";
 import {
   addChannel,
   renameChannel,
@@ -39,11 +39,8 @@ import {
 import { ChannelRackTopBar } from "./channel-rack/ChannelRackTopBar";
 import { useChannelRackMidiDrop } from "./channel-rack/useChannelRackMidiDrop";
 import { useChannelRackOverlayDismiss } from "./channel-rack/useChannelRackOverlayDismiss";
+import { useChannelRackDerivedState } from "./channel-rack/useChannelRackDerivedState";
 import {
-  DEFAULT_PATTERN_COLOR,
-  STEPS_PER_BEAT,
-  clamp,
-  getInsertLabel,
   resolveChannelMenuPosition,
 } from "./channel-rack/channelRackUtils";
 
@@ -57,44 +54,22 @@ export function ChannelRackWindow() {
   const [channelContextMenu, setChannelContextMenu] = useState(null);
   const [channelRenamePanel, setChannelRenamePanel] = useState(null);
 
-  const activePatternId = useSelector(function (state) {
-    return state.daw.project.activePatternId;
-  });
-  const patterns = useSelector(function (state) {
-    return state.daw.project.patterns;
-  });
-  const activePattern = useSelector(function (state) {
-    return state.daw.project.patterns.find(function (item) {
-      return item.id === activePatternId;
-    });
-  });
-  const activePatternColor = String(activePattern?.color || DEFAULT_PATTERN_COLOR);
-  const channels = useSelector(function (state) {
-    return state.daw.project.channels;
-  });
-  const mixerInserts = useSelector(function (state) {
-    return state.daw.mixer.inserts.filter(function (insert) {
-      return !insert.isMaster;
-    });
-  });
-  const playhead = useSelector(function (state) {
-    return state.daw.transport.currentStep16;
-  });
-  const isPlaying = useSelector(function (state) {
-    return state.daw.transport.isPlaying;
-  });
-  const bpm = useSelector(function (state) {
-    return state.daw.transport.bpm;
-  });
-  const channelRackMode = useSelector(function (state) {
-    return state.daw.ui.channelRackMode;
-  });
-  const patternLength = Math.max(4, activePattern?.lengthSteps || 16);
-  const normalizedPlayheadStep =
-    ((playhead % patternLength) + patternLength) % patternLength;
-  const playheadStep = isPlaying
-    ? (normalizedPlayheadStep - 1 + patternLength) % patternLength
-    : normalizedPlayheadStep;
+  const {
+    activePatternId,
+    patterns,
+    activePattern,
+    activePatternColor,
+    channels,
+    mixerInserts,
+    isPlaying,
+    bpm,
+    channelRackMode,
+    patternLength,
+    playheadStep,
+    insertLabelById,
+    stepsPerBeat,
+    clampFn,
+  } = useChannelRackDerivedState();
 
   useEffect(
     function () {
@@ -118,7 +93,7 @@ export function ChannelRackWindow() {
       const setPlayheadRatio = function (ratio) {
         shellElement.style.setProperty(
           "--rack-playhead-ratio",
-          String(clamp(ratio, 0, 1)),
+          String(clampFn(ratio, 0, 1)),
         );
       };
 
@@ -136,11 +111,11 @@ export function ChannelRackWindow() {
       }
 
       let rafId = 0;
-      const stepDurationMs = (60 / Math.max(1, bpm) / STEPS_PER_BEAT) * 1000;
+      const stepDurationMs = (60 / Math.max(1, bpm) / stepsPerBeat) * 1000;
 
       const tick = function () {
         const elapsed = performance.now() - playheadStepTimestampRef.current;
-        const progress = clamp(elapsed / stepDurationMs, 0, 0.999);
+        const progress = clampFn(elapsed / stepDurationMs, 0, 0.999);
         const baseStep =
           ((playheadStepRef.current % patternLength) + patternLength) %
           patternLength;
@@ -155,17 +130,7 @@ export function ChannelRackWindow() {
         cancelAnimationFrame(rafId);
       };
     },
-    [isPlaying, bpm, patternLength],
-  );
-
-  const insertLabelById = useMemo(
-    function () {
-      return mixerInserts.reduce(function (acc, insert, index) {
-        acc[insert.id] = getInsertLabel(insert, index);
-        return acc;
-      }, {});
-    },
-    [mixerInserts],
+    [isPlaying, bpm, patternLength, stepsPerBeat, clampFn],
   );
 
   useChannelRackOverlayDismiss({
