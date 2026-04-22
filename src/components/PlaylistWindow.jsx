@@ -18,6 +18,7 @@ import {
 } from "../store";
 import { getSafeSampleSettings } from "../audio/domain/sampleSettings";
 import { ClipPreviewNotes } from "./playlist/ClipPreviewNotes";
+import { PlaylistTopControls } from "./playlist/PlaylistTopControls";
 import {
   buildWaveformEnvelope,
   buildWaveformPathData,
@@ -1200,117 +1201,30 @@ export function PlaylistWindow() {
         "--playlist-snap-opacity": String(snapLineOpacity),
       }}
     >
-      <div className="playlist-toolbar">
-        <div className="playlist-snap-menu" ref={snapMenuRef}>
-          <button
-            type="button"
-            className="playlist-snap-trigger"
-            onClick={function () {
-              setIsSnapMenuOpen(function (value) {
-                return !value;
-              });
-            }}
-          >
-            Snap: {activeSnap.label}
-          </button>
-
-          {isSnapMenuOpen ? (
-            <div className="playlist-snap-dropdown">
-              {SNAP_OPTIONS.map(function (option) {
-                return (
-                  <label key={option.key} className="playlist-snap-option">
-                    <input
-                      type="radio"
-                      name="playlist-snap"
-                      checked={snapKey === option.key}
-                      onChange={function () {
-                        setSnapKey(option.key);
-                        setIsSnapMenuOpen(false);
-                      }}
-                    />
-                    <span>{option.label}</span>
-                  </label>
-                );
-              })}
-            </div>
-          ) : null}
-        </div>
-
-        <button
-          type="button"
-          className="playlist-add-track-btn"
-          onClick={function () {
-            dispatch(addPlaylistTrack());
-          }}
-        >
-          + Track
-        </button>
-
-        <label className="playlist-length-control">
-          <span>Length</span>
-          <input
-            className="playlist-length-input"
-            type="number"
-            min={MIN_PLAYLIST_BARS}
-            max={MAX_PLAYLIST_BARS}
-            step="1"
-            value={playlistBarCount}
-            onChange={onPlaylistLengthChange}
-          />
-        </label>
-
-        <div
-          className="playlist-loop-toggle"
-          role="group"
-          aria-label="Song loop"
-        >
-          <span>Loop</span>
-          <button
-            type="button"
-            className={
-              "playlist-loop-btn" + (songLoopEnabled ? " is-active" : "")
-            }
-            onClick={function () {
-              dispatch(setSongLoopEnabled(true));
-            }}
-          >
-            On
-          </button>
-          <button
-            type="button"
-            className={
-              "playlist-loop-btn" + (!songLoopEnabled ? " is-active" : "")
-            }
-            onClick={function () {
-              dispatch(setSongLoopEnabled(false));
-            }}
-          >
-            Off
-          </button>
-        </div>
-      </div>
-
-      <div className="playlist-header-shell">
-        <div
-          ref={playlistHeaderRef}
-          className="playlist-header"
-          onMouseDown={onPlaylistHeaderMouseDown}
-          style={{
-            gridTemplateColumns:
-              "92px repeat(" + playlistBarCount + ", " + barWidth + "px)",
-            width: 92 + timelineWidth,
-          }}
-        >
-          <div className="bar-label empty" />
-          {Array.from({ length: playlistBarCount }).map(function (_, index) {
-            return (
-              <div className="bar-cell" key={index} data-bar-index={index}>
-                {index + 1}
-              </div>
-            );
-          })}
-        </div>
-      </div>
+      <PlaylistTopControls
+        snapMenuRef={snapMenuRef}
+        isSnapMenuOpen={isSnapMenuOpen}
+        setIsSnapMenuOpen={setIsSnapMenuOpen}
+        activeSnap={activeSnap}
+        SNAP_OPTIONS={SNAP_OPTIONS}
+        snapKey={snapKey}
+        setSnapKey={setSnapKey}
+        onAddTrack={function () {
+          dispatch(addPlaylistTrack());
+        }}
+        minPlaylistBars={MIN_PLAYLIST_BARS}
+        maxPlaylistBars={MAX_PLAYLIST_BARS}
+        playlistBarCount={playlistBarCount}
+        onPlaylistLengthChange={onPlaylistLengthChange}
+        songLoopEnabled={songLoopEnabled}
+        onSongLoopEnabledChange={function (enabled) {
+          dispatch(setSongLoopEnabled(enabled));
+        }}
+        playlistHeaderRef={playlistHeaderRef}
+        onPlaylistHeaderMouseDown={onPlaylistHeaderMouseDown}
+        barWidth={barWidth}
+        timelineWidth={timelineWidth}
+      />
 
       <div
         ref={playlistBodyRef}
