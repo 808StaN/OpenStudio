@@ -67,7 +67,9 @@ import { usePianoRollClipboardActions } from "./piano-roll/usePianoRollClipboard
 import { usePianoRollMenuDismiss } from "./piano-roll/usePianoRollMenuDismiss";
 import { usePianoRollMidiIo } from "./piano-roll/usePianoRollMidiIo";
 import { usePianoRollMidiDrop } from "./piano-roll/usePianoRollMidiDrop";
+import { usePianoRollNoteOps } from "./piano-roll/usePianoRollNoteOps";
 import { usePianoRollPreviewAudio } from "./piano-roll/usePianoRollPreviewAudio";
+import { usePianoRollScrollAndZoom } from "./piano-roll/usePianoRollScrollAndZoom";
 import {
   usePianoRollInitialViewport,
   usePianoRollPlayheadAnimation,
@@ -263,161 +265,33 @@ export function PianoRollWindow() {
     setIsScaleTypeMenuOpen,
   });
 
-  const onGridWrapScroll = function (event) {
-    if (velocityWrapRef.current && !isSyncingHorizontalScrollRef.current) {
-      isSyncingHorizontalScrollRef.current = true;
-      velocityWrapRef.current.scrollLeft = event.currentTarget.scrollLeft;
-      isSyncingHorizontalScrollRef.current = false;
-    }
-
-    if (!keysRef.current || isSyncingScrollRef.current) {
-      return;
-    }
-    isSyncingScrollRef.current = true;
-    keysRef.current.scrollTop = event.currentTarget.scrollTop;
-    isSyncingScrollRef.current = false;
-  };
-
-  const onVelocityWrapScroll = function (event) {
-    if (!gridWrapRef.current || isSyncingHorizontalScrollRef.current) {
-      return;
-    }
-
-    isSyncingHorizontalScrollRef.current = true;
-    gridWrapRef.current.scrollLeft = event.currentTarget.scrollLeft;
-    isSyncingHorizontalScrollRef.current = false;
-  };
-
-  const onKeysScroll = function (event) {
-    if (!gridWrapRef.current || isSyncingScrollRef.current) {
-      return;
-    }
-    isSyncingScrollRef.current = true;
-    gridWrapRef.current.scrollTop = event.currentTarget.scrollTop;
-    isSyncingScrollRef.current = false;
-  };
-
-  const onGridWheel = function (event) {
-    const viewport = gridWrapRef.current;
-    if (!viewport) {
-      return;
-    }
-
-    if (!event.ctrlKey) {
-      return;
-    }
-
-    const rect = viewport.getBoundingClientRect();
-    const pointerX = clamp(event.clientX - rect.left, 0, viewport.clientWidth);
-
-    event.preventDefault();
-    const previousWidth = stepWidth;
-    const nextWidth = clamp(
-      previousWidth + (event.deltaY < 0 ? 2 : -2),
-      MIN_STEP_WIDTH,
-      MAX_STEP_WIDTH,
-    );
-
-    if (nextWidth === previousWidth) {
-      return;
-    }
-
-    const worldX = viewport.scrollLeft + pointerX;
-    const stepPosition = worldX / previousWidth;
-
-    setStepWidth(nextWidth);
-
-    requestAnimationFrame(function () {
-      viewport.scrollLeft = Math.max(0, stepPosition * nextWidth - pointerX);
-      if (keysRef.current) {
-        keysRef.current.scrollTop = viewport.scrollTop;
-      }
+  const { onGridWrapScroll, onVelocityWrapScroll, onKeysScroll, onGridWheel } =
+    usePianoRollScrollAndZoom({
+      gridWrapRef,
+      keysRef,
+      velocityWrapRef,
+      isSyncingScrollRef,
+      isSyncingHorizontalScrollRef,
+      stepWidth,
+      setStepWidth,
+      minStepWidth: MIN_STEP_WIDTH,
+      maxStepWidth: MAX_STEP_WIDTH,
+      clampFn: clamp,
     });
-  };
 
-  const getGridPointerFromEvent = function (event) {
-    const viewport = gridWrapRef.current;
-    if (!viewport) {
-      return null;
-    }
-
-    const rect = viewport.getBoundingClientRect();
-    const x = event.clientX - rect.left + viewport.scrollLeft;
-    const y =
-      event.clientY - rect.top + viewport.scrollTop - GRID_HEADER_HEIGHT;
-
-    return {
-      x,
-      y,
-      viewport,
-    };
-  };
-
-  const removeNote = function (note) {
-    if (!activeChannel) {
-      return;
-    }
-
-    if (note.source === "step") {
-      dispatch(
-        toggleStep({
-          patternId: activePatternId,
-          channelId: activeChannel.id,
-          stepIndex: Math.round(note.start),
-        }),
-      );
-      return;
-    }
-
-    dispatch(
-      togglePianoNote({
-        patternId: activePatternId,
-        channelId: activeChannel.id,
-        start: note.start,
-        pitch: note.pitch,
-        length: note.length,
-      }),
-    );
-  };
-
-  const ensureNoteIsPiano = function (note) {
-    if (!activeChannel) {
-      return note;
-    }
-
-    if (note.source !== "step") {
-      return note;
-    }
-
-    dispatch(
-      toggleStep({
-        patternId: activePatternId,
-        channelId: activeChannel.id,
-        stepIndex: Math.round(note.start),
-      }),
-    );
-
-    const generatedId = makeGeneratedNoteId("conv");
-    dispatch(
-      togglePianoNote({
-        patternId: activePatternId,
-        channelId: activeChannel.id,
-        id: generatedId,
-        start: note.start,
-        pitch: note.pitch,
-        length: note.length,
-        velocity: Math.round(
-          clamp(Number(note.velocity || DEFAULT_NOTE_VELOCITY), 1, 127),
-        ),
-      }),
-    );
-
-    return {
-      ...note,
-      source: "piano",
-      id: generatedId,
-    };
-  };
+  const { getGridPointerFromEvent, removeNote, ensureNoteIsPiano } =
+    usePianoRollNoteOps({
+      gridWrapRef,
+      gridHeaderHeight: GRID_HEADER_HEIGHT,
+      activeChannel,
+      dispatch,
+      activePatternId,
+      defaultNoteVelocity: DEFAULT_NOTE_VELOCITY,
+      clampFn: clamp,
+      makeIdFn: makeGeneratedNoteId,
+      toggleStepAction: toggleStep,
+      togglePianoNoteAction: togglePianoNote,
+    });
 
   const {
     copySelectedNotes,
