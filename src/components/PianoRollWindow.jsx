@@ -71,6 +71,7 @@ import {
   findVelocityCandidatesAtClientX as findVelocityCandidatesAtClientXFromUtils,
   getVelocityPercentFromClientY,
 } from "./piano-roll/pianoRollVelocityUtils";
+import { usePianoRollKeyboardShortcuts } from "./piano-roll/usePianoRollKeyboardShortcuts";
 import { PianoRollToolbar } from "./piano-roll/PianoRollToolbar";
 import { PianoRollEditorBody } from "./piano-roll/PianoRollEditorBody";
 
@@ -1032,150 +1033,36 @@ export function PianoRollWindow() {
     }
   };
 
-  /* eslint-disable react-hooks/exhaustive-deps */
-  useEffect(
-    function () {
-      const onKeyDown = function (event) {
-        const target = event.target;
-        if (
-          target instanceof HTMLElement &&
-          (target.isContentEditable ||
-            target.closest("input, textarea, [contenteditable='true']"))
-        ) {
-          return;
-        }
-
-        const hasSelection = selectedNotes.length > 0;
-        const key = event.key.toLowerCase();
-        const ctrlOrMeta = event.ctrlKey || event.metaKey;
-
-        if (ctrlOrMeta && key === "a") {
-          event.preventDefault();
-          setEditMode("select");
-          setSelectedNoteIds(
-            pianoNotes.map(function (note) {
-              return getNoteSelectionId(note);
-            }),
-          );
-          return;
-        }
-
-        if (editMode !== "select") {
-          return;
-        }
-
-        if (ctrlOrMeta && key === "c") {
-          event.preventDefault();
-          copySelectedNotes();
-          return;
-        }
-
-        if (ctrlOrMeta && key === "x") {
-          event.preventDefault();
-          cutSelectedNotes();
-          return;
-        }
-
-        if (ctrlOrMeta && key === "v") {
-          event.preventDefault();
-          pasteClipboardNotes();
-          return;
-        }
-
-        if (event.key === "Delete" || event.key === "Backspace") {
-          if (!hasSelection) {
-            return;
-          }
-          event.preventDefault();
-          deleteSelectedNotes();
-          return;
-        }
-
-        if (event.key !== "ArrowUp" && event.key !== "ArrowDown") {
-          return;
-        }
-
-        if (!hasSelection || !activeChannel) {
-          return;
-        }
-
-        event.preventDefault();
-
-        const direction = event.key === "ArrowUp" ? 1 : -1;
-        const moveByOctave = event.ctrlKey && !event.metaKey;
-        const moveBySemitone = event.shiftKey;
-        const fixedStep = moveByOctave ? 12 : moveBySemitone ? 1 : 0;
-        const moved = selectedNotes.map(function (note) {
-          return ensureNoteIsPiano(note);
-        });
-
-        const moves = [];
-
-        moved.forEach(function (note) {
-          const nextPitch =
-            fixedStep > 0
-              ? clamp(note.pitch + direction * fixedStep, PITCH_MIN, PITCH_MAX)
-              : moveByScaleStep(
-                  note.pitch,
-                  direction,
-                  scalePitchClasses,
-                  PITCH_MIN,
-                  PITCH_MAX,
-                );
-
-          if (nextPitch === note.pitch) {
-            return;
-          }
-
-          moves.push({
-            noteId: note.id,
-            start: note.start,
-            pitch: note.pitch,
-            nextStart: note.start,
-            nextPitch,
-          });
-
-          note.pitch = nextPitch;
-        });
-
-        if (moves.length > 0) {
-          dispatch(
-            movePianoNotesBatch({
-              patternId: activePatternId,
-              channelId: activeChannel.id,
-              moves,
-            }),
-          );
-        }
-
-        setSelectedNoteIds(
-          moved.map(function (note) {
-            return "piano:" + note.id;
-          }),
-        );
-      };
-
-      window.addEventListener("keydown", onKeyDown);
-
-      return function () {
-        window.removeEventListener("keydown", onKeyDown);
-      };
+  usePianoRollKeyboardShortcuts({
+    activeChannel,
+    patternId: activePatternId,
+    channelId: activeChannel?.id || "",
+    editMode,
+    pianoNotes,
+    selectedNotes,
+    scalePitchClasses,
+    pitchMin: PITCH_MIN,
+    pitchMax: PITCH_MAX,
+    setEditMode,
+    setSelectedNoteIds,
+    toSelectionId: getNoteSelectionId,
+    copySelectedNotes,
+    cutSelectedNotes,
+    pasteClipboardNotes,
+    deleteSelectedNotes,
+    ensureNoteIsPiano,
+    clampFn: clamp,
+    moveByScaleStepFn: moveByScaleStep,
+    onMoveSelectedNotes: function ({ patternId, channelId, moves }) {
+      dispatch(
+        movePianoNotesBatch({
+          patternId,
+          channelId,
+          moves,
+        }),
+      );
     },
-    [
-      activeChannel,
-      activePattern,
-      activePatternId,
-      dispatch,
-      editMode,
-      pianoNotes,
-      patternLength,
-      playheadStep,
-      scalePitchClasses,
-      selectedNotes,
-      snapStepSize,
-    ],
-  );
-  /* eslint-enable react-hooks/exhaustive-deps */
+  });
 
   const onGridMouseDown = function (event) {
     if (!activeChannel || !activePattern) {
