@@ -71,6 +71,10 @@ import {
   findVelocityCandidatesAtClientX as findVelocityCandidatesAtClientXFromUtils,
   getVelocityPercentFromClientY,
 } from "./piano-roll/pianoRollVelocityUtils";
+import {
+  hasMidiDropPayload,
+  resolveDroppedMidiNotes,
+} from "./piano-roll/pianoRollMidiDropUtils";
 import { usePianoRollKeyboardShortcuts } from "./piano-roll/usePianoRollKeyboardShortcuts";
 import { PianoRollToolbar } from "./piano-roll/PianoRollToolbar";
 import { PianoRollEditorBody } from "./piano-roll/PianoRollEditorBody";
@@ -1318,32 +1322,16 @@ export function PianoRollWindow() {
     }
   };
 
-  const getDroppedMidiFile = function (dataTransfer) {
-    const files = Array.from(dataTransfer?.files || []);
-    return (
-      files.find(function (file) {
-        return isMidiFileName(file?.name);
-      }) || null
-    );
-  };
-
   const onPianoRollMidiDragOver = function (event) {
-    const hasMidiPatternType = dataTransferHasMidiPatternPayload(
-      event.dataTransfer,
-    );
-    const hasMidiFileType = dataTransferHasMidiFilePayload(event.dataTransfer);
-    const payload = readMidiPatternFromDataTransfer(event.dataTransfer);
-    const midiFilePayload = readMidiFilePayloadFromDataTransfer(
-      event.dataTransfer,
-    );
-    const droppedFile = getDroppedMidiFile(event.dataTransfer);
-
     if (
-      hasMidiPatternType ||
-      hasMidiFileType ||
-      payload ||
-      midiFilePayload ||
-      droppedFile
+      hasMidiDropPayload({
+        dataTransfer: event.dataTransfer,
+        dataTransferHasMidiPatternPayloadFn: dataTransferHasMidiPatternPayload,
+        dataTransferHasMidiFilePayloadFn: dataTransferHasMidiFilePayload,
+        readMidiPatternFromDataTransferFn: readMidiPatternFromDataTransfer,
+        readMidiFilePayloadFromDataTransferFn: readMidiFilePayloadFromDataTransfer,
+        isMidiFileNameFn: isMidiFileName,
+      })
     ) {
       event.preventDefault();
       event.dataTransfer.dropEffect = "copy";
@@ -1382,62 +1370,24 @@ export function PianoRollWindow() {
       return;
     }
 
-    const midiFilePayload = readMidiFilePayloadFromDataTransfer(
-      event.dataTransfer,
+    const notes = await resolveDroppedMidiNotes({
+      dataTransfer: event.dataTransfer,
+      readMidiFilePayloadFromDataTransferFn: readMidiFilePayloadFromDataTransfer,
+      parseMidiArrayBufferToStepNotesFn: parseMidiArrayBufferToStepNotes,
+      isMidiFileNameFn: isMidiFileName,
+    });
+    if (notes.length === 0) {
+      return;
+    }
+
+    dispatch(
+      pasteMidiPatternToChannel({
+        patternId: activePatternId,
+        channelId: activeChannel.id,
+        insertStep,
+        notes,
+      }),
     );
-    if (midiFilePayload?.midiPath) {
-      try {
-        const response = await fetch(midiFilePayload.midiPath, {
-          cache: "no-store",
-        });
-        if (!response.ok) {
-          return;
-        }
-
-        const bytes = await response.arrayBuffer();
-        const notes = parseMidiArrayBufferToStepNotes(bytes);
-        if (notes.length === 0) {
-          return;
-        }
-
-        dispatch(
-          pasteMidiPatternToChannel({
-            patternId: activePatternId,
-            channelId: activeChannel.id,
-            insertStep,
-            notes,
-          }),
-        );
-      } catch {
-        return;
-      }
-
-      return;
-    }
-
-    const droppedFile = getDroppedMidiFile(event.dataTransfer);
-    if (!droppedFile) {
-      return;
-    }
-
-    try {
-      const bytes = await droppedFile.arrayBuffer();
-      const notes = parseMidiArrayBufferToStepNotes(bytes);
-      if (notes.length === 0) {
-        return;
-      }
-
-      dispatch(
-        pasteMidiPatternToChannel({
-          patternId: activePatternId,
-          channelId: activeChannel.id,
-          insertStep,
-          notes,
-        }),
-      );
-    } catch {
-      return;
-    }
   };
 
   const onExportMidiClick = function () {
