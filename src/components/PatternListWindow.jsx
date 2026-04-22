@@ -11,6 +11,7 @@ import {
   rgbToHex,
   rgbToHsv,
 } from "./pattern-list/patternListColorUtils";
+import { PatternListRow } from "./pattern-list/PatternListRow";
 import {
   createPattern,
   duplicatePatterns,
@@ -399,6 +400,46 @@ export function PatternListWindow() {
     dispatch(setActivePattern(patternId));
   };
 
+  const onPatternRowDragStart = function (event, pattern) {
+    if (!shouldStartPatternDrag(event.target)) {
+      event.preventDefault();
+      return;
+    }
+
+    const draggedPatternIds = selectedPatternIds.includes(pattern.id)
+      ? orderedSelectedPatternIds
+      : [pattern.id];
+
+    const payload = JSON.stringify({
+      patternId: pattern.id,
+      patternIds: draggedPatternIds,
+    });
+
+    event.dataTransfer.effectAllowed = "copy";
+    event.dataTransfer.setData(PATTERN_DRAG_MIME, payload);
+    event.dataTransfer.setData("text/plain", pattern.id);
+    setPatternDragSession(draggedPatternIds);
+    setOpenColorPatternId(null);
+    setSelectedPatternIds(function (prev) {
+      return prev.includes(pattern.id) ? prev : [pattern.id];
+    });
+    setDraggingPatternId(pattern.id);
+  };
+
+  const onPatternRowDragEnd = function () {
+    clearPatternDragSession();
+    setDraggingPatternId(null);
+  };
+
+  const onPatternRename = function (patternId, name) {
+    dispatch(
+      renamePattern({
+        patternId,
+        name,
+      }),
+    );
+  };
+
   return (
     <section
       ref={patternListRef}
@@ -424,161 +465,25 @@ export function PatternListWindow() {
 
       <div className="pattern-list-body">
         {patterns.map(function (pattern) {
-          const pickerState = getPickerStateForPattern(pattern);
-          const pickerColor = rgbToHex(
-            hsvToRgb(pickerState.h, pickerState.s, pickerState.v),
-          );
-          const hueColor = rgbToHex(hsvToRgb(pickerState.h, 1, 1));
-          const svCursorLeft = clamp(pickerState.s * 100, 0, 100);
-          const svCursorTop = clamp((1 - pickerState.v) * 100, 0, 100);
-          const hueCursorLeft = clamp((pickerState.h / 360) * 100, 0, 100);
-
           return (
-            <article
+            <PatternListRow
               key={pattern.id}
-              className={
-                "pattern-list-row" +
-                (selectedIdSet.has(pattern.id) ? " is-selected" : "") +
-                (draggingPatternId === pattern.id ? " is-dragging" : "")
-              }
-              draggable
-              onClick={function (event) {
-                onPatternRowClick(event, pattern.id);
-              }}
-              onDragStart={function (event) {
-                if (!shouldStartPatternDrag(event.target)) {
-                  event.preventDefault();
-                  return;
-                }
-
-                const draggedPatternIds = selectedPatternIds.includes(
-                  pattern.id,
-                )
-                  ? orderedSelectedPatternIds
-                  : [pattern.id];
-
-                const payload = JSON.stringify({
-                  patternId: pattern.id,
-                  patternIds: draggedPatternIds,
-                });
-
-                event.dataTransfer.effectAllowed = "copy";
-                event.dataTransfer.setData(PATTERN_DRAG_MIME, payload);
-                event.dataTransfer.setData("text/plain", pattern.id);
-                setPatternDragSession(draggedPatternIds);
-                setOpenColorPatternId(null);
-                setSelectedPatternIds(function (prev) {
-                  return prev.includes(pattern.id) ? prev : [pattern.id];
-                });
-                setDraggingPatternId(pattern.id);
-              }}
-              onDragEnd={function () {
-                clearPatternDragSession();
-                setDraggingPatternId(null);
-              }}
-            >
-              <div className="pattern-list-row-top">
-                <input
-                  className="pattern-list-name"
-                  value={pattern.name}
-                  maxLength={40}
-                  onClick={function (event) {
-                    event.stopPropagation();
-                  }}
-                  onChange={function (event) {
-                    dispatch(
-                      renamePattern({
-                        patternId: pattern.id,
-                        name: event.target.value,
-                      }),
-                    );
-                  }}
-                />
-
-                <div
-                  className="pattern-list-color-wrap"
-                  onMouseDown={function (event) {
-                    event.stopPropagation();
-                  }}
-                >
-                  <button
-                    type="button"
-                    className="pattern-list-color-label"
-                    title="Pattern color"
-                    onClick={function (event) {
-                      event.stopPropagation();
-                      setOpenColorPatternId(function (prev) {
-                        return prev === pattern.id ? null : pattern.id;
-                      });
-                    }}
-                  >
-                    <span
-                      className="pattern-list-color-chip"
-                      style={{
-                        backgroundColor: pickerColor,
-                      }}
-                    />
-                  </button>
-
-                  {openColorPatternId === pattern.id ? (
-                    <div className="pattern-list-color-popover">
-                      <div
-                        className="pattern-list-sv"
-                        style={{
-                          backgroundColor: hueColor,
-                        }}
-                        onMouseDown={function (event) {
-                          startSvDrag(event, pattern);
-                        }}
-                      >
-                        <span
-                          className="pattern-list-sv-cursor"
-                          style={{
-                            left: svCursorLeft + "%",
-                            top: svCursorTop + "%",
-                          }}
-                        />
-                      </div>
-
-                      <div
-                        className="pattern-list-hue"
-                        onMouseDown={function (event) {
-                          startHueDrag(event, pattern);
-                        }}
-                      >
-                        <span
-                          className="pattern-list-hue-cursor"
-                          style={{
-                            left: hueCursorLeft + "%",
-                          }}
-                        />
-                      </div>
-
-                      <button
-                        type="button"
-                        className="pattern-list-color-reset"
-                        onClick={function () {
-                          updatePickerColor(
-                            pattern,
-                            rgbToHsv(hexToRgb(DEFAULT_PATTERN_COLOR)),
-                          );
-                        }}
-                      >
-                        Reset
-                      </button>
-                    </div>
-                  ) : null}
-                </div>
-              </div>
-
-              <div className="pattern-list-meta">
-                <span>
-                  {Math.max(1, Math.ceil((pattern.lengthSteps || 16) / 16))}{" "}
-                  bars
-                </span>
-                <span>{clipCountByPattern[pattern.id] || 0} clips</span>
-              </div>
-            </article>
+              pattern={pattern}
+              isSelected={selectedIdSet.has(pattern.id)}
+              isDragging={draggingPatternId === pattern.id}
+              clipCount={clipCountByPattern[pattern.id] || 0}
+              openColorPatternId={openColorPatternId}
+              defaultPatternColor={DEFAULT_PATTERN_COLOR}
+              getPickerStateForPattern={getPickerStateForPattern}
+              setOpenColorPatternId={setOpenColorPatternId}
+              startSvDrag={startSvDrag}
+              startHueDrag={startHueDrag}
+              updatePickerColor={updatePickerColor}
+              onRowClick={onPatternRowClick}
+              onRowDragStart={onPatternRowDragStart}
+              onRowDragEnd={onPatternRowDragEnd}
+              onRename={onPatternRename}
+            />
           );
         })}
       </div>
