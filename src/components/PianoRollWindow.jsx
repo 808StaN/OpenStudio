@@ -64,14 +64,11 @@ import {
   STEPS_PER_BAR,
 } from "./piano-roll/pianoRollConstants";
 import {
-  buildClipboardPastePayload,
-  copySelectedNotesToClipboard,
-} from "./piano-roll/pianoRollClipboard";
-import {
   findVelocityCandidatesAtClientX as findVelocityCandidatesAtClientXFromUtils,
   getVelocityPercentFromClientY,
 } from "./piano-roll/pianoRollVelocityUtils";
 import { usePianoRollKeyboardShortcuts } from "./piano-roll/usePianoRollKeyboardShortcuts";
+import { usePianoRollClipboardActions } from "./piano-roll/usePianoRollClipboardActions";
 import { usePianoRollMidiIo } from "./piano-roll/usePianoRollMidiIo";
 import { usePianoRollMidiDrop } from "./piano-roll/usePianoRollMidiDrop";
 import {
@@ -879,83 +876,29 @@ export function PianoRollWindow() {
     };
   };
 
-  const copySelectedNotes = function () {
-    copySelectedNotesToClipboard({
-      selectedNotes,
-      activePatternId,
-      activeChannelId: activeChannel?.id || null,
-      defaultVelocity: DEFAULT_NOTE_VELOCITY,
-      clampFn: clamp,
-    });
-  };
-
-  const deleteSelectedNotes = function () {
-    if (!selectedNotes.length) {
-      return;
-    }
-
-    if (activeChannel) {
-      dispatch(
-        removePianoNotesBatch({
-          patternId: activePatternId,
-          channelId: activeChannel.id,
-          notes: selectedNotes.map(function (note) {
-            return {
-              id: note.id,
-              source: note.source,
-              start: note.start,
-              pitch: note.pitch,
-            };
-          }),
-        }),
-      );
-    }
-
-    setSelectedNoteIds([]);
-  };
-
-  const cutSelectedNotes = function () {
-    if (!selectedNotes.length) {
-      return;
-    }
-    copySelectedNotes();
-    deleteSelectedNotes();
-  };
-
-  const pasteClipboardNotes = function () {
-    if (!activePattern || !activeChannel) {
-      return;
-    }
-
-    const channelNotes = activePattern.pianoPreview?.[activeChannel.id] || [];
-    const { notesToAdd, nextSelection } = buildClipboardPastePayload({
-      activePatternId,
-      activeChannelId: activeChannel.id,
-      patternLength,
-      minFreeLength: MIN_FREE_LENGTH,
-      pitchMin: PITCH_MIN,
-      pitchMax: PITCH_MAX,
-      channelNotes,
-      defaultVelocity: DEFAULT_NOTE_VELOCITY,
-      clampFn: clamp,
-      makeIdFn: makeGeneratedNoteId,
-    });
-
-    if (notesToAdd.length > 0) {
-      dispatch(
-        addPianoNotesBatch({
-          patternId: activePatternId,
-          channelId: activeChannel.id,
-          notes: notesToAdd,
-        }),
-      );
-    }
-
-    if (nextSelection.length > 0) {
-      setSelectedNoteIds(nextSelection);
-      setEditMode("select");
-    }
-  };
+  const {
+    copySelectedNotes,
+    deleteSelectedNotes,
+    cutSelectedNotes,
+    pasteClipboardNotes,
+  } = usePianoRollClipboardActions({
+    selectedNotes,
+    activePatternId,
+    activePattern,
+    activeChannel,
+    dispatch,
+    patternLength,
+    minFreeLength: MIN_FREE_LENGTH,
+    pitchMin: PITCH_MIN,
+    pitchMax: PITCH_MAX,
+    defaultVelocity: DEFAULT_NOTE_VELOCITY,
+    clampFn: clamp,
+    makeIdFn: makeGeneratedNoteId,
+    addPianoNotesBatchAction: addPianoNotesBatch,
+    removePianoNotesBatchAction: removePianoNotesBatch,
+    setSelectedNoteIds,
+    setEditMode,
+  });
 
   usePianoRollKeyboardShortcuts({
     activeChannel,
