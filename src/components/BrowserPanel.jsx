@@ -3,11 +3,11 @@ import { useCallback, useEffect, useRef, useState } from "react";
 import { useDispatch, useSelector } from "react-redux";
 import { PLUGIN_EFFECTS } from "../data/pluginEffects";
 import { PLUGIN_INSTRUMENTS } from "../data/pluginInstruments";
+import { BrowserPackTree } from "./browser/BrowserPackTree";
+import { BrowserPluginTree } from "./browser/BrowserPluginTree";
 import { setBrowserTab } from "../store";
 import {
-  buildMidiFileDragPayload,
   isMidiFileName,
-  writeMidiFileToDataTransfer,
 } from "../utils/midiImport";
 import { toSafeSampleUrl } from "../utils/sampleUrl";
 
@@ -585,95 +585,6 @@ export function BrowserPanel() {
 
   const packTree = buildPackTree(packGroups);
 
-  const renderFolderNode = function (node, depth) {
-    const parentPath = getParentPath(node.path);
-    const isOpen = expandedByParent[parentPath] === node.path;
-
-    return (
-      <section className="tree-group" key={node.path}>
-        <button
-          className="tree-folder"
-          style={{ paddingLeft: 8 + depth * 14 + "px" }}
-          onClick={function () {
-            toggleFolder(node.path);
-          }}
-        >
-          <span className="caret">{isOpen ? "v" : ">"}</span>
-          {node.name}
-        </button>
-
-        <div className={"tree-collapse" + (isOpen ? " is-open" : "")}>
-          <div className="tree-collapse-inner">
-            <div className="tree-children">
-              {node.children.map(function (childNode) {
-                return renderFolderNode(childNode, depth + 1);
-              })}
-
-              {node.samples.length > 0 ? (
-                <ul className="tree-list">
-                  {node.samples.map(function (sampleItem) {
-                    return (
-                      <li
-                        key={node.path + "-" + sampleItem.name}
-                        className="tree-item"
-                        style={{ marginLeft: 16 + depth * 14 + "px" }}
-                        draggable
-                        onClick={function () {
-                          if (sampleItem.type === "audio") {
-                            void playSamplePreview(sampleItem.path);
-                          }
-                        }}
-                        onDragStart={function (event) {
-                          if (sampleItem.type === "midi") {
-                            const payload = buildMidiFileDragPayload({
-                              fileName: sampleItem.name,
-                              midiPath: sampleItem.path,
-                            });
-
-                            event.dataTransfer.effectAllowed = "copy";
-                            writeMidiFileToDataTransfer(
-                              event.dataTransfer,
-                              payload,
-                            );
-                            return;
-                          }
-
-                          const safeSamplePath = toSafeSampleUrl(
-                            sampleItem.path,
-                          );
-                          if (!safeSamplePath) {
-                            event.preventDefault();
-                            return;
-                          }
-
-                          const payload = JSON.stringify({
-                            tab: "packs",
-                            folder: node.path,
-                            file: sampleItem.name,
-                            samplePath: safeSamplePath,
-                          });
-
-                          event.dataTransfer.effectAllowed = "copy";
-                          event.dataTransfer.setData(
-                            "application/x-daw-sample",
-                            payload,
-                          );
-                          event.dataTransfer.setData("text/plain", payload);
-                        }}
-                      >
-                        {sampleItem.name}
-                      </li>
-                    );
-                  })}
-                </ul>
-              ) : null}
-            </div>
-          </div>
-        </div>
-      </section>
-    );
-  };
-
   return (
     <aside className="browser-shell">
       <div className="browser-tabs">
@@ -698,90 +609,24 @@ export function BrowserPanel() {
       </div>
 
       <div className="browser-tree">
-        {browserTab === "packs" && packGroups.length === 0 ? (
-          <div className="browser-hint">
-            {manifestStatus === "loading"
-              ? "Loading packs..."
-              : "Wklej WAV lub MID do public/packs i uruchom npm run refresh:packs (Packs)"}
-          </div>
-        ) : null}
-
         {browserTab === "plugins"
-          ? browserData.plugins.map(function (group) {
-              const isOpen = Boolean(pluginExpandedByFolder[group.folder]);
-              return (
-                <section className="tree-group" key={group.folder}>
-                  <button
-                    className="tree-folder plugin-folder"
-                    onClick={function () {
-                      togglePluginFolder(group.folder);
-                    }}
-                  >
-                    <span className="caret">{isOpen ? "v" : ">"}</span>
-                    {group.folder}
-                  </button>
-
-                  <div className={"tree-collapse" + (isOpen ? " is-open" : "")}>
-                    <div className="tree-collapse-inner">
-                      <ul className="tree-list">
-                        {group.items.map(function (item) {
-                          const isInstrument = group.type === "instrument";
-                          const key = isInstrument
-                            ? group.folder + "-" + item.pluginRef
-                            : group.folder + "-" + item.effectType;
-                          const payload = isInstrument
-                            ? {
-                                tab: "plugins",
-                                type: "instrument",
-                                pluginRef: item.pluginRef,
-                                pluginName: item.name,
-                              }
-                            : {
-                                tab: "plugins",
-                                type: "effect",
-                                effectType: item.effectType,
-                                effectName: item.name,
-                              };
-                          const mimeType = isInstrument
-                            ? "application/x-daw-plugin"
-                            : "application/x-daw-effect";
-
-                          return (
-                            <li
-                              key={key}
-                              className={
-                                "tree-item plugin-item" +
-                                (isInstrument
-                                  ? " instrument-item"
-                                  : " effect-item")
-                              }
-                              title={item.description}
-                              draggable
-                              onDragStart={function (event) {
-                                const payloadText = JSON.stringify(payload);
-                                event.dataTransfer.setData(
-                                  mimeType,
-                                  payloadText,
-                                );
-                                event.dataTransfer.setData(
-                                  "text/plain",
-                                  payloadText,
-                                );
-                              }}
-                            >
-                              {item.name}
-                            </li>
-                          );
-                        })}
-                      </ul>
-                    </div>
-                  </div>
-                </section>
-              );
-            })
-          : packTree.children.map(function (node) {
-              return renderFolderNode(node, 0);
-            })}
+          ? (
+            <BrowserPluginTree
+              pluginGroups={browserData.plugins}
+              pluginExpandedByFolder={pluginExpandedByFolder}
+              togglePluginFolder={togglePluginFolder}
+            />
+          )
+          : (
+            <BrowserPackTree
+              packGroups={packGroups}
+              manifestStatus={manifestStatus}
+              packTree={packTree}
+              expandedByParent={expandedByParent}
+              toggleFolder={toggleFolder}
+              playSamplePreview={playSamplePreview}
+            />
+          )}
       </div>
     </aside>
   );
