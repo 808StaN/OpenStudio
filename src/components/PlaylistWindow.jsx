@@ -1,5 +1,5 @@
-import { useMemo, useRef, useState } from "react";
-import { useDispatch, useSelector } from "react-redux";
+import { useRef, useState } from "react";
+import { useDispatch } from "react-redux";
 import {
   addPlaylistAudioClip,
   addPlaylistPatternClip,
@@ -17,13 +17,15 @@ import {
   setTransportMode,
 } from "../store";
 import { PlaylistTopControls } from "./playlist/PlaylistTopControls";
-import { PlaylistTrackRow } from "./playlist/PlaylistTrackRow";
+import { PlaylistTracksCanvas } from "./playlist/PlaylistTracksCanvas";
 import { usePlaylistAudioAnalysis } from "./playlist/usePlaylistAudioAnalysis";
 import { usePlaylistAudioClipMaintenance } from "./playlist/usePlaylistAudioClipMaintenance";
+import { usePlaylistDerivedState } from "./playlist/usePlaylistDerivedState";
 import { usePlaylistDropPlacement } from "./playlist/usePlaylistDropPlacement";
 import { usePlaylistPasteShortcut } from "./playlist/usePlaylistPasteShortcut";
 import { usePlaylistClipInteractions } from "./playlist/usePlaylistClipInteractions";
 import { usePlaylistPatternSelectionRef } from "./playlist/usePlaylistPatternSelectionRef";
+import { usePlaylistStoreState } from "./playlist/usePlaylistStoreState";
 import { usePlaylistTrackGridHandlers } from "./playlist/usePlaylistTrackGridHandlers";
 import {
   usePlaylistDropPreviewCleanup,
@@ -45,7 +47,6 @@ import {
 import {
   buildWaveformEnvelope,
   clamp,
-  getPatternPreviewNotes,
   getTargetAudioClipBarLength,
   quantizeBySnap,
 } from "./playlist/playlistUtils";
@@ -106,39 +107,19 @@ export function PlaylistWindow() {
   const [isPointerOverPlaylist, setIsPointerOverPlaylist] = useState(false);
   const [lastHoverPlacement, setLastHoverPlacement] = useState(null);
 
-  const activePatternId = useSelector(function (state) {
-    return state.daw.project.activePatternId;
-  });
-  const patterns = useSelector(function (state) {
-    return state.daw.project.patterns;
-  });
-  const channels = useSelector(function (state) {
-    return state.daw.project.channels;
-  });
-  const tracks = useSelector(function (state) {
-    return state.daw.project.playlistTracks;
-  });
-  const clips = useSelector(function (state) {
-    return state.daw.project.playlistClips;
-  });
-  const clipboardPatternIds = useSelector(function (state) {
-    return state.daw.ui.patternClipboardIds;
-  });
-  const isPlaying = useSelector(function (state) {
-    return state.daw.transport.isPlaying;
-  });
-  const currentStep16 = useSelector(function (state) {
-    return state.daw.transport.currentStep16;
-  });
-  const bpm = useSelector(function (state) {
-    return state.daw.transport.bpm;
-  });
-  const transportMode = useSelector(function (state) {
-    return state.daw.transport.mode;
-  });
-  const songLoopEnabled = useSelector(function (state) {
-    return Boolean(state.daw.transport.songLoopEnabled);
-  });
+  const {
+    activePatternId,
+    patterns,
+    channels,
+    tracks,
+    clips,
+    clipboardPatternIds,
+    isPlaying,
+    currentStep16,
+    bpm,
+    transportMode,
+    songLoopEnabled,
+  } = usePlaylistStoreState();
 
   usePlaylistPatternSelectionRef(patternSelectionForInsertRef);
   const { getAudioAnalysis, audioAnalysisCache } = usePlaylistAudioAnalysis({
@@ -146,65 +127,31 @@ export function PlaylistWindow() {
     waveformBins: AUDIO_WAVEFORM_BINS,
   });
 
-  const patternsById = patterns.reduce(function (acc, pattern) {
-    acc[pattern.id] = pattern;
-    return acc;
-  }, {});
-  const channelsById = useMemo(function () {
-    return channels.reduce(function (acc, channel) {
-      acc[channel.id] = channel;
-      return acc;
-    }, {});
-  }, [channels]);
-
-  const previewNotesByPatternId = useMemo(function () {
-    return patterns.reduce(function (acc, pattern) {
-      acc[pattern.id] = getPatternPreviewNotes(pattern);
-      return acc;
-    }, {});
-  }, [patterns]);
-
-  const timelineWidth = playlistBarCount * barWidth;
-  const activePatternLengthSteps = Math.max(
-    1,
-    patternsById[activePatternId]?.lengthSteps || 16,
-  );
-  const songLengthSteps = Math.max(
-    activePatternLengthSteps,
-    clips.reduce(function (maxSongStep, clip) {
-      const clipStartStep = Math.max(
-        0,
-        Math.round((Number(clip.barStart || 1) - 1) * 16),
-      );
-      const clipLengthSteps = Math.max(
-        1,
-        Math.round(Number(clip.barLength || 1) * 16),
-      );
-      return Math.max(maxSongStep, clipStartStep + clipLengthSteps);
-    }, 16),
-  );
-  const playheadCycleSteps =
-    transportMode === "song" ? songLengthSteps : activePatternLengthSteps;
-  const timelineSteps = Math.max(1, playheadCycleSteps);
-  const normalizedPlayheadStep =
-    ((currentStep16 % timelineSteps) + timelineSteps) % timelineSteps;
-  const playheadStep = isPlaying
-    ? (normalizedPlayheadStep +
-        PLAYLIST_PLAYHEAD_STEP_PHASE_COMPENSATION +
-        timelineSteps) %
-      timelineSteps
-    : normalizedPlayheadStep;
-  const activeSnap =
-    SNAP_OPTIONS.find(function (option) {
-      return option.key === snapKey;
-    }) || SNAP_OPTIONS[11];
-  const snapLineWidth = activeSnap.stepSize
-    ? Math.max(1, (activeSnap.stepSize / 16) * barWidth)
-    : 1;
-  const snapLineOpacity = activeSnap.stepSize ? 0.09 : 0;
-  const snapBarSize = activeSnap.stepSize
-    ? Math.max(1 / 16, activeSnap.stepSize / 16)
-    : null;
+  const {
+    patternsById,
+    channelsById,
+    previewNotesByPatternId,
+    timelineWidth,
+    timelineSteps,
+    playheadStep,
+    activeSnap,
+    snapLineWidth,
+    snapLineOpacity,
+    snapBarSize,
+  } = usePlaylistDerivedState({
+    patterns,
+    channels,
+    clips,
+    activePatternId,
+    transportMode,
+    isPlaying,
+    currentStep16,
+    playlistBarCount,
+    barWidth,
+    snapOptions: SNAP_OPTIONS,
+    snapKey,
+    playheadPhaseCompensation: PLAYLIST_PLAYHEAD_STEP_PHASE_COMPENSATION,
+  });
 
   usePlaylistPlayheadClock({
     playheadStep,
@@ -422,82 +369,45 @@ export function PlaylistWindow() {
         onScroll={onPlaylistBodyScroll}
         onWheel={onPlaylistBodyWheel}
       >
-        <div
-          className="playlist-tracks-shell"
-          style={{ width: 92 + timelineWidth }}
-        >
-          {isPlaying || currentStep16 > 0 ? (
-            <div
-              className="playlist-playhead-layer"
-              style={{ width: timelineWidth + "px" }}
-            >
-              <span ref={playheadRef} className="playlist-playhead-line" />
-            </div>
-          ) : null}
-          {tracks.map(function (track) {
-            const clipsOnTrack = clips
-              .filter(function (clip) {
-                return clip.trackId === track.id;
-              })
-              .sort(function (a, b) {
-                return a.barStart - b.barStart;
-              });
-
-            const {
-              onTrackGridMouseDown,
-              onTrackGridMouseMove,
-              onTrackGridDragOver,
-              onTrackGridDragLeave,
-              onTrackGridDrop,
-              dropPlacementsOnTrack,
-            } = createTrackGridHandlers(track.id);
-
-            return (
-              <PlaylistTrackRow
-                key={track.id}
-                track={track}
-                timelineWidth={timelineWidth}
-                playlistBarCount={playlistBarCount}
-                dropPlacementsOnTrack={dropPlacementsOnTrack}
-                onTrackGridMouseDown={onTrackGridMouseDown}
-                onTrackGridMouseMove={onTrackGridMouseMove}
-                onTrackGridDragOver={onTrackGridDragOver}
-                onTrackGridDragLeave={onTrackGridDragLeave}
-                onTrackGridDrop={onTrackGridDrop}
-                patternsById={patternsById}
-                clipsOnTrack={clipsOnTrack}
-                activePatternId={activePatternId}
-                channelsById={channelsById}
-                audioAnalysisCache={audioAnalysisCache}
-                previewNotesByPatternId={previewNotesByPatternId}
-                bpm={bpm}
-                barWidth={barWidth}
-                onStartMove={startMove}
-                onRemoveClip={function (clipId) {
-                  dispatch(removePlaylistClip(clipId));
-                }}
-                onOpenSampleSettings={function (channelId) {
-                  dispatch(setActiveChannel(channelId));
-                  dispatch(openWindow("sampleSettings"));
-                }}
-                onOpenPattern={function (patternId) {
-                  dispatch(setActivePattern(patternId));
-                  patternSelectionForInsertRef.current = patternId;
-                  window.dispatchEvent(
-                    new CustomEvent("openstudio:playlist-pattern-focus", {
-                      detail: {
-                        patternId,
-                      },
-                    }),
-                  );
-                  dispatch(openWindow("channelRack"));
-                }}
-                onStartResizeFromStart={startResizeFromStart}
-                onStartResize={startResize}
-              />
+        <PlaylistTracksCanvas
+          tracks={tracks}
+          clips={clips}
+          currentStep16={currentStep16}
+          isPlaying={isPlaying}
+          timelineWidth={timelineWidth}
+          playheadRef={playheadRef}
+          playlistBarCount={playlistBarCount}
+          createTrackGridHandlers={createTrackGridHandlers}
+          patternsById={patternsById}
+          activePatternId={activePatternId}
+          channelsById={channelsById}
+          audioAnalysisCache={audioAnalysisCache}
+          previewNotesByPatternId={previewNotesByPatternId}
+          bpm={bpm}
+          barWidth={barWidth}
+          onStartMove={startMove}
+          onRemoveClip={function (clipId) {
+            dispatch(removePlaylistClip(clipId));
+          }}
+          onOpenSampleSettings={function (channelId) {
+            dispatch(setActiveChannel(channelId));
+            dispatch(openWindow("sampleSettings"));
+          }}
+          onOpenPattern={function (patternId) {
+            dispatch(setActivePattern(patternId));
+            patternSelectionForInsertRef.current = patternId;
+            window.dispatchEvent(
+              new CustomEvent("openstudio:playlist-pattern-focus", {
+                detail: {
+                  patternId,
+                },
+              }),
             );
-          })}
-        </div>
+            dispatch(openWindow("channelRack"));
+          }}
+          onStartResizeFromStart={startResizeFromStart}
+          onStartResize={startResize}
+        />
       </div>
     </section>
   );
