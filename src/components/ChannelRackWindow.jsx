@@ -36,6 +36,7 @@ import {
   ChannelContextMenuPanel,
   ChannelRenamePanel,
 } from "./channel-rack/ChannelRackContextPanels";
+import { ChannelRackTopBar } from "./channel-rack/ChannelRackTopBar";
 import { useChannelRackMidiDrop } from "./channel-rack/useChannelRackMidiDrop";
 import { useChannelRackOverlayDismiss } from "./channel-rack/useChannelRackOverlayDismiss";
 import {
@@ -288,150 +289,53 @@ export function ChannelRackWindow() {
 
   return (
     <section className="rack-shell" ref={rackShellRef}>
-      <header className="rack-topbar">
-        <div className="rack-pattern-picker-wrap">
-          <div
-            className={
-              "rack-pattern-picker rack-modern-select" +
-              (isPatternMenuOpen ? " is-open" : "")
+      <ChannelRackTopBar
+        isPatternMenuOpen={isPatternMenuOpen}
+        activePatternColor={activePatternColor}
+        activePatternName={activePattern?.name || "Pattern"}
+        patterns={patterns}
+        activePatternId={activePatternId}
+        onTogglePatternMenu={function () {
+          setIsPatternMenuOpen(function (value) {
+            const next = !value;
+            if (next) {
+              setOpenInsertMenuChannelId(null);
             }
-          >
-            <button
-              type="button"
-              className="rack-modern-select-trigger"
-              aria-label="Active pattern"
-              onClick={function () {
-                setIsPatternMenuOpen(function (value) {
-                  const next = !value;
-                  if (next) {
-                    setOpenInsertMenuChannelId(null);
-                  }
-                  return next;
-                });
-              }}
-            >
-              <span className="rack-modern-select-value">
-                <span style={{ color: activePatternColor }}>
-                  {activePattern?.name || "Pattern"}
-                </span>
-              </span>
-              <span className="rack-modern-select-caret">v</span>
-            </button>
-            {isPatternMenuOpen ? (
-              <div className="rack-modern-select-dropdown">
-                {patterns.map(function (pattern) {
-                  const isActive = pattern.id === activePatternId;
-                  return (
-                    <button
-                      key={pattern.id}
-                      type="button"
-                      className={
-                        "rack-modern-select-option" + (isActive ? " is-active" : "")
-                      }
-                      style={
-                        isActive
-                          ? null
-                          : { color: String(pattern.color || DEFAULT_PATTERN_COLOR) }
-                      }
-                      onClick={function () {
-                        dispatch(setActivePattern(pattern.id));
-                        setIsPatternMenuOpen(false);
-                      }}
-                    >
-                      {pattern.name}
-                    </button>
-                  );
-                })}
-              </div>
-            ) : null}
-          </div>
-          <button
-            className="rack-pattern-add"
-            title="Add pattern"
-            aria-label="Add pattern"
-            onClick={function () {
-              dispatch(createPattern());
-            }}
-          >
-            +
-          </button>
-          <button
-            className="rack-channel-add"
-            title="Add channel"
-            aria-label="Add channel"
-            onClick={function () {
-              dispatch(addChannel());
-            }}
-          >
-            + Channel
-          </button>
-        </div>
-
-        <div className="rack-topbar-controls">
-          <div className="rack-mode-toggle">
-            <button
-              className={channelRackMode === "sequencer" ? "is-active" : ""}
-              onClick={function () {
-                dispatch(setChannelRackMode("sequencer"));
-              }}
-            >
-              Sequencer
-            </button>
-            <button
-              className={channelRackMode === "melody" ? "is-active" : ""}
-              onClick={function () {
-                dispatch(setChannelRackMode("melody"));
-              }}
-            >
-              Melody Mode
-            </button>
-          </div>
-
-          <div className="pattern-length-control">
-            <span>Pattern Length</span>
-            <button
-              onClick={function () {
-                dispatch(
-                  setPatternLength({
-                    patternId: activePatternId,
-                    length: patternLength - 4,
-                  }),
-                );
-              }}
-            >
-              -
-            </button>
-            <input
-              type="number"
-              min="4"
-              max="128"
-              step="1"
-              value={patternLength}
-              onChange={function (event) {
-                dispatch(
-                  setPatternLength({
-                    patternId: activePatternId,
-                    length: Number(event.target.value),
-                  }),
-                );
-              }}
-            />
-            <button
-              onClick={function () {
-                dispatch(
-                  setPatternLength({
-                    patternId: activePatternId,
-                    length: patternLength + 4,
-                  }),
-                );
-              }}
-            >
-              +
-            </button>
-            <small>steps</small>
-          </div>
-        </div>
-      </header>
+            return next;
+          });
+        }}
+        onSelectPattern={function (patternId) {
+          dispatch(setActivePattern(patternId));
+          setIsPatternMenuOpen(false);
+        }}
+        onAddPattern={function () {
+          dispatch(createPattern());
+        }}
+        onAddChannel={function () {
+          dispatch(addChannel());
+        }}
+        channelRackMode={channelRackMode}
+        patternLength={patternLength}
+        onSetMode={function (mode) {
+          dispatch(setChannelRackMode(mode));
+        }}
+        onAdjustPatternLength={function (delta) {
+          dispatch(
+            setPatternLength({
+              patternId: activePatternId,
+              length: patternLength + delta,
+            }),
+          );
+        }}
+        onPatternLengthInput={function (event) {
+          dispatch(
+            setPatternLength({
+              patternId: activePatternId,
+              length: Number(event.target.value),
+            }),
+          );
+        }}
+      />
 
       <div className="rack-scroll-area">
         <div className="rack-rows">

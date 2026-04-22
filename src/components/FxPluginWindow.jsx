@@ -14,6 +14,8 @@ import { MaximizerEditor } from "./fx-plugin/MaximizerEditor";
 import { ReverbEditor } from "./fx-plugin/ReverbEditor";
 import { REVERB_CONTROLS } from "./fx-plugin/reverbControls";
 import { useFxEmptySlotDropTarget } from "./fx-plugin/useFxEmptySlotDropTarget";
+import { useFxMaximizerMetrics } from "./fx-plugin/useFxMaximizerMetrics";
+import { useGraphicEqControlInteractions } from "./fx-plugin/useGraphicEqControlInteractions";
 import { useReverbControlInteractions } from "./fx-plugin/useReverbControlInteractions";
 import {
   buildGraphicEqPath,
@@ -54,11 +56,8 @@ import {
 export function FxPluginWindow() {
   const dispatch = useDispatch();
   const graphRef = useRef(null);
-  const cancelInlineEditRef = useRef(false);
   // UI editing/drag state is local to the window, while actual FX params stay in Redux.
   const [draggingPointIndex, setDraggingPointIndex] = useState(null);
-  const [editingField, setEditingField] = useState(null);
-  const [editingValue, setEditingValue] = useState("");
 
   const inserts = useSelector(function (state) {
     return state.daw.mixer.inserts;
@@ -171,54 +170,19 @@ export function FxPluginWindow() {
     [activeInsert],
   );
 
-  const maximizerWaveformPath = useMemo(
-    function () {
-      return buildWaveformPath(
-        Array.isArray(activeInsert?.meterWaveform)
-          ? activeInsert.meterWaveform
-          : null,
-        520,
-        152,
-      );
-    },
-    [activeInsert],
-  );
-
-  const maximizerTransferPath = useMemo(
-    function () {
-      return buildMaximizerTransferPath(maximizerParams, 520, 152);
-    },
-    [maximizerParams],
-  );
-
-  const maximizerThresholdWavePath = useMemo(
-    function () {
-      const thresholdAmplitude = clamp(
-        Math.pow(10, Number(maximizerParams.thresholdDb || 0) / 20),
-        0,
-        1,
-      );
-      return buildWaveformReductionPath(
-        Array.isArray(activeInsert?.meterWaveform)
-          ? activeInsert.meterWaveform
-          : null,
-        520,
-        152,
-        thresholdAmplitude,
-      );
-    },
-    [activeInsert, maximizerParams.thresholdDb],
-  );
-
-  const maximizerOutDb = useMemo(
-    function () {
-      if (Number.isFinite(Number(activeInsert?.maximizerOutputDb))) {
-        return clamp(Number(activeInsert.maximizerOutputDb), -96, 6);
-      }
-      return -96;
-    },
-    [activeInsert],
-  );
+  const {
+    maximizerWaveformPath,
+    maximizerTransferPath,
+    maximizerThresholdWavePath,
+    maximizerOutDb,
+  } = useFxMaximizerMetrics({
+    activeInsert,
+    maximizerParams,
+    clampFn: clamp,
+    buildWaveformPathFn: buildWaveformPath,
+    buildMaximizerTransferPathFn: buildMaximizerTransferPath,
+    buildWaveformReductionPathFn: buildWaveformReductionPath,
+  });
 
   const pointCoordinates = useMemo(
     function () {
@@ -385,6 +349,31 @@ export function FxPluginWindow() {
     parseNumericInputFn: parseNumericInput,
   });
 
+  // Graphic EQ field editing/wheel interactions are isolated in a dedicated hook.
+  const {
+    editingField,
+    editingValue,
+    setEditingValue,
+    adjustPointShapeByWheel,
+    beginInlineEdit,
+    onInlineEditKeyDown,
+    onInlineEditBlur,
+    onBandTypeChange,
+  } = useGraphicEqControlInteractions({
+    eqParams,
+    activeInsertId,
+    activeSlotId,
+    dispatch,
+    setFxSlotGraphicEqPointAction: setFxSlotGraphicEqPoint,
+    parseFrequencyInputFn: parseFrequencyInput,
+    parseDbInputFn: parseDbInput,
+    parseShapePercentInputFn: parseShapePercentInput,
+    getQFromShapePercentFn: getQFromShapePercent,
+    getPointShapePercentFn: getPointShapePercent,
+    clampFn: clamp,
+    wheelShapeStepPercent: WHEEL_SHAPE_STEP_PERCENT,
+  });
+
   if (!activeInsert || !activeSlot) {
     return (
       <section className="fx-plugin-panel fx-window-panel">
@@ -442,158 +431,6 @@ export function FxPluginWindow() {
       />
     );
   }
-
-  const adjustPointShapeByWheel = function (event, pointIndex) {
-    const targetTagName = String(event.target?.tagName || "").toUpperCase();
-    if (targetTagName === "SELECT" || targetTagName === "OPTION") {
-      return;
-    }
-
-    event.preventDefault();
-    event.stopPropagation();
-
-    const point = eqParams.points[pointIndex];
-    if (!point) {
-      return;
-    }
-
-    const currentPercent = getPointShapePercent(point);
-    const direction = event.deltaY < 0 ? 1 : -1;
-    const nextPercent = clamp(
-      currentPercent + direction * WHEEL_SHAPE_STEP_PERCENT,
-      0,
-      100,
-    );
-    const nextQ = getQFromShapePercent(point.bandType, nextPercent);
-
-    if (!activeInsertId || !activeSlotId) {
-      return;
-    }
-
-    dispatch(
-      setFxSlotGraphicEqPoint({
-        insertId: activeInsertId,
-        slotId: activeSlotId,
-        pointIndex,
-        q: nextQ,
-      }),
-    );
-  };
-
-  const beginInlineEdit = function (point, pointIndex, field) {
-    if (field === "frequency") {
-      setEditingValue(String(Math.round(point.frequencyHz)));
-    } else if (field === "gain") {
-      setEditingValue(Number(point.gainDb || 0).toFixed(1));
-    } else {
-      setEditingValue(String(getPointShapePercent(point)));
-    }
-
-    setEditingField({
-      pointIndex,
-      field,
-    });
-  };
-
-  const cancelInlineEdit = function () {
-    setEditingField(null);
-    setEditingValue("");
-  };
-
-  const commitInlineEdit = function () {
-    if (!editingField) {
-      return;
-    }
-
-    const point = eqParams.points[editingField.pointIndex];
-    if (!point) {
-      cancelInlineEdit();
-      return;
-    }
-
-    if (!activeInsertId || !activeSlotId) {
-      cancelInlineEdit();
-      return;
-    }
-
-    if (editingField.field === "frequency") {
-      const nextFrequencyHz = parseFrequencyInput(editingValue);
-      if (nextFrequencyHz !== null) {
-        dispatch(
-          setFxSlotGraphicEqPoint({
-            insertId: activeInsertId,
-            slotId: activeSlotId,
-            pointIndex: editingField.pointIndex,
-            frequencyHz: nextFrequencyHz,
-          }),
-        );
-      }
-    } else if (editingField.field === "gain") {
-      const nextGainDb = parseDbInput(editingValue);
-      if (nextGainDb !== null) {
-        dispatch(
-          setFxSlotGraphicEqPoint({
-            insertId: activeInsertId,
-            slotId: activeSlotId,
-            pointIndex: editingField.pointIndex,
-            gainDb: nextGainDb,
-          }),
-        );
-      }
-    } else {
-      const nextPercent = parseShapePercentInput(editingValue);
-      if (nextPercent !== null) {
-        dispatch(
-          setFxSlotGraphicEqPoint({
-            insertId: activeInsertId,
-            slotId: activeSlotId,
-            pointIndex: editingField.pointIndex,
-            q: getQFromShapePercent(point.bandType, nextPercent),
-          }),
-        );
-      }
-    }
-
-    cancelInlineEdit();
-  };
-
-  const onInlineEditKeyDown = function (event) {
-    if (event.key === "Enter") {
-      event.preventDefault();
-      commitInlineEdit();
-      return;
-    }
-
-    if (event.key === "Escape") {
-      event.preventDefault();
-      cancelInlineEditRef.current = true;
-      cancelInlineEdit();
-    }
-  };
-
-  const onInlineEditBlur = function () {
-    if (cancelInlineEditRef.current) {
-      cancelInlineEditRef.current = false;
-      return;
-    }
-
-    commitInlineEdit();
-  };
-
-  const onBandTypeChange = function (pointIndex, bandType) {
-    if (!activeInsertId || !activeSlotId) {
-      return;
-    }
-
-    dispatch(
-      setFxSlotGraphicEqPoint({
-        insertId: activeInsertId,
-        slotId: activeSlotId,
-        pointIndex,
-        bandType,
-      }),
-    );
-  };
 
   return (
     // Graphic EQ UI branch: curve editor, draggable points, and per-band readouts.

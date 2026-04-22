@@ -74,6 +74,12 @@ import {
 import { usePianoRollKeyboardShortcuts } from "./piano-roll/usePianoRollKeyboardShortcuts";
 import { usePianoRollMidiIo } from "./piano-roll/usePianoRollMidiIo";
 import { usePianoRollMidiDrop } from "./piano-roll/usePianoRollMidiDrop";
+import {
+  usePianoRollInitialViewport,
+  usePianoRollPlayheadAnimation,
+  usePianoRollPlayheadClock,
+  usePianoRollPreventBrowserZoom,
+} from "./piano-roll/usePianoRollViewportAndPlayhead";
 import { PianoRollToolbar } from "./piano-roll/PianoRollToolbar";
 import { PianoRollEditorBody } from "./piano-roll/PianoRollEditorBody";
 
@@ -221,122 +227,38 @@ export function PianoRollWindow() {
     ? (normalizedPlayheadStep - 1 + patternLength) % patternLength
     : normalizedPlayheadStep;
 
-  useEffect(
-    function () {
-      if (playheadStepRef.current === playheadStep) {
-        return;
-      }
+  // Playhead and viewport side-effects are extracted to dedicated hooks to keep this component slimmer.
+  usePianoRollPlayheadClock({
+    playheadStep,
+    playheadStepRef,
+    playheadStepTimestampRef,
+  });
 
-      playheadStepRef.current = playheadStep;
-      playheadStepTimestampRef.current = performance.now();
-    },
-    [playheadStep],
-  );
+  usePianoRollPlayheadAnimation({
+    playheadRef,
+    playheadStepRef,
+    playheadStepTimestampRef,
+    isPlaying,
+    bpm,
+    patternLength,
+    stepWidth,
+    clampFn: clamp,
+  });
 
-  useEffect(
-    function () {
-      const playheadElement = playheadRef.current;
-      if (!playheadElement) {
-        return;
-      }
+  usePianoRollInitialViewport({
+    initializedViewportRef,
+    gridWrapRef,
+    keysRef,
+    rowHeight,
+    pitchMax: PITCH_MAX,
+    c5Pitch: C5_PITCH,
+    gridHeaderHeight: GRID_HEADER_HEIGHT,
+  });
 
-      const setPlayheadPosition = function (positionPx) {
-        playheadElement.style.transform = "translateX(" + positionPx + "px)";
-      };
-
-      const currentBaseStep =
-        ((playheadStepRef.current % patternLength) + patternLength) %
-        patternLength;
-
-      if (!isPlaying) {
-        setPlayheadPosition(currentBaseStep * stepWidth);
-        return;
-      }
-
-      if (playheadStepTimestampRef.current <= 0) {
-        playheadStepTimestampRef.current = performance.now();
-      }
-
-      let rafId = 0;
-      const stepDurationMs = (60 / Math.max(1, bpm) / 4) * 1000;
-
-      const tick = function () {
-        const elapsed = performance.now() - playheadStepTimestampRef.current;
-        const progress = clamp(elapsed / stepDurationMs, 0, 0.999);
-        const baseStep =
-          ((playheadStepRef.current % patternLength) + patternLength) %
-          patternLength;
-        setPlayheadPosition((baseStep + progress) * stepWidth);
-        rafId = requestAnimationFrame(tick);
-      };
-
-      tick();
-
-      return function () {
-        cancelAnimationFrame(rafId);
-      };
-    },
-    [isPlaying, bpm, patternLength, stepWidth],
-  );
-
-  useEffect(
-    function () {
-      if (initializedViewportRef.current) {
-        return;
-      }
-
-      const viewport = gridWrapRef.current;
-      if (!viewport) {
-        return;
-      }
-
-      const c5RowIndex = Math.max(0, PITCH_MAX - C5_PITCH);
-      const targetScrollTop = Math.max(
-        0,
-        c5RowIndex * rowHeight -
-          viewport.clientHeight * 0.45 +
-          GRID_HEADER_HEIGHT,
-      );
-      viewport.scrollTop = targetScrollTop;
-
-      if (keysRef.current) {
-        keysRef.current.scrollTop = targetScrollTop;
-      }
-
-      initializedViewportRef.current = true;
-    },
-    [rowHeight],
-  );
-
-  useEffect(function () {
-    const viewport = gridWrapRef.current;
-    const keys = keysRef.current;
-
-    const preventBrowserZoom = function (event) {
-      if (!event.ctrlKey) {
-        return;
-      }
-      event.preventDefault();
-    };
-
-    const options = { passive: false };
-
-    if (viewport) {
-      viewport.addEventListener("wheel", preventBrowserZoom, options);
-    }
-    if (keys) {
-      keys.addEventListener("wheel", preventBrowserZoom, options);
-    }
-
-    return function () {
-      if (viewport) {
-        viewport.removeEventListener("wheel", preventBrowserZoom, options);
-      }
-      if (keys) {
-        keys.removeEventListener("wheel", preventBrowserZoom, options);
-      }
-    };
-  }, []);
+  usePianoRollPreventBrowserZoom({
+    gridWrapRef,
+    keysRef,
+  });
 
   const clearPreviewStopListeners = useCallback(function () {
     const listeners = previewStopListenersRef.current;
