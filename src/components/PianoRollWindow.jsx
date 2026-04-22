@@ -68,6 +68,7 @@ import { usePianoRollPreviewAudio } from "./piano-roll/usePianoRollPreviewAudio"
 import { usePianoRollScrollAndZoom } from "./piano-roll/usePianoRollScrollAndZoom";
 import { usePianoRollDerivedState } from "./piano-roll/usePianoRollDerivedState";
 import { usePianoRollStoreState } from "./piano-roll/usePianoRollStoreState";
+import { usePianoRollToolbarActions } from "./piano-roll/usePianoRollToolbarActions";
 import {
   usePianoRollInitialViewport,
   usePianoRollPlayheadAnimation,
@@ -430,6 +431,15 @@ export function PianoRollWindow() {
     midiVelocityToPercentFn: midiVelocityToPercent,
   });
 
+  const { onSelectChannel, onSelectScaleRoot, onSelectScaleType } =
+    usePianoRollToolbarActions({
+      dispatch,
+      setActiveChannelAction: setActiveChannel,
+      setPianoRollScaleAction: setPianoRollScale,
+      scaleRoot,
+      scaleType,
+    });
+
   return (
     <section className="piano-roll-shell">
       <PianoRollToolbar
@@ -448,9 +458,7 @@ export function PianoRollWindow() {
         setIsScaleRootMenuOpen={setIsScaleRootMenuOpen}
         isScaleTypeMenuOpen={isScaleTypeMenuOpen}
         setIsScaleTypeMenuOpen={setIsScaleTypeMenuOpen}
-        onSelectChannel={function (channelId) {
-          dispatch(setActiveChannel(channelId));
-        }}
+        onSelectChannel={onSelectChannel}
         onImportMidiClick={onImportMidiClick}
         onExportMidiClick={onExportMidiClick}
         onImportMidiFileChange={onImportMidiFileChange}
@@ -466,22 +474,8 @@ export function PianoRollWindow() {
         activeScale={activeScale}
         SCALE_ROOTS={SCALE_ROOTS}
         SCALE_TYPES={SCALE_TYPES}
-        onSelectScaleRoot={function (noteName) {
-          dispatch(
-            setPianoRollScale({
-              root: noteName,
-              type: scaleType,
-            }),
-          );
-        }}
-        onSelectScaleType={function (typeKey) {
-          dispatch(
-            setPianoRollScale({
-              root: scaleRoot,
-              type: typeKey,
-            }),
-          );
-        }}
+        onSelectScaleRoot={onSelectScaleRoot}
+        onSelectScaleType={onSelectScaleType}
       />
 
       <PianoRollEditorBody
