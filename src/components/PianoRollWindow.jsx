@@ -34,6 +34,20 @@ import {
   PIANO_PITCH_MIN,
   getChannelMergedNotes,
 } from "../utils/patternNotes";
+import {
+  clamp,
+  getNoteName,
+  getNoteSelectionId,
+  getPitchClassName,
+  isNearlyEqual,
+  makeGeneratedNoteId,
+  midiPitchToPlaybackRate,
+  midiVelocityToPercent,
+  moveByScaleStep,
+  percentToMidiVelocity,
+  quantizeBySnap,
+  toPitchClass,
+} from "./piano-roll/pianoRollUtils";
 
 const PITCH_MIN = PIANO_PITCH_MIN;
 const PITCH_MAX = PIANO_PITCH_MAX;
@@ -51,7 +65,6 @@ const DEFAULT_SAMPLE_MIDI_PITCH = 72;
 const DEFAULT_NOTE_VELOCITY = 95;
 const MIN_VELOCITY_LANE_HEIGHT = 72;
 const MAX_VELOCITY_LANE_HEIGHT = 2400;
-const MIDI_VELOCITY_MAX = 127;
 
 const SNAP_OPTIONS = [
   { key: "none", label: "(none)", stepSize: null },
@@ -95,104 +108,6 @@ const SCALE_TYPES = [
     intervals: [0, 2, 4, 5, 7, 9, 11],
   },
 ];
-
-const PITCH_CLASS_NAMES = [
-  "C",
-  "C#",
-  "D",
-  "D#",
-  "E",
-  "F",
-  "F#",
-  "G",
-  "G#",
-  "A",
-  "A#",
-  "B",
-];
-
-function clamp(value, min, max) {
-  return Math.max(min, Math.min(max, value));
-}
-
-function midiVelocityToPercent(rawVelocity) {
-  const safeMidi = clamp(
-    Number(rawVelocity || DEFAULT_NOTE_VELOCITY),
-    1,
-    MIDI_VELOCITY_MAX,
-  );
-  return Math.round((safeMidi / MIDI_VELOCITY_MAX) * 100);
-}
-
-function percentToMidiVelocity(rawPercent) {
-  const safePercent = clamp(Number(rawPercent || 0), 0, 100);
-  return Math.max(1, Math.round((safePercent / 100) * MIDI_VELOCITY_MAX));
-}
-
-function quantizeBySnap(value, snapSize) {
-  if (!snapSize) {
-    return Math.round(value * 1000) / 1000;
-  }
-
-  return Math.round(value / snapSize) * snapSize;
-}
-
-function isNearlyEqual(left, right) {
-  return Math.abs(left - right) <= SNAP_EPSILON;
-}
-
-function getNoteName(pitch) {
-  const name = PITCH_CLASS_NAMES[pitch % 12];
-  const octave = Math.floor(pitch / 12) - 1;
-  return name + octave;
-}
-
-function getPitchClassName(pitch) {
-  return PITCH_CLASS_NAMES[toPitchClass(pitch)];
-}
-
-function toPitchClass(pitch) {
-  return ((pitch % 12) + 12) % 12;
-}
-
-function makeGeneratedNoteId(prefix) {
-  return (
-    prefix +
-    "-" +
-    Date.now().toString(36) +
-    "-" +
-    Math.random().toString(36).slice(2, 7)
-  );
-}
-
-function midiPitchToPlaybackRate(midiPitch) {
-  const semitoneOffset =
-    Number(midiPitch || DEFAULT_SAMPLE_MIDI_PITCH) - DEFAULT_SAMPLE_MIDI_PITCH;
-  const rawRate = Math.pow(2, semitoneOffset / 12);
-  return clamp(rawRate, 0.125, 8);
-}
-
-function getNoteSelectionId(note) {
-  if (note.source === "step") {
-    return "step:" + note.start;
-  }
-  return "piano:" + note.id;
-}
-
-function moveByScaleStep(pitch, direction, pitchClassSet, minPitch, maxPitch) {
-  let probe = pitch;
-  for (let attempt = 0; attempt < 24; attempt += 1) {
-    probe += direction;
-    if (probe < minPitch || probe > maxPitch) {
-      break;
-    }
-    if (pitchClassSet.has(toPitchClass(probe))) {
-      return probe;
-    }
-  }
-
-  return clamp(pitch + direction, minPitch, maxPitch);
-}
 
 let sharedPianoClipboard = {
   sourcePatternId: null,
