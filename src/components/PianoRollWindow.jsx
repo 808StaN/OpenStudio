@@ -71,12 +71,9 @@ import {
   findVelocityCandidatesAtClientX as findVelocityCandidatesAtClientXFromUtils,
   getVelocityPercentFromClientY,
 } from "./piano-roll/pianoRollVelocityUtils";
-import {
-  hasMidiDropPayload,
-  resolveDroppedMidiNotes,
-} from "./piano-roll/pianoRollMidiDropUtils";
 import { usePianoRollKeyboardShortcuts } from "./piano-roll/usePianoRollKeyboardShortcuts";
 import { usePianoRollMidiIo } from "./piano-roll/usePianoRollMidiIo";
+import { usePianoRollMidiDrop } from "./piano-roll/usePianoRollMidiDrop";
 import { PianoRollToolbar } from "./piano-roll/PianoRollToolbar";
 import { PianoRollEditorBody } from "./piano-roll/PianoRollEditorBody";
 
@@ -1323,73 +1320,25 @@ export function PianoRollWindow() {
     }
   };
 
-  const onPianoRollMidiDragOver = function (event) {
-    if (
-      hasMidiDropPayload({
-        dataTransfer: event.dataTransfer,
-        dataTransferHasMidiPatternPayloadFn: dataTransferHasMidiPatternPayload,
-        dataTransferHasMidiFilePayloadFn: dataTransferHasMidiFilePayload,
-        readMidiPatternFromDataTransferFn: readMidiPatternFromDataTransfer,
-        readMidiFilePayloadFromDataTransferFn: readMidiFilePayloadFromDataTransfer,
-        isMidiFileNameFn: isMidiFileName,
-      })
-    ) {
-      event.preventDefault();
-      event.dataTransfer.dropEffect = "copy";
-    }
-  };
-
-  const onPianoRollMidiDrop = async function (event) {
-    if (!activePattern || !activeChannel) {
-      return;
-    }
-
-    const payload = readMidiPatternFromDataTransfer(event.dataTransfer);
-
-    const pointer = getGridPointerFromEvent(event);
-    if (!pointer) {
-      return;
-    }
-
-    event.preventDefault();
-
-    const insertStep = clamp(
-      Math.floor(pointer.x / stepWidth),
-      0,
-      patternLength - 1,
-    );
-
-    if (payload) {
-      dispatch(
-        pasteMidiPatternToChannel({
-          patternId: activePatternId,
-          channelId: activeChannel.id,
-          insertStep,
-          notes: payload.notes,
-        }),
-      );
-      return;
-    }
-
-    const notes = await resolveDroppedMidiNotes({
-      dataTransfer: event.dataTransfer,
+  const { onPianoRollMidiDragOver, onPianoRollMidiDrop } = usePianoRollMidiDrop(
+    {
+      activePattern,
+      activeChannel,
+      activePatternId,
+      patternLength,
+      stepWidth,
+      dispatch,
+      clampFn: clamp,
+      getGridPointerFromEvent,
+      pasteMidiPatternToChannelAction: pasteMidiPatternToChannel,
+      dataTransferHasMidiPatternPayloadFn: dataTransferHasMidiPatternPayload,
+      dataTransferHasMidiFilePayloadFn: dataTransferHasMidiFilePayload,
+      readMidiPatternFromDataTransferFn: readMidiPatternFromDataTransfer,
       readMidiFilePayloadFromDataTransferFn: readMidiFilePayloadFromDataTransfer,
       parseMidiArrayBufferToStepNotesFn: parseMidiArrayBufferToStepNotes,
       isMidiFileNameFn: isMidiFileName,
-    });
-    if (notes.length === 0) {
-      return;
-    }
-
-    dispatch(
-      pasteMidiPatternToChannel({
-        patternId: activePatternId,
-        channelId: activeChannel.id,
-        insertStep,
-        notes,
-      }),
-    );
-  };
+    },
+  );
 
   const { onExportMidiClick, onImportMidiClick, onImportMidiFileChange } =
     usePianoRollMidiIo({
