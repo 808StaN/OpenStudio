@@ -36,9 +36,7 @@ import {
 } from "../utils/patternNotes";
 import {
   clamp,
-  getNoteName,
   getNoteSelectionId,
-  getPitchClassName,
   isNearlyEqual,
   makeGeneratedNoteId,
   midiPitchToPlaybackRate,
@@ -46,8 +44,9 @@ import {
   moveByScaleStep,
   percentToMidiVelocity,
   quantizeBySnap,
-  toPitchClass,
 } from "./piano-roll/pianoRollUtils";
+import { PianoRollToolbar } from "./piano-roll/PianoRollToolbar";
+import { PianoRollEditorBody } from "./piano-roll/PianoRollEditorBody";
 
 const PITCH_MIN = PIANO_PITCH_MIN;
 const PITCH_MAX = PIANO_PITCH_MAX;
@@ -2484,500 +2483,95 @@ export function PianoRollWindow() {
 
   return (
     <section className="piano-roll-shell">
-      <header className="piano-roll-toolbar">
-        <div className="snap-menu channel-menu" ref={channelMenuRef}>
-          <button
-            type="button"
-            className="snap-trigger"
-            onClick={function () {
-              setIsChannelMenuOpen(function (value) {
-                const next = !value;
-                setIsSnapMenuOpen(false);
-                setIsScaleRootMenuOpen(false);
-                setIsScaleTypeMenuOpen(false);
-                return next;
-              });
-            }}
-          >
-            Channel: {activeChannel?.name || "-"}
-          </button>
-          {isChannelMenuOpen ? (
-            <div className="snap-dropdown">
-              {channels.map(function (channel) {
-                return (
-                  <label key={channel.id} className="snap-option">
-                    <input
-                      type="radio"
-                      name="piano-roll-channel"
-                      checked={(activeChannel?.id || "") === channel.id}
-                      onChange={function () {
-                        dispatch(setActiveChannel(channel.id));
-                        setIsChannelMenuOpen(false);
-                      }}
-                    />
-                    <span>{channel.name}</span>
-                  </label>
-                );
-              })}
-            </div>
-          ) : null}
-        </div>
-        <button
-          type="button"
-          className="snap-trigger"
-          onClick={onImportMidiClick}
-        >
-          Import MIDI
-        </button>
-        <button
-          type="button"
-          className="snap-trigger"
-          onClick={onExportMidiClick}
-        >
-          Export MIDI
-        </button>
-        <input
-          ref={midiImportInputRef}
-          type="file"
-          accept=".mid,.midi,audio/midi,audio/x-midi"
-          style={{ display: "none" }}
-          onChange={function (event) {
-            void onImportMidiFileChange(event);
-          }}
-        />
-        <div className="edit-mode-toggle">
-          <button
-            type="button"
-            className={editMode === "add" ? "is-active" : ""}
-            onClick={function () {
-              setEditMode("add");
-              setSelectedNoteIds([]);
-            }}
-          >
-            Add Notes
-          </button>
-          <button
-            type="button"
-            className={editMode === "select" ? "is-active" : ""}
-            onClick={function () {
-              setEditMode("select");
-            }}
-          >
-            Select
-          </button>
-        </div>
-        <div className="snap-menu" ref={snapMenuRef}>
-          <button
-            type="button"
-            className="snap-trigger"
-            onClick={function () {
-              setIsSnapMenuOpen(function (value) {
-                const next = !value;
-                setIsChannelMenuOpen(false);
-                setIsScaleRootMenuOpen(false);
-                setIsScaleTypeMenuOpen(false);
-                return next;
-              });
-            }}
-          >
-            Snap: {activeSnap.label}
-          </button>
-          {isSnapMenuOpen ? (
-            <div className="snap-dropdown">
-              {SNAP_OPTIONS.map(function (option) {
-                return (
-                  <label key={option.key} className="snap-option">
-                    <input
-                      type="radio"
-                      name="piano-roll-snap"
-                      checked={snapKey === option.key}
-                      onChange={function () {
-                        setSnapKey(option.key);
-                        setIsSnapMenuOpen(false);
-                      }}
-                    />
-                    <span>{option.label}</span>
-                  </label>
-                );
-              })}
-            </div>
-          ) : null}
-        </div>
-        <div className="scale-controls">
-          <span>Scale:</span>
-          <div className="snap-menu scale-menu" ref={scaleRootMenuRef}>
-            <button
-              type="button"
-              className="snap-trigger"
-              onClick={function () {
-                setIsScaleRootMenuOpen(function (value) {
-                  const next = !value;
-                  setIsScaleTypeMenuOpen(false);
-                  setIsChannelMenuOpen(false);
-                  setIsSnapMenuOpen(false);
-                  return next;
-                });
-              }}
-            >
-              {scaleRoot}
-            </button>
-            {isScaleRootMenuOpen ? (
-              <div className="snap-dropdown">
-                {SCALE_ROOTS.map(function (noteName) {
-                  return (
-                    <label key={noteName} className="snap-option">
-                      <input
-                        type="radio"
-                        name="piano-roll-scale-root"
-                        checked={scaleRoot === noteName}
-                        onChange={function () {
-                          dispatch(
-                            setPianoRollScale({
-                              root: noteName,
-                              type: scaleType,
-                            }),
-                          );
-                          setIsScaleRootMenuOpen(false);
-                        }}
-                      />
-                      <span>{noteName}</span>
-                    </label>
-                  );
-                })}
-              </div>
-            ) : null}
-          </div>
-          <div className="snap-menu scale-menu" ref={scaleTypeMenuRef}>
-            <button
-              type="button"
-              className="snap-trigger"
-              onClick={function () {
-                setIsScaleTypeMenuOpen(function (value) {
-                  const next = !value;
-                  setIsScaleRootMenuOpen(false);
-                  setIsChannelMenuOpen(false);
-                  setIsSnapMenuOpen(false);
-                  return next;
-                });
-              }}
-            >
-              {activeScale.label}
-            </button>
-            {isScaleTypeMenuOpen ? (
-              <div className="snap-dropdown">
-                {SCALE_TYPES.map(function (item) {
-                  return (
-                    <label key={item.key} className="snap-option">
-                      <input
-                        type="radio"
-                        name="piano-roll-scale-type"
-                        checked={scaleType === item.key}
-                        onChange={function () {
-                          dispatch(
-                            setPianoRollScale({
-                              root: scaleRoot,
-                              type: item.key,
-                            }),
-                          );
-                          setIsScaleTypeMenuOpen(false);
-                        }}
-                      />
-                      <span>{item.label}</span>
-                    </label>
-                  );
-                })}
-              </div>
-            ) : null}
-          </div>
-        </div>
-        <small>
-          {editMode === "add"
-            ? "LMB add. LMB drag note to move, right edge to resize. RMB delete."
-            : "Drag to select. Move selected with mouse. Ctrl+C/X/V, Delete, Arrow Up/Down (scale), Shift+Arrow +/-1, Ctrl+Arrow +/-12."}{" "}
-          Drop MID file on Piano Roll (from Drumkits Browser or your computer)
-          to paste melody. Import MIDI opens file picker. Export MIDI saves
-          current channel melody. Wheel: up/down, Ctrl+Wheel: zoom.
-        </small>
-      </header>
+      <PianoRollToolbar
+        channelMenuRef={channelMenuRef}
+        snapMenuRef={snapMenuRef}
+        scaleRootMenuRef={scaleRootMenuRef}
+        scaleTypeMenuRef={scaleTypeMenuRef}
+        midiImportInputRef={midiImportInputRef}
+        activeChannel={activeChannel}
+        channels={channels}
+        isChannelMenuOpen={isChannelMenuOpen}
+        setIsChannelMenuOpen={setIsChannelMenuOpen}
+        isSnapMenuOpen={isSnapMenuOpen}
+        setIsSnapMenuOpen={setIsSnapMenuOpen}
+        isScaleRootMenuOpen={isScaleRootMenuOpen}
+        setIsScaleRootMenuOpen={setIsScaleRootMenuOpen}
+        isScaleTypeMenuOpen={isScaleTypeMenuOpen}
+        setIsScaleTypeMenuOpen={setIsScaleTypeMenuOpen}
+        onSelectChannel={function (channelId) {
+          dispatch(setActiveChannel(channelId));
+        }}
+        onImportMidiClick={onImportMidiClick}
+        onExportMidiClick={onExportMidiClick}
+        onImportMidiFileChange={onImportMidiFileChange}
+        editMode={editMode}
+        setEditMode={setEditMode}
+        setSelectedNoteIds={setSelectedNoteIds}
+        activeSnap={activeSnap}
+        SNAP_OPTIONS={SNAP_OPTIONS}
+        snapKey={snapKey}
+        setSnapKey={setSnapKey}
+        scaleRoot={scaleRoot}
+        scaleType={scaleType}
+        activeScale={activeScale}
+        SCALE_ROOTS={SCALE_ROOTS}
+        SCALE_TYPES={SCALE_TYPES}
+        onSelectScaleRoot={function (noteName) {
+          dispatch(
+            setPianoRollScale({
+              root: noteName,
+              type: scaleType,
+            }),
+          );
+        }}
+        onSelectScaleType={function (typeKey) {
+          dispatch(
+            setPianoRollScale({
+              root: scaleRoot,
+              type: typeKey,
+            }),
+          );
+        }}
+      />
 
-      <div className="piano-roll-body">
-        <div className="piano-main-grid">
-          <aside
-            className="piano-keys"
-            ref={keysRef}
-            onWheel={onGridWheel}
-            onScroll={onKeysScroll}
-            style={{ height: "100%" }}
-          >
-            <div className="piano-keys-header" />
-            {pitchRows.map(function (pitch) {
-              const noteName = getNoteName(pitch);
-              const isSharp = noteName.includes("#");
-              const isC = noteName.startsWith("C");
-
-              return (
-                <div
-                  key={pitch}
-                  className={
-                    "piano-key-row" +
-                    (isSharp ? " sharp" : "") +
-                    (isC ? " marker" : "")
-                  }
-                  style={{ height: rowHeight }}
-                >
-                  <span>{noteName}</span>
-                </div>
-              );
-            })}
-          </aside>
-
-          <div
-            className="piano-grid-wrap"
-            ref={gridWrapRef}
-            onWheel={onGridWheel}
-            onScroll={onGridWrapScroll}
-            onContextMenu={function (event) {
-              event.preventDefault();
-            }}
-          >
-            <div className="piano-grid-header" style={{ width: gridWidth }}>
-              {Array.from({ length: totalBars }).map(function (_, barIndex) {
-                const barStart = barIndex * STEPS_PER_BAR;
-                const barSteps = Math.min(
-                  STEPS_PER_BAR,
-                  patternLength - barStart,
-                );
-                return (
-                  <div
-                    key={barIndex}
-                    className="piano-bar-cell"
-                    style={{ width: barSteps * stepWidth }}
-                  >
-                    {barIndex + 1}
-                  </div>
-                );
-              })}
-            </div>
-
-            <div
-              className="piano-grid"
-              style={{
-                width: gridWidth,
-                height: gridHeight,
-                "--step-width": stepWidth + "px",
-                "--bar-width": stepWidth * 4 + "px",
-                "--row-height": rowHeight + "px",
-                "--snap-width": snapLineWidth + "px",
-                "--snap-opacity": String(snapLineOpacity),
-              }}
-              onDragOver={onPianoRollMidiDragOver}
-              onDrop={onPianoRollMidiDrop}
-              onMouseDown={onGridMouseDown}
-              onContextMenu={function (event) {
-                event.preventDefault();
-              }}
-            >
-              {selectionBox ? (
-                <span
-                  className="piano-selection-box"
-                  style={{
-                    left: Math.min(selectionBox.startX, selectionBox.endX),
-                    top: Math.min(selectionBox.startY, selectionBox.endY),
-                    width: Math.abs(selectionBox.endX - selectionBox.startX),
-                    height: Math.abs(selectionBox.endY - selectionBox.startY),
-                  }}
-                />
-              ) : null}
-
-              {isPlaying ? (
-                <span ref={playheadRef} className="piano-playhead-line" />
-              ) : null}
-
-              {Array.from({ length: Math.max(0, totalBars - 1) }).map(
-                function (_, index) {
-                  const boundaryStep = (index + 1) * STEPS_PER_BAR;
-                  if (boundaryStep >= patternLength) {
-                    return null;
-                  }
-
-                  return (
-                    <span
-                      key={"major-line-" + boundaryStep}
-                      className="piano-major-line"
-                      style={{ left: boundaryStep * stepWidth }}
-                    />
-                  );
-                },
-              )}
-
-              {pitchRows.map(function (pitch, rowIndex) {
-                if (scalePitchClasses.has(toPitchClass(pitch))) {
-                  return null;
-                }
-
-                return (
-                  <span
-                    key={"scale-row-" + pitch}
-                    className="piano-scale-row"
-                    style={{
-                      top: rowIndex * rowHeight,
-                      height: rowHeight,
-                    }}
-                  />
-                );
-              })}
-
-              {pianoNotes.map(function (note) {
-                const top = (PITCH_MAX - note.pitch) * rowHeight + 2;
-                const left = note.start * stepWidth + 1;
-                const width = Math.max(8, note.length * stepWidth - 2);
-                const velocityAlpha = clamp(
-                  midiVelocityToPercent(
-                    Number(note.velocity || DEFAULT_NOTE_VELOCITY),
-                  ) / 100,
-                  0.78,
-                  1,
-                );
-
-                return (
-                  <span
-                    key={note.id}
-                    className={
-                      "piano-note" +
-                      (note.source === "step" ? " from-step" : " from-piano") +
-                      (selectedNoteIdSet.has(getNoteSelectionId(note))
-                        ? " is-selected"
-                        : "")
-                    }
-                    onMouseDown={function (event) {
-                      onNoteMouseDown(event, note);
-                    }}
-                    onContextMenu={function (event) {
-                      event.preventDefault();
-                    }}
-                    style={{
-                      top,
-                      left,
-                      width,
-                      height: Math.max(6, rowHeight - 4),
-                      opacity: velocityAlpha,
-                    }}
-                  >
-                    <span className="piano-note-label">
-                      {getPitchClassName(note.pitch)}
-                    </span>
-                  </span>
-                );
-              })}
-            </div>
-          </div>
-        </div>
-
-        <button
-          type="button"
-          className="piano-velocity-resize"
-          onMouseDown={onVelocityResizeMouseDown}
-          aria-label="Resize velocity lane"
-        />
-
-        <div
-          className="piano-velocity-grid-shell"
-          style={{ height: velocityLaneHeight }}
-        >
-          <aside className="piano-velocity-label">
-            <strong>Control</strong>
-            <span>Velocity</span>
-            {isVelocityLaneHovered || isVelocityEditing ? (
-              <em>Vel {velocityReadout}%</em>
-            ) : null}
-          </aside>
-
-          <div
-            className="piano-velocity-wrap"
-            ref={velocityWrapRef}
-            onMouseEnter={function () {
-              setIsVelocityLaneHovered(true);
-            }}
-            onMouseLeave={function () {
-              if (!velocityBrushActiveRef.current) {
-                setIsVelocityLaneHovered(false);
-              }
-            }}
-            onScroll={onVelocityWrapScroll}
-            onContextMenu={function (event) {
-              event.preventDefault();
-            }}
-          >
-            <div
-              className="piano-velocity-grid"
-              onMouseDown={function (event) {
-                startVelocityBrush(event, null);
-              }}
-              style={{
-                width: gridWidth,
-                "--step-width": stepWidth + "px",
-                "--bar-width": stepWidth * 4 + "px",
-                "--snap-width": snapLineWidth + "px",
-                "--snap-opacity": String(snapLineOpacity),
-              }}
-            >
-              {Array.from({ length: Math.max(0, totalBars - 1) }).map(
-                function (_, index) {
-                  const boundaryStep = (index + 1) * STEPS_PER_BAR;
-                  if (boundaryStep >= patternLength) {
-                    return null;
-                  }
-
-                  return (
-                    <span
-                      key={"vel-major-line-" + boundaryStep}
-                      className="piano-major-line"
-                      style={{ left: boundaryStep * stepWidth }}
-                    />
-                  );
-                },
-              )}
-
-              {pianoNotes.map(function (note) {
-                const isSelected = selectedNoteIdSet.has(
-                  getNoteSelectionId(note),
-                );
-                const velocity = clamp(
-                  Number(note.velocity || DEFAULT_NOTE_VELOCITY),
-                  1,
-                  127,
-                );
-                const ratio = midiVelocityToPercent(velocity) / 100;
-                const selectedExpand = isSelected ? 2 : 0;
-                const barLeft = note.start * stepWidth + 2;
-                const barWidth = Math.max(3, note.length * stepWidth - 4);
-                const stemHeight = Math.max(1, ratio * velocityLaneHeight);
-
-                return (
-                  <span
-                    key={"velocity-" + note.id}
-                    className={
-                      "piano-velocity-bar" +
-                      (note.source === "step" ? " from-step" : " from-piano") +
-                      (isSelected ? " is-selected" : "")
-                    }
-                    style={{
-                      left: barLeft - selectedExpand,
-                      width: barWidth + selectedExpand * 2,
-                      height: stemHeight,
-                      "--velocity-stem-height": stemHeight + "px",
-                      zIndex: isSelected ? 4 : 2,
-                    }}
-                    onMouseDown={function (event) {
-                      onVelocityBarMouseDown(event, note);
-                    }}
-                  />
-                );
-              })}
-            </div>
-          </div>
-        </div>
-      </div>
+      <PianoRollEditorBody
+        pitchRows={pitchRows}
+        rowHeight={rowHeight}
+        onGridWheel={onGridWheel}
+        onKeysScroll={onKeysScroll}
+        keysRef={keysRef}
+        gridWrapRef={gridWrapRef}
+        onGridWrapScroll={onGridWrapScroll}
+        gridWidth={gridWidth}
+        totalBars={totalBars}
+        patternLength={patternLength}
+        stepWidth={stepWidth}
+        gridHeight={gridHeight}
+        snapLineWidth={snapLineWidth}
+        snapLineOpacity={snapLineOpacity}
+        onPianoRollMidiDragOver={onPianoRollMidiDragOver}
+        onPianoRollMidiDrop={onPianoRollMidiDrop}
+        onGridMouseDown={onGridMouseDown}
+        selectionBox={selectionBox}
+        isPlaying={isPlaying}
+        playheadRef={playheadRef}
+        scalePitchClasses={scalePitchClasses}
+        pianoNotes={pianoNotes}
+        selectedNoteIdSet={selectedNoteIdSet}
+        onNoteMouseDown={onNoteMouseDown}
+        onVelocityResizeMouseDown={onVelocityResizeMouseDown}
+        velocityLaneHeight={velocityLaneHeight}
+        isVelocityLaneHovered={isVelocityLaneHovered}
+        isVelocityEditing={isVelocityEditing}
+        velocityReadout={velocityReadout}
+        setIsVelocityLaneHovered={setIsVelocityLaneHovered}
+        velocityBrushActiveRef={velocityBrushActiveRef}
+        velocityWrapRef={velocityWrapRef}
+        onVelocityWrapScroll={onVelocityWrapScroll}
+        startVelocityBrush={startVelocityBrush}
+        onVelocityBarMouseDown={onVelocityBarMouseDown}
+      />
     </section>
   );
 }
