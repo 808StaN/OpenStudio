@@ -17,15 +17,14 @@ import {
   setTransportMode,
 } from "../store";
 import { getSafeSampleSettings } from "../audio/domain/sampleSettings";
-import { PlaylistClipItem } from "./playlist/PlaylistClipItem";
 import { PlaylistTopControls } from "./playlist/PlaylistTopControls";
+import { PlaylistTrackRow } from "./playlist/PlaylistTrackRow";
 import {
   buildWaveformEnvelope,
   clamp,
   getPatternPreviewNotes,
   getTargetAudioClipBarLength,
   quantizeBySnap,
-  withAlpha,
 } from "./playlist/playlistUtils";
 import { getPatternDragSession } from "../utils/patternDragSession";
 import { toSafeSampleUrl } from "../utils/sampleUrl";
@@ -38,7 +37,6 @@ const PLAYLIST_ZOOM_X = 3;
 const INITIAL_BAR_WIDTH = Math.round(BASE_BAR_WIDTH * PLAYLIST_ZOOM_X);
 const MIN_BAR_WIDTH = 42;
 const MAX_BAR_WIDTH = 320;
-const DEFAULT_PATTERN_COLOR = "#4bef9f";
 const MIN_CLIP_BAR_LENGTH = 1 / 16;
 const PATTERN_DRAG_MIME = "application/x-daw-pattern";
 const SAMPLE_DRAG_MIME = "application/x-daw-sample";
@@ -1241,15 +1239,15 @@ export function PlaylistWindow() {
             </div>
           ) : null}
           {tracks.map(function (track) {
-          const clipsOnTrack = clips.filter(function (clip) {
-            return clip.trackId === track.id;
-          });
+            const clipsOnTrack = clips
+              .filter(function (clip) {
+                return clip.trackId === track.id;
+              })
+              .sort(function (a, b) {
+                return a.barStart - b.barStart;
+              });
 
-          clipsOnTrack.sort(function (a, b) {
-            return a.barStart - b.barStart;
-          });
-
-          const onTrackGridMouseDown = function (event) {
+            const onTrackGridMouseDown = function (event) {
             if (event.button !== 0) {
               return;
             }
@@ -1298,7 +1296,7 @@ export function PlaylistWindow() {
             );
           };
 
-          const onTrackGridDragOver = function (event) {
+            const onTrackGridDragOver = function (event) {
             const acceptsSample = hasDraggedSampleData(event);
             const draggedSample = acceptsSample
               ? getDraggedSamplePayload(event)
@@ -1389,7 +1387,7 @@ export function PlaylistWindow() {
             });
           };
 
-          const onTrackGridMouseMove = function (event) {
+            const onTrackGridMouseMove = function (event) {
             const barStart = resolveBarStartFromPointer(
               event,
               event.currentTarget,
@@ -1410,7 +1408,7 @@ export function PlaylistWindow() {
             });
           };
 
-          const onTrackGridDragLeave = function (event) {
+            const onTrackGridDragLeave = function (event) {
             const pointerX = event.clientX;
             const pointerY = event.clientY;
 
@@ -1433,7 +1431,7 @@ export function PlaylistWindow() {
             });
           };
 
-          const onTrackGridDrop = function (event) {
+            const onTrackGridDrop = function (event) {
             const acceptsSample = hasDraggedSampleData(event);
             const draggedSample = acceptsSample
               ? getDraggedSamplePayload(event)
@@ -1472,116 +1470,55 @@ export function PlaylistWindow() {
             setDropPreview(null);
           };
 
-          const dropPlacementsOnTrack = (dropPreview?.placements || []).filter(
-            function (placement) {
-              return placement.trackId === track.id;
-            },
-          );
+            const dropPlacementsOnTrack = (dropPreview?.placements || []).filter(
+              function (placement) {
+                return placement.trackId === track.id;
+              },
+            );
 
             return (
-              <article
-                className="playlist-track"
+              <PlaylistTrackRow
                 key={track.id}
-                style={{
-                  gridTemplateColumns: "92px " + timelineWidth + "px",
-                  width: 92 + timelineWidth,
+                track={track}
+                timelineWidth={timelineWidth}
+                playlistBarCount={playlistBarCount}
+                dropPlacementsOnTrack={dropPlacementsOnTrack}
+                onTrackGridMouseDown={onTrackGridMouseDown}
+                onTrackGridMouseMove={onTrackGridMouseMove}
+                onTrackGridDragOver={onTrackGridDragOver}
+                onTrackGridDragLeave={onTrackGridDragLeave}
+                onTrackGridDrop={onTrackGridDrop}
+                patternsById={patternsById}
+                clipsOnTrack={clipsOnTrack}
+                activePatternId={activePatternId}
+                channelsById={channelsById}
+                audioAnalysisCache={audioAnalysisCacheRef.current}
+                previewNotesByPatternId={previewNotesByPatternId}
+                bpm={bpm}
+                barWidth={barWidth}
+                onStartMove={startMove}
+                onRemoveClip={function (clipId) {
+                  dispatch(removePlaylistClip(clipId));
                 }}
-              >
-              <div className="track-name">{track.name}</div>
-              <div
-                className={
-                  "track-grid" +
-                  (dropPlacementsOnTrack.length > 0 ? " is-drop-target" : "")
-                }
-                data-track-id={track.id}
-                onMouseDown={onTrackGridMouseDown}
-                onMouseMove={onTrackGridMouseMove}
-                onDragOver={onTrackGridDragOver}
-                onDragLeave={onTrackGridDragLeave}
-                onDrop={onTrackGridDrop}
-              >
-                {dropPlacementsOnTrack.map(function (placement) {
-                  const previewPattern = patternsById[placement.patternId];
-                  const previewColor =
-                    placement.clipType === "audio"
-                      ? "#69b5ff"
-                      : previewPattern?.color || DEFAULT_PATTERN_COLOR;
-                  const previewBarLength = clamp(
-                    placement.barLength,
-                    MIN_CLIP_BAR_LENGTH,
-                    Math.max(
-                      MIN_CLIP_BAR_LENGTH,
-                      playlistBarCount - placement.barStart + 1,
-                    ),
+                onOpenSampleSettings={function (channelId) {
+                  dispatch(setActiveChannel(channelId));
+                  dispatch(openWindow("sampleSettings"));
+                }}
+                onOpenPattern={function (patternId) {
+                  dispatch(setActivePattern(patternId));
+                  patternSelectionForInsertRef.current = patternId;
+                  window.dispatchEvent(
+                    new CustomEvent("openstudio:playlist-pattern-focus", {
+                      detail: {
+                        patternId,
+                      },
+                    }),
                   );
-
-                  return (
-                    <div
-                      key={
-                        "drop-" + placement.trackId + "-" + placement.patternId
-                      }
-                      className="track-drop-preview"
-                      style={{
-                        left:
-                          "calc(" +
-                          ((placement.barStart - 1) / playlistBarCount) * 100 +
-                          "% + 0.5px)",
-                        width:
-                          "calc(" +
-                          (previewBarLength / playlistBarCount) * 100 +
-                          "% - 1px)",
-                        borderColor: withAlpha(previewColor, 0.95),
-                        backgroundColor: withAlpha(previewColor, 0.22),
-                        boxShadow:
-                          "inset 0 0 0 1px " +
-                          withAlpha(previewColor, 0.72) +
-                          ", 0 0 10px " +
-                          withAlpha(previewColor, 0.28),
-                      }}
-                    />
-                  );
-                })}
-                {clipsOnTrack.map(function (clip) {
-                  return (
-                    <PlaylistClipItem
-                      key={clip.id}
-                      clip={clip}
-                      activePatternId={activePatternId}
-                      patternsById={patternsById}
-                      channelsById={channelsById}
-                      audioAnalysisCache={audioAnalysisCacheRef.current}
-                      previewNotesByPatternId={previewNotesByPatternId}
-                      bpm={bpm}
-                      barWidth={barWidth}
-                      playlistBarCount={playlistBarCount}
-                      onStartMove={startMove}
-                      onRemove={function (clipId) {
-                        dispatch(removePlaylistClip(clipId));
-                      }}
-                      onOpenSampleSettings={function (channelId) {
-                        dispatch(setActiveChannel(channelId));
-                        dispatch(openWindow("sampleSettings"));
-                      }}
-                      onOpenPattern={function (patternId) {
-                        dispatch(setActivePattern(patternId));
-                        patternSelectionForInsertRef.current = patternId;
-                        window.dispatchEvent(
-                          new CustomEvent("openstudio:playlist-pattern-focus", {
-                            detail: {
-                              patternId,
-                            },
-                          }),
-                        );
-                        dispatch(openWindow("channelRack"));
-                      }}
-                      onStartResizeFromStart={startResizeFromStart}
-                      onStartResize={startResize}
-                      trackId={track.id}
-                    />
-                  );
-                })}
-              </div>
-              </article>
+                  dispatch(openWindow("channelRack"));
+                }}
+                onStartResizeFromStart={startResizeFromStart}
+                onStartResize={startResize}
+              />
             );
           })}
         </div>
