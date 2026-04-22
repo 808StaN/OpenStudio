@@ -52,20 +52,12 @@ import {
   SNAP_OPTIONS,
   STEPS_PER_BAR,
 } from "./piano-roll/pianoRollConstants";
-import { usePianoRollKeyboardShortcuts } from "./piano-roll/usePianoRollKeyboardShortcuts";
-import { usePianoRollClipboardActions } from "./piano-roll/usePianoRollClipboardActions";
 import { usePianoRollMenuDismiss } from "./piano-roll/usePianoRollMenuDismiss";
-import { usePianoRollMidiIo } from "./piano-roll/usePianoRollMidiIo";
-import { usePianoRollMidiDrop } from "./piano-roll/usePianoRollMidiDrop";
-import { usePianoRollGridMouseDown } from "./piano-roll/usePianoRollGridMouseDown";
-import { usePianoRollNoteMouseDown } from "./piano-roll/usePianoRollNoteMouseDown";
-import { usePianoRollVelocityEditing } from "./piano-roll/usePianoRollVelocityEditing";
-import { usePianoRollNoteOps } from "./piano-roll/usePianoRollNoteOps";
 import { usePianoRollPreviewAudio } from "./piano-roll/usePianoRollPreviewAudio";
-import { usePianoRollScrollAndZoom } from "./piano-roll/usePianoRollScrollAndZoom";
 import { usePianoRollDerivedState } from "./piano-roll/usePianoRollDerivedState";
 import { usePianoRollStoreState } from "./piano-roll/usePianoRollStoreState";
 import { usePianoRollToolbarActions } from "./piano-roll/usePianoRollToolbarActions";
+import { usePianoRollInteractionHandlers } from "./piano-roll/usePianoRollInteractionHandlers";
 import { usePianoRollUiState } from "./piano-roll/usePianoRollUiState";
 import {
   usePianoRollInitialViewport,
@@ -215,128 +207,34 @@ export function PianoRollWindow() {
     setIsScaleTypeMenuOpen,
   });
 
-  const { onGridWrapScroll, onVelocityWrapScroll, onKeysScroll, onGridWheel } =
-    usePianoRollScrollAndZoom({
-      gridWrapRef,
-      keysRef,
-      velocityWrapRef,
-      isSyncingScrollRef,
-      isSyncingHorizontalScrollRef,
-      stepWidth,
-      setStepWidth,
-      minStepWidth: MIN_STEP_WIDTH,
-      maxStepWidth: MAX_STEP_WIDTH,
-      clampFn: clamp,
-    });
-
-  const { getGridPointerFromEvent, removeNote, ensureNoteIsPiano } =
-    usePianoRollNoteOps({
-      gridWrapRef,
-      gridHeaderHeight: GRID_HEADER_HEIGHT,
-      activeChannel,
-      dispatch,
-      activePatternId,
-      defaultNoteVelocity: DEFAULT_NOTE_VELOCITY,
-      clampFn: clamp,
-      makeIdFn: makeGeneratedNoteId,
-      toggleStepAction: toggleStep,
-      togglePianoNoteAction: togglePianoNote,
-    });
-
-  // Velocity lane editing state/handlers are kept in a dedicated hook.
   const {
+    onGridWrapScroll,
+    onVelocityWrapScroll,
+    onKeysScroll,
+    onGridWheel,
     velocityBrushActiveRef,
     velocityLaneHeight,
     velocityReadout,
     isVelocityLaneHovered,
     isVelocityEditing,
     setIsVelocityLaneHovered,
-    setVelocityReadout,
     onVelocityResizeMouseDown,
     startVelocityBrush,
     onVelocityBarMouseDown,
-  } = usePianoRollVelocityEditing({
-    activeChannel,
-    dispatch,
-    activePatternId,
-    velocityWrapRef,
-    selectedNotes,
-    pianoNotes,
-    stepWidth,
-    patternLength,
-    defaultNoteVelocity: DEFAULT_NOTE_VELOCITY,
-    minVelocityLaneHeight: MIN_VELOCITY_LANE_HEIGHT,
-    maxVelocityLaneHeight: MAX_VELOCITY_LANE_HEIGHT,
-    clampFn: clamp,
-    midiVelocityToPercentFn: midiVelocityToPercent,
-    percentToMidiVelocityFn: percentToMidiVelocity,
-    ensureNoteIsPiano,
-    lastTouchedVelocityRef,
-    setPianoNoteVelocityAction: setPianoNoteVelocity,
-    getSelectionId: getNoteSelectionId,
-  });
-
-  const {
-    copySelectedNotes,
-    deleteSelectedNotes,
-    cutSelectedNotes,
-    pasteClipboardNotes,
-  } = usePianoRollClipboardActions({
-    selectedNotes,
-    activePatternId,
-    activePattern,
-    activeChannel,
-    dispatch,
-    patternLength,
-    minFreeLength: MIN_FREE_LENGTH,
-    pitchMin: PITCH_MIN,
-    pitchMax: PITCH_MAX,
-    defaultVelocity: DEFAULT_NOTE_VELOCITY,
-    clampFn: clamp,
-    makeIdFn: makeGeneratedNoteId,
-    addPianoNotesBatchAction: addPianoNotesBatch,
-    removePianoNotesBatchAction: removePianoNotesBatch,
-    setSelectedNoteIds,
-    setEditMode,
-  });
-
-  usePianoRollKeyboardShortcuts({
-    activeChannel,
-    patternId: activePatternId,
-    channelId: activeChannel?.id || "",
-    editMode,
-    pianoNotes,
-    selectedNotes,
-    scalePitchClasses,
-    pitchMin: PITCH_MIN,
-    pitchMax: PITCH_MAX,
-    setEditMode,
-    setSelectedNoteIds,
-    toSelectionId: getNoteSelectionId,
-    copySelectedNotes,
-    cutSelectedNotes,
-    pasteClipboardNotes,
-    deleteSelectedNotes,
-    ensureNoteIsPiano,
-    clampFn: clamp,
-    moveByScaleStepFn: moveByScaleStep,
-    onMoveSelectedNotes: function ({ patternId, channelId, moves }) {
-      dispatch(
-        movePianoNotesBatch({
-          patternId,
-          channelId,
-          moves,
-        }),
-      );
-    },
-  });
-
-  const { onGridMouseDown } = usePianoRollGridMouseDown({
+    onGridMouseDown,
+    onPianoRollMidiDragOver,
+    onPianoRollMidiDrop,
+    onExportMidiClick,
+    onImportMidiClick,
+    onImportMidiFileChange,
+    onNoteMouseDown,
+  } = usePianoRollInteractionHandlers({
     activeChannel,
     activePattern,
     activePatternId,
-    editMode,
+    bpm,
     patternLength,
+    editMode,
     stepWidth,
     rowHeight,
     gridWidth,
@@ -344,100 +242,72 @@ export function PianoRollWindow() {
     pitchRows,
     snapStepSize,
     minNoteLength,
-    minFreeLength: MIN_FREE_LENGTH,
-    pitchMax: PITCH_MAX,
-    c5Pitch: C5_PITCH,
-    marqueeMinDrag: MARQUEE_MIN_DRAG,
+    selectedNoteIdSet,
+    selectedNoteIds,
+    selectedNotes,
     pianoNotes,
-    dispatch,
-    getGridPointerFromEvent,
-    setSelectionBox,
-    setSelectedNoteIds,
-    toggleStepAction: toggleStep,
-    togglePianoNoteAction: togglePianoNote,
-    startPreviewNote,
+    scalePitchClasses,
+    isSyncingScrollRef,
+    isSyncingHorizontalScrollRef,
+    gridWrapRef,
+    keysRef,
+    velocityWrapRef,
+    midiImportInputRef,
+    resizeSessionRef,
+    dragSelectionRef,
     lastTouchedLengthRef,
     lastTouchedVelocityRef,
-    clampFn: clamp,
-    isNearlyEqualFn: isNearlyEqual,
-    quantizeBySnapFn: quantizeBySnap,
-    getSelectionId: getNoteSelectionId,
-  });
-
-  const { onPianoRollMidiDragOver, onPianoRollMidiDrop } = usePianoRollMidiDrop(
-    {
-      activePattern,
-      activeChannel,
-      activePatternId,
-      patternLength,
-      stepWidth,
-      dispatch,
+    setStepWidth,
+    setSelectionBox,
+    setSelectedNoteIds,
+    setEditMode,
+    dispatch,
+    constants: {
+      minStepWidth: MIN_STEP_WIDTH,
+      maxStepWidth: MAX_STEP_WIDTH,
+      gridHeaderHeight: GRID_HEADER_HEIGHT,
+      defaultNoteVelocity: DEFAULT_NOTE_VELOCITY,
+      minVelocityLaneHeight: MIN_VELOCITY_LANE_HEIGHT,
+      maxVelocityLaneHeight: MAX_VELOCITY_LANE_HEIGHT,
+      minFreeLength: MIN_FREE_LENGTH,
+      pitchMin: PITCH_MIN,
+      pitchMax: PITCH_MAX,
+      c5Pitch: C5_PITCH,
+      marqueeMinDrag: MARQUEE_MIN_DRAG,
+      snapEpsilon: SNAP_EPSILON,
+    },
+    utils: {
       clampFn: clamp,
-      getGridPointerFromEvent,
+      makeGeneratedNoteIdFn: makeGeneratedNoteId,
+      midiVelocityToPercentFn: midiVelocityToPercent,
+      percentToMidiVelocityFn: percentToMidiVelocity,
+      getSelectionId: getNoteSelectionId,
+      moveByScaleStepFn: moveByScaleStep,
+      isNearlyEqualFn: isNearlyEqual,
+      quantizeBySnapFn: quantizeBySnap,
+    },
+    actions: {
+      addPianoNotesBatchAction: addPianoNotesBatch,
+      removePianoNotesBatchAction: removePianoNotesBatch,
+      movePianoNotesBatchAction: movePianoNotesBatch,
+      movePianoNoteAction: movePianoNote,
+      setPianoNoteLengthAction: setPianoNoteLength,
+      setPianoNoteVelocityAction: setPianoNoteVelocity,
+      togglePianoNoteAction: togglePianoNote,
+      toggleStepAction: toggleStep,
       pasteMidiPatternToChannelAction: pasteMidiPatternToChannel,
+    },
+    externalFns: {
+      startPreviewNote,
       dataTransferHasMidiPatternPayloadFn: dataTransferHasMidiPatternPayload,
       dataTransferHasMidiFilePayloadFn: dataTransferHasMidiFilePayload,
       readMidiPatternFromDataTransferFn: readMidiPatternFromDataTransfer,
       readMidiFilePayloadFromDataTransferFn: readMidiFilePayloadFromDataTransfer,
       parseMidiArrayBufferToStepNotesFn: parseMidiArrayBufferToStepNotes,
       isMidiFileNameFn: isMidiFileName,
-    },
-  );
-
-  const { onExportMidiClick, onImportMidiClick, onImportMidiFileChange } =
-    usePianoRollMidiIo({
-      midiImportInputRef,
-      activePattern,
-      activeChannel,
-      activePatternId,
-      bpm,
-      dispatch,
-      isMidiFileNameFn: isMidiFileName,
-      parseMidiArrayBufferToStepNotesFn: parseMidiArrayBufferToStepNotes,
       extractMidiPatternNotesFn: extractMidiPatternNotes,
       triggerMidiDownloadFn: triggerMidiDownload,
-      pasteMidiPatternToChannelAction: pasteMidiPatternToChannel,
-    });
-
-  const { onNoteMouseDown } = usePianoRollNoteMouseDown({
-    activeChannel,
-    activePatternId,
-    editMode,
-    selectedNoteIdSet,
-    selectedNoteIds,
-    selectedNotes,
-    pianoNotes,
-    patternLength,
-    stepWidth,
-    rowHeight,
-    snapStepSize,
-    minNoteLength,
-    minFreeLength: MIN_FREE_LENGTH,
-    snapEpsilon: SNAP_EPSILON,
-    pitchMin: PITCH_MIN,
-    pitchMax: PITCH_MAX,
-    defaultNoteVelocity: DEFAULT_NOTE_VELOCITY,
-    dispatch,
-    clampFn: clamp,
-    isNearlyEqualFn: isNearlyEqual,
-    quantizeBySnapFn: quantizeBySnap,
-    getSelectionId: getNoteSelectionId,
-    ensureNoteIsPiano,
-    removeNote,
-    deleteSelectedNotes,
-    setSelectedNoteIds,
-    movePianoNotesBatchAction: movePianoNotesBatch,
-    movePianoNoteAction: movePianoNote,
-    setPianoNoteLengthAction: setPianoNoteLength,
-    toggleStepAction: toggleStep,
-    togglePianoNoteAction: togglePianoNote,
-    resizeSessionRef,
-    dragSelectionRef,
-    startPreviewNote,
-    lastTouchedLengthRef,
-    lastTouchedVelocityRef,
-    setVelocityReadout,
-    midiVelocityToPercentFn: midiVelocityToPercent,
+    },
   });
 
   const { onSelectChannel, onSelectScaleRoot, onSelectScaleType } =
