@@ -12,7 +12,9 @@ import { EmptyFxSlotState } from "./fx-plugin/EmptyFxSlotState";
 import { GraphicEqEditor } from "./fx-plugin/GraphicEqEditor";
 import { MaximizerEditor } from "./fx-plugin/MaximizerEditor";
 import { ReverbEditor } from "./fx-plugin/ReverbEditor";
+import { REVERB_CONTROLS } from "./fx-plugin/reverbControls";
 import { useFxEmptySlotDropTarget } from "./fx-plugin/useFxEmptySlotDropTarget";
+import { useReverbControlInteractions } from "./fx-plugin/useReverbControlInteractions";
 import {
   buildGraphicEqPath,
   buildMaximizerTransferPath,
@@ -20,9 +22,6 @@ import {
   buildWaveformPath,
   buildWaveformReductionPath,
   clamp,
-  formatMs,
-  formatPercent,
-  formatSeconds,
   getPointShapePercent,
   getQFromShapePercent,
   GRAPHIC_EQ_BAND_TYPES,
@@ -56,14 +55,10 @@ export function FxPluginWindow() {
   const dispatch = useDispatch();
   const graphRef = useRef(null);
   const cancelInlineEditRef = useRef(false);
-  const reverbDragRef = useRef(null);
   // UI editing/drag state is local to the window, while actual FX params stay in Redux.
   const [draggingPointIndex, setDraggingPointIndex] = useState(null);
   const [editingField, setEditingField] = useState(null);
   const [editingValue, setEditingValue] = useState("");
-  const [draggingReverbParam, setDraggingReverbParam] = useState("");
-  const [editingReverbParam, setEditingReverbParam] = useState("");
-  const [editingReverbText, setEditingReverbText] = useState("");
 
   const inserts = useSelector(function (state) {
     return state.daw.mixer.inserts;
@@ -371,212 +366,24 @@ export function FxPluginWindow() {
     );
   };
 
-  const reverbControls = [
-    {
-      param: "decayTime",
-      label: "Decay",
-      min: 0.2,
-      max: 20,
-      step: 0.01,
-      defaultValue: 2.8,
-      format: formatSeconds,
-    },
-    {
-      param: "preDelayMs",
-      label: "PreDelay",
-      min: 0,
-      max: 250,
-      step: 1,
-      defaultValue: 24,
-      format: formatMs,
-    },
-    {
-      param: "size",
-      label: "Size",
-      min: 0,
-      max: 1,
-      step: 0.01,
-      defaultValue: 0.62,
-      format: formatPercent,
-    },
-    {
-      param: "damping",
-      label: "Damping",
-      min: 0,
-      max: 1,
-      step: 0.01,
-      defaultValue: 0.45,
-      format: formatPercent,
-    },
-    {
-      param: "hiCutHz",
-      label: "HiCut",
-      min: 1200,
-      max: 18000,
-      step: 10,
-      defaultValue: 9000,
-      format: function (value) {
-        return Math.round(Number(value || 0)) + " Hz";
-      },
-    },
-    {
-      param: "loCutHz",
-      label: "LoCut",
-      min: 20,
-      max: 1200,
-      step: 1,
-      defaultValue: 130,
-      format: function (value) {
-        return Math.round(Number(value || 0)) + " Hz";
-      },
-    },
-    {
-      param: "earlyReflections",
-      label: "Early",
-      min: 0,
-      max: 1,
-      step: 0.01,
-      defaultValue: 0.38,
-      format: formatPercent,
-    },
-    {
-      param: "diffusion",
-      label: "Diffusion",
-      min: 0,
-      max: 1,
-      step: 0.01,
-      defaultValue: 0.72,
-      format: formatPercent,
-    },
-    {
-      param: "modulationDepth",
-      label: "Mod Depth",
-      min: 0,
-      max: 1,
-      step: 0.01,
-      defaultValue: 0.22,
-      format: formatPercent,
-    },
-    {
-      param: "modulationRateHz",
-      label: "Mod Rate",
-      min: 0,
-      max: 8,
-      step: 0.01,
-      defaultValue: 0.35,
-      format: function (value) {
-        return Number(value || 0).toFixed(2) + " Hz";
-      },
-    },
-    {
-      param: "width",
-      label: "Width",
-      min: 0,
-      max: 1,
-      step: 0.01,
-      defaultValue: 0.9,
-      format: formatPercent,
-    },
-    {
-      param: "dryWet",
-      label: "Mix",
-      min: 0,
-      max: 1,
-      step: 0.01,
-      defaultValue: 0.34,
-      format: formatPercent,
-    },
-  ];
-
-  const beginReverbDrag = function (event, control) {
-    event.preventDefault();
-
-    const startValue = Number(reverbParams[control.param] || 0);
-    reverbDragRef.current = {
-      param: control.param,
-      startY: event.clientY,
-      startValue,
-      control,
-    };
-    setDraggingReverbParam(control.param);
-  };
-
-  const adjustReverbValue = useCallback(
-    function (control, rawValue) {
-      const clampedValue = clamp(rawValue, control.min, control.max);
-      const stepped = roundToStep(clampedValue, control.step);
-      setReverbValue(control.param, stepped);
-    },
-    [setReverbValue],
-  );
-
-  const onReverbWheel = function (event, control) {
-    event.preventDefault();
-    const direction = event.deltaY < 0 ? 1 : -1;
-    const current = Number(reverbParams[control.param] || 0);
-    const wheelFactor = event.shiftKey ? 0.4 : 2;
-    adjustReverbValue(
-      control,
-      current + direction * control.step * wheelFactor,
-    );
-  };
-
-  const resetReverbControl = function (control) {
-    adjustReverbValue(control, Number(control.defaultValue));
-  };
-
-  const beginReverbEdit = function (control) {
-    const raw = Number(reverbParams[control.param] || 0);
-    setEditingReverbParam(control.param);
-    setEditingReverbText(String(roundToStep(raw, control.step)));
-  };
-
-  const commitReverbEdit = function (control) {
-    const parsed = parseNumericInput(editingReverbText);
-    if (parsed !== null) {
-      adjustReverbValue(control, parsed);
-    }
-    setEditingReverbParam("");
-    setEditingReverbText("");
-  };
-
-  useEffect(
-    function () {
-      if (!draggingReverbParam || !reverbDragRef.current) {
-        return;
-      }
-
-      // Vertical drag adjusts knob value; Shift provides finer control.
-      const onMouseMove = function (event) {
-        const drag = reverbDragRef.current;
-        if (!drag) {
-          return;
-        }
-
-        const range = drag.control.max - drag.control.min;
-        const delta = drag.startY - event.clientY;
-        const valuePerPixel = range / (event.shiftKey ? 700 : 160);
-        adjustReverbValue(
-          drag.control,
-          drag.startValue + delta * valuePerPixel,
-        );
-      };
-
-      const onMouseUp = function () {
-        reverbDragRef.current = null;
-        setDraggingReverbParam("");
-      };
-
-      window.addEventListener("mousemove", onMouseMove);
-      window.addEventListener("mouseup", onMouseUp);
-
-      return function () {
-        window.removeEventListener("mousemove", onMouseMove);
-        window.removeEventListener("mouseup", onMouseUp);
-      };
-    },
-    [adjustReverbValue, draggingReverbParam],
-  );
+  const {
+    draggingReverbParam,
+    beginReverbDrag,
+    onReverbWheel,
+    resetReverbControl,
+    editingReverbParam,
+    editingReverbText,
+    setEditingReverbParam,
+    setEditingReverbText,
+    commitReverbEdit,
+    beginReverbEdit,
+  } = useReverbControlInteractions({
+    reverbParams,
+    setReverbValue,
+    clampFn: clamp,
+    roundToStepFn: roundToStep,
+    parseNumericInputFn: parseNumericInput,
+  });
 
   if (!activeInsert || !activeSlot) {
     return (
@@ -608,7 +415,7 @@ export function FxPluginWindow() {
     // Reverb UI branch: knob grid + typed value editing.
     return (
       <ReverbEditor
-        reverbControls={reverbControls}
+        reverbControls={REVERB_CONTROLS}
         reverbParams={reverbParams}
         draggingReverbParam={draggingReverbParam}
         beginReverbDrag={beginReverbDrag}
