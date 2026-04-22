@@ -13,32 +13,14 @@ import {
   setInsertStereo,
   toggleFxSlot,
 } from "../store";
-
-const FX_EFFECT_GRAPHIC_EQ = "graphic-eq";
-const FX_EFFECT_REVERB = "reverb";
-const FX_EFFECT_MAXIMIZER = "maximizer";
-const FX_EFFECT_NONE = "none";
-
-function isSupportedEffectType(effectType) {
-  return (
-    effectType === FX_EFFECT_GRAPHIC_EQ ||
-    effectType === FX_EFFECT_REVERB ||
-    effectType === FX_EFFECT_MAXIMIZER
-  );
-}
-
-function getFxSlotName(slot, fallbackIndex) {
-  if (slot?.effectType === FX_EFFECT_GRAPHIC_EQ) {
-    return "Graphic EQ";
-  }
-  if (slot?.effectType === FX_EFFECT_REVERB) {
-    return "Reverb";
-  }
-  if (slot?.effectType === FX_EFFECT_MAXIMIZER) {
-    return "Limiter";
-  }
-  return String(slot?.name || "").trim() || "Slot " + (fallbackIndex + 1);
-}
+import {
+  FX_EFFECT_NONE,
+  formatPercentValue,
+  formatSignedPercentValue,
+  getFxSlotName,
+  getInsertLabel,
+  isSupportedEffectType,
+} from "./mixer/mixerUiUtils";
 
 export function MixerWindow() {
   const dispatch = useDispatch();
@@ -81,25 +63,6 @@ export function MixerWindow() {
       ? armedFxClearSlotId
       : null;
 
-  const getInsertLabel = function (insert) {
-    if (insert.isMaster) {
-      return insert.name || "Master";
-    }
-
-    const sourceName = String(insert.name || "");
-    const renamed = sourceName.replace(/^insert\b/i, "Insert");
-    if (renamed && renamed !== sourceName) {
-      return renamed;
-    }
-
-    const numericSuffix = String(insert.id || "").match(/insert-(\d+)/i)?.[1];
-    if (numericSuffix) {
-      return "Insert " + numericSuffix;
-    }
-
-    return sourceName || "Insert";
-  };
-
   useEffect(function () {
     return function () {
       if (clearReadoutTimeoutRef.current) {
@@ -107,18 +70,6 @@ export function MixerWindow() {
       }
     };
   }, []);
-
-  const formatPercentValue = function (value) {
-    return Math.round(value * 100) + "%";
-  };
-
-  const formatSignedPercentValue = function (value) {
-    const intValue = Math.round(value * 100);
-    if (intValue > 0) {
-      return "+" + intValue + "%";
-    }
-    return intValue + "%";
-  };
 
   const showValueReadout = function (text) {
     setValueReadout(text);
