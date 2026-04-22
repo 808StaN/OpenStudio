@@ -4,21 +4,15 @@ import {
   clearPatternDragSession,
   setPatternDragSession,
 } from "../utils/patternDragSession";
-import {
-  clamp,
-  hexToRgb,
-  hsvToRgb,
-  rgbToHex,
-  rgbToHsv,
-} from "./pattern-list/patternListColorUtils";
 import { PatternListRow } from "./pattern-list/PatternListRow";
+import { usePatternColorPicker } from "./pattern-list/usePatternColorPicker";
+import { usePatternListClipboardShortcuts } from "./pattern-list/usePatternListClipboardShortcuts";
 import {
   createPattern,
   duplicatePatterns,
   renamePattern,
   setActivePattern,
   setPatternClipboard,
-  setPatternColor,
 } from "../store";
 
 const DEFAULT_PATTERN_COLOR = "#4bef9f";
@@ -31,9 +25,16 @@ export function PatternListWindow() {
   const [draggingPatternId, setDraggingPatternId] = useState(null);
   const [selectedPatternIds, setSelectedPatternIds] = useState([]);
   const [isPointerOverList, setIsPointerOverList] = useState(false);
-  const [pickerStateByPatternId, setPickerStateByPatternId] = useState({});
-  const colorRafMapRef = useRef(new Map());
-  const pendingColorMapRef = useRef(new Map());
+
+  const {
+    getPickerStateForPattern,
+    updatePickerColor,
+    startSvDrag,
+    startHueDrag,
+  } = usePatternColorPicker({
+    dispatch,
+    defaultPatternColor: DEFAULT_PATTERN_COLOR,
+  });
 
   const patterns = useSelector(function (state) {
     return state.daw.project.patterns;
@@ -78,11 +79,6 @@ export function PatternListWindow() {
 
   useEffect(function () {
     return function () {
-      colorRafMapRef.current.forEach(function (rafId) {
-        cancelAnimationFrame(rafId);
-      });
-      colorRafMapRef.current.clear();
-      pendingColorMapRef.current.clear();
       clearPatternDragSession();
     };
   }, []);
@@ -132,6 +128,8 @@ export function PatternListWindow() {
         }),
       );
 
+      // Selection must be pruned when patterns are removed externally.
+      // eslint-disable-next-line react-hooks/set-state-in-effect
       setSelectedPatternIds(function (prev) {
         const filtered = prev.filter(function (patternId) {
           return validPatternIds.has(patternId);
@@ -143,81 +141,26 @@ export function PatternListWindow() {
     [patterns],
   );
 
-  useEffect(
-    function () {
-      const shouldIgnoreShortcutTarget = function (target) {
-        if (!(target instanceof HTMLElement)) {
-          return false;
-        }
-
-        if (target.isContentEditable) {
-          return true;
-        }
-
-        return Boolean(
-          target.closest("input, textarea, select, [contenteditable='true']"),
-        );
-      };
-
-      const onKeyDown = function (event) {
-        const isModifierPressed = event.ctrlKey || event.metaKey;
-        const isCopyShortcut =
-          isModifierPressed && !event.shiftKey && event.code === "KeyC";
-        const isPasteShortcut =
-          isModifierPressed && !event.shiftKey && event.code === "KeyV";
-
-        if (!isCopyShortcut && !isPasteShortcut) {
-          return;
-        }
-
-        const root = patternListRef.current;
-        const activeElement = document.activeElement;
-        const hasContext =
-          isPointerOverList ||
-          (root instanceof HTMLElement && root.contains(activeElement));
-
-        if (!hasContext || shouldIgnoreShortcutTarget(event.target)) {
-          return;
-        }
-
-        if (isCopyShortcut) {
-          if (orderedSelectedPatternIds.length === 0) {
-            return;
-          }
-
-          event.preventDefault();
-          dispatch(
-            setPatternClipboard({
-              patternIds: orderedSelectedPatternIds,
-            }),
-          );
-          return;
-        }
-
-        if (clipboardPatternIds.length === 0) {
-          return;
-        }
-
-        event.preventDefault();
-        dispatch(
-          duplicatePatterns({
-            patternIds: clipboardPatternIds,
-          }),
-        );
-      };
-
-      window.addEventListener("keydown", onKeyDown);
-      return function () {
-        window.removeEventListener("keydown", onKeyDown);
-      };
+  usePatternListClipboardShortcuts({
+    patternListRef,
+    isPointerOverList,
+    orderedSelectedPatternIds,
+    clipboardPatternIds,
+    onCopyPatterns: function (patternIds) {
+      dispatch(
+        setPatternClipboard({
+          patternIds,
+        }),
+      );
     },
-    [
-      clipboardPatternIds,
-      dispatch,
-      isPointerOverList,
-      orderedSelectedPatternIds,
-    ],
-  );
+    onPastePatterns: function (patternIds) {
+      dispatch(
+        duplicatePatterns({
+          patternIds,
+        }),
+      );
+    },
+  });
 
   useEffect(function () {
     const onDocumentMouseDown = function (event) {
@@ -238,127 +181,6 @@ export function PatternListWindow() {
       window.removeEventListener("mousedown", onDocumentMouseDown);
     };
   }, []);
-
-  const queuePatternColorUpdate = function (patternId, color) {
-    pendingColorMapRef.current.set(patternId, color);
-
-    if (colorRafMapRef.current.has(patternId)) {
-      return;
-    }
-
-    const rafId = requestAnimationFrame(function () {
-      colorRafMapRef.current.delete(patternId);
-      const nextColor = pendingColorMapRef.current.get(patternId);
-      pendingColorMapRef.current.delete(patternId);
-      if (!nextColor) {
-        return;
-      }
-
-      dispatch(
-        setPatternColor({
-          patternId,
-          color: nextColor,
-        }),
-      );
-    });
-
-    colorRafMapRef.current.set(patternId, rafId);
-  };
-
-  const getPickerStateForPattern = function (pattern) {
-    const patternId = pattern.id;
-    const existing = pickerStateByPatternId[patternId];
-    if (existing) {
-      return existing;
-    }
-
-    return rgbToHsv(hexToRgb(pattern.color || DEFAULT_PATTERN_COLOR));
-  };
-
-  const updatePickerColor = function (pattern, nextPartial) {
-    const patternId = pattern.id;
-    const current = getPickerStateForPattern(pattern);
-    const next = {
-      h: clamp(Number(nextPartial.h ?? current.h), 0, 360),
-      s: clamp(Number(nextPartial.s ?? current.s), 0, 1),
-      v: clamp(Number(nextPartial.v ?? current.v), 0, 1),
-    };
-
-    setPickerStateByPatternId(function (prev) {
-      return {
-        ...prev,
-        [patternId]: next,
-      };
-    });
-
-    const hex = rgbToHex(hsvToRgb(next.h, next.s, next.v));
-    queuePatternColorUpdate(patternId, hex);
-  };
-
-  const startSvDrag = function (event, pattern) {
-    event.preventDefault();
-    event.stopPropagation();
-
-    const element = event.currentTarget;
-
-    const updateFromPointer = function (pointerEvent) {
-      const rect = element.getBoundingClientRect();
-      const x = clamp(pointerEvent.clientX - rect.left, 0, rect.width);
-      const y = clamp(pointerEvent.clientY - rect.top, 0, rect.height);
-      const nextS = rect.width > 0 ? x / rect.width : 0;
-      const nextV = rect.height > 0 ? 1 - y / rect.height : 0;
-
-      updatePickerColor(pattern, {
-        s: nextS,
-        v: nextV,
-      });
-    };
-
-    updateFromPointer(event);
-
-    const onMouseMove = function (moveEvent) {
-      updateFromPointer(moveEvent);
-    };
-
-    const onMouseUp = function () {
-      window.removeEventListener("mousemove", onMouseMove);
-      window.removeEventListener("mouseup", onMouseUp);
-    };
-
-    window.addEventListener("mousemove", onMouseMove);
-    window.addEventListener("mouseup", onMouseUp);
-  };
-
-  const startHueDrag = function (event, pattern) {
-    event.preventDefault();
-    event.stopPropagation();
-
-    const element = event.currentTarget;
-
-    const updateFromPointer = function (pointerEvent) {
-      const rect = element.getBoundingClientRect();
-      const x = clamp(pointerEvent.clientX - rect.left, 0, rect.width);
-      const nextHue = rect.width > 0 ? (x / rect.width) * 360 : 0;
-
-      updatePickerColor(pattern, {
-        h: nextHue,
-      });
-    };
-
-    updateFromPointer(event);
-
-    const onMouseMove = function (moveEvent) {
-      updateFromPointer(moveEvent);
-    };
-
-    const onMouseUp = function () {
-      window.removeEventListener("mousemove", onMouseMove);
-      window.removeEventListener("mouseup", onMouseUp);
-    };
-
-    window.addEventListener("mousemove", onMouseMove);
-    window.addEventListener("mouseup", onMouseUp);
-  };
 
   const shouldStartPatternDrag = function (target) {
     if (!(target instanceof HTMLElement)) {
