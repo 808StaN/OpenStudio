@@ -62,51 +62,24 @@ export function MixerWindow() {
   const fxSlots = Array.isArray(selectedInsert?.fxSlots)
     ? selectedInsert.fxSlots
     : [];
-  const selectedFxSlot =
-    fxSlots.find(function (slot) {
+  // Keep selection stable even when insert/fx layout changes after Redux updates.
+  const activeSelectedFxSlotId =
+    selectedFxSlotId &&
+    fxSlots.some(function (slot) {
       return slot.id === selectedFxSlotId;
-    }) ||
-    fxSlots[0] ||
-    null;
-
-  useEffect(
-    function () {
-      if (fxSlots.length === 0) {
-        if (selectedFxSlotId !== null) {
-          setSelectedFxSlotId(null);
-        }
-        return;
-      }
-
-      const exists = fxSlots.some(function (slot) {
-        return slot.id === selectedFxSlotId;
-      });
-
-      if (!exists) {
-        setSelectedFxSlotId(fxSlots[0].id);
-      }
-    },
-    [fxSlots, selectedFxSlotId],
-  );
-
-  useEffect(
-    function () {
-      if (!armedFxClearSlotId) {
-        return;
-      }
-
-      const stillLoaded = fxSlots.some(function (slot) {
-        return (
-          slot.id === armedFxClearSlotId && slot.effectType !== FX_EFFECT_NONE
-        );
-      });
-
-      if (!stillLoaded) {
-        setArmedFxClearSlotId(null);
-      }
-    },
-    [fxSlots, armedFxClearSlotId],
-  );
+    })
+      ? selectedFxSlotId
+      : fxSlots[0]?.id || null;
+  // Auto-expire armed clear state when slot/effect is no longer present.
+  const activeArmedFxClearSlotId =
+    armedFxClearSlotId &&
+    fxSlots.some(function (slot) {
+      return (
+        slot.id === armedFxClearSlotId && slot.effectType !== FX_EFFECT_NONE
+      );
+    })
+      ? armedFxClearSlotId
+      : null;
 
   const getInsertLabel = function (insert) {
     if (insert.isMaster) {
@@ -490,12 +463,12 @@ export function MixerWindow() {
               <div
                 className={
                   "fx-row" +
-                  (slot.id === selectedFxSlot?.id ? " is-selected" : "") +
+                  (slot.id === activeSelectedFxSlotId ? " is-selected" : "") +
                   (slot.id === dropTargetSlotId ? " is-drop-target" : "")
                 }
                 key={slot.id}
                 onClick={function () {
-                  if (armedFxClearSlotId) {
+                  if (activeArmedFxClearSlotId) {
                     setArmedFxClearSlotId(null);
                   }
                   setSelectedFxSlotId(slot.id);
@@ -529,7 +502,7 @@ export function MixerWindow() {
                   onClick={function (event) {
                     event.stopPropagation();
 
-                    if (armedFxClearSlotId) {
+                    if (activeArmedFxClearSlotId) {
                       setArmedFxClearSlotId(null);
                     }
 
@@ -561,17 +534,17 @@ export function MixerWindow() {
                     type="button"
                     className={
                       "fx-clear" +
-                      (armedFxClearSlotId === slot.id ? " is-armed" : "")
+                      (activeArmedFxClearSlotId === slot.id ? " is-armed" : "")
                     }
                     title={
-                      armedFxClearSlotId === slot.id
+                      activeArmedFxClearSlotId === slot.id
                         ? "Click again to confirm removal"
                         : "Remove effect"
                     }
                     onClick={function (event) {
                       event.stopPropagation();
 
-                      if (armedFxClearSlotId !== slot.id) {
+                      if (activeArmedFxClearSlotId !== slot.id) {
                         setArmedFxClearSlotId(slot.id);
                         showValueReadout("Click X again to remove " + slotName);
                         return;
