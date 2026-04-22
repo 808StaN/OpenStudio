@@ -1,5 +1,5 @@
-import { useMemo, useRef, useState } from "react";
-import { useDispatch, useSelector } from "react-redux";
+import { useRef, useState } from "react";
+import { useDispatch } from "react-redux";
 import {
   addPianoNotesBatch,
   removePianoNotesBatch,
@@ -25,10 +25,7 @@ import {
   parseMidiArrayBufferToStepNotes,
   readMidiFilePayloadFromDataTransfer,
 } from "../utils/midiImport";
-import {
-  C5_PITCH,
-  getChannelMergedNotes,
-} from "../utils/patternNotes";
+import { C5_PITCH } from "../utils/patternNotes";
 import {
   clamp,
   getNoteSelectionId,
@@ -69,6 +66,8 @@ import { usePianoRollVelocityEditing } from "./piano-roll/usePianoRollVelocityEd
 import { usePianoRollNoteOps } from "./piano-roll/usePianoRollNoteOps";
 import { usePianoRollPreviewAudio } from "./piano-roll/usePianoRollPreviewAudio";
 import { usePianoRollScrollAndZoom } from "./piano-roll/usePianoRollScrollAndZoom";
+import { usePianoRollDerivedState } from "./piano-roll/usePianoRollDerivedState";
+import { usePianoRollStoreState } from "./piano-roll/usePianoRollStoreState";
 import {
   usePianoRollInitialViewport,
   usePianoRollPlayheadAnimation,
@@ -80,44 +79,19 @@ import { PianoRollEditorBody } from "./piano-roll/PianoRollEditorBody";
 
 export function PianoRollWindow() {
   const dispatch = useDispatch();
-
-  const activePatternId = useSelector(function (state) {
-    return state.daw.project.activePatternId;
-  });
-  const activePattern = useSelector(function (state) {
-    return state.daw.project.patterns.find(function (item) {
-      return item.id === activePatternId;
-    });
-  });
-  const channels = useSelector(function (state) {
-    return state.daw.project.channels;
-  });
-  const activeChannelId = useSelector(function (state) {
-    return state.daw.project.activeChannelId;
-  });
-  const bpm = useSelector(function (state) {
-    return state.daw.transport.bpm;
-  });
-  const scaleRoot = useSelector(function (state) {
-    return state.daw.ui.pianoRollScaleRoot || "C";
-  });
-  const scaleType = useSelector(function (state) {
-    return state.daw.ui.pianoRollScaleType || "minor";
-  });
-  const isPlaying = useSelector(function (state) {
-    return state.daw.transport.isPlaying;
-  });
-  const currentStep16 = useSelector(function (state) {
-    return state.daw.transport.currentStep16;
-  });
-
-  const activeChannel =
-    channels.find(function (channel) {
-      return channel.id === activeChannelId;
-    }) || channels[0];
-
-  const patternLength = Math.max(4, activePattern?.lengthSteps || 16);
-  const pianoNotes = getChannelMergedNotes(activePattern, activeChannel?.id);
+  const {
+    activePatternId,
+    activePattern,
+    channels,
+    activeChannel,
+    bpm,
+    scaleRoot,
+    scaleType,
+    isPlaying,
+    currentStep16,
+    patternLength,
+    pianoNotes,
+  } = usePianoRollStoreState();
   const resizeSessionRef = useRef(null);
   const gridWrapRef = useRef(null);
   const keysRef = useRef(null);
@@ -147,62 +121,36 @@ export function PianoRollWindow() {
   const [selectedNoteIds, setSelectedNoteIds] = useState([]);
   const [selectionBox, setSelectionBox] = useState(null);
 
-  const activeSnap =
-    SNAP_OPTIONS.find(function (option) {
-      return option.key === snapKey;
-    }) || SNAP_OPTIONS[9];
-  const snapStepSize = activeSnap.stepSize;
-  const minNoteLength = snapStepSize || MIN_FREE_LENGTH;
-  const snapLineWidth = Math.max(1, (snapStepSize || 1) * stepWidth);
-  const snapLineOpacity = snapStepSize ? 0.12 : 0;
-  const scaleRootClass = SCALE_ROOTS.indexOf(scaleRoot);
-  const activeScale =
-    SCALE_TYPES.find(function (item) {
-      return item.key === scaleType;
-    }) || SCALE_TYPES[0];
-  const scalePitchClasses = useMemo(
-    function () {
-      return new Set(
-        activeScale.intervals.map(function (interval) {
-          return (scaleRootClass + interval + 12) % 12;
-        }),
-      );
-    },
-    [activeScale, scaleRootClass],
-  );
-
-  const pitchRows = useMemo(function () {
-    const rows = [];
-    for (let pitch = PITCH_MAX; pitch >= PITCH_MIN; pitch -= 1) {
-      rows.push(pitch);
-    }
-    return rows;
-  }, []);
-
-  const selectedNoteIdSet = useMemo(
-    function () {
-      return new Set(selectedNoteIds);
-    },
-    [selectedNoteIds],
-  );
-
-  const selectedNotes = useMemo(
-    function () {
-      return pianoNotes.filter(function (note) {
-        return selectedNoteIdSet.has(getNoteSelectionId(note));
-      });
-    },
-    [pianoNotes, selectedNoteIdSet],
-  );
-
-  const gridWidth = patternLength * stepWidth;
-  const gridHeight = pitchRows.length * rowHeight;
-  const totalBars = Math.max(1, Math.ceil(patternLength / STEPS_PER_BAR));
-  const normalizedPlayheadStep =
-    ((currentStep16 % patternLength) + patternLength) % patternLength;
-  const playheadStep = isPlaying
-    ? (normalizedPlayheadStep - 1 + patternLength) % patternLength
-    : normalizedPlayheadStep;
+  const {
+    activeSnap,
+    snapStepSize,
+    minNoteLength,
+    snapLineWidth,
+    snapLineOpacity,
+    activeScale,
+    scalePitchClasses,
+    pitchRows,
+    selectedNoteIdSet,
+    selectedNotes,
+    gridWidth,
+    gridHeight,
+    totalBars,
+    playheadStep,
+  } = usePianoRollDerivedState({
+    scaleRoot,
+    scaleType,
+    snapKey,
+    stepWidth,
+    patternLength,
+    rowHeight,
+    pitchMin: PITCH_MIN,
+    pitchMax: PITCH_MAX,
+    pianoNotes,
+    selectedNoteIds,
+    currentStep16,
+    isPlaying,
+    scaleRoots: SCALE_ROOTS,
+  });
 
   // Playhead and viewport side-effects are extracted to dedicated hooks to keep this component slimmer.
   usePianoRollPlayheadClock({
