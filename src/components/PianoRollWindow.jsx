@@ -58,15 +58,12 @@ import {
   SNAP_OPTIONS,
   STEPS_PER_BAR,
 } from "./piano-roll/pianoRollConstants";
-import {
-  findVelocityCandidatesAtClientX as findVelocityCandidatesAtClientXFromUtils,
-  getVelocityPercentFromClientY,
-} from "./piano-roll/pianoRollVelocityUtils";
 import { usePianoRollKeyboardShortcuts } from "./piano-roll/usePianoRollKeyboardShortcuts";
 import { usePianoRollClipboardActions } from "./piano-roll/usePianoRollClipboardActions";
 import { usePianoRollMenuDismiss } from "./piano-roll/usePianoRollMenuDismiss";
 import { usePianoRollMidiIo } from "./piano-roll/usePianoRollMidiIo";
 import { usePianoRollMidiDrop } from "./piano-roll/usePianoRollMidiDrop";
+import { usePianoRollVelocityEditing } from "./piano-roll/usePianoRollVelocityEditing";
 import { usePianoRollNoteOps } from "./piano-roll/usePianoRollNoteOps";
 import { usePianoRollPreviewAudio } from "./piano-roll/usePianoRollPreviewAudio";
 import { usePianoRollScrollAndZoom } from "./piano-roll/usePianoRollScrollAndZoom";
@@ -137,7 +134,6 @@ export function PianoRollWindow() {
   const midiImportInputRef = useRef(null);
   const dragSelectionRef = useRef(null);
   const velocityWrapRef = useRef(null);
-  const velocityBrushActiveRef = useRef(false);
   const rowHeight = DEFAULT_ROW_HEIGHT;
   const [stepWidth, setStepWidth] = useState(DEFAULT_STEP_WIDTH);
   const [snapKey, setSnapKey] = useState("1-2-beat");
@@ -148,12 +144,6 @@ export function PianoRollWindow() {
   const [editMode, setEditMode] = useState("add");
   const [selectedNoteIds, setSelectedNoteIds] = useState([]);
   const [selectionBox, setSelectionBox] = useState(null);
-  const [velocityLaneHeight, setVelocityLaneHeight] = useState(150);
-  const [velocityReadout, setVelocityReadout] = useState(
-    midiVelocityToPercent(DEFAULT_NOTE_VELOCITY),
-  );
-  const [isVelocityLaneHovered, setIsVelocityLaneHovered] = useState(false);
-  const [isVelocityEditing, setIsVelocityEditing] = useState(false);
 
   const activeSnap =
     SNAP_OPTIONS.find(function (option) {
@@ -292,6 +282,39 @@ export function PianoRollWindow() {
       toggleStepAction: toggleStep,
       togglePianoNoteAction: togglePianoNote,
     });
+
+  // Velocity lane editing state/handlers are kept in a dedicated hook.
+  const {
+    velocityBrushActiveRef,
+    velocityLaneHeight,
+    velocityReadout,
+    isVelocityLaneHovered,
+    isVelocityEditing,
+    setIsVelocityLaneHovered,
+    setVelocityReadout,
+    onVelocityResizeMouseDown,
+    startVelocityBrush,
+    onVelocityBarMouseDown,
+  } = usePianoRollVelocityEditing({
+    activeChannel,
+    dispatch,
+    activePatternId,
+    velocityWrapRef,
+    selectedNotes,
+    pianoNotes,
+    stepWidth,
+    patternLength,
+    defaultNoteVelocity: DEFAULT_NOTE_VELOCITY,
+    minVelocityLaneHeight: MIN_VELOCITY_LANE_HEIGHT,
+    maxVelocityLaneHeight: MAX_VELOCITY_LANE_HEIGHT,
+    clampFn: clamp,
+    midiVelocityToPercentFn: midiVelocityToPercent,
+    percentToMidiVelocityFn: percentToMidiVelocity,
+    ensureNoteIsPiano,
+    lastTouchedVelocityRef,
+    setPianoNoteVelocityAction: setPianoNoteVelocity,
+    getSelectionId: getNoteSelectionId,
+  });
 
   const {
     copySelectedNotes,
@@ -1155,203 +1178,6 @@ export function PianoRollWindow() {
 
     window.addEventListener("mousemove", onMouseMove);
     window.addEventListener("mouseup", onMouseUp);
-  };
-
-  const onVelocityResizeMouseDown = function (event) {
-    event.preventDefault();
-
-    const originY = event.clientY;
-    const originHeight = velocityLaneHeight;
-
-    const onMouseMove = function (moveEvent) {
-      const delta = originY - moveEvent.clientY;
-      setVelocityLaneHeight(
-        clamp(
-          originHeight + delta,
-          MIN_VELOCITY_LANE_HEIGHT,
-          MAX_VELOCITY_LANE_HEIGHT,
-        ),
-      );
-    };
-
-    const onMouseUp = function () {
-      window.removeEventListener("mousemove", onMouseMove);
-      window.removeEventListener("mouseup", onMouseUp);
-    };
-
-    window.addEventListener("mousemove", onMouseMove);
-    window.addEventListener("mouseup", onMouseUp);
-  };
-
-  const applyVelocityAtPointer = function (note, clientY) {
-    if (!activeChannel || !velocityWrapRef.current) {
-      return;
-    }
-
-    const rect = velocityWrapRef.current.getBoundingClientRect();
-    const nextVelocityPercent = getVelocityPercentFromClientY({
-      clientY,
-      laneRect: rect,
-      clampFn: clamp,
-    });
-    const nextVelocityMidi = percentToMidiVelocity(nextVelocityPercent);
-
-    const pianoTarget = ensureNoteIsPiano(note);
-    const currentVelocityPercent = midiVelocityToPercent(
-      Number(pianoTarget.velocity || DEFAULT_NOTE_VELOCITY),
-    );
-
-    setVelocityReadout(nextVelocityPercent);
-    if (currentVelocityPercent === nextVelocityPercent) {
-      return;
-    }
-
-    dispatch(
-      setPianoNoteVelocity({
-        patternId: activePatternId,
-        channelId: activeChannel.id,
-        noteId: pianoTarget.id,
-        start: pianoTarget.start,
-        pitch: pianoTarget.pitch,
-        velocity: nextVelocityMidi,
-      }),
-    );
-
-    lastTouchedVelocityRef.current = nextVelocityMidi;
-  };
-
-  const applyLockedVelocityPercent = function (note, lockedVelocityPercent) {
-    if (!activeChannel) {
-      return;
-    }
-
-    const safePercent = Math.round(clamp(lockedVelocityPercent, 0, 100));
-    const nextVelocityMidi = percentToMidiVelocity(safePercent);
-    const pianoTarget = ensureNoteIsPiano(note);
-    const currentVelocityPercent = midiVelocityToPercent(
-      Number(pianoTarget.velocity || DEFAULT_NOTE_VELOCITY),
-    );
-
-    setVelocityReadout(safePercent);
-    if (currentVelocityPercent === safePercent) {
-      return;
-    }
-
-    dispatch(
-      setPianoNoteVelocity({
-        patternId: activePatternId,
-        channelId: activeChannel.id,
-        noteId: pianoTarget.id,
-        start: pianoTarget.start,
-        pitch: pianoTarget.pitch,
-        velocity: nextVelocityMidi,
-      }),
-    );
-
-    lastTouchedVelocityRef.current = nextVelocityMidi;
-  };
-
-  const findVelocityCandidatesAtClientX = function (clientX, fallbackNote) {
-    return findVelocityCandidatesAtClientXFromUtils({
-      clientX,
-      velocityWrapElement: velocityWrapRef.current,
-      selectedNotes,
-      pianoNotes,
-      stepWidth,
-      patternLength,
-      clampFn: clamp,
-      fallbackNote,
-      getSelectionId: getNoteSelectionId,
-    });
-  };
-
-  const applyVelocityByPointer = function (
-    clientX,
-    clientY,
-    fallbackNote,
-    isMultiBrush,
-    lockedVelocityPercent,
-  ) {
-    const targets = findVelocityCandidatesAtClientX(clientX, fallbackNote);
-    if (!targets || targets.length === 0) {
-      return;
-    }
-
-    const applyTargets = isMultiBrush ? targets : [targets[0]];
-    applyTargets.forEach(function (target) {
-      if (Number.isFinite(lockedVelocityPercent)) {
-        applyLockedVelocityPercent(target, lockedVelocityPercent);
-      } else {
-        applyVelocityAtPointer(target, clientY);
-      }
-    });
-  };
-
-  const startVelocityBrush = function (event, fallbackNote) {
-    event.preventDefault();
-    event.stopPropagation();
-
-    const isMultiBrush = Boolean(event.shiftKey);
-    const velocityRect = velocityWrapRef.current
-      ? velocityWrapRef.current.getBoundingClientRect()
-      : null;
-    let lockVelocityPercent =
-      isMultiBrush && velocityRect
-        ? getVelocityPercentFromClientY({
-            clientY: event.clientY,
-            laneRect: velocityRect,
-            clampFn: clamp,
-          })
-        : null;
-
-    velocityBrushActiveRef.current = true;
-    setIsVelocityEditing(true);
-
-    applyVelocityByPointer(
-      event.clientX,
-      event.clientY,
-      fallbackNote,
-      isMultiBrush,
-      lockVelocityPercent,
-    );
-
-    const onMouseMove = function (moveEvent) {
-      const moveWantsLock = Boolean(moveEvent.shiftKey);
-      if (moveWantsLock && !Number.isFinite(lockVelocityPercent)) {
-        const moveRect = velocityWrapRef.current
-          ? velocityWrapRef.current.getBoundingClientRect()
-          : null;
-        if (moveRect) {
-          lockVelocityPercent = getVelocityPercentFromClientY({
-            clientY: moveEvent.clientY,
-            laneRect: moveRect,
-            clampFn: clamp,
-          });
-        }
-      }
-
-      applyVelocityByPointer(
-        moveEvent.clientX,
-        moveEvent.clientY,
-        null,
-        moveWantsLock || isMultiBrush,
-        lockVelocityPercent,
-      );
-    };
-
-    const onMouseUp = function () {
-      velocityBrushActiveRef.current = false;
-      setIsVelocityEditing(false);
-      window.removeEventListener("mousemove", onMouseMove);
-      window.removeEventListener("mouseup", onMouseUp);
-    };
-
-    window.addEventListener("mousemove", onMouseMove);
-    window.addEventListener("mouseup", onMouseUp);
-  };
-
-  const onVelocityBarMouseDown = function (event, note) {
-    startVelocityBrush(event, note);
   };
 
   return (
