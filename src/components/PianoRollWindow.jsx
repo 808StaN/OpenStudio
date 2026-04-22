@@ -63,6 +63,8 @@ import { usePianoRollClipboardActions } from "./piano-roll/usePianoRollClipboard
 import { usePianoRollMenuDismiss } from "./piano-roll/usePianoRollMenuDismiss";
 import { usePianoRollMidiIo } from "./piano-roll/usePianoRollMidiIo";
 import { usePianoRollMidiDrop } from "./piano-roll/usePianoRollMidiDrop";
+import { usePianoRollGridMouseDown } from "./piano-roll/usePianoRollGridMouseDown";
+import { usePianoRollNoteMouseDown } from "./piano-roll/usePianoRollNoteMouseDown";
 import { usePianoRollVelocityEditing } from "./piano-roll/usePianoRollVelocityEditing";
 import { usePianoRollNoteOps } from "./piano-roll/usePianoRollNoteOps";
 import { usePianoRollPreviewAudio } from "./piano-roll/usePianoRollPreviewAudio";
@@ -371,259 +373,38 @@ export function PianoRollWindow() {
     },
   });
 
-  const onGridMouseDown = function (event) {
-    if (!activeChannel || !activePattern) {
-      return;
-    }
-
-    if (event.button !== 0 && event.button !== 2) {
-      return;
-    }
-
-    const pointer = getGridPointerFromEvent(event);
-    if (!pointer) {
-      return;
-    }
-
-    const x = pointer.x;
-    const y = pointer.y;
-
-    if (y < 0) {
-      return;
-    }
-
-    if (editMode === "select") {
-      if (event.button !== 0) {
-        return;
-      }
-
-      event.preventDefault();
-
-      const startX = clamp(x, 0, gridWidth);
-      const startY = clamp(y, 0, gridHeight);
-      setSelectionBox({
-        startX,
-        startY,
-        endX: startX,
-        endY: startY,
-      });
-
-      const onMouseMove = function (moveEvent) {
-        const movePointer = getGridPointerFromEvent(moveEvent);
-        if (!movePointer) {
-          return;
-        }
-
-        setSelectionBox(function (current) {
-          if (!current) {
-            return current;
-          }
-
-          return {
-            ...current,
-            endX: clamp(movePointer.x, 0, gridWidth),
-            endY: clamp(movePointer.y, 0, gridHeight),
-          };
-        });
-      };
-
-      const onMouseUp = function (upEvent) {
-        window.removeEventListener("mousemove", onMouseMove);
-        window.removeEventListener("mouseup", onMouseUp);
-
-        const upPointer = getGridPointerFromEvent(upEvent) || {
-          x: startX,
-          y: startY,
-        };
-
-        const endX = clamp(upPointer.x, 0, gridWidth);
-        const endY = clamp(upPointer.y, 0, gridHeight);
-        const minX = Math.min(startX, endX);
-        const maxX = Math.max(startX, endX);
-        const minY = Math.min(startY, endY);
-        const maxY = Math.max(startY, endY);
-        const wasClick =
-          Math.abs(maxX - minX) < MARQUEE_MIN_DRAG &&
-          Math.abs(maxY - minY) < MARQUEE_MIN_DRAG;
-
-        if (wasClick) {
-          setSelectedNoteIds([]);
-          setSelectionBox(null);
-          return;
-        }
-
-        const nextSelection = pianoNotes
-          .filter(function (note) {
-            const noteLeft = note.start * stepWidth + 1;
-            const noteTop = (PITCH_MAX - note.pitch) * rowHeight + 2;
-            const noteWidth = Math.max(8, note.length * stepWidth - 2);
-            const noteHeight = Math.max(6, rowHeight - 4);
-            const noteRight = noteLeft + noteWidth;
-            const noteBottom = noteTop + noteHeight;
-
-            const intersectsHorizontally =
-              noteRight >= minX && noteLeft <= maxX;
-            const intersectsVertically = noteBottom >= minY && noteTop <= maxY;
-            return intersectsHorizontally && intersectsVertically;
-          })
-          .map(function (note) {
-            return getNoteSelectionId(note);
-          });
-
-        setSelectedNoteIds(nextSelection);
-        setSelectionBox(null);
-      };
-
-      window.addEventListener("mousemove", onMouseMove);
-      window.addEventListener("mouseup", onMouseUp);
-      return;
-    }
-
-    const stepIndex = Math.max(
-      0,
-      Math.min(patternLength - 1, Math.floor(x / stepWidth)),
-    );
-    const rawStart = clamp(x / stepWidth, 0, patternLength - MIN_FREE_LENGTH);
-    const snappedStart = clamp(
-      quantizeBySnap(rawStart, snapStepSize),
-      0,
-      patternLength - MIN_FREE_LENGTH,
-    );
-    const rowIndex = Math.max(
-      0,
-      Math.min(pitchRows.length - 1, Math.floor(y / rowHeight)),
-    );
-    const pitch = PITCH_MAX - rowIndex;
-
-    const stepRow = activePattern.stepGrid?.[activeChannel.id] || [];
-    const stepIsOn = Boolean(stepRow[stepIndex]);
-
-    const customNotes = activePattern.pianoPreview?.[activeChannel.id] || [];
-    const hasCustomNote = customNotes.some(function (note) {
-      return (
-        isNearlyEqual(note.start || 0, snappedStart) && note.pitch === pitch
-      );
-    });
-
-    const maxNewLength = Math.max(
-      MIN_FREE_LENGTH,
-      patternLength - snappedStart,
-    );
-    const minNewLength = Math.min(MIN_FREE_LENGTH, maxNewLength);
-    const lastTouchedLength = Math.max(
-      MIN_FREE_LENGTH,
-      Number(lastTouchedLengthRef.current || minNoteLength),
-    );
-    const nextCreatedLength = clamp(
-      lastTouchedLength,
-      minNewLength,
-      maxNewLength,
-    );
-    const snappedStartIsStep = isNearlyEqual(snappedStart, stepIndex);
-    const shouldUseStepCell =
-      snappedStartIsStep && isNearlyEqual(nextCreatedLength, 1);
-
-    if (pitch === C5_PITCH) {
-      if (event.button === 0) {
-        if (shouldUseStepCell) {
-          if (!stepIsOn) {
-            dispatch(
-              toggleStep({
-                patternId: activePatternId,
-                channelId: activeChannel.id,
-                stepIndex,
-              }),
-            );
-          }
-          void startPreviewNote(pitch);
-          return;
-        }
-
-        if (!hasCustomNote) {
-          if (stepIsOn && snappedStartIsStep) {
-            dispatch(
-              toggleStep({
-                patternId: activePatternId,
-                channelId: activeChannel.id,
-                stepIndex,
-              }),
-            );
-          }
-
-          lastTouchedLengthRef.current = nextCreatedLength;
-          dispatch(
-            togglePianoNote({
-              patternId: activePatternId,
-              channelId: activeChannel.id,
-              start: snappedStart,
-              pitch,
-              length: nextCreatedLength,
-              velocity: lastTouchedVelocityRef.current,
-            }),
-          );
-          void startPreviewNote(pitch);
-        }
-        return;
-      }
-
-      if (event.button === 2) {
-        event.preventDefault();
-
-        if (hasCustomNote) {
-          dispatch(
-            togglePianoNote({
-              patternId: activePatternId,
-              channelId: activeChannel.id,
-              start: snappedStart,
-              pitch,
-              length: minNoteLength,
-            }),
-          );
-          return;
-        }
-
-        if (stepIsOn) {
-          dispatch(
-            toggleStep({
-              patternId: activePatternId,
-              channelId: activeChannel.id,
-              stepIndex,
-            }),
-          );
-        }
-      }
-
-      return;
-    }
-
-    if (event.button === 0 && !hasCustomNote) {
-      lastTouchedLengthRef.current = nextCreatedLength;
-      dispatch(
-        togglePianoNote({
-          patternId: activePatternId,
-          channelId: activeChannel.id,
-          start: snappedStart,
-          pitch,
-          length: nextCreatedLength,
-          velocity: lastTouchedVelocityRef.current,
-        }),
-      );
-      void startPreviewNote(pitch);
-    }
-
-    if (event.button === 2 && hasCustomNote) {
-      event.preventDefault();
-      dispatch(
-        togglePianoNote({
-          patternId: activePatternId,
-          channelId: activeChannel.id,
-          start: snappedStart,
-          pitch,
-          length: minNoteLength,
-        }),
-      );
-    }
-  };
+  const { onGridMouseDown } = usePianoRollGridMouseDown({
+    activeChannel,
+    activePattern,
+    activePatternId,
+    editMode,
+    patternLength,
+    stepWidth,
+    rowHeight,
+    gridWidth,
+    gridHeight,
+    pitchRows,
+    snapStepSize,
+    minNoteLength,
+    minFreeLength: MIN_FREE_LENGTH,
+    pitchMax: PITCH_MAX,
+    c5Pitch: C5_PITCH,
+    marqueeMinDrag: MARQUEE_MIN_DRAG,
+    pianoNotes,
+    dispatch,
+    getGridPointerFromEvent,
+    setSelectionBox,
+    setSelectedNoteIds,
+    toggleStepAction: toggleStep,
+    togglePianoNoteAction: togglePianoNote,
+    startPreviewNote,
+    lastTouchedLengthRef,
+    lastTouchedVelocityRef,
+    clampFn: clamp,
+    isNearlyEqualFn: isNearlyEqual,
+    quantizeBySnapFn: quantizeBySnap,
+    getSelectionId: getNoteSelectionId,
+  });
 
   const { onPianoRollMidiDragOver, onPianoRollMidiDrop } = usePianoRollMidiDrop(
     {
@@ -660,525 +441,46 @@ export function PianoRollWindow() {
       pasteMidiPatternToChannelAction: pasteMidiPatternToChannel,
     });
 
-  const onNoteMouseDown = function (event, note) {
-    event.stopPropagation();
-    event.preventDefault();
-
-    if (Number(note.length) > 0) {
-      lastTouchedLengthRef.current = Number(note.length);
-    }
-    if (Number(note.velocity) > 0) {
-      const touchedVelocity = Math.round(clamp(Number(note.velocity), 1, 127));
-      lastTouchedVelocityRef.current = touchedVelocity;
-      setVelocityReadout(midiVelocityToPercent(touchedVelocity));
-    }
-
-    if (event.button === 0) {
-      void startPreviewNote(note.pitch);
-    }
-
-    const noteRect = event.currentTarget.getBoundingClientRect();
-    const clickedNearRightEdge = noteRect.right - event.clientX <= 8;
-
-    if (editMode === "select") {
-      if (!activeChannel) {
-        return;
-      }
-
-      const noteSelectionId = getNoteSelectionId(note);
-
-      if (event.button === 2) {
-        if (
-          selectedNoteIdSet.has(noteSelectionId) &&
-          selectedNotes.length > 1
-        ) {
-          deleteSelectedNotes();
-          return;
-        }
-
-        removeNote(note);
-        setSelectedNoteIds(function (current) {
-          return current.filter(function (item) {
-            return item !== noteSelectionId;
-          });
-        });
-        return;
-      }
-
-      if (event.button !== 0) {
-        return;
-      }
-
-      if (clickedNearRightEdge) {
-        const session = {
-          patternId: activePatternId,
-          channelId: activeChannel.id,
-          source: note.source,
-          mode: "resize",
-          start: note.start,
-          pitch: note.pitch,
-          length: note.length,
-          originStart: note.start,
-          originPitch: note.pitch,
-          originLength: note.length,
-          originX: event.clientX,
-          originY: event.clientY,
-          convertedStep: false,
-        };
-
-        resizeSessionRef.current = session;
-
-        const ensureStepConverted = function () {
-          const activeSession = resizeSessionRef.current;
-          if (!activeSession) {
-            return;
-          }
-
-          if (activeSession.source !== "step" || activeSession.convertedStep) {
-            return;
-          }
-
-          dispatch(
-            toggleStep({
-              patternId: activeSession.patternId,
-              channelId: activeSession.channelId,
-              stepIndex: activeSession.start,
-            }),
-          );
-
-          dispatch(
-            togglePianoNote({
-              patternId: activeSession.patternId,
-              channelId: activeSession.channelId,
-              start: activeSession.start,
-              pitch: activeSession.pitch,
-              length: activeSession.length,
-              velocity: Math.round(
-                clamp(Number(note.velocity || DEFAULT_NOTE_VELOCITY), 1, 127),
-              ),
-            }),
-          );
-
-          activeSession.source = "piano";
-          activeSession.convertedStep = true;
-        };
-
-        const onMouseMove = function (moveEvent) {
-          const activeSession = resizeSessionRef.current;
-          if (!activeSession) {
-            return;
-          }
-
-          const deltaStepsRaw =
-            (moveEvent.clientX - activeSession.originX) / stepWidth;
-          const maxLen = Math.max(
-            MIN_FREE_LENGTH,
-            patternLength - activeSession.start,
-          );
-          const minLen = Math.min(minNoteLength, maxLen);
-          const rawEnd =
-            activeSession.start + activeSession.originLength + deltaStepsRaw;
-          const snappedEnd = snapStepSize
-            ? quantizeBySnap(rawEnd, snapStepSize)
-            : rawEnd;
-          const nextLength = clamp(
-            snappedEnd - activeSession.start,
-            minLen,
-            maxLen,
-          );
-
-          if (activeSession.source === "step") {
-            if (nextLength <= 1) {
-              return;
-            }
-            ensureStepConverted();
-          }
-
-          if (Math.abs(nextLength - activeSession.length) <= SNAP_EPSILON) {
-            return;
-          }
-
-          dispatch(
-            setPianoNoteLength({
-              patternId: activeSession.patternId,
-              channelId: activeSession.channelId,
-              noteId: note.id,
-              start: activeSession.start,
-              pitch: activeSession.pitch,
-              length: nextLength,
-            }),
-          );
-
-          activeSession.length = nextLength;
-          lastTouchedLengthRef.current = nextLength;
-        };
-
-        const onMouseUp = function () {
-          resizeSessionRef.current = null;
-          window.removeEventListener("mousemove", onMouseMove);
-          window.removeEventListener("mouseup", onMouseUp);
-        };
-
-        window.addEventListener("mousemove", onMouseMove);
-        window.addEventListener("mouseup", onMouseUp);
-        return;
-      }
-
-      const activeSelectionIds = selectedNoteIdSet.has(noteSelectionId)
-        ? selectedNoteIds
-        : [noteSelectionId];
-
-      let notesToMove = pianoNotes.filter(function (item) {
-        return activeSelectionIds.includes(getNoteSelectionId(item));
-      });
-
-      notesToMove = notesToMove.map(function (item) {
-        return ensureNoteIsPiano(item);
-      });
-
-      const dragIds = notesToMove.map(function (item) {
-        return "piano:" + item.id;
-      });
-      setSelectedNoteIds(dragIds);
-
-      const session = {
-        originX: event.clientX,
-        originY: event.clientY,
-        previewOriginPitch: note.pitch,
-        // Track last previewed pitch to avoid retrigger spam while dragging.
-        lastPreviewPitch: note.pitch,
-        notes: notesToMove.map(function (item) {
-          return {
-            id: item.id,
-            start: item.start,
-            pitch: item.pitch,
-            length: item.length,
-            originStart: item.start,
-            originPitch: item.pitch,
-          };
-        }),
-      };
-
-      const anchorNote = session.notes.reduce(function (best, item) {
-        if (!best) {
-          return item;
-        }
-
-        if (item.originStart < best.originStart) {
-          return item;
-        }
-
-        return best;
-      }, null);
-
-      session.anchorOriginStart = anchorNote ? anchorNote.originStart : 0;
-      session.minDeltaSteps = session.notes.reduce(function (acc, item) {
-        return Math.max(acc, -item.originStart);
-      }, -Infinity);
-      session.maxDeltaSteps = session.notes.reduce(function (acc, item) {
-        const maxStart = Math.max(0, patternLength - item.length);
-        return Math.min(acc, maxStart - item.originStart);
-      }, Infinity);
-
-      dragSelectionRef.current = session;
-
-      const onMouseMove = function (moveEvent) {
-        const dragSession = dragSelectionRef.current;
-        if (!dragSession) {
-          return;
-        }
-
-        const deltaStepsRaw =
-          (moveEvent.clientX - dragSession.originX) / stepWidth;
-        const anchorTargetStart = snapStepSize
-          ? quantizeBySnap(
-              dragSession.anchorOriginStart + deltaStepsRaw,
-              snapStepSize,
-            )
-          : dragSession.anchorOriginStart + deltaStepsRaw;
-        const deltaSteps = clamp(
-          anchorTargetStart - dragSession.anchorOriginStart,
-          dragSession.minDeltaSteps,
-          dragSession.maxDeltaSteps,
-        );
-        const deltaRows = Math.round(
-          (moveEvent.clientY - dragSession.originY) / rowHeight,
-        );
-        const previewPitch = clamp(
-          dragSession.previewOriginPitch - deltaRows,
-          PITCH_MIN,
-          PITCH_MAX,
-        );
-        if (previewPitch !== dragSession.lastPreviewPitch) {
-          dragSession.lastPreviewPitch = previewPitch;
-          void startPreviewNote(previewPitch);
-        }
-
-        dragSession.moves = [];
-        dragSession.notes.forEach(function (item) {
-          const maxStart = Math.max(0, patternLength - item.length);
-          const nextStart = clamp(item.originStart + deltaSteps, 0, maxStart);
-          const nextPitch = Math.max(
-            PITCH_MIN,
-            Math.min(PITCH_MAX, item.originPitch - deltaRows),
-          );
-
-          if (
-            isNearlyEqual(nextStart, item.start) &&
-            nextPitch === item.pitch
-          ) {
-            return;
-          }
-
-          dragSession.moves.push({
-            noteId: item.id,
-            start: item.start,
-            pitch: item.pitch,
-            nextStart,
-            nextPitch,
-          });
-        });
-
-        if (Array.isArray(dragSession.moves) && dragSession.moves.length > 0) {
-          dispatch(
-            movePianoNotesBatch({
-              patternId: activePatternId,
-              channelId: activeChannel.id,
-              moves: dragSession.moves,
-            }),
-          );
-
-          dragSession.moves.forEach(function (move) {
-            const target = dragSession.notes.find(function (item) {
-              return item.id === move.noteId;
-            });
-            if (!target) {
-              return;
-            }
-
-            target.start = move.nextStart;
-            target.pitch = move.nextPitch;
-          });
-        }
-      };
-
-      const onMouseUp = function () {
-        const dragSession = dragSelectionRef.current;
-        dragSelectionRef.current = null;
-
-        window.removeEventListener("mousemove", onMouseMove);
-        window.removeEventListener("mouseup", onMouseUp);
-
-        if (!dragSession) {
-          return;
-        }
-
-        setSelectedNoteIds(
-          dragSession.notes.map(function (item) {
-            return "piano:" + item.id;
-          }),
-        );
-      };
-
-      window.addEventListener("mousemove", onMouseMove);
-      window.addEventListener("mouseup", onMouseUp);
-      return;
-    }
-
-    if (event.button === 2) {
-      if (!activeChannel) {
-        return;
-      }
-
-      if (note.source === "step") {
-        dispatch(
-          toggleStep({
-            patternId: activePatternId,
-            channelId: activeChannel.id,
-            stepIndex: note.start,
-          }),
-        );
-        return;
-      }
-
-      dispatch(
-        togglePianoNote({
-          patternId: activePatternId,
-          channelId: activeChannel.id,
-          start: note.start,
-          pitch: note.pitch,
-          length: note.length,
-        }),
-      );
-      return;
-    }
-
-    if (event.button !== 0) {
-      return;
-    }
-
-    if (!activeChannel) {
-      return;
-    }
-
-    const session = {
-      patternId: activePatternId,
-      channelId: activeChannel.id,
-      source: note.source,
-      mode: clickedNearRightEdge ? "resize" : "move",
-      start: note.start,
-      pitch: note.pitch,
-      length: note.length,
-      originStart: note.start,
-      originPitch: note.pitch,
-      originLength: note.length,
-      originX: event.clientX,
-      originY: event.clientY,
-      convertedStep: false,
-    };
-
-    resizeSessionRef.current = session;
-
-    const ensureStepConverted = function () {
-      const activeSession = resizeSessionRef.current;
-      if (!activeSession) {
-        return;
-      }
-
-      if (activeSession.source !== "step" || activeSession.convertedStep) {
-        return;
-      }
-
-      dispatch(
-        toggleStep({
-          patternId: activeSession.patternId,
-          channelId: activeSession.channelId,
-          stepIndex: activeSession.start,
-        }),
-      );
-
-      dispatch(
-        togglePianoNote({
-          patternId: activeSession.patternId,
-          channelId: activeSession.channelId,
-          start: activeSession.start,
-          pitch: activeSession.pitch,
-          length: activeSession.length,
-          velocity: Math.round(
-            clamp(Number(note.velocity || DEFAULT_NOTE_VELOCITY), 1, 127),
-          ),
-        }),
-      );
-
-      activeSession.source = "piano";
-      activeSession.convertedStep = true;
-    };
-
-    const onMouseMove = function (moveEvent) {
-      const activeSession = resizeSessionRef.current;
-      if (!activeSession) {
-        return;
-      }
-
-      const deltaStepsRaw =
-        (moveEvent.clientX - activeSession.originX) / stepWidth;
-
-      if (activeSession.mode === "resize") {
-        const maxLen = Math.max(
-          MIN_FREE_LENGTH,
-          patternLength - activeSession.start,
-        );
-        const minLen = Math.min(minNoteLength, maxLen);
-        const rawEnd =
-          activeSession.start + activeSession.originLength + deltaStepsRaw;
-        const snappedEnd = snapStepSize
-          ? quantizeBySnap(rawEnd, snapStepSize)
-          : rawEnd;
-        const nextLength = clamp(
-          snappedEnd - activeSession.start,
-          minLen,
-          maxLen,
-        );
-
-        if (activeSession.source === "step") {
-          if (nextLength <= 1) {
-            return;
-          }
-          ensureStepConverted();
-        }
-
-        if (Math.abs(nextLength - activeSession.length) <= SNAP_EPSILON) {
-          return;
-        }
-
-        dispatch(
-          setPianoNoteLength({
-            patternId: activeSession.patternId,
-            channelId: activeSession.channelId,
-            noteId: note.id,
-            start: activeSession.start,
-            pitch: activeSession.pitch,
-            length: nextLength,
-          }),
-        );
-
-        activeSession.length = nextLength;
-        lastTouchedLengthRef.current = nextLength;
-        return;
-      }
-
-      const deltaRows = Math.round(
-        (moveEvent.clientY - activeSession.originY) / rowHeight,
-      );
-      const maxStart = Math.max(0, patternLength - activeSession.length);
-      const nextStart = clamp(
-        quantizeBySnap(activeSession.originStart + deltaStepsRaw, snapStepSize),
-        0,
-        maxStart,
-      );
-      const nextPitch = Math.max(
-        PITCH_MIN,
-        Math.min(PITCH_MAX, activeSession.originPitch - deltaRows),
-      );
-
-      if (
-        nextStart === activeSession.start &&
-        nextPitch === activeSession.pitch
-      ) {
-        return;
-      }
-
-      ensureStepConverted();
-
-      if (nextPitch !== activeSession.pitch) {
-        void startPreviewNote(nextPitch);
-      }
-
-      dispatch(
-        movePianoNote({
-          patternId: activeSession.patternId,
-          channelId: activeSession.channelId,
-          noteId: note.id,
-          start: activeSession.start,
-          pitch: activeSession.pitch,
-          nextStart,
-          nextPitch,
-        }),
-      );
-
-      activeSession.start = nextStart;
-      activeSession.pitch = nextPitch;
-    };
-
-    const onMouseUp = function () {
-      resizeSessionRef.current = null;
-      window.removeEventListener("mousemove", onMouseMove);
-      window.removeEventListener("mouseup", onMouseUp);
-    };
-
-    window.addEventListener("mousemove", onMouseMove);
-    window.addEventListener("mouseup", onMouseUp);
-  };
+  const { onNoteMouseDown } = usePianoRollNoteMouseDown({
+    activeChannel,
+    activePatternId,
+    editMode,
+    selectedNoteIdSet,
+    selectedNoteIds,
+    selectedNotes,
+    pianoNotes,
+    patternLength,
+    stepWidth,
+    rowHeight,
+    snapStepSize,
+    minNoteLength,
+    minFreeLength: MIN_FREE_LENGTH,
+    snapEpsilon: SNAP_EPSILON,
+    pitchMin: PITCH_MIN,
+    pitchMax: PITCH_MAX,
+    defaultNoteVelocity: DEFAULT_NOTE_VELOCITY,
+    dispatch,
+    clampFn: clamp,
+    isNearlyEqualFn: isNearlyEqual,
+    quantizeBySnapFn: quantizeBySnap,
+    getSelectionId: getNoteSelectionId,
+    ensureNoteIsPiano,
+    removeNote,
+    deleteSelectedNotes,
+    setSelectedNoteIds,
+    movePianoNotesBatchAction: movePianoNotesBatch,
+    movePianoNoteAction: movePianoNote,
+    setPianoNoteLengthAction: setPianoNoteLength,
+    toggleStepAction: toggleStep,
+    togglePianoNoteAction: togglePianoNote,
+    resizeSessionRef,
+    dragSelectionRef,
+    startPreviewNote,
+    lastTouchedLengthRef,
+    lastTouchedVelocityRef,
+    setVelocityReadout,
+    midiVelocityToPercentFn: midiVelocityToPercent,
+  });
 
   return (
     <section className="piano-roll-shell">
