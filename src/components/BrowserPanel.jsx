@@ -5,6 +5,11 @@ import { PLUGIN_EFFECTS } from "../data/pluginEffects";
 import { PLUGIN_INSTRUMENTS } from "../data/pluginInstruments";
 import { BrowserPackTree } from "./browser/BrowserPackTree";
 import { BrowserPluginTree } from "./browser/BrowserPluginTree";
+import {
+  buildPackTree,
+  getPackParentPath,
+  mergePackGroups,
+} from "./browser/browserPackUtils";
 import { setBrowserTab } from "../store";
 import {
   isMidiFileName,
@@ -121,13 +126,6 @@ export function BrowserPanel() {
     );
   };
 
-  const normalizeFolderPath = function (folderPath) {
-    if (!folderPath || folderPath === "Root") {
-      return "";
-    }
-    return folderPath;
-  };
-
   const buildGroupsFromRelativePaths = useCallback(
     function (relativePaths) {
       const folderMap = new Map();
@@ -192,56 +190,6 @@ export function BrowserPanel() {
     },
     [makePacksPath],
   );
-
-  const mergeGroups = function (manifestFolders, discoveredFolders) {
-    const mergedMap = new Map();
-
-    const appendFolders = function (folders) {
-      (Array.isArray(folders) ? folders : []).forEach(function (group) {
-        const folder = String(group?.folder || "Root");
-        if (!mergedMap.has(folder)) {
-          mergedMap.set(folder, new Map());
-        }
-
-        const itemMap = mergedMap.get(folder);
-        (Array.isArray(group?.items) ? group.items : []).forEach(
-          function (item) {
-            const name = String(item?.name || "").trim();
-            const path = String(item?.path || "").trim();
-            if (!name || !path) {
-              return;
-            }
-
-            if (!itemMap.has(path)) {
-              itemMap.set(path, {
-                name,
-                path,
-              });
-            }
-          },
-        );
-      });
-    };
-
-    appendFolders(manifestFolders);
-    appendFolders(discoveredFolders);
-
-    return Array.from(mergedMap.entries())
-      .map(function (entry) {
-        const folder = entry[0];
-        const items = Array.from(entry[1].values()).sort(function (a, b) {
-          return a.name.localeCompare(b.name);
-        });
-
-        return {
-          folder,
-          items,
-        };
-      })
-      .sort(function (a, b) {
-        return a.folder.localeCompare(b.folder);
-      });
-  };
 
   const discoverPacksFromDirectoryIndex = useCallback(async function () {
     if (isFileProtocol) {
@@ -344,82 +292,7 @@ export function BrowserPanel() {
     return buildGroupsFromRelativePaths(Array.from(mediaRelativePaths));
   }, [buildGroupsFromRelativePaths, isFileProtocol]);
 
-  const buildPackTree = function (folders) {
-    const root = {
-      path: "",
-      name: "",
-      children: new Map(),
-      samples: [],
-    };
-
-    folders.forEach(function (group) {
-      const folderPath = normalizeFolderPath(group.folder);
-      const segments = folderPath ? folderPath.split("/") : [];
-
-      let currentNode = root;
-      let currentPath = "";
-
-      segments.forEach(function (segment) {
-        currentPath = currentPath ? currentPath + "/" + segment : segment;
-        if (!currentNode.children.has(segment)) {
-          currentNode.children.set(segment, {
-            path: currentPath,
-            name: segment,
-            children: new Map(),
-            samples: [],
-          });
-        }
-        currentNode = currentNode.children.get(segment);
-      });
-
-      group.items.forEach(function (item) {
-        const sampleName = typeof item === "string" ? item : item.name;
-        const samplePath =
-          typeof item === "string"
-            ? ""
-            : item.path ||
-              makePacksPath(
-                "packs/" + normalizeFolderPath(group.folder) + "/" + item.name,
-              );
-        const itemType = isMidiFileName(sampleName) ? "midi" : "audio";
-
-        currentNode.samples.push({
-          name: sampleName,
-          path: samplePath,
-          type: itemType,
-        });
-      });
-    });
-
-    const sortNode = function (node) {
-      const sortedChildren = Array.from(node.children.values())
-        .sort(function (a, b) {
-          return a.name.localeCompare(b.name);
-        })
-        .map(sortNode);
-
-      const sortedSamples = node.samples.sort(function (a, b) {
-        return a.name.localeCompare(b.name);
-      });
-
-      return {
-        path: node.path,
-        name: node.name,
-        children: sortedChildren,
-        samples: sortedSamples,
-      };
-    };
-
-    return sortNode(root);
-  };
-
-  const getParentPath = function (folderPath) {
-    const lastSlash = folderPath.lastIndexOf("/");
-    if (lastSlash === -1) {
-      return "";
-    }
-    return folderPath.slice(0, lastSlash);
-  };
+  const getParentPath = getPackParentPath;
 
   const toggleFolder = function (folderPath) {
     const parentPath = getParentPath(folderPath);
@@ -524,7 +397,7 @@ export function BrowserPanel() {
             })
           : [];
         const discoveredFolders = await discoverPacksFromDirectoryIndex();
-        const merged = mergeGroups(manifestFolders, discoveredFolders);
+        const merged = mergePackGroups(manifestFolders, discoveredFolders);
 
         setPackGroups(merged);
         setManifestStatus("ready");
@@ -583,7 +456,11 @@ export function BrowserPanel() {
     [browserTab, triggerPacksRescan],
   );
 
-  const packTree = buildPackTree(packGroups);
+  const packTree = buildPackTree({
+    folders: packGroups,
+    isMidiFileNameFn: isMidiFileName,
+    makePacksPathFn: makePacksPath,
+  });
 
   return (
     <aside className="browser-shell">
