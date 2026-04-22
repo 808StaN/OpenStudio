@@ -21,8 +21,6 @@ import {
   removeChannel,
   toggleStep,
 } from "../store";
-import { getPluginInstrument } from "../data/pluginInstruments";
-import { C5_PITCH, getChannelMergedNotes } from "../utils/patternNotes";
 import {
   dataTransferHasMidiPatternPayload,
   readMidiPatternFromDataTransfer,
@@ -33,26 +31,18 @@ import {
   parseMidiArrayBufferToStepNotes,
   readMidiFilePayloadFromDataTransfer,
 } from "../utils/midiImport";
-
-const MIDI_PITCH_MIN = 0;
-const MIDI_PITCH_MAX = 127;
-const PREVIEW_TOP_MIN_PERCENT = 9;
-const PREVIEW_TOP_MAX_PERCENT = 91;
-const STEP_CELL_WIDTH_PX = 24;
-const STEP_CELL_GAP_PX = 5;
-const STEPS_PER_BEAT = 4;
-const DEFAULT_PATTERN_COLOR = "#4bef9f";
-
-function clamp(value, min, max) {
-  return Math.max(min, Math.min(max, value));
-}
-
-function isMelodyShapeNote(note) {
-  const pitch = Math.round(Number(note.pitch || C5_PITCH));
-  const length = Number(note.length || 1);
-
-  return pitch !== C5_PITCH || Math.abs(length - 1) > 0.0001;
-}
+import { ChannelRackRow } from "./channel-rack/ChannelRackRow";
+import {
+  ChannelContextMenuPanel,
+  ChannelRenamePanel,
+} from "./channel-rack/ChannelRackContextPanels";
+import {
+  DEFAULT_PATTERN_COLOR,
+  STEPS_PER_BEAT,
+  clamp,
+  getInsertLabel,
+  resolveChannelMenuPosition,
+} from "./channel-rack/channelRackUtils";
 
 export function ChannelRackWindow() {
   const dispatch = useDispatch();
@@ -164,20 +154,6 @@ export function ChannelRackWindow() {
     },
     [isPlaying, bpm, patternLength],
   );
-
-  const getInsertLabel = function (insert, index) {
-    const fromName = String(insert.name || "").replace(/^insert\b/i, "Insert");
-    if (fromName && fromName !== insert.name) {
-      return fromName;
-    }
-
-    const numericSuffix = String(insert.id || "").match(/insert-(\d+)/i)?.[1];
-    if (numericSuffix) {
-      return "Insert " + numericSuffix;
-    }
-
-    return "Insert " + (index + 1);
-  };
 
   const insertLabelById = useMemo(
     function () {
@@ -358,6 +334,102 @@ export function ChannelRackWindow() {
     }
   };
 
+  const onAssignPluginToChannel = function (channelId, payload) {
+    dispatch(
+      assignPluginToChannel({
+        channelId,
+        pluginRef: payload.pluginRef,
+        pluginName: payload.pluginName,
+      }),
+    );
+  };
+
+  const onAssignSampleToChannel = function (channelId, payload) {
+    dispatch(
+      assignSampleToChannel({
+        channelId,
+        sampleRef: payload.samplePath || payload.file,
+        sampleName: payload.file,
+      }),
+    );
+  };
+
+  const onOpenSampleSettings = function (channelId) {
+    setChannelContextMenu(null);
+    dispatch(setActiveChannel(channelId));
+    dispatch(openWindow("sampleSettings"));
+  };
+
+  const onOpenChannelContextMenu = function (channelId, buttonRect) {
+    const shellRect = rackShellRef.current?.getBoundingClientRect() || {
+      left: 0,
+      top: 0,
+      width: window.innerWidth,
+      height: window.innerHeight,
+    };
+    const position = resolveChannelMenuPosition(buttonRect, shellRect);
+
+    dispatch(setActiveChannel(channelId));
+    setIsPatternMenuOpen(false);
+    setOpenInsertMenuChannelId(null);
+    setChannelRenamePanel(null);
+    setChannelContextMenu({
+      channelId,
+      x: position.x,
+      y: position.y,
+    });
+  };
+
+  const onToggleInsertMenu = function (channelId) {
+    setOpenInsertMenuChannelId(function (value) {
+      const next = value === channelId ? null : channelId;
+      if (next) {
+        setIsPatternMenuOpen(false);
+      }
+      return next;
+    });
+  };
+
+  const onAssignMixerInsert = function (channelId, insertId) {
+    dispatch(
+      setChannelMixerInsert({
+        channelId,
+        insertId,
+      }),
+    );
+    setOpenInsertMenuChannelId(null);
+  };
+
+  const onOpenPianoRoll = function (channelId) {
+    dispatch(setActiveChannel(channelId));
+    dispatch(openWindow("pianoRoll"));
+  };
+
+  const onTogglePatternStep = function (patternId, channelId, stepIndex) {
+    dispatch(
+      toggleStep({
+        patternId,
+        channelId,
+        stepIndex,
+      }),
+    );
+  };
+
+  const onSaveRenamePanel = function () {
+    const nextName = String(channelRenamePanel?.value || "").trim();
+    if (!nextName) {
+      setChannelRenamePanel(null);
+      return;
+    }
+    dispatch(
+      renameChannel({
+        channelId: channelRenamePanel.channelId,
+        name: nextName,
+      }),
+    );
+    setChannelRenamePanel(null);
+  };
+
   return (
     <section className="rack-shell" ref={rackShellRef}>
       <header className="rack-topbar">
@@ -508,560 +580,108 @@ export function ChannelRackWindow() {
       <div className="rack-scroll-area">
         <div className="rack-rows">
           {channels.map(function (channel) {
-            const rawRow =
-              (activePattern && activePattern.stepGrid[channel.id]) || [];
-            const row = Array.from({ length: patternLength }, function (_, i) {
-              return Boolean(rawRow[i]);
-            });
-            const hasAnyStepNotes = row.some(Boolean);
-            const notes = getChannelMergedNotes(activePattern, channel.id);
-            const hasAnyNotes = notes.length > 0;
-            const notePitchBounds = notes.reduce(
-              function (acc, note) {
-                const pitch = Math.max(
-                  MIDI_PITCH_MIN,
-                  Math.min(MIDI_PITCH_MAX, Math.round(note.pitch || C5_PITCH)),
-                );
-
-                return {
-                  min: Math.min(acc.min, pitch),
-                  max: Math.max(acc.max, pitch),
-                };
-              },
-              {
-                min: Infinity,
-                max: -Infinity,
-              },
-            );
-            const hasPitchBounds = Number.isFinite(notePitchBounds.min);
-            const notePitchRange = hasPitchBounds
-              ? notePitchBounds.max - notePitchBounds.min
-              : 0;
-            const pianoNotes = activePattern?.pianoPreview?.[channel.id] || [];
-            const shouldAutoShowMelodyInSequencer =
-              pianoNotes.some(isMelodyShapeNote);
-            const showPianoPreview =
-              channelRackMode === "melody" ||
-              (channelRackMode === "sequencer" &&
-                shouldAutoShowMelodyInSequencer);
-            const channelGridWidthPx =
-              patternLength * STEP_CELL_WIDTH_PX +
-              Math.max(0, patternLength - 1) * STEP_CELL_GAP_PX;
-
             return (
-              <article
-                className={
-                  "rack-row" +
-                  (openInsertMenuChannelId === channel.id ? " is-menu-open" : "")
-                }
+              <ChannelRackRow
                 key={channel.id}
-                onMouseDown={function () {
-                  dispatch(setActiveChannel(channel.id));
+                channel={channel}
+                activePattern={activePattern}
+                activePatternId={activePatternId}
+                patternLength={patternLength}
+                channelRackMode={channelRackMode}
+                isPlaying={isPlaying}
+                playheadStep={playheadStep}
+                openInsertMenuChannelId={openInsertMenuChannelId}
+                mixerInserts={mixerInserts}
+                insertLabelById={insertLabelById}
+                onActivateChannel={function (channelId) {
+                  dispatch(setActiveChannel(channelId));
                 }}
-                onDragOver={function (event) {
-                  event.preventDefault();
+                onAssignPluginToChannel={onAssignPluginToChannel}
+                onAssignSampleToChannel={onAssignSampleToChannel}
+                onToggleMute={function (channelId, value) {
+                  dispatch(setChannelMute({ channelId, value }));
                 }}
-                onDrop={function (event) {
-                  event.preventDefault();
-
-                  const rawPlugin = event.dataTransfer.getData(
-                    "application/x-daw-plugin",
-                  );
-
-                  if (rawPlugin) {
-                    try {
-                      const payload = JSON.parse(rawPlugin);
-                      dispatch(
-                        assignPluginToChannel({
-                          channelId: channel.id,
-                          pluginRef: payload.pluginRef,
-                          pluginName: payload.pluginName,
-                        }),
-                      );
-                      return;
-                    } catch {
-                      return;
-                    }
-                  }
-
-                  const rawSample = event.dataTransfer.getData(
-                    "application/x-daw-sample",
-                  );
-                  if (!rawSample) {
-                    return;
-                  }
-
-                  try {
-                    const payload = JSON.parse(rawSample);
-                    dispatch(
-                      assignSampleToChannel({
-                        channelId: channel.id,
-                        sampleRef: payload.samplePath || payload.file,
-                        sampleName: payload.file,
-                      }),
-                    );
-                  } catch {
-                    return;
-                  }
+                onToggleSolo={function (channelId, value) {
+                  dispatch(setChannelSolo({ channelId, value }));
                 }}
-              >
-                <div className="rack-controls">
-                  <button
-                    className={"small-toggle" + (channel.muted ? " is-on" : "")}
-                    onClick={function () {
-                      dispatch(
-                        setChannelMute({
-                          channelId: channel.id,
-                          value: !channel.muted,
-                        }),
-                      );
-                    }}
-                  >
-                    M
-                  </button>
-                  <button
-                    className={"small-toggle" + (channel.solo ? " is-on" : "")}
-                    onClick={function () {
-                      dispatch(
-                        setChannelSolo({
-                          channelId: channel.id,
-                          value: !channel.solo,
-                        }),
-                      );
-                    }}
-                  >
-                    S
-                  </button>
-                  <label className="knob-label">
-                    Vol
-                    <input
-                      className="rack-knob"
-                      type="range"
-                      min="0"
-                      max="1"
-                      step="0.01"
-                      value={channel.volume}
-                      onDoubleClick={function () {
-                        dispatch(
-                          setChannelVolume({
-                            channelId: channel.id,
-                            value: 1,
-                          }),
-                        );
-                      }}
-                      onChange={function (event) {
-                        dispatch(
-                          setChannelVolume({
-                            channelId: channel.id,
-                            value: Number(event.target.value),
-                          }),
-                        );
-                      }}
-                    />
-                  </label>
-
-                  <label className="knob-label">
-                    Pan
-                    <input
-                      className="rack-knob"
-                      type="range"
-                      min="-1"
-                      max="1"
-                      step="0.01"
-                      value={channel.pan}
-                      onDoubleClick={function () {
-                        dispatch(
-                          setChannelPan({
-                            channelId: channel.id,
-                            value: 0,
-                          }),
-                        );
-                      }}
-                      onChange={function (event) {
-                        dispatch(
-                          setChannelPan({
-                            channelId: channel.id,
-                            value: Number(event.target.value),
-                          }),
-                        );
-                      }}
-                    />
-                  </label>
-
-                  <button
-                    className="channel-name"
-                    title={
-                      channel.pluginRef
-                        ? "Instrument: " +
-                          (getPluginInstrument(channel.pluginRef)?.name ||
-                            channel.name)
-                        : channel.sampleRef || "Drop WAV from Browser"
-                    }
-                    onClick={function (event) {
-                      event.stopPropagation();
-                      setChannelContextMenu(null);
-                      dispatch(setActiveChannel(channel.id));
-                      dispatch(openWindow("sampleSettings"));
-                    }}
-                    onContextMenu={function (event) {
-                      event.preventDefault();
-                      event.stopPropagation();
-                      const buttonRect = event.currentTarget.getBoundingClientRect();
-                      const shellRect =
-                        rackShellRef.current?.getBoundingClientRect() || {
-                          left: 0,
-                          top: 0,
-                          width: window.innerWidth,
-                          height: window.innerHeight,
-                        };
-                      const estimatedMenuWidth = 176;
-                      const estimatedMenuHeight = 132;
-                      const preferredX = buttonRect.right - shellRect.left + 3;
-                      const preferredY = buttonRect.top - shellRect.top;
-                      const maxX = Math.max(
-                        8,
-                        shellRect.width - estimatedMenuWidth - 8,
-                      );
-                      const maxY = Math.max(
-                        8,
-                        shellRect.height - estimatedMenuHeight - 8,
-                      );
-                      const safeX = Math.max(8, Math.min(preferredX, maxX));
-                      const safeY = Math.max(8, Math.min(preferredY, maxY));
-
-                      dispatch(setActiveChannel(channel.id));
-                      setIsPatternMenuOpen(false);
-                      setOpenInsertMenuChannelId(null);
-                      setChannelRenamePanel(null);
-                      setChannelContextMenu({
-                        channelId: channel.id,
-                        x: safeX,
-                        y: safeY,
-                      });
-                    }}
-                  >
-                    {channel.name}
-                  </button>
-
-                  <label className="channel-insert">
-                    <div
-                      className={
-                        "channel-insert-select rack-modern-select" +
-                        (openInsertMenuChannelId === channel.id ? " is-open" : "")
-                      }
-                    >
-                      <button
-                        type="button"
-                        className="rack-modern-select-trigger"
-                        aria-label="Insert assignment"
-                        onClick={function (event) {
-                          event.stopPropagation();
-                          setOpenInsertMenuChannelId(function (value) {
-                            const next = value === channel.id ? null : channel.id;
-                            if (next) {
-                              setIsPatternMenuOpen(false);
-                            }
-                            return next;
-                          });
-                        }}
-                      >
-                        <span className="rack-modern-select-value">
-                          {insertLabelById[channel.mixerInsertId] || "Insert 1"}
-                        </span>
-                        <span className="rack-modern-select-caret">v</span>
-                      </button>
-                      {openInsertMenuChannelId === channel.id ? (
-                        <div className="rack-modern-select-dropdown">
-                          {mixerInserts.map(function (insert, index) {
-                            const label = getInsertLabel(insert, index);
-                            const isActive = insert.id === channel.mixerInsertId;
-                            return (
-                              <button
-                                key={insert.id}
-                                type="button"
-                                className={
-                                  "rack-modern-select-option" +
-                                  (isActive ? " is-active" : "")
-                                }
-                                onClick={function (event) {
-                                  event.stopPropagation();
-                                  dispatch(
-                                    setChannelMixerInsert({
-                                      channelId: channel.id,
-                                      insertId: insert.id,
-                                    }),
-                                  );
-                                  setOpenInsertMenuChannelId(null);
-                                }}
-                              >
-                                {label}
-                              </button>
-                            );
-                          })}
-                        </div>
-                      ) : null}
-                    </div>
-                  </label>
-                </div>
-
-                <div
-                  className={
-                    "rack-input " +
-                    (showPianoPreview ? "rack-input-piano" : "rack-input-steps")
-                  }
-                >
-                  {showPianoPreview ? (
-                    <button
-                      className="piano-preview"
-                      style={{ width: channelGridWidthPx + "px" }}
-                      onDragOver={onMidiPatternDragOver}
-                      onDrop={function (event) {
-                        void onMidiPatternDrop(event, channel);
-                      }}
-                      onClick={function () {
-                        dispatch(setActiveChannel(channel.id));
-                        dispatch(openWindow("pianoRoll"));
-                      }}
-                    >
-                      {showPianoPreview ? (
-                        hasAnyNotes ? (
-                          <span className="piano-preview-playhead" />
-                        ) : null
-                      ) : null}
-                      {notes.map(function (note) {
-                        const left = (note.start / patternLength) * 100;
-                        const width = (note.length / patternLength) * 100;
-                        const pitch = Math.max(
-                          MIDI_PITCH_MIN,
-                          Math.min(
-                            MIDI_PITCH_MAX,
-                            Math.round(note.pitch || C5_PITCH),
-                          ),
-                        );
-                        const pitchRatio =
-                          notePitchRange <= 0
-                            ? 0.5
-                            : (notePitchBounds.max - pitch) / notePitchRange;
-                        const top =
-                          PREVIEW_TOP_MIN_PERCENT +
-                          pitchRatio *
-                            (PREVIEW_TOP_MAX_PERCENT - PREVIEW_TOP_MIN_PERCENT);
-
-                        return (
-                          <span
-                            key={note.id}
-                            className="mini-note"
-                            style={{
-                              left: left + "%",
-                              width: width + "%",
-                              top: top + "%",
-                            }}
-                          />
-                        );
-                      })}
-                      <span className="piano-hint">Open Piano Roll</span>
-                    </button>
-                  ) : (
-                    <div
-                      className="step-grid"
-                      onDragOver={onMidiPatternDragOver}
-                      onDrop={function (event) {
-                        void onMidiPatternDrop(event, channel);
-                      }}
-                      style={{
-                        gridTemplateColumns:
-                          "repeat(" +
-                          patternLength +
-                          ", " +
-                          STEP_CELL_WIDTH_PX +
-                          "px)",
-                      }}
-                    >
-                      {row.map(function (isOn, stepIndex) {
-                        return (
-                          <button
-                            key={channel.id + "-" + stepIndex}
-                            type="button"
-                            className={
-                              "step" +
-                              (Math.floor(stepIndex / 4) % 2 === 0
-                                ? " group-a"
-                                : " group-b") +
-                              (isOn ? " is-on" : "") +
-                              (isPlaying &&
-                              hasAnyStepNotes &&
-                              playheadStep === stepIndex
-                                ? " is-playhead"
-                                : "")
-                            }
-                            onMouseDown={function (event) {
-                              if (event.button === 0 && !isOn) {
-                                dispatch(
-                                  toggleStep({
-                                    patternId: activePatternId,
-                                    channelId: channel.id,
-                                    stepIndex,
-                                  }),
-                                );
-                              }
-
-                              if (event.button === 2 && isOn) {
-                                event.preventDefault();
-                                dispatch(
-                                  toggleStep({
-                                    patternId: activePatternId,
-                                    channelId: channel.id,
-                                    stepIndex,
-                                  }),
-                                );
-                              }
-                            }}
-                            onContextMenu={function (event) {
-                              event.preventDefault();
-                            }}
-                          />
-                        );
-                      })}
-                    </div>
-                  )}
-                </div>
-              </article>
+                onSetVolume={function (channelId, value) {
+                  dispatch(setChannelVolume({ channelId, value }));
+                }}
+                onSetPan={function (channelId, value) {
+                  dispatch(setChannelPan({ channelId, value }));
+                }}
+                onOpenSampleSettings={onOpenSampleSettings}
+                onOpenChannelContextMenu={onOpenChannelContextMenu}
+                onToggleInsertMenu={onToggleInsertMenu}
+                onAssignMixerInsert={onAssignMixerInsert}
+                onMidiPatternDragOver={onMidiPatternDragOver}
+                onMidiPatternDrop={onMidiPatternDrop}
+                onOpenPianoRoll={onOpenPianoRoll}
+                onToggleStep={onTogglePatternStep}
+              />
             );
           })}
         </div>
       </div>
-      {channelContextMenu ? (
-        <div
-          className="rack-channel-context-menu"
-          style={{
-            left: channelContextMenu.x + "px",
-            top: channelContextMenu.y + "px",
-          }}
-        >
-          <button
-            type="button"
-            onClick={function () {
-              dispatch(duplicateChannel(channelContextMenu.channelId));
-              setChannelContextMenu(null);
-            }}
-          >
-            Clone Channel
-          </button>
-          <button
-            type="button"
-            disabled={channels.length <= 1}
-            onClick={function () {
-              if (channels.length <= 1) {
-                return;
-              }
-              dispatch(removeChannel(channelContextMenu.channelId));
-              setChannelContextMenu(null);
-            }}
-          >
-            Remove Channel
-          </button>
-          <button
-            type="button"
-            onClick={function () {
-              const channel = channels.find(function (item) {
-                return item.id === channelContextMenu.channelId;
-              });
-              const currentName =
-                String(channel?.name || "").trim() || "Channel";
-              setChannelRenamePanel({
-                channelId: channelContextMenu.channelId,
-                x: channelContextMenu.x + 12,
-                y: channelContextMenu.y + 8,
-                value: currentName,
-              });
-              setChannelContextMenu(null);
-            }}
-          >
-            Rename Channel
-          </button>
-        </div>
-      ) : null}
-      {channelRenamePanel ? (
-        <div
-          className="rack-channel-rename-panel"
-          style={{
-            left: channelRenamePanel.x + "px",
-            top: channelRenamePanel.y + "px",
-          }}
-        >
-          <input
-            autoFocus
-            value={channelRenamePanel.value}
-            maxLength={14}
-            onChange={function (event) {
-              const nextValue = String(event.target.value || "");
-              setChannelRenamePanel(function (previous) {
-                if (!previous) {
-                  return previous;
-                }
-                return {
-                  ...previous,
-                  value: nextValue,
-                };
-              });
-            }}
-            onKeyDown={function (event) {
-              if (event.key === "Escape") {
-                event.preventDefault();
-                setChannelRenamePanel(null);
-                return;
-              }
-
-              if (event.key !== "Enter") {
-                return;
-              }
-
-              event.preventDefault();
-              const nextName = String(channelRenamePanel.value || "").trim();
-              if (!nextName) {
-                setChannelRenamePanel(null);
-                return;
-              }
-              dispatch(
-                renameChannel({
-                  channelId: channelRenamePanel.channelId,
-                  name: nextName,
-                }),
-              );
-              setChannelRenamePanel(null);
-            }}
-          />
-          <div className="rack-channel-rename-actions">
-            <button
-              type="button"
-              onClick={function () {
-                const nextName = String(channelRenamePanel.value || "").trim();
-                if (!nextName) {
-                  setChannelRenamePanel(null);
-                  return;
-                }
-                dispatch(
-                  renameChannel({
-                    channelId: channelRenamePanel.channelId,
-                    name: nextName,
-                  }),
-                );
-                setChannelRenamePanel(null);
-              }}
-            >
-              Save
-            </button>
-            <button
-              type="button"
-              onClick={function () {
-                setChannelRenamePanel(null);
-              }}
-            >
-              Cancel
-            </button>
-          </div>
-        </div>
-      ) : null}
+      <ChannelContextMenuPanel
+        channelContextMenu={channelContextMenu}
+        channelsCount={channels.length}
+        onCloneChannel={function () {
+          dispatch(duplicateChannel(channelContextMenu.channelId));
+          setChannelContextMenu(null);
+        }}
+        onRemoveChannel={function () {
+          if (channels.length <= 1) {
+            return;
+          }
+          dispatch(removeChannel(channelContextMenu.channelId));
+          setChannelContextMenu(null);
+        }}
+        onBeginRenameChannel={function () {
+          const channel = channels.find(function (item) {
+            return item.id === channelContextMenu.channelId;
+          });
+          const currentName = String(channel?.name || "").trim() || "Channel";
+          setChannelRenamePanel({
+            channelId: channelContextMenu.channelId,
+            x: channelContextMenu.x + 12,
+            y: channelContextMenu.y + 8,
+            value: currentName,
+          });
+          setChannelContextMenu(null);
+        }}
+      />
+      <ChannelRenamePanel
+        renamePanel={channelRenamePanel}
+        onChangeValue={function (event) {
+          const nextValue = String(event.target.value || "");
+          setChannelRenamePanel(function (previous) {
+            if (!previous) {
+              return previous;
+            }
+            return {
+              ...previous,
+              value: nextValue,
+            };
+          });
+        }}
+        onKeyDown={function (event) {
+          if (event.key === "Escape") {
+            event.preventDefault();
+            setChannelRenamePanel(null);
+            return;
+          }
+          if (event.key !== "Enter") {
+            return;
+          }
+          event.preventDefault();
+          onSaveRenamePanel();
+        }}
+        onSave={onSaveRenamePanel}
+        onCancel={function () {
+          setChannelRenamePanel(null);
+        }}
+      />
     </section>
   );
 }
