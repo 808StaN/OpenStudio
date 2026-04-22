@@ -16,6 +16,8 @@ import {
   setSongLoopEnabled,
   setTransportMode,
 } from "../store";
+import { getSafeSampleSettings } from "../audio/domain/sampleSettings";
+import { getTimeStretchProfile } from "../audio/domain/timeStretch";
 import { getPatternDragSession } from "../utils/patternDragSession";
 import { C5_PITCH } from "../utils/patternNotes";
 import { toSafeSampleUrl } from "../utils/sampleUrl";
@@ -39,18 +41,6 @@ const AUDIO_CLIP_FALLBACK_BAR_LENGTH = 2;
 const AUDIO_WAVEFORM_BINS = 2048;
 const AUDIO_WAVEFORM_DETAIL_DENSITY = 1.15;
 const AUDIO_WAVEFORM_MAX_BARS = 520;
-const SAMPLE_STRETCH_MODES = new Set(["none", "resample", "stretch", "realtime"]);
-const SAMPLE_STRETCH_TIME_MODES = new Set([
-  "none",
-  "set-bpm",
-  "project-tempo",
-  "beat-1",
-  "beat-2",
-  "bar-1",
-  "bar-2",
-  "bar-3",
-  "bar-4",
-]);
 
 const SNAP_OPTIONS = [
   { key: "none", label: "(none)", stepSize: null },
@@ -77,142 +67,6 @@ function quantizeBySnap(value, snapSize) {
   }
 
   return Math.round(value / snapSize) * snapSize;
-}
-
-function getSafeSampleSettings(raw) {
-  const base = {
-    lengthPct: 100,
-    pitchCents: 0,
-    stretchMode: "resample",
-    stretchPitchSemitones: 0,
-    stretchMultiplier: 1,
-    stretchSourceBpm: 120,
-    stretchProjectTempoBpm: 120,
-    stretchTimeMode: "none",
-  };
-  const next = {
-    ...base,
-    ...(raw || {}),
-  };
-
-  const mode = String(next.stretchMode || "")
-    .trim()
-    .toLowerCase();
-  next.stretchMode = SAMPLE_STRETCH_MODES.has(mode) ? mode : "resample";
-
-  const timeMode = String(next.stretchTimeMode || "")
-    .trim()
-    .toLowerCase();
-  next.stretchTimeMode = SAMPLE_STRETCH_TIME_MODES.has(timeMode)
-    ? timeMode
-    : "none";
-
-  next.stretchPitchSemitones = clamp(
-    Number(next.stretchPitchSemitones || 0),
-    -24,
-    24,
-  );
-  next.stretchMultiplier = clamp(Number(next.stretchMultiplier || 1), 0.25, 8);
-  next.stretchSourceBpm = clamp(Number(next.stretchSourceBpm || 120), 20, 300);
-  next.stretchProjectTempoBpm = clamp(
-    Number(next.stretchProjectTempoBpm || 120),
-    20,
-    300,
-  );
-  next.lengthPct = clamp(Number(next.lengthPct || 100), 0.5, 100);
-  next.pitchCents = clamp(Number(next.pitchCents || 0), -1200, 1200);
-
-  return next;
-}
-
-function getStretchTargetDurationSeconds(settings, sampleReadDuration, bpm) {
-  const safeDuration = Math.max(0.01, Number(sampleReadDuration || 0.01));
-  const safeBpm = Math.max(1, Number(bpm || 120));
-  const quarterSec = 60 / safeBpm;
-  const timeMode = String(settings.stretchTimeMode || "none")
-    .trim()
-    .toLowerCase();
-  const mul = clamp(Number(settings.stretchMultiplier || 1), 0.25, 8);
-
-  if (timeMode === "set-bpm") {
-    const sourceBpm = clamp(Number(settings.stretchSourceBpm || 120), 20, 300);
-    return Math.max(0.01, safeDuration * (sourceBpm / safeBpm) * mul);
-  }
-  if (timeMode === "project-tempo") {
-    const projectLockBpm = clamp(
-      Number(settings.stretchProjectTempoBpm || safeBpm),
-      20,
-      300,
-    );
-    return Math.max(0.01, safeDuration * (projectLockBpm / safeBpm) * mul);
-  }
-  if (timeMode === "beat-1") {
-    return quarterSec * mul;
-  }
-  if (timeMode === "beat-2") {
-    return quarterSec * 2 * mul;
-  }
-  if (timeMode === "bar-1") {
-    return quarterSec * 4 * mul;
-  }
-  if (timeMode === "bar-2") {
-    return quarterSec * 8 * mul;
-  }
-  if (timeMode === "bar-3") {
-    return quarterSec * 12 * mul;
-  }
-  if (timeMode === "bar-4") {
-    return quarterSec * 16 * mul;
-  }
-
-  return Math.max(0.01, safeDuration * mul);
-}
-
-function getTimeStretchProfile(settings, sampleReadDuration, bpm, baseRate) {
-  const stretchMode = String(settings.stretchMode || "none")
-    .trim()
-    .toLowerCase();
-  const safeBaseRate = clamp(Number(baseRate || 1), 0.125, 8);
-  const targetDurationSec = getStretchTargetDurationSeconds(
-    settings,
-    sampleReadDuration,
-    bpm,
-  );
-
-  if (stretchMode === "none") {
-    return {
-      playbackRate: safeBaseRate,
-      targetDurationSec: Math.max(0.01, sampleReadDuration / safeBaseRate),
-      useGranularStretch: false,
-    };
-  }
-
-  const pitchShiftSemitones = clamp(
-    Number(settings.stretchPitchSemitones || 0),
-    -24,
-    24,
-  );
-  const pitchShiftRate = Math.pow(2, pitchShiftSemitones / 12);
-
-  if (stretchMode === "stretch") {
-    return {
-      playbackRate: clamp(safeBaseRate * pitchShiftRate, 0.125, 8),
-      targetDurationSec: Math.max(0.01, targetDurationSec),
-      useGranularStretch: true,
-    };
-  }
-
-  const durationRate = clamp(sampleReadDuration / targetDurationSec, 0.125, 8);
-
-  return {
-    playbackRate: clamp(
-      safeBaseRate * pitchShiftRate * durationRate,
-      0.125,
-      8,
-    ),
-    targetDurationSec: Math.max(0.01, sampleReadDuration / durationRate),
-    useGranularStretch: false,
-  };
 }
 
 function getTargetAudioClipBarLength(durationSec, sampleSettings, bpm) {

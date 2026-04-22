@@ -1,33 +1,28 @@
 import { useCallback, useEffect, useRef } from "react";
 import Soundfont from "soundfont-player";
 import { useDispatch, useSelector } from "react-redux";
+import { applyVolumeEnvelopeToGain } from "./domain/envelope";
+import {
+  buildSoftClipCurve,
+  FX_EFFECT_GRAPHIC_EQ,
+  FX_EFFECT_MAXIMIZER,
+  FX_EFFECT_REVERB,
+  getDefaultEqBandType,
+  getSafeGraphicEqParams,
+  getSafeMaximizerParams,
+  getSafeReverbParams,
+  GRAPHIC_EQ_DEFAULT_POINT_FREQUENCIES,
+  sanitizeEqBandType,
+  sanitizeMaximizerMode,
+} from "./domain/fxParams";
+import { DEFAULT_SAMPLE_MIDI_PITCH, midiPitchToPlaybackRate } from "./domain/pitch";
+import { getSafeSampleSettings } from "./domain/sampleSettings";
+import { getTimeStretchProfile } from "./domain/timeStretch";
 import { getPluginInstrument } from "../data/pluginInstruments";
 import { setInsertMeter, setPlayheadStep, setPlaying } from "../store";
 import { toSafeSampleUrl } from "../utils/sampleUrl";
 import { createWsolaStretchedBufferFromSample } from "./wsolaStretch";
 
-const defaultSampleSettings = {
-  cutItself: false,
-  normalize: false,
-  lengthPct: 100,
-  fadeInPct: 0,
-  fadeOutPct: 0,
-  envEnabled: false,
-  envDelayMs: 0,
-  envAttackMs: 0,
-  envHoldMs: 0,
-  envDecayMs: 0,
-  envSustainPct: 100,
-  envReleaseMs: 0,
-  stretchMode: "resample",
-  stretchPitchSemitones: 0,
-  stretchMultiplier: 1,
-  stretchSourceBpm: 120,
-  stretchProjectTempoBpm: 120,
-  stretchTimeMode: "none",
-};
-
-const DEFAULT_SAMPLE_MIDI_PITCH = 72;
 const DEFAULT_NOTE_VELOCITY = 95;
 const PLUGIN_INSTRUMENT_GAIN_BOOST = 1.5;
 const BASE_CHANNEL_TRIGGER_GAIN = 0.75;
@@ -39,12 +34,6 @@ const MIXER_METER_DECAY = 0.9;
 const EQ_SPECTRUM_BINS = 112;
 const EQ_SPECTRUM_MIN_FREQ = 20;
 const EQ_SPECTRUM_MAX_FREQ = 20000;
-const FX_EFFECT_GRAPHIC_EQ = "graphic-eq";
-const FX_EFFECT_REVERB = "reverb";
-const FX_EFFECT_MAXIMIZER = "maximizer";
-const GRAPHIC_EQ_DEFAULT_POINT_FREQUENCIES = [
-  50, 100, 250, 500, 1000, 3000, 8000,
-];
 const PACK_PREVIEW_EVENT = "openstudio:packs-preview";
 const SAMPLE_SETTINGS_PREVIEW_PLAY_EVENT =
   "openstudio:sample-settings-preview-play";
@@ -53,49 +42,13 @@ const SAMPLE_SETTINGS_PREVIEW_STOP_EVENT =
 const MIN_AUDIO_GAIN = 0.0001;
 const CUT_ITSELF_RELEASE_SEC = 0.01;
 const CUT_ITSELF_STOP_PADDING_SEC = 0.003;
-const GRAPHIC_EQ_BAND_TYPES = [
-  "peaking",
-  "lowshelf",
-  "highshelf",
-  "lowpass",
-  "highpass",
-];
-const MAXIMIZER_MODES = ["irc-ll", "irc-i", "irc-ii", "irc-iii", "irc-iv"];
 
-function getDefaultEqBandType(index) {
-  if (index === 0) {
-    return "lowshelf";
-  }
-
-  if (index === GRAPHIC_EQ_DEFAULT_POINT_FREQUENCIES.length - 1) {
-    return "highshelf";
-  }
-
-  return "peaking";
-}
-
-function sanitizeEqBandType(raw, fallback) {
-  const requested = String(raw || "")
-    .trim()
-    .toLowerCase();
-  if (GRAPHIC_EQ_BAND_TYPES.includes(requested)) {
-    return requested;
-  }
-
-  const safeFallback = String(fallback || "")
-    .trim()
-    .toLowerCase();
-  if (GRAPHIC_EQ_BAND_TYPES.includes(safeFallback)) {
-    return safeFallback;
-  }
-
-  return "peaking";
-}
-
+// Generic clamp utility for scheduler-side parameter safety.
 function clamp(value, min, max) {
   return Math.max(min, Math.min(max, value));
 }
 
+// Smoothly ramps a gain node to near-silence and returns safe stop time.
 function scheduleSmoothGainStop(param, atTime, releaseSec) {
   const safeReleaseSec = Math.max(0.003, Number(releaseSec || 0));
   const stopAt = atTime + safeReleaseSec;
@@ -115,137 +68,7 @@ function scheduleSmoothGainStop(param, atTime, releaseSec) {
   return stopAt;
 }
 
-function getSafeGraphicEqParams(raw) {
-  const requestedPoints = Array.isArray(raw?.points) ? raw.points : [];
-  const legacyBands = Array.isArray(raw?.bands) ? raw.bands : [];
-  return {
-    points: GRAPHIC_EQ_DEFAULT_POINT_FREQUENCIES.map(
-      function (defaultFreq, index) {
-        const requestedPoint = requestedPoints[index];
-        const legacyGain = legacyBands[index];
-        return {
-          frequencyHz: clamp(
-            Number(requestedPoint?.frequencyHz || defaultFreq),
-            20,
-            20000,
-          ),
-          gainDb: clamp(
-            Number(
-              requestedPoint?.gainDb ??
-                (Number.isFinite(legacyGain) ? legacyGain : 0),
-            ),
-            -18,
-            18,
-          ),
-          q: clamp(Number(requestedPoint?.q || 1.2), 0.25, 8),
-          bandType: sanitizeEqBandType(
-            requestedPoint?.bandType,
-            getDefaultEqBandType(index),
-          ),
-        };
-      },
-    ),
-  };
-}
-
-function getSafeReverbParams(raw) {
-  const base = {
-    decayTime: 2.8,
-    preDelayMs: 24,
-    size: 0.62,
-    damping: 0.45,
-    hiCutHz: 9000,
-    loCutHz: 130,
-    earlyReflections: 0.38,
-    diffusion: 0.72,
-    modulationDepth: 0.22,
-    modulationRateHz: 0.35,
-    width: 0.9,
-    dryWet: 0.34,
-    freeze: false,
-    ...(raw || {}),
-  };
-
-  return {
-    decayTime: clamp(Number(base.decayTime ?? 2.8), 0.2, 20),
-    preDelayMs: clamp(Number(base.preDelayMs ?? 24), 0, 250),
-    size: clamp(Number(base.size ?? 0.62), 0, 1),
-    damping: clamp(Number(base.damping ?? 0.45), 0, 1),
-    hiCutHz: clamp(Number(base.hiCutHz ?? 9000), 1200, 18000),
-    loCutHz: clamp(Number(base.loCutHz ?? 130), 20, 1200),
-    earlyReflections: clamp(Number(base.earlyReflections ?? 0.38), 0, 1),
-    diffusion: clamp(Number(base.diffusion ?? 0.72), 0, 1),
-    modulationDepth: clamp(Number(base.modulationDepth ?? 0.22), 0, 1),
-    modulationRateHz: clamp(Number(base.modulationRateHz ?? 0.35), 0, 8),
-    width: clamp(Number(base.width ?? 0.9), 0, 1),
-    dryWet: clamp(Number(base.dryWet ?? 0.34), 0, 1),
-    freeze: Boolean(base.freeze),
-  };
-}
-
-function sanitizeMaximizerMode(rawMode) {
-  const requested = String(rawMode || "")
-    .trim()
-    .toLowerCase();
-  if (MAXIMIZER_MODES.includes(requested)) {
-    return requested;
-  }
-  return "irc-ii";
-}
-
-function getSafeMaximizerParams(raw) {
-  const legacyThreshold = Number(raw?.thresholdDb);
-  const legacyCeiling = Number(raw?.ceilingDb);
-  const legacyCharacter = Number(raw?.character);
-  const legacyMode = sanitizeMaximizerMode(raw?.mode);
-  const isLegacyDefault =
-    Number.isFinite(legacyThreshold) &&
-    Number.isFinite(legacyCeiling) &&
-    Number.isFinite(legacyCharacter) &&
-    Math.abs(legacyThreshold + 6) < 0.001 &&
-    Math.abs(legacyCeiling + 0.1) < 0.001 &&
-    Math.abs(legacyCharacter - 0.58) < 0.001 &&
-    legacyMode === "irc-ii" &&
-    Boolean(raw?.truePeakEnabled ?? true);
-
-  const base = {
-    mode: "irc-ii",
-    truePeakEnabled: true,
-    thresholdDb: 0,
-    ceilingDb: -1,
-    character: 0.5,
-    ...(raw || {}),
-  };
-
-  if (isLegacyDefault) {
-    base.thresholdDb = 0;
-    base.ceilingDb = -1;
-    base.character = 0.5;
-  }
-
-  return {
-    mode: sanitizeMaximizerMode(base.mode),
-    truePeakEnabled: Boolean(base.truePeakEnabled),
-    thresholdDb: clamp(Number(base.thresholdDb ?? 0), -24, 0),
-    ceilingDb: clamp(Number(base.ceilingDb ?? -1), -18, 0),
-    character: clamp(Number(base.character ?? 0.5), 0, 1),
-  };
-}
-
-function buildSoftClipCurve(strength) {
-  const safeStrength = clamp(Number(strength || 0), 0, 1);
-  const samples = 4096;
-  const curve = new Float32Array(samples);
-  const drive = 1 + safeStrength * 6;
-
-  for (let index = 0; index < samples; index += 1) {
-    const x = (index / (samples - 1)) * 2 - 1;
-    curve[index] = Math.tanh(x * drive) / Math.tanh(drive);
-  }
-
-  return curve;
-}
-
+// Reads active insert effects and normalizes all effect params for runtime usage.
 function getActiveFxState(insert) {
   const fxSlots = Array.isArray(insert?.fxSlots) ? insert.fxSlots : [];
   const state = {
@@ -282,361 +105,6 @@ function getActiveFxState(insert) {
   });
 
   return state;
-}
-
-function midiPitchToPlaybackRate(midiPitch) {
-  const semitoneOffset = midiPitch - DEFAULT_SAMPLE_MIDI_PITCH;
-  const rawRate = Math.pow(2, semitoneOffset / 12);
-  return Math.max(0.125, Math.min(8, rawRate));
-}
-
-function applyVolumeEnvelopeToGain(
-  gainParam,
-  startTime,
-  gateDuration,
-  settings,
-) {
-  const minGain = 0.0001;
-  const envDelay = Math.max(0, Number(settings.envDelayMs ?? 0) / 1000);
-  const envAttack = Math.max(0, Number(settings.envAttackMs ?? 0) / 1000);
-  const envHold = Math.max(0, Number(settings.envHoldMs ?? 0) / 1000);
-  const envDecay = Math.max(0, Number(settings.envDecayMs ?? 0) / 1000);
-  const envRelease = Math.max(0, Number(settings.envReleaseMs ?? 0) / 1000);
-  const envSustain = Math.max(
-    minGain,
-    Math.min(1, Number(settings.envSustainPct ?? 100) / 100),
-  );
-
-  const noteOffTime = startTime + Math.max(0.001, Number(gateDuration || 0));
-
-  let cursor = startTime;
-
-  gainParam.cancelScheduledValues(startTime);
-  gainParam.setValueAtTime(minGain, startTime);
-
-  const advanceWithHold = function (seconds, value) {
-    const endTime = Math.min(noteOffTime, cursor + Math.max(0, seconds));
-    gainParam.setValueAtTime(value, endTime);
-    cursor = endTime;
-  };
-
-  const advanceWithRamp = function (seconds, targetValue) {
-    const endTime = Math.min(noteOffTime, cursor + Math.max(0, seconds));
-    if (endTime <= cursor) {
-      gainParam.setValueAtTime(targetValue, cursor);
-      return;
-    }
-
-    if (seconds > 0.0005) {
-      gainParam.linearRampToValueAtTime(targetValue, endTime);
-    } else {
-      gainParam.setValueAtTime(targetValue, endTime);
-    }
-
-    cursor = endTime;
-  };
-
-  if (envDelay > 0) {
-    advanceWithHold(envDelay, minGain);
-  }
-
-  if (cursor < noteOffTime) {
-    advanceWithRamp(envAttack, 1);
-  }
-
-  if (cursor < noteOffTime) {
-    advanceWithHold(envHold, 1);
-  }
-
-  if (cursor < noteOffTime) {
-    advanceWithRamp(envDecay, envSustain);
-  }
-
-  gainParam.setValueAtTime(envSustain, noteOffTime);
-
-  if (envRelease > 0.0005) {
-    gainParam.linearRampToValueAtTime(minGain, noteOffTime + envRelease);
-  } else {
-    gainParam.setValueAtTime(minGain, noteOffTime);
-  }
-}
-
-function getSafeSampleSettings(raw) {
-  const hasPitchCents = Object.hasOwn(raw || {}, "pitchCents");
-  const base = {
-    ...defaultSampleSettings,
-    attackMs: 8,
-    releaseMs: 420,
-    pitchCents: hasPitchCents
-      ? Number(raw.pitchCents)
-      : Number(raw?.pitchSemitones || 0) * 100,
-    monoMode: false,
-    ...(raw || {}),
-  };
-
-  const next = {
-    cutItself: Boolean(base.cutItself),
-    normalize: Boolean(base.normalize),
-    lengthPct: Math.max(5, Math.min(100, Number(base.lengthPct ?? 100))),
-    fadeInPct: Math.max(0, Math.min(95, Number(base.fadeInPct ?? 0))),
-    fadeOutPct: Math.max(0, Math.min(95, Number(base.fadeOutPct ?? 0))),
-    envEnabled: Boolean(base.envEnabled),
-    envDelayMs: Math.max(0, Math.min(3000, Number(base.envDelayMs ?? 0))),
-    envAttackMs: Math.max(0, Math.min(3000, Number(base.envAttackMs ?? 0))),
-    envHoldMs: Math.max(0, Math.min(3000, Number(base.envHoldMs ?? 0))),
-    envDecayMs: Math.max(0, Math.min(3000, Number(base.envDecayMs ?? 0))),
-    envSustainPct: Math.max(
-      0,
-      Math.min(100, Number(base.envSustainPct ?? 100)),
-    ),
-    envReleaseMs: Math.max(0, Math.min(3000, Number(base.envReleaseMs ?? 0))),
-    attackMs: Math.max(0, Math.min(400, Number(base.attackMs ?? 8))),
-    releaseMs: Math.max(0, Math.min(1000, Number(base.releaseMs ?? 420))),
-    pitchCents: Math.max(
-      -100,
-      Math.min(100, Math.round(Number(base.pitchCents ?? 0))),
-    ),
-    monoMode: Boolean(base.monoMode),
-    stretchMode: ["none", "resample", "stretch", "realtime"].includes(
-      String(base.stretchMode || "")
-        .trim()
-        .toLowerCase(),
-    )
-      ? String(base.stretchMode || "none")
-          .trim()
-          .toLowerCase()
-      : "none",
-    stretchPitchSemitones: Math.max(
-      -24,
-      Math.min(24, Number(base.stretchPitchSemitones ?? 0)),
-    ),
-    stretchMultiplier: Math.max(
-      0.25,
-      Math.min(8, Number(base.stretchMultiplier ?? 1)),
-    ),
-    stretchSourceBpm: Math.max(
-      20,
-      Math.min(300, Number(base.stretchSourceBpm ?? 120)),
-    ),
-    stretchProjectTempoBpm: Math.max(
-      20,
-      Math.min(300, Number(base.stretchProjectTempoBpm ?? 120)),
-    ),
-    stretchTimeMode: [
-      "none",
-      "set-bpm",
-      "project-tempo",
-      "beat-1",
-      "beat-2",
-      "bar-1",
-      "bar-2",
-      "bar-3",
-      "bar-4",
-    ].includes(
-      String(base.stretchTimeMode || "")
-        .trim()
-        .toLowerCase(),
-    )
-      ? String(base.stretchTimeMode || "none")
-          .trim()
-          .toLowerCase()
-      : "none",
-  };
-
-  const fadeTotal = next.fadeInPct + next.fadeOutPct;
-  if (fadeTotal > 98) {
-    const scale = 98 / fadeTotal;
-    next.fadeInPct = Math.max(0, Math.round(next.fadeInPct * scale));
-    next.fadeOutPct = Math.max(0, Math.round(next.fadeOutPct * scale));
-  }
-
-  return next;
-}
-
-function getStretchTargetDurationSeconds(settings, sampleReadDuration, bpm) {
-  const safeDuration = Math.max(0.01, Number(sampleReadDuration || 0.01));
-  const safeBpm = Math.max(1, Number(bpm || 120));
-  const quarterSec = 60 / safeBpm;
-  const timeMode = String(settings.stretchTimeMode || "none")
-    .trim()
-    .toLowerCase();
-  const mul = Math.max(
-    0.25,
-    Math.min(8, Number(settings.stretchMultiplier || 1)),
-  );
-
-  if (timeMode === "set-bpm") {
-    const sourceBpm = Math.max(
-      20,
-      Math.min(300, Number(settings.stretchSourceBpm || 120)),
-    );
-    return Math.max(0.01, safeDuration * (sourceBpm / safeBpm) * mul);
-  }
-
-  if (timeMode === "project-tempo") {
-    const projectLockBpm = Math.max(
-      20,
-      Math.min(300, Number(settings.stretchProjectTempoBpm || safeBpm)),
-    );
-    return Math.max(0.01, safeDuration * (projectLockBpm / safeBpm) * mul);
-  }
-
-  if (timeMode === "beat-1") {
-    return quarterSec * mul;
-  }
-  if (timeMode === "beat-2") {
-    return quarterSec * 2 * mul;
-  }
-  if (timeMode === "bar-1") {
-    return quarterSec * 4 * mul;
-  }
-  if (timeMode === "bar-2") {
-    return quarterSec * 8 * mul;
-  }
-  if (timeMode === "bar-3") {
-    return quarterSec * 12 * mul;
-  }
-  if (timeMode === "bar-4") {
-    return quarterSec * 16 * mul;
-  }
-
-  return Math.max(0.01, safeDuration * mul);
-}
-
-function getTimeStretchProfile(settings, sampleReadDuration, bpm, baseRate) {
-  const stretchMode = String(settings.stretchMode || "none")
-    .trim()
-    .toLowerCase();
-  const safeBaseRate = Math.max(0.125, Math.min(8, Number(baseRate || 1)));
-  const targetDurationSec = getStretchTargetDurationSeconds(
-    settings,
-    sampleReadDuration,
-    bpm,
-  );
-
-  if (stretchMode === "none") {
-    return {
-      playbackRate: safeBaseRate,
-      targetDurationSec: Math.max(0.01, sampleReadDuration / safeBaseRate),
-      useGranularStretch: false,
-    };
-  }
-
-  const pitchShiftSemitones = Math.max(
-    -24,
-    Math.min(24, Number(settings.stretchPitchSemitones || 0)),
-  );
-  const pitchShiftRate = Math.pow(2, pitchShiftSemitones / 12);
-
-  if (stretchMode === "stretch") {
-    return {
-      // In stretch mode keep duration target independent from pitch changes.
-      playbackRate: Math.max(0.125, Math.min(8, safeBaseRate * pitchShiftRate)),
-      targetDurationSec: Math.max(0.01, targetDurationSec),
-      useGranularStretch: true,
-    };
-  }
-
-  const durationRate = Math.max(
-    0.125,
-    Math.min(8, sampleReadDuration / targetDurationSec),
-  );
-
-  return {
-    playbackRate: Math.max(
-      0.125,
-      Math.min(8, safeBaseRate * pitchShiftRate * durationRate),
-    ),
-    targetDurationSec: Math.max(0.01, sampleReadDuration / durationRate),
-    useGranularStretch: false,
-  };
-}
-
-const hannWindowCache = new Map();
-
-function getHannWindowCurve(samples) {
-  const size = Math.max(16, Math.min(2048, Math.round(Number(samples) || 256)));
-  const cached = hannWindowCache.get(size);
-  if (cached) {
-    return cached;
-  }
-
-  const curve = new Float32Array(size);
-  for (let i = 0; i < size; i += 1) {
-    const phase = size > 1 ? i / (size - 1) : 0;
-    curve[i] = Math.max(0, Math.sin(Math.PI * phase));
-  }
-
-  hannWindowCache.set(size, curve);
-  return curve;
-}
-
-function findBestWsolaOffsetSamples(
-  channelData,
-  predictedOffset,
-  referenceOffset,
-  windowSamples,
-  searchRadiusSamples,
-  maxOffsetSamples,
-) {
-  if (!channelData || channelData.length <= 1) {
-    return Math.max(0, Math.min(maxOffsetSamples, predictedOffset));
-  }
-
-  const safeMax = Math.max(
-    0,
-    Math.min(maxOffsetSamples, channelData.length - 2),
-  );
-  const safeWindow = Math.max(32, Math.min(windowSamples, 1024));
-  const halfWindow = Math.max(16, Math.floor(safeWindow / 2));
-  const safeRef = Math.max(0, Math.min(safeMax, referenceOffset));
-  const searchMin = Math.max(
-    0,
-    Math.min(safeMax, predictedOffset - searchRadiusSamples),
-  );
-  const searchMax = Math.max(
-    0,
-    Math.min(safeMax, predictedOffset + searchRadiusSamples),
-  );
-
-  let bestOffset = Math.max(searchMin, Math.min(searchMax, predictedOffset));
-  let bestScore = -Infinity;
-
-  for (let candidate = searchMin; candidate <= searchMax; candidate += 1) {
-    let dot = 0;
-    let energyA = 0;
-    let energyB = 0;
-
-    for (let i = 0; i < safeWindow; i += 1) {
-      const centerShift = i - halfWindow;
-      const refIndex = safeRef + centerShift;
-      const candIndex = candidate + centerShift;
-
-      if (
-        refIndex < 0 ||
-        candIndex < 0 ||
-        refIndex >= channelData.length ||
-        candIndex >= channelData.length
-      ) {
-        continue;
-      }
-
-      const a = channelData[refIndex];
-      const b = channelData[candIndex];
-      dot += a * b;
-      energyA += a * a;
-      energyB += b * b;
-    }
-
-    const denom = Math.sqrt(energyA * energyB) + 1e-9;
-    const score = dot / denom;
-    if (score > bestScore) {
-      bestScore = score;
-      bestOffset = candidate;
-    }
-  }
-
-  return bestOffset;
 }
 
 function areMixerSettingsEqual(prev, next) {
