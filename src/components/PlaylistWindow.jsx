@@ -20,6 +20,14 @@ import { getSafeSampleSettings } from "../audio/domain/sampleSettings";
 import { PlaylistTopControls } from "./playlist/PlaylistTopControls";
 import { PlaylistTrackRow } from "./playlist/PlaylistTrackRow";
 import {
+  getDraggedPatternIdsWithFallback as getDraggedPatternIdsWithFallbackFromUtils,
+  getDraggedSamplePayload as getDraggedSamplePayloadFromUtils,
+  hasDraggedPatternData as hasDraggedPatternDataFromUtils,
+  hasDraggedSampleData as hasDraggedSampleDataFromUtils,
+  normalizePatternIds as normalizePatternIdsFromUtils,
+  resolveBarStartFromPointer as resolveBarStartFromPointerFromUtils,
+} from "./playlist/playlistDragUtils";
+import {
   buildWaveformEnvelope,
   clamp,
   getPatternPreviewNotes,
@@ -738,64 +746,16 @@ export function PlaylistWindow() {
   };
 
   const normalizePatternIds = function (rawIds) {
-    const seen = new Set();
-
-    return (rawIds || [])
-      .map(function (patternId) {
-        return String(patternId || "").trim();
-      })
-      .filter(function (patternId) {
-        if (!patternId || !patternsById[patternId] || seen.has(patternId)) {
-          return false;
-        }
-
-        seen.add(patternId);
-        return true;
-      });
-  };
-
-  const getDraggedPatternIds = function (event) {
-    const rawPayload = event.dataTransfer?.getData(PATTERN_DRAG_MIME);
-    if (rawPayload) {
-      try {
-        const payload = JSON.parse(rawPayload);
-        const fromArray = normalizePatternIds(payload.patternIds);
-        if (fromArray.length > 0) {
-          return fromArray;
-        }
-
-        const patternId = String(payload.patternId || "").trim();
-        if (patternId && patternsById[patternId]) {
-          return [patternId];
-        }
-      } catch {
-        return [];
-      }
-    }
-
-    const textPatternId = String(
-      event.dataTransfer?.getData("text/plain") || "",
-    ).trim();
-    if (textPatternId && patternsById[textPatternId]) {
-      return [textPatternId];
-    }
-
-    return [];
+    return normalizePatternIdsFromUtils(rawIds, patternsById);
   };
 
   const getDraggedPatternIdsWithFallback = function (event) {
-    const idsFromSession = normalizePatternIds(getPatternDragSession());
-    const idsFromDataTransfer = getDraggedPatternIds(event);
-
-    if (idsFromSession.length > 1) {
-      return idsFromSession;
-    }
-
-    if (idsFromDataTransfer.length > 0) {
-      return idsFromDataTransfer;
-    }
-
-    return idsFromSession;
+    return getDraggedPatternIdsWithFallbackFromUtils({
+      event,
+      patternDragMime: PATTERN_DRAG_MIME,
+      patternsById,
+      sessionPatternIds: getPatternDragSession(),
+    });
   };
 
   const resolvePatternIdsForPlacement = function (candidateIds) {
@@ -817,51 +777,37 @@ export function PlaylistWindow() {
   };
 
   const hasDraggedPatternData = function (event) {
-    const types = Array.from(event.dataTransfer?.types || []);
-    if (types.includes(PATTERN_DRAG_MIME)) {
-      return true;
-    }
-
-    return normalizePatternIds(getPatternDragSession()).length > 0;
+    return hasDraggedPatternDataFromUtils({
+      event,
+      patternDragMime: PATTERN_DRAG_MIME,
+      patternsById,
+      sessionPatternIds: getPatternDragSession(),
+    });
   };
 
   const getDraggedSamplePayload = function (event) {
-    const rawPayloads = [
-      String(event.dataTransfer?.getData(SAMPLE_DRAG_MIME) || ""),
-      String(event.dataTransfer?.getData("text/plain") || ""),
-    ].filter(Boolean);
-
-    for (let index = 0; index < rawPayloads.length; index += 1) {
-      try {
-        const payload = JSON.parse(rawPayloads[index]);
-        const samplePath = String(payload.samplePath || "").trim();
-        if (!samplePath) {
-          continue;
-        }
-
-        return {
-          samplePath,
-          clipName: String(payload.file || "").trim() || "Audio",
-        };
-      } catch {
-        continue;
-      }
-    }
-
-    return null;
+    return getDraggedSamplePayloadFromUtils({
+      event,
+      sampleDragMime: SAMPLE_DRAG_MIME,
+    });
   };
 
   const hasDraggedSampleData = function (event) {
-    const types = Array.from(event.dataTransfer?.types || []);
-    return types.includes(SAMPLE_DRAG_MIME);
+    return hasDraggedSampleDataFromUtils({
+      event,
+      sampleDragMime: SAMPLE_DRAG_MIME,
+    });
   };
 
   const resolveBarStartFromPointer = function (event, trackElement) {
-    const rect = trackElement.getBoundingClientRect();
-    const x = clamp(event.clientX - rect.left, 0, rect.width);
-    const rawBarStart = (x / Math.max(1, rect.width)) * playlistBarCount + 1;
-    const snappedBarStart = quantizeBySnap(rawBarStart, snapBarSize);
-    return clamp(snappedBarStart, 1, playlistBarCount);
+    return resolveBarStartFromPointerFromUtils({
+      event,
+      trackElement,
+      playlistBarCount,
+      snapBarSize,
+      clampFn: clamp,
+      quantizeFn: quantizeBySnap,
+    });
   };
 
   const buildDropPlacements = function (trackId, startBar, patternIds) {
