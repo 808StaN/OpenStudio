@@ -19,6 +19,7 @@ import {
 import { getSafeSampleSettings } from "../audio/domain/sampleSettings";
 import { PlaylistTopControls } from "./playlist/PlaylistTopControls";
 import { PlaylistTrackRow } from "./playlist/PlaylistTrackRow";
+import { usePlaylistPasteShortcut } from "./playlist/usePlaylistPasteShortcut";
 import {
   getDraggedPatternIdsWithFallback as getDraggedPatternIdsWithFallbackFromUtils,
   getDraggedSamplePayload as getDraggedSamplePayloadFromUtils,
@@ -1025,105 +1026,22 @@ export function PlaylistWindow() {
     [clips, bpm],
   );
 
-  useEffect(
-    function () {
-      const shouldIgnoreShortcutTarget = function (target) {
-        if (!(target instanceof HTMLElement)) {
-          return false;
-        }
-
-        if (target.isContentEditable) {
-          return true;
-        }
-
-        return Boolean(
-          target.closest("input, textarea, select, [contenteditable='true']"),
-        );
-      };
-
-      const onKeyDown = function (event) {
-        const isPasteShortcut =
-          (event.ctrlKey || event.metaKey) &&
-          !event.shiftKey &&
-          event.code === "KeyV";
-        if (!isPasteShortcut) {
-          return;
-        }
-
-        const root = playlistShellRef.current;
-        const activeElement = document.activeElement;
-        const hasContext =
-          isPointerOverPlaylist ||
-          (root instanceof HTMLElement && root.contains(activeElement));
-
-        if (!hasContext || shouldIgnoreShortcutTarget(event.target)) {
-          return;
-        }
-
-        const fallbackTrackId = tracks[0]?.id;
-        const targetTrackId = lastHoverPlacement?.trackId || fallbackTrackId;
-        if (!targetTrackId) {
-          return;
-        }
-
-        const targetBarStart = clamp(
-          lastHoverPlacement?.barStart ?? 1,
-          1,
-          playlistBarCount,
-        );
-
-        const selectedPatternId = patternSelectionForInsertRef.current;
-        if (selectedPatternId) {
-          const patternIds = normalizePatternIds(clipboardPatternIds);
-          const patternIdsToPaste =
-            patternIds.length > 0
-              ? patternIds
-              : normalizePatternIds([selectedPatternId]);
-
-          if (patternIdsToPaste.length > 0) {
-            event.preventDefault();
-            placePatternsOnTrack(
-              targetTrackId,
-              targetBarStart,
-              patternIdsToPaste,
-            );
-            return;
-          }
-        }
-
-        const touchedAudioClip = lastTouchedAudioClipRef.current;
-        if (!touchedAudioClip?.samplePath) {
-          return;
-        }
-
-        event.preventDefault();
-        dispatch(
-          addPlaylistAudioClip({
-            trackId: targetTrackId,
-            barStart: targetBarStart,
-            barLength: touchedAudioClip.barLength,
-            samplePath: touchedAudioClip.samplePath,
-            clipName: touchedAudioClip.audioName,
-            channelId: touchedAudioClip.channelId,
-            sourceOffsetSteps: touchedAudioClip.sourceOffsetSteps,
-          }),
-        );
-      };
-
-      window.addEventListener("keydown", onKeyDown);
-      return function () {
-        window.removeEventListener("keydown", onKeyDown);
-      };
+  usePlaylistPasteShortcut({
+    playlistShellRef,
+    isPointerOverPlaylist,
+    tracks,
+    lastHoverPlacement,
+    playlistBarCount,
+    clipboardPatternIds,
+    patternSelectionForInsertRef,
+    normalizePatternIds,
+    placePatternsOnTrack,
+    lastTouchedAudioClipRef,
+    clampFn: clamp,
+    onPasteAudioClip: function (payload) {
+      dispatch(addPlaylistAudioClip(payload));
     },
-    [
-      clipboardPatternIds,
-      isPointerOverPlaylist,
-      lastHoverPlacement,
-      tracks,
-      placePatternsOnTrack,
-      playlistBarCount,
-    ],
-  );
+  });
 
   return (
     <section
