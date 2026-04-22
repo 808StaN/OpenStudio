@@ -1,4 +1,3 @@
-import { ChevronRight, Power } from "lucide-react";
 import { useEffect, useRef, useState } from "react";
 import { useDispatch, useSelector } from "react-redux";
 import {
@@ -14,6 +13,8 @@ import {
   toggleFxSlot,
 } from "../store";
 import { useMixerFxDropHandlers } from "./mixer/useMixerFxDropHandlers";
+import { MixerFxSlotsPanel } from "./mixer/MixerFxSlotsPanel";
+import { MixerTrackList } from "./mixer/MixerTrackList";
 import {
   FX_EFFECT_NONE,
   formatPercentValue,
@@ -155,289 +156,142 @@ export function MixerWindow() {
       setSelectedFxSlotId,
     });
 
+  const onSelectInsert = function (insertId) {
+    dispatch(selectInsert(insertId));
+  };
+
+  const onToggleInsertActive = function (insert) {
+    const nextValue = !insert.active;
+    const trackLabel = getInsertLabel(insert);
+    dispatch(
+      setInsertActive({
+        insertId: insert.id,
+        value: nextValue,
+      }),
+    );
+    showValueReadout(trackLabel + " Active: " + (nextValue ? "ON" : "OFF"));
+  };
+
+  const onPanChange = function (insert, nextValue) {
+    const trackLabel = getInsertLabel(insert);
+    dispatch(
+      setInsertPan({
+        insertId: insert.id,
+        value: nextValue,
+      }),
+    );
+    showValueReadout(trackLabel + " Pan: " + formatSignedPercentValue(nextValue));
+  };
+
+  const onStereoChange = function (insert, nextValue) {
+    const trackLabel = getInsertLabel(insert);
+    dispatch(
+      setInsertStereo({
+        insertId: insert.id,
+        value: nextValue,
+      }),
+    );
+    showValueReadout(
+      trackLabel + " Stereo: " + formatSignedPercentValue(nextValue),
+    );
+  };
+
+  const onFaderChange = function (insert, nextValue) {
+    const trackLabel = getInsertLabel(insert);
+    dispatch(
+      setInsertFader({
+        insertId: insert.id,
+        value: nextValue,
+      }),
+    );
+    showValueReadout(trackLabel + " Volume: " + formatPercentValue(nextValue));
+  };
+
+  const onSelectSlot = function (slotId) {
+    if (activeArmedFxClearSlotId) {
+      setArmedFxClearSlotId(null);
+    }
+    setSelectedFxSlotId(slotId);
+    openFxEditorForSlot(slotId);
+  };
+
+  const onToggleSlotPower = function (slot, slotName) {
+    if (activeArmedFxClearSlotId) {
+      setArmedFxClearSlotId(null);
+    }
+
+    if (!isSupportedEffectType(slot.effectType)) {
+      return;
+    }
+
+    dispatch(
+      toggleFxSlot({
+        insertId: selectedInsert.id,
+        slotId: slot.id,
+      }),
+    );
+
+    showValueReadout(
+      getInsertLabel(selectedInsert) +
+        " " +
+        slotName +
+        ": " +
+        (!slot.enabled ? "ON" : "OFF"),
+    );
+  };
+
+  const onArmSlotClear = function (slotId, slotName) {
+    setArmedFxClearSlotId(slotId);
+    showValueReadout("Click X again to remove " + slotName);
+  };
+
+  const onConfirmSlotClear = function (slotId, slotName) {
+    setArmedFxClearSlotId(null);
+
+    dispatch(
+      setFxSlotEffectType({
+        insertId: selectedInsert.id,
+        slotId,
+        effectType: FX_EFFECT_NONE,
+      }),
+    );
+
+    showValueReadout(getInsertLabel(selectedInsert) + " cleared " + slotName);
+  };
+
   return (
     <div className="mixer-root">
-      <section className="mixer-left">
-        {inserts.map(function (insert) {
-          return (
-            <article
-              className={
-                "mixer-track" +
-                (insert.id === selectedInsertId ? " is-selected" : "")
-              }
-              key={insert.id}
-              onClick={function () {
-                dispatch(selectInsert(insert.id));
-              }}
-            >
-              <div className="track-header">
-                <button
-                  className={"track-led" + (insert.active ? " is-on" : "")}
-                  onClick={function (event) {
-                    event.stopPropagation();
-                    const nextValue = !insert.active;
-                    const trackLabel = getInsertLabel(insert);
-                    dispatch(
-                      setInsertActive({
-                        insertId: insert.id,
-                        value: nextValue,
-                      }),
-                    );
-                    showValueReadout(
-                      trackLabel + " Active: " + (nextValue ? "ON" : "OFF"),
-                    );
-                  }}
-                />
-                <div className="track-title">{getInsertLabel(insert)}</div>
-              </div>
+      <MixerTrackList
+        inserts={inserts}
+        selectedInsertId={selectedInsertId}
+        getInsertLabel={getInsertLabel}
+        onSelectInsert={onSelectInsert}
+        onToggleInsertActive={onToggleInsertActive}
+        onPanChange={onPanChange}
+        onPanReset={resetPan}
+        onStereoChange={onStereoChange}
+        onStereoReset={resetStereo}
+        onFaderChange={onFaderChange}
+        onFaderReset={resetVolume}
+      />
 
-              <div className="knob-group">
-                <label className="knob-wrap">
-                  <span>Pan</span>
-                  <input
-                    className="metal-knob"
-                    type="range"
-                    min="-1"
-                    max="1"
-                    step="0.01"
-                    value={insert.pan}
-                    onDoubleClick={function (event) {
-                      event.stopPropagation();
-                      resetPan(insert);
-                    }}
-                    onChange={function (event) {
-                      const nextValue = Number(event.target.value);
-                      const trackLabel = getInsertLabel(insert);
-                      dispatch(
-                        setInsertPan({
-                          insertId: insert.id,
-                          value: nextValue,
-                        }),
-                      );
-                      showValueReadout(
-                        trackLabel +
-                          " Pan: " +
-                          formatSignedPercentValue(nextValue),
-                      );
-                    }}
-                  />
-                </label>
-
-                <label className="knob-wrap">
-                  <span>Stereo</span>
-                  <input
-                    className="metal-knob"
-                    type="range"
-                    min="-1"
-                    max="1"
-                    step="0.01"
-                    value={insert.stereoSeparation}
-                    onDoubleClick={function (event) {
-                      event.stopPropagation();
-                      resetStereo(insert);
-                    }}
-                    onChange={function (event) {
-                      const nextValue = Number(event.target.value);
-                      const trackLabel = getInsertLabel(insert);
-                      dispatch(
-                        setInsertStereo({
-                          insertId: insert.id,
-                          value: nextValue,
-                        }),
-                      );
-                      showValueReadout(
-                        trackLabel +
-                          " Stereo: " +
-                          formatSignedPercentValue(nextValue),
-                      );
-                    }}
-                  />
-                </label>
-              </div>
-
-              <div className="fader-block">
-                <div className="fader-groove">
-                  <input
-                    className="fader-slider"
-                    type="range"
-                    min="0"
-                    max="1.25"
-                    step="0.01"
-                    value={insert.fader}
-                    onDoubleClick={function (event) {
-                      event.stopPropagation();
-                      resetVolume(insert);
-                    }}
-                    onChange={function (event) {
-                      const nextValue = Number(event.target.value);
-                      const trackLabel = getInsertLabel(insert);
-                      dispatch(
-                        setInsertFader({
-                          insertId: insert.id,
-                          value: nextValue,
-                        }),
-                      );
-                      showValueReadout(
-                        trackLabel +
-                          " Volume: " +
-                          formatPercentValue(nextValue),
-                      );
-                    }}
-                  />
-                </div>
-
-                <div className="meter-column">
-                  {Array.from({ length: 14 }).map(function (_, index) {
-                    const threshold = (index + 1) / 14;
-                    const isActive = insert.meter >= threshold;
-                    return (
-                      <span
-                        key={index}
-                        className={"meter-seg" + (isActive ? " is-on" : "")}
-                      />
-                    );
-                  })}
-                </div>
-              </div>
-            </article>
-          );
-        })}
-      </section>
-
-      <aside className="mixer-right">
-        <div className="mixer-right-header">
-          <div className="fx-header">FX Slots</div>
-          <button
-            className="mixer-track-add"
-            type="button"
-            onClick={function () {
-              dispatch(addMixerTrack());
-            }}
-          >
-            + Insert
-          </button>
-        </div>
-
-        <div className="fx-list">
-          {fxSlots.map(function (slot, slotIndex) {
-            const slotName = getFxSlotName(slot, slotIndex);
-            const hasLoadedEffect = slot.effectType !== FX_EFFECT_NONE;
-            return (
-              <div
-                className={
-                  "fx-row" +
-                  (slot.id === activeSelectedFxSlotId ? " is-selected" : "") +
-                  (slot.id === dropTargetSlotId ? " is-drop-target" : "")
-                }
-                key={slot.id}
-                onClick={function () {
-                  if (activeArmedFxClearSlotId) {
-                    setArmedFxClearSlotId(null);
-                  }
-                  setSelectedFxSlotId(slot.id);
-                  openFxEditorForSlot(slot.id);
-                }}
-                onDragOver={function (event) {
-                  onFxSlotDragOver(event, slot);
-                }}
-                onDragLeave={function (event) {
-                  onFxSlotDragLeave(event, slot);
-                }}
-                onDrop={function (event) {
-                  onFxSlotDrop(event, slot);
-                }}
-              >
-                <button
-                  className={
-                    "fx-power" +
-                    (slot.enabled ? " is-on" : "") +
-                    (isSupportedEffectType(slot.effectType)
-                      ? ""
-                      : " is-disabled")
-                  }
-                  title={
-                    isSupportedEffectType(slot.effectType)
-                      ? slot.enabled
-                        ? "Bypass FX"
-                        : "Enable FX"
-                      : "Empty slot"
-                  }
-                  onClick={function (event) {
-                    event.stopPropagation();
-
-                    if (activeArmedFxClearSlotId) {
-                      setArmedFxClearSlotId(null);
-                    }
-
-                    if (!isSupportedEffectType(slot.effectType)) {
-                      return;
-                    }
-
-                    dispatch(
-                      toggleFxSlot({
-                        insertId: selectedInsert.id,
-                        slotId: slot.id,
-                      }),
-                    );
-
-                    showValueReadout(
-                      getInsertLabel(selectedInsert) +
-                        " " +
-                        slotName +
-                        ": " +
-                        (!slot.enabled ? "ON" : "OFF"),
-                    );
-                  }}
-                >
-                  <Power size={12} />
-                </button>
-                <span className="fx-name">{slotName}</span>
-                {hasLoadedEffect ? (
-                  <button
-                    type="button"
-                    className={
-                      "fx-clear" +
-                      (activeArmedFxClearSlotId === slot.id ? " is-armed" : "")
-                    }
-                    title={
-                      activeArmedFxClearSlotId === slot.id
-                        ? "Click again to confirm removal"
-                        : "Remove effect"
-                    }
-                    onClick={function (event) {
-                      event.stopPropagation();
-
-                      if (activeArmedFxClearSlotId !== slot.id) {
-                        setArmedFxClearSlotId(slot.id);
-                        showValueReadout("Click X again to remove " + slotName);
-                        return;
-                      }
-
-                      setArmedFxClearSlotId(null);
-
-                      dispatch(
-                        setFxSlotEffectType({
-                          insertId: selectedInsert.id,
-                          slotId: slot.id,
-                          effectType: FX_EFFECT_NONE,
-                        }),
-                      );
-
-                      showValueReadout(
-                        getInsertLabel(selectedInsert) + " cleared " + slotName,
-                      );
-                    }}
-                  >
-                    <span className="fx-clear-glyph">X</span>
-                  </button>
-                ) : (
-                  <ChevronRight size={14} className="fx-arrow" />
-                )}
-              </div>
-            );
-          })}
-        </div>
-      </aside>
+      <MixerFxSlotsPanel
+        fxSlots={fxSlots}
+        dropTargetSlotId={dropTargetSlotId}
+        activeSelectedFxSlotId={activeSelectedFxSlotId}
+        activeArmedFxClearSlotId={activeArmedFxClearSlotId}
+        getFxSlotName={getFxSlotName}
+        onAddInsert={function () {
+          dispatch(addMixerTrack());
+        }}
+        onSelectSlot={onSelectSlot}
+        onDragOverSlot={onFxSlotDragOver}
+        onDragLeaveSlot={onFxSlotDragLeave}
+        onDropSlot={onFxSlotDrop}
+        onToggleSlotPower={onToggleSlotPower}
+        onArmSlotClear={onArmSlotClear}
+        onConfirmSlotClear={onConfirmSlotClear}
+      />
 
       <div
         className={"mixer-value-readout" + (valueReadout ? " is-visible" : "")}
