@@ -1,12 +1,9 @@
-import { useCallback, useEffect, useMemo, useRef, useState } from "react";
-import { useDispatch, useSelector } from "react-redux";
+import { useCallback, useMemo } from "react";
+import { useDispatch } from "react-redux";
 import {
   FX_EFFECT_GRAPHIC_EQ,
   FX_EFFECT_MAXIMIZER,
   FX_EFFECT_REVERB,
-  getSafeGraphicEqParams,
-  getSafeMaximizerParams,
-  getSafeReverbParams,
 } from "../audio/domain/fxParams";
 import { EmptyFxSlotState } from "./fx-plugin/EmptyFxSlotState";
 import { GraphicEqEditor } from "./fx-plugin/GraphicEqEditor";
@@ -14,8 +11,10 @@ import { MaximizerEditor } from "./fx-plugin/MaximizerEditor";
 import { ReverbEditor } from "./fx-plugin/ReverbEditor";
 import { REVERB_CONTROLS } from "./fx-plugin/reverbControls";
 import { useFxEmptySlotDropTarget } from "./fx-plugin/useFxEmptySlotDropTarget";
+import { useFxEditorSelection } from "./fx-plugin/useFxEditorSelection";
 import { useFxMaximizerMetrics } from "./fx-plugin/useFxMaximizerMetrics";
 import { useGraphicEqControlInteractions } from "./fx-plugin/useGraphicEqControlInteractions";
+import { useGraphicEqPointDrag } from "./fx-plugin/useGraphicEqPointDrag";
 import { useReverbControlInteractions } from "./fx-plugin/useReverbControlInteractions";
 import {
   buildGraphicEqPath,
@@ -55,40 +54,15 @@ import {
 
 export function FxPluginWindow() {
   const dispatch = useDispatch();
-  const graphRef = useRef(null);
-  // UI editing/drag state is local to the window, while actual FX params stay in Redux.
-  const [draggingPointIndex, setDraggingPointIndex] = useState(null);
-
-  const inserts = useSelector(function (state) {
-    return state.daw.mixer.inserts;
-  });
-  const selectedInsertId = useSelector(function (state) {
-    return state.daw.mixer.selectedInsertId;
-  });
-  const fxEditorTarget = useSelector(function (state) {
-    return state.daw.ui.fxEditorTarget;
-  });
-
-  // Resolve currently edited insert/slot with sensible fallbacks.
-  const activeInsert =
-    inserts.find(function (insert) {
-      return insert.id === fxEditorTarget?.insertId;
-    }) ||
-    inserts.find(function (insert) {
-      return insert.id === selectedInsertId;
-    }) ||
-    inserts[0] ||
-    null;
-
-  const fxSlots = Array.isArray(activeInsert?.fxSlots)
-    ? activeInsert.fxSlots
-    : [];
-  const activeSlot =
-    fxSlots.find(function (slot) {
-      return slot.id === fxEditorTarget?.slotId;
-    }) ||
-    fxSlots[0] ||
-    null;
+  const {
+    activeInsert,
+    activeSlot,
+    activeInsertId,
+    activeSlotId,
+    eqParams,
+    reverbParams,
+    maximizerParams,
+  } = useFxEditorSelection();
 
   const applyDroppedEffectType = useCallback(
     function (effectType) {
@@ -125,31 +99,6 @@ export function FxPluginWindow() {
     onEmptySlotDrop,
   } = useFxEmptySlotDropTarget(applyDroppedEffectType);
 
-  const activeInsertId = activeInsert?.id || "";
-  const activeSlotId = activeSlot?.id || "";
-
-  // Store values can be partial or stale while switching inserts; sanitize before rendering.
-  const reverbParams = useMemo(
-    function () {
-      return getSafeReverbParams(activeSlot?.params);
-    },
-    [activeSlot?.params],
-  );
-
-  const eqParams = useMemo(
-    function () {
-      return getSafeGraphicEqParams(activeSlot?.params);
-    },
-    [activeSlot?.params],
-  );
-
-  const maximizerParams = useMemo(
-    function () {
-      return getSafeMaximizerParams(activeSlot?.params);
-    },
-    [activeSlot?.params],
-  );
-
   const eqCurvePath = useMemo(
     function () {
       return buildGraphicEqPath(eqParams, GRAPH_WIDTH, GRAPH_HEIGHT);
@@ -184,118 +133,21 @@ export function FxPluginWindow() {
     buildWaveformReductionPathFn: buildWaveformReductionPath,
   });
 
-  const pointCoordinates = useMemo(
-    function () {
-      const leftPad = GRAPH_PADDING.left;
-      const rightPad = GRAPH_PADDING.right;
-      const topPad = GRAPH_PADDING.top;
-      const bottomPad = GRAPH_PADDING.bottom;
-      const innerW = Math.max(1, GRAPH_WIDTH - leftPad - rightPad);
-      const innerH = Math.max(1, GRAPH_HEIGHT - topPad - bottomPad);
-
-      return eqParams.points.map(function (point) {
-        const xRatio =
-          Math.log(
-            clamp(point.frequencyHz, GRAPH_MIN_FREQ, GRAPH_MAX_FREQ) /
-              GRAPH_MIN_FREQ,
-          ) / Math.log(GRAPH_MAX_FREQ / GRAPH_MIN_FREQ);
-        const yRatio =
-          (clamp(point.gainDb, -GRAPH_MAX_DB, GRAPH_MAX_DB) + GRAPH_MAX_DB) /
-          (GRAPH_MAX_DB * 2);
-
-        return {
-          x: leftPad + xRatio * innerW,
-          y: topPad + (1 - yRatio) * innerH,
-        };
-      });
-    },
-    [eqParams.points],
-  );
-
-  const updatePointFromClient = useCallback(
-    function (clientX, clientY, pointIndex) {
-      if (!graphRef.current || !activeInsertId || !activeSlotId) {
-        return;
-      }
-
-      const rect = graphRef.current.getBoundingClientRect();
-      if (rect.width <= 0 || rect.height <= 0) {
-        return;
-      }
-
-      const leftPad = GRAPH_PADDING.left;
-      const rightPad = GRAPH_PADDING.right;
-      const topPad = GRAPH_PADDING.top;
-      const bottomPad = GRAPH_PADDING.bottom;
-      const innerW = Math.max(1, GRAPH_WIDTH - leftPad - rightPad);
-      const innerH = Math.max(1, GRAPH_HEIGHT - topPad - bottomPad);
-
-      const normalizedX = (clientX - rect.left) / rect.width;
-      const normalizedY = (clientY - rect.top) / rect.height;
-
-      const graphX = clamp(
-        normalizedX * GRAPH_WIDTH,
-        leftPad,
-        GRAPH_WIDTH - rightPad,
-      );
-      const graphY = clamp(
-        normalizedY * GRAPH_HEIGHT,
-        topPad,
-        GRAPH_HEIGHT - bottomPad,
-      );
-
-      const freqRatio = (graphX - leftPad) / innerW;
-      const gainRatio = 1 - (graphY - topPad) / innerH;
-
-      const frequencyHz = clamp(
-        GRAPH_MIN_FREQ * Math.pow(GRAPH_MAX_FREQ / GRAPH_MIN_FREQ, freqRatio),
-        GRAPH_MIN_FREQ,
-        GRAPH_MAX_FREQ,
-      );
-      const gainDb = clamp(
-        gainRatio * GRAPH_MAX_DB * 2 - GRAPH_MAX_DB,
-        -GRAPH_MAX_DB,
-        GRAPH_MAX_DB,
-      );
-
-      dispatch(
-        setFxSlotGraphicEqPoint({
-          insertId: activeInsertId,
-          slotId: activeSlotId,
-          pointIndex,
-          frequencyHz,
-          gainDb,
-        }),
-      );
-    },
-    [activeInsertId, activeSlotId, dispatch],
-  );
-
-  useEffect(
-    function () {
-      if (draggingPointIndex === null) {
-        return;
-      }
-
-      // Global listeners keep dragging responsive even when cursor leaves the svg area.
-      const onMouseMove = function (event) {
-        updatePointFromClient(event.clientX, event.clientY, draggingPointIndex);
-      };
-
-      const onMouseUp = function () {
-        setDraggingPointIndex(null);
-      };
-
-      window.addEventListener("mousemove", onMouseMove);
-      window.addEventListener("mouseup", onMouseUp);
-
-      return function () {
-        window.removeEventListener("mousemove", onMouseMove);
-        window.removeEventListener("mouseup", onMouseUp);
-      };
-    },
-    [draggingPointIndex, updatePointFromClient],
-  );
+  const { graphRef, draggingPointIndex, setDraggingPointIndex, pointCoordinates } =
+    useGraphicEqPointDrag({
+      eqParams,
+      activeInsertId,
+      activeSlotId,
+      dispatch,
+      setFxSlotGraphicEqPointAction: setFxSlotGraphicEqPoint,
+      clampFn: clamp,
+      graphPadding: GRAPH_PADDING,
+      graphWidth: GRAPH_WIDTH,
+      graphHeight: GRAPH_HEIGHT,
+      graphMinFreq: GRAPH_MIN_FREQ,
+      graphMaxFreq: GRAPH_MAX_FREQ,
+      graphMaxDb: GRAPH_MAX_DB,
+    });
 
   const setReverbValue = useCallback(
     function (param, value) {
