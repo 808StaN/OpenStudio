@@ -76,6 +76,7 @@ import {
   resolveDroppedMidiNotes,
 } from "./piano-roll/pianoRollMidiDropUtils";
 import { usePianoRollKeyboardShortcuts } from "./piano-roll/usePianoRollKeyboardShortcuts";
+import { usePianoRollMidiIo } from "./piano-roll/usePianoRollMidiIo";
 import { PianoRollToolbar } from "./piano-roll/PianoRollToolbar";
 import { PianoRollEditorBody } from "./piano-roll/PianoRollEditorBody";
 
@@ -1390,69 +1391,20 @@ export function PianoRollWindow() {
     );
   };
 
-  const onExportMidiClick = function () {
-    if (!activePattern || !activeChannel) {
-      return;
-    }
-
-    const notes = extractMidiPatternNotes(activePattern, activeChannel.id);
-    if (notes.length === 0) {
-      return;
-    }
-
-    const fileName =
-      String(activePattern.name || "pattern").trim() +
-      "-" +
-      String(activeChannel.name || "channel").trim();
-    triggerMidiDownload(notes, bpm, fileName);
-  };
-
-  const onImportMidiClick = function () {
-    if (!midiImportInputRef.current) {
-      return;
-    }
-
-    midiImportInputRef.current.click();
-  };
-
-  const onImportMidiFileChange = async function (event) {
-    const input = event.target;
-    const file = input?.files?.[0] || null;
-
-    if (!file || !isMidiFileName(file.name)) {
-      if (input) {
-        input.value = "";
-      }
-      return;
-    }
-
-    if (!activePattern || !activeChannel) {
-      input.value = "";
-      return;
-    }
-
-    try {
-      const bytes = await file.arrayBuffer();
-      const notes = parseMidiArrayBufferToStepNotes(bytes);
-      if (notes.length === 0) {
-        input.value = "";
-        return;
-      }
-
-      dispatch(
-        pasteMidiPatternToChannel({
-          patternId: activePatternId,
-          channelId: activeChannel.id,
-          insertStep: 0,
-          notes,
-        }),
-      );
-    } catch {
-      // Ignore unreadable MIDI files.
-    }
-
-    input.value = "";
-  };
+  const { onExportMidiClick, onImportMidiClick, onImportMidiFileChange } =
+    usePianoRollMidiIo({
+      midiImportInputRef,
+      activePattern,
+      activeChannel,
+      activePatternId,
+      bpm,
+      dispatch,
+      isMidiFileNameFn: isMidiFileName,
+      parseMidiArrayBufferToStepNotesFn: parseMidiArrayBufferToStepNotes,
+      extractMidiPatternNotesFn: extractMidiPatternNotes,
+      triggerMidiDownloadFn: triggerMidiDownload,
+      pasteMidiPatternToChannelAction: pasteMidiPatternToChannel,
+    });
 
   const onNoteMouseDown = function (event, note) {
     event.stopPropagation();
