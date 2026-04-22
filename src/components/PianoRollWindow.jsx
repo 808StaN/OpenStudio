@@ -67,6 +67,10 @@ import {
   buildClipboardPastePayload,
   copySelectedNotesToClipboard,
 } from "./piano-roll/pianoRollClipboard";
+import {
+  findVelocityCandidatesAtClientX as findVelocityCandidatesAtClientXFromUtils,
+  getVelocityPercentFromClientY,
+} from "./piano-roll/pianoRollVelocityUtils";
 import { PianoRollToolbar } from "./piano-roll/PianoRollToolbar";
 import { PianoRollEditorBody } from "./piano-roll/PianoRollEditorBody";
 
@@ -2162,10 +2166,11 @@ export function PianoRollWindow() {
     }
 
     const rect = velocityWrapRef.current.getBoundingClientRect();
-    const laneHeight = Math.max(1, rect.height);
-    const y = clamp(clientY - rect.top, 0, laneHeight);
-    const ratio = 1 - y / laneHeight;
-    const nextVelocityPercent = Math.round(clamp(ratio * 100, 0, 100));
+    const nextVelocityPercent = getVelocityPercentFromClientY({
+      clientY,
+      laneRect: rect,
+      clampFn: clamp,
+    });
     const nextVelocityMidi = percentToMidiVelocity(nextVelocityPercent);
 
     const pianoTarget = ensureNoteIsPiano(note);
@@ -2224,56 +2229,17 @@ export function PianoRollWindow() {
   };
 
   const findVelocityCandidatesAtClientX = function (clientX, fallbackNote) {
-    if (!velocityWrapRef.current) {
-      return fallbackNote ? [fallbackNote] : [];
-    }
-
-    const candidateNotes =
-      selectedNotes.length > 0 ? selectedNotes : pianoNotes;
-    if (candidateNotes.length === 0) {
-      return [];
-    }
-
-    const rect = velocityWrapRef.current.getBoundingClientRect();
-    const worldX =
-      clientX - rect.left + Number(velocityWrapRef.current.scrollLeft || 0);
-    const stepPosition = clamp(
-      worldX / Math.max(1, stepWidth),
-      0,
+    return findVelocityCandidatesAtClientXFromUtils({
+      clientX,
+      velocityWrapElement: velocityWrapRef.current,
+      selectedNotes,
+      pianoNotes,
+      stepWidth,
       patternLength,
-    );
-
-    const covering = candidateNotes.filter(function (item) {
-      const noteStart = Number(item.start || 0);
-      const noteEnd = noteStart + Math.max(0.0625, Number(item.length || 1));
-      return stepPosition >= noteStart && stepPosition <= noteEnd;
+      clampFn: clamp,
+      fallbackNote,
+      getSelectionId: getNoteSelectionId,
     });
-    if (covering.length > 0) {
-      return covering;
-    }
-
-    if (
-      fallbackNote &&
-      candidateNotes.some(function (item) {
-        return getNoteSelectionId(item) === getNoteSelectionId(fallbackNote);
-      })
-    ) {
-      return [fallbackNote];
-    }
-
-    const nearest = candidateNotes.reduce(function (best, item) {
-      const center = Number(item.start || 0) + Number(item.length || 1) * 0.5;
-      const distance = Math.abs(center - stepPosition);
-      if (!best || distance < best.distance) {
-        return {
-          note: item,
-          distance,
-        };
-      }
-      return best;
-    }, null);
-
-    return nearest ? [nearest.note] : [];
   };
 
   const applyVelocityByPointer = function (
@@ -2308,20 +2274,11 @@ export function PianoRollWindow() {
       : null;
     let lockVelocityPercent =
       isMultiBrush && velocityRect
-        ? Math.round(
-            clamp(
-              100 *
-                (1 -
-                  clamp(
-                    (event.clientY - velocityRect.top) /
-                      Math.max(1, velocityRect.height),
-                    0,
-                    1,
-                  )),
-              0,
-              100,
-            ),
-          )
+        ? getVelocityPercentFromClientY({
+            clientY: event.clientY,
+            laneRect: velocityRect,
+            clampFn: clamp,
+          })
         : null;
 
     velocityBrushActiveRef.current = true;
@@ -2342,20 +2299,11 @@ export function PianoRollWindow() {
           ? velocityWrapRef.current.getBoundingClientRect()
           : null;
         if (moveRect) {
-          lockVelocityPercent = Math.round(
-            clamp(
-              100 *
-                (1 -
-                  clamp(
-                    (moveEvent.clientY - moveRect.top) /
-                      Math.max(1, moveRect.height),
-                    0,
-                    1,
-                  )),
-              0,
-              100,
-            ),
-          );
+          lockVelocityPercent = getVelocityPercentFromClientY({
+            clientY: moveEvent.clientY,
+            laneRect: moveRect,
+            clampFn: clamp,
+          });
         }
       }
 
