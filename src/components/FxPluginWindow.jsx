@@ -12,6 +12,7 @@ import { EmptyFxSlotState } from "./fx-plugin/EmptyFxSlotState";
 import { GraphicEqEditor } from "./fx-plugin/GraphicEqEditor";
 import { MaximizerEditor } from "./fx-plugin/MaximizerEditor";
 import { ReverbEditor } from "./fx-plugin/ReverbEditor";
+import { useFxEmptySlotDropTarget } from "./fx-plugin/useFxEmptySlotDropTarget";
 import {
   buildGraphicEqPath,
   buildMaximizerTransferPath,
@@ -33,7 +34,6 @@ import {
   GRAPH_MIN_FREQ,
   GRAPH_PADDING,
   GRAPH_WIDTH,
-  isSupportedEffectType,
   parseDbInput,
   parseFrequencyInput,
   parseNumericInput,
@@ -64,7 +64,6 @@ export function FxPluginWindow() {
   const [draggingReverbParam, setDraggingReverbParam] = useState("");
   const [editingReverbParam, setEditingReverbParam] = useState("");
   const [editingReverbText, setEditingReverbText] = useState("");
-  const [isEmptyDropTarget, setIsEmptyDropTarget] = useState(false);
 
   const inserts = useSelector(function (state) {
     return state.daw.mixer.inserts;
@@ -97,108 +96,40 @@ export function FxPluginWindow() {
     fxSlots[0] ||
     null;
 
-  // Accepts plugin payload dropped from Browser effect list.
-  const readEffectPayloadFromDataTransfer = function (dataTransfer) {
-    if (!dataTransfer) {
-      return null;
-    }
-
-    const parsePayload = function (raw) {
-      if (!raw) {
-        return null;
+  const applyDroppedEffectType = useCallback(
+    function (effectType) {
+      if (!activeInsert || !activeSlot) {
+        return;
       }
 
-      try {
-        const payload = JSON.parse(raw);
-        if (
-          payload &&
-          payload.type === "effect" &&
-          isSupportedEffectType(payload.effectType)
-        ) {
-          return payload;
-        }
-      } catch {
-        return null;
-      }
-
-      return null;
-    };
-
-    return (
-      parsePayload(dataTransfer.getData("application/x-daw-effect")) ||
-      parsePayload(dataTransfer.getData("text/plain"))
-    );
-  };
-
-  // Empty slots can be used as a drop target to quickly assign an effect.
-  const onEmptySlotDragOver = function (event) {
-    const types = Array.from(event.dataTransfer?.types || []);
-    const supportsEffectPayload =
-      types.includes("application/x-daw-effect") ||
-      types.includes("text/plain");
-
-    if (!supportsEffectPayload) {
-      return;
-    }
-
-    event.preventDefault();
-    event.stopPropagation();
-    event.dataTransfer.dropEffect = "copy";
-    if (!isEmptyDropTarget) {
-      setIsEmptyDropTarget(true);
-    }
-  };
-
-  const onEmptySlotDragLeave = function (event) {
-    event.stopPropagation();
-
-    const related = event.relatedTarget;
-    const currentTarget = event.currentTarget;
-    if (
-      related &&
-      currentTarget &&
-      typeof currentTarget.contains === "function" &&
-      currentTarget.contains(related)
-    ) {
-      return;
-    }
-
-    if (isEmptyDropTarget) {
-      setIsEmptyDropTarget(false);
-    }
-  };
-
-  const onEmptySlotDrop = function (event) {
-    event.preventDefault();
-    event.stopPropagation();
-    setIsEmptyDropTarget(false);
-
-    if (!activeInsert || !activeSlot) {
-      return;
-    }
-
-    const payload = readEffectPayloadFromDataTransfer(event.dataTransfer);
-    if (!payload) {
-      return;
-    }
-
-    dispatch(
-      setFxSlotEffectType({
-        insertId: activeInsert.id,
-        slotId: activeSlot.id,
-        effectType: payload.effectType,
-      }),
-    );
-
-    if (!(activeSlot.effectType === payload.effectType && activeSlot.enabled)) {
+      // Dropped browser plugin becomes the new effect type for this slot.
       dispatch(
-        toggleFxSlot({
+        setFxSlotEffectType({
           insertId: activeInsert.id,
           slotId: activeSlot.id,
+          effectType,
         }),
       );
-    }
-  };
+
+      // Auto-enable slot after replacing effect so preview works immediately.
+      if (!(activeSlot.effectType === effectType && activeSlot.enabled)) {
+        dispatch(
+          toggleFxSlot({
+            insertId: activeInsert.id,
+            slotId: activeSlot.id,
+          }),
+        );
+      }
+    },
+    [activeInsert, activeSlot, dispatch],
+  );
+
+  const {
+    isEmptyDropTarget,
+    onEmptySlotDragOver,
+    onEmptySlotDragLeave,
+    onEmptySlotDrop,
+  } = useFxEmptySlotDropTarget(applyDroppedEffectType);
 
   const activeInsertId = activeInsert?.id || "";
   const activeSlotId = activeSlot?.id || "";
