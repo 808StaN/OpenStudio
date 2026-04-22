@@ -2,25 +2,16 @@ import { useEffect, useMemo, useRef, useState } from "react";
 import { useDispatch, useSelector } from "react-redux";
 import { DEFAULT_SAMPLE_SETTINGS } from "../audio/domain/sampleSettings";
 import { getPluginInstrument } from "../data/pluginInstruments";
-import {
-  SAMPLE_SETTINGS_PREVIEW_PLAY_EVENT,
-  SAMPLE_SETTINGS_PREVIEW_STOP_EVENT,
-} from "./sample-settings/sampleSettingsConstants";
 import { EnvelopeTabSection } from "./sample-settings/EnvelopeTabSection";
 import { PluginSettingsSection } from "./sample-settings/PluginSettingsSection";
 import { SampleTabSection } from "./sample-settings/SampleTabSection";
 import { SampleSettingsTabs } from "./sample-settings/SampleSettingsTabs";
 import { SampleWaveformCard } from "./sample-settings/SampleWaveformCard";
 import { TimeStretchTabSection } from "./sample-settings/TimeStretchTabSection";
-import {
-  computePeakAbs,
-  computeWaveformPeaks,
-  getNormalizeGainFromPeakAbs,
-  getSampleFileNameWithExtension,
-  getWaveformDecodeContext,
-} from "./sample-settings/sampleSettingsUtils";
-import { assignSampleToChannel, setChannelSampleSettings } from "../store";
-import { toSafeSampleUrl } from "../utils/sampleUrl";
+import { useSampleSettingsPreview } from "./sample-settings/useSampleSettingsPreview";
+import { useSampleWaveformState } from "./sample-settings/useSampleWaveformState";
+import { getSampleFileNameWithExtension } from "./sample-settings/sampleSettingsUtils";
+import { setChannelSampleSettings } from "../store";
 
 export function SampleSettingsDialog({ channel }) {
   const dispatch = useDispatch();
@@ -43,194 +34,65 @@ export function SampleSettingsDialog({ channel }) {
     settings.pitchCents = Number(settings.pitchSemitones || 0) * 100;
   }
 
-  const [peaks, setPeaks] = useState([]);
-  const [waveformPeakAbs, setWaveformPeakAbs] = useState(0);
-  const [isLoading, setIsLoading] = useState(false);
-  const [error, setError] = useState("");
-  const [isDropTargetActive, setIsDropTargetActive] = useState(false);
-  const [isPreviewPlaying, setIsPreviewPlaying] = useState(false);
-  const [activeSampleTab, setActiveSampleTab] = useState("sample");
-  const [openStretchSelect, setOpenStretchSelect] = useState(null);
+  const [sampleTabState, setSampleTabState] = useState(function () {
+    return {
+      channelId: channel.id,
+      tab: "sample",
+    };
+  });
+  const [stretchSelectState, setStretchSelectState] = useState(function () {
+    return {
+      channelId: channel.id,
+      value: null,
+    };
+  });
   const stretchSelectsRef = useRef(null);
-  // Preview refs are intentionally split so sample/plugin paths can be stopped independently.
-  const previewSampleContextRef = useRef(null);
-  const previewSampleNodeRef = useRef(null);
-  const previewSampleStopTimeoutRef = useRef(null);
-  const previewPluginContextRef = useRef(null);
-  const previewPluginNodeRef = useRef(null);
-  const previewPluginStopTimeoutRef = useRef(null);
-  const previewUiResetTimeoutRef = useRef(null);
+  const { isPreviewPlaying, onPreviewClick, stopPreview } = useSampleSettingsPreview({
+    channelId: channel.id,
+    isPluginChannel,
+    sampleRef,
+  });
+  const {
+    peaks,
+    isLoading,
+    error,
+    setError,
+    isDropTargetActive,
+    onWaveformDragOver,
+    onWaveformDragLeave,
+    onWaveformDrop,
+    waveformNormalizeGain,
+  } = useSampleWaveformState({
+    channelId: channel.id,
+    isPluginChannel,
+    sampleRef,
+    normalizeEnabled: settings.normalize,
+    stopPreview,
+  });
+  const activeSampleTab =
+    sampleTabState.channelId === channel.id ? sampleTabState.tab : "sample";
+  const openStretchSelect =
+    stretchSelectState.channelId === channel.id ? stretchSelectState.value : null;
 
-  const stopSamplePreview = function () {
-    if (previewSampleStopTimeoutRef.current) {
-      clearTimeout(previewSampleStopTimeoutRef.current);
-      previewSampleStopTimeoutRef.current = null;
-    }
-
-    const node = previewSampleNodeRef.current;
-    if (node && typeof node.stop === "function") {
-      try {
-        node.stop();
-      } catch {
-        // Node can already be stopped.
-      }
-    }
-
-    previewSampleNodeRef.current = null;
+  const setActiveSampleTab = function (nextTab) {
+    // Scope UI tab state per-channel so switching channels auto-resets to default.
+    setSampleTabState({
+      channelId: channel.id,
+      tab: nextTab,
+    });
   };
 
-  const stopPluginPreview = function () {
-    if (previewPluginStopTimeoutRef.current) {
-      clearTimeout(previewPluginStopTimeoutRef.current);
-      previewPluginStopTimeoutRef.current = null;
-    }
-
-    const node = previewPluginNodeRef.current;
-    if (node && typeof node.stop === "function") {
-      try {
-        node.stop();
-      } catch {
-        // Node can already be stopped.
-      }
-    }
-
-    previewPluginNodeRef.current = null;
+  const setOpenStretchSelect = function (nextValue) {
+    // Scope dropdown state per-channel to avoid stale open menus after channel switch.
+    setStretchSelectState({
+      channelId: channel.id,
+      value: nextValue,
+    });
   };
 
-  const stopPreview = function () {
-    if (previewUiResetTimeoutRef.current) {
-      clearTimeout(previewUiResetTimeoutRef.current);
-      previewUiResetTimeoutRef.current = null;
-    }
-
-    stopSamplePreview();
-    stopPluginPreview();
-
-    window.dispatchEvent(
-      new CustomEvent(SAMPLE_SETTINGS_PREVIEW_STOP_EVENT, {
-        detail: {
-          channelId: channel.id,
-        },
-      }),
-    );
-
-    setIsPreviewPlaying(false);
+  const onPreviewClickHandler = function () {
+    onPreviewClick(setError);
   };
-
-  useEffect(
-    function () {
-      // Dialog unmount cleanup: stop timers/nodes and close temporary AudioContexts.
-      return function () {
-        stopPreview();
-
-        if (previewPluginContextRef.current) {
-          try {
-            previewPluginContextRef.current.close();
-          } catch {
-            // Ignore context close errors.
-          }
-          previewPluginContextRef.current = null;
-        }
-
-        if (previewSampleContextRef.current) {
-          try {
-            previewSampleContextRef.current.close();
-          } catch {
-            // Ignore context close errors.
-          }
-          previewSampleContextRef.current = null;
-        }
-      };
-    },
-    [channel.id],
-  );
-
-  useEffect(
-    function () {
-      // Whenever source changes, reset waveform state and preview lifecycle.
-      stopPreview();
-
-      if (isPluginChannel) {
-        setPeaks([]);
-        setWaveformPeakAbs(0);
-        setError("");
-        setIsLoading(false);
-        setIsDropTargetActive(false);
-        return function () {
-          return;
-        };
-      }
-
-      let cancelled = false;
-
-      if (!sampleRef) {
-        setPeaks([]);
-        setWaveformPeakAbs(0);
-        setError("Drop sample here from Browser");
-        setIsLoading(false);
-        return function () {
-          cancelled = true;
-        };
-      }
-
-      setIsLoading(true);
-      setError("");
-
-      const load = async function () {
-        try {
-          const safeSampleRef = toSafeSampleUrl(sampleRef);
-          if (!safeSampleRef) {
-            throw new Error("Sample path is empty");
-          }
-
-          const response = await fetch(safeSampleRef);
-          if (!response.ok) {
-            throw new Error("Sample fetch failed");
-          }
-
-          const buffer = await response.arrayBuffer();
-          const decodeCtx = getWaveformDecodeContext();
-          const decoded = await decodeCtx.decodeAudioData(buffer.slice(0));
-
-          const primaryChannel = decoded.getChannelData(0);
-          const waveformPeaks = computeWaveformPeaks(primaryChannel, 180);
-          const peakAbs = computePeakAbs(primaryChannel);
-
-          if (cancelled) {
-            return;
-          }
-
-          setPeaks(waveformPeaks);
-          setWaveformPeakAbs(peakAbs);
-          setIsLoading(false);
-        } catch {
-          if (cancelled) {
-            return;
-          }
-          setIsLoading(false);
-          setPeaks([]);
-          setWaveformPeakAbs(0);
-          setError("Cannot read waveform for this sample");
-        }
-      };
-
-      void load();
-
-      return function () {
-        cancelled = true;
-      };
-    },
-    [sampleRef, isPluginChannel],
-  );
-
-  useEffect(
-    function () {
-      // Reset UI tab/dropdown when target channel changes.
-      setActiveSampleTab("sample");
-      setOpenStretchSelect(null);
-    },
-    [channel.id, isPluginChannel],
-  );
 
   useEffect(
     function () {
@@ -246,7 +108,10 @@ export function SampleSettingsDialog({ channel }) {
         }
 
         if (!root.contains(event.target)) {
-          setOpenStretchSelect(null);
+          setStretchSelectState({
+            channelId: channel.id,
+            value: null,
+          });
         }
       };
 
@@ -255,7 +120,7 @@ export function SampleSettingsDialog({ channel }) {
         window.removeEventListener("mousedown", onPointerDown);
       };
     },
-    [openStretchSelect],
+    [channel.id, openStretchSelect],
   );
 
   const fadeInWidthPct = useMemo(
@@ -273,11 +138,6 @@ export function SampleSettingsDialog({ channel }) {
   );
 
   const fadeOutStartPct = Math.max(0, settings.lengthPct - fadeOutWidthPct);
-  const waveformNormalizeGain = getNormalizeGainFromPeakAbs(
-    waveformPeakAbs,
-    Boolean(settings.normalize),
-  );
-
   const onSettingChange = function (changes) {
     // Centralized settings update keeps reducer payloads consistent.
     dispatch(
@@ -296,91 +156,6 @@ export function SampleSettingsDialog({ channel }) {
     return match?.label || safeValue;
   };
 
-  const onWaveformDragOver = function (event) {
-    if (isPluginChannel) {
-      return;
-    }
-
-    event.preventDefault();
-    if (!isDropTargetActive) {
-      setIsDropTargetActive(true);
-    }
-  };
-
-  const onWaveformDragLeave = function () {
-    setIsDropTargetActive(false);
-  };
-
-  const onWaveformDrop = function (event) {
-    if (isPluginChannel) {
-      return;
-    }
-
-    event.preventDefault();
-    setIsDropTargetActive(false);
-
-    const raw = event.dataTransfer.getData("application/x-daw-sample");
-    if (!raw) {
-      return;
-    }
-
-    try {
-      const payload = JSON.parse(raw);
-      const sampleRefValue = payload.samplePath || payload.file;
-      if (!sampleRefValue) {
-        return;
-      }
-
-      dispatch(
-        assignSampleToChannel({
-          channelId: channel.id,
-          sampleRef: sampleRefValue,
-          sampleName: payload.file,
-        }),
-      );
-      setError("");
-    } catch {
-      return;
-    }
-  };
-
-  const onPreviewClick = async function () {
-    // Preview is event-driven to avoid interfering with main transport scheduler.
-    if (!isPluginChannel && !sampleRef) {
-      return;
-    }
-
-    if (isPreviewPlaying) {
-      stopPreview();
-      return;
-    }
-
-    stopPreview();
-
-    window.dispatchEvent(
-      new CustomEvent(SAMPLE_SETTINGS_PREVIEW_PLAY_EVENT, {
-        detail: {
-          channelId: channel.id,
-        },
-      }),
-    );
-
-    setIsPreviewPlaying(true);
-    setError("");
-
-    previewUiResetTimeoutRef.current = setTimeout(function () {
-      window.dispatchEvent(
-        new CustomEvent(SAMPLE_SETTINGS_PREVIEW_STOP_EVENT, {
-          detail: {
-            channelId: channel.id,
-          },
-        }),
-      );
-      setIsPreviewPlaying(false);
-      previewUiResetTimeoutRef.current = null;
-    }, 2600);
-  };
-
   return (
     <section className="sample-settings-panel">
       {!isPluginChannel ? (
@@ -397,7 +172,7 @@ export function SampleSettingsDialog({ channel }) {
         sampleRef={sampleRef}
         getSampleFileNameWithExtension={getSampleFileNameWithExtension}
         isPreviewPlaying={isPreviewPlaying}
-        onPreviewClick={onPreviewClick}
+        onPreviewClick={onPreviewClickHandler}
         isDropTargetActive={isDropTargetActive}
         onWaveformDragOver={onWaveformDragOver}
         onWaveformDragLeave={onWaveformDragLeave}
