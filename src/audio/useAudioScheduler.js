@@ -1,8 +1,12 @@
 import { useCallback, useEffect, useRef } from "react";
-import Soundfont from "soundfont-player";
 import { useDispatch, useSelector } from "react-redux";
 import { clamp } from "../store/utils";
 import { useAudioContext } from "./core/useAudioContext";
+import {
+  usePluginInstruments,
+  getPluginInstrumentCacheKey,
+  routeInstrumentOutputToNode,
+} from "./core/usePluginInstruments";
 import { getActiveFxState } from "./core/getActiveFxState";
 import { applyInsertSettings } from "./core/applyInsertSettings";
 import { createMixerInsertNodes } from "./core/createMixerInsertNodes";
@@ -200,41 +204,6 @@ function toMixerGraphSignature(settings) {
     .join("|");
 }
 
-function getPluginInstrumentCacheKey(pluginRef, channelId) {
-  const safePluginRef = String(pluginRef || "").trim();
-  const safeChannelId = String(channelId || "").trim();
-  if (!safeChannelId) {
-    return safePluginRef;
-  }
-
-  return safePluginRef + "::" + safeChannelId;
-}
-
-function routeInstrumentOutputToNode(instrument, destinationNode) {
-  if (!instrument || !destinationNode) {
-    return;
-  }
-
-  const candidateNodes = [instrument, instrument.output].filter(Boolean);
-  for (let index = 0; index < candidateNodes.length; index += 1) {
-    const node = candidateNodes[index];
-    if (
-      typeof node.connect !== "function" ||
-      typeof node.disconnect !== "function"
-    ) {
-      continue;
-    }
-
-    try {
-      node.disconnect();
-      node.connect(destinationNode);
-      return;
-    } catch {
-      continue;
-    }
-  }
-}
-
 function safeDisconnect(node) {
   if (!node) {
     return;
@@ -384,9 +353,13 @@ export function useAudioScheduler() {
   const stretchedSampleBufferCacheRef = useRef(new WeakMap());
   const activeSampleVoicesRef = useRef(new Map());
   const activeSynthVoicesRef = useRef(new Map());
-  const pluginInstrumentRef = useRef(new Map());
-  const pluginInstrumentLoadRef = useRef(new Map());
-  const pluginInstrumentFailedRef = useRef(new Set());
+
+  const {
+    pluginInstrumentRef,
+    pluginInstrumentFailedRef,
+    loadPluginInstrument,
+  } = usePluginInstruments(ensureContext);
+
   const packPreviewVoiceRef = useRef(null);
   const packPreviewMeterRafRef = useRef(null);
   const sampleSettingsPreviewMeterRafRef = useRef(null);
@@ -423,54 +396,6 @@ export function useAudioScheduler() {
       );
     },
     [fxEditorTarget?.insertId, selectedInsertId],
-  );
-
-  const loadPluginInstrument = useCallback(
-    async function (pluginRef, channelId, destinationNode) {
-      const plugin = getPluginInstrument(pluginRef);
-      if (!plugin || !plugin.soundfont) {
-        return null;
-      }
-
-      const key = getPluginInstrumentCacheKey(plugin.pluginRef, channelId);
-      const cached = pluginInstrumentRef.current.get(key);
-      if (cached) {
-        routeInstrumentOutputToNode(cached, destinationNode);
-        return cached;
-      }
-
-      const pending = pluginInstrumentLoadRef.current.get(key);
-      if (pending) {
-        return pending;
-      }
-
-      if (pluginInstrumentFailedRef.current.has(key)) {
-        return null;
-      }
-
-      const audioCtx = ensureContext();
-      const defaultDestination = destinationNode || audioCtx.destination;
-      const request = Soundfont.instrument(audioCtx, plugin.soundfont, {
-        destination: defaultDestination,
-      })
-        .then(function (instrument) {
-          routeInstrumentOutputToNode(instrument, destinationNode);
-          pluginInstrumentRef.current.set(key, instrument);
-          pluginInstrumentFailedRef.current.delete(key);
-          return instrument;
-        })
-        .catch(function () {
-          pluginInstrumentFailedRef.current.add(key);
-          return null;
-        })
-        .finally(function () {
-          pluginInstrumentLoadRef.current.delete(key);
-        });
-
-      pluginInstrumentLoadRef.current.set(key, request);
-      return request;
-    },
-    [ensureContext],
   );
 
   const loadSampleBuffer = useCallback(
