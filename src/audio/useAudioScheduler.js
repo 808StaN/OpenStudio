@@ -216,7 +216,7 @@ export function useAudioScheduler() {
       ensureMixerGraph();
       applyMixerSettingsToGraph();
     },
-    [mixerSettings, ensureMixerGraph, applyMixerSettingsToGraph],
+    [mixerSettings, ensureMixerGraph, applyMixerSettingsToGraph, audioCtxRef, mixerSettingsRef],
   );
 
   useEffect(
@@ -238,7 +238,7 @@ export function useAudioScheduler() {
         }
       });
     },
-    [channels, loadSampleBuffer],
+    [channels, loadSampleBuffer, sampleBufferCacheRef],
   );
 
   useEffect(
@@ -275,6 +275,7 @@ export function useAudioScheduler() {
       ensureMixerGraph,
       getInsertInputNodeForChannel,
       loadPluginInstrument,
+      pluginInstrumentFailedRef,
     ],
   );
 

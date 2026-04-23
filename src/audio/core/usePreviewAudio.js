@@ -192,6 +192,8 @@ export function usePreviewAudio({
 
   useEffect(
     function () {
+      const audioCtx = audioCtxRef.current;
+
       const onPackPreviewRequest = function (event) {
         const samplePath = String(event?.detail?.samplePath || "").trim();
         if (!samplePath) {
@@ -210,7 +212,7 @@ export function usePreviewAudio({
         );
 
         const activeVoice = packPreviewVoiceRef.current;
-        if (!activeVoice?.source || !audioCtxRef.current) {
+        if (!activeVoice?.source || !audioCtx) {
           return;
         }
 
@@ -219,7 +221,7 @@ export function usePreviewAudio({
           packPreviewMeterRafRef.current = null;
         }
 
-        const stopTime = audioCtxRef.current.currentTime;
+        const stopTime = audioCtx.currentTime;
         try {
           activeVoice.gain.gain.cancelScheduledValues(stopTime);
           activeVoice.gain.gain.setValueAtTime(
