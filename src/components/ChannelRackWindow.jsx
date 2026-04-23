@@ -1,4 +1,4 @@
-import { useRef, useState } from "react";
+import { useCallback, useRef, useState } from "react";
 import { useDispatch } from "react-redux";
 import {
   addChannel,
@@ -121,6 +121,77 @@ export function ChannelRackWindow() {
     setChannelRenamePanel,
   });
 
+  // Stable top-bar callbacks so the toolbar never re-renders unnecessarily.
+  const handleTogglePatternMenu = useCallback(function () {
+    setIsPatternMenuOpen(function (value) {
+      const next = !value;
+      if (next) {
+        setOpenInsertMenuChannelId(null);
+      }
+      return next;
+    });
+  }, []);
+
+  const handleSelectPattern = useCallback(function (patternId) {
+    dispatch(setActivePattern(patternId));
+    setIsPatternMenuOpen(false);
+  }, [dispatch]);
+
+  const handleAddPattern = useCallback(function () {
+    dispatch(createPattern());
+  }, [dispatch]);
+
+  const handleAddChannel = useCallback(function () {
+    dispatch(addChannel());
+  }, [dispatch]);
+
+  const handleSetMode = useCallback(function (mode) {
+    dispatch(setChannelRackMode(mode));
+  }, [dispatch]);
+
+  const handleAdjustPatternLength = useCallback(function (delta) {
+    dispatch(
+      setPatternLength({
+        patternId: activePatternId,
+        length: patternLength + delta,
+      }),
+    );
+  }, [dispatch, activePatternId, patternLength]);
+
+  const handlePatternLengthInput = useCallback(function (event) {
+    dispatch(
+      setPatternLength({
+        patternId: activePatternId,
+        length: Number(event.target.value),
+      }),
+    );
+  }, [dispatch, activePatternId]);
+
+  // Stable row callbacks so every ChannelRackRow receives the same ref each render.
+  const handleActivateChannel = useCallback(function (channelId) {
+    dispatch(setActiveChannel(channelId));
+  }, [dispatch]);
+
+  const handleToggleMute = useCallback(function (channelId, value) {
+    dispatch(setChannelMute({ channelId, value }));
+  }, [dispatch]);
+
+  const handleToggleSolo = useCallback(function (channelId, value) {
+    dispatch(setChannelSolo({ channelId, value }));
+  }, [dispatch]);
+
+  const handleSetVolume = useCallback(function (channelId, value) {
+    dispatch(setChannelVolume({ channelId, value }));
+  }, [dispatch]);
+
+  const handleSetPan = useCallback(function (channelId, value) {
+    dispatch(setChannelPan({ channelId, value }));
+  }, [dispatch]);
+
+  const handleCancelRename = useCallback(function () {
+    setChannelRenamePanel(null);
+  }, []);
+
   return (
     <section className="rack-shell" ref={rackShellRef}>
       <ChannelRackTopBar
@@ -129,46 +200,15 @@ export function ChannelRackWindow() {
         activePatternName={activePattern?.name || "Pattern"}
         patterns={patterns}
         activePatternId={activePatternId}
-        onTogglePatternMenu={function () {
-          setIsPatternMenuOpen(function (value) {
-            const next = !value;
-            if (next) {
-              setOpenInsertMenuChannelId(null);
-            }
-            return next;
-          });
-        }}
-        onSelectPattern={function (patternId) {
-          dispatch(setActivePattern(patternId));
-          setIsPatternMenuOpen(false);
-        }}
-        onAddPattern={function () {
-          dispatch(createPattern());
-        }}
-        onAddChannel={function () {
-          dispatch(addChannel());
-        }}
+        onTogglePatternMenu={handleTogglePatternMenu}
+        onSelectPattern={handleSelectPattern}
+        onAddPattern={handleAddPattern}
+        onAddChannel={handleAddChannel}
         channelRackMode={channelRackMode}
         patternLength={patternLength}
-        onSetMode={function (mode) {
-          dispatch(setChannelRackMode(mode));
-        }}
-        onAdjustPatternLength={function (delta) {
-          dispatch(
-            setPatternLength({
-              patternId: activePatternId,
-              length: patternLength + delta,
-            }),
-          );
-        }}
-        onPatternLengthInput={function (event) {
-          dispatch(
-            setPatternLength({
-              patternId: activePatternId,
-              length: Number(event.target.value),
-            }),
-          );
-        }}
+        onSetMode={handleSetMode}
+        onAdjustPatternLength={handleAdjustPatternLength}
+        onPatternLengthInput={handlePatternLengthInput}
       />
 
       <div className="rack-scroll-area">
@@ -187,23 +227,13 @@ export function ChannelRackWindow() {
                 openInsertMenuChannelId={openInsertMenuChannelId}
                 mixerInserts={mixerInserts}
                 insertLabelById={insertLabelById}
-                onActivateChannel={function (channelId) {
-                  dispatch(setActiveChannel(channelId));
-                }}
+                onActivateChannel={handleActivateChannel}
                 onAssignPluginToChannel={onAssignPluginToChannel}
                 onAssignSampleToChannel={onAssignSampleToChannel}
-                onToggleMute={function (channelId, value) {
-                  dispatch(setChannelMute({ channelId, value }));
-                }}
-                onToggleSolo={function (channelId, value) {
-                  dispatch(setChannelSolo({ channelId, value }));
-                }}
-                onSetVolume={function (channelId, value) {
-                  dispatch(setChannelVolume({ channelId, value }));
-                }}
-                onSetPan={function (channelId, value) {
-                  dispatch(setChannelPan({ channelId, value }));
-                }}
+                onToggleMute={handleToggleMute}
+                onToggleSolo={handleToggleSolo}
+                onSetVolume={handleSetVolume}
+                onSetPan={handleSetPan}
                 onOpenSampleSettings={onOpenSampleSettings}
                 onOpenChannelContextMenu={onOpenChannelContextMenu}
                 onToggleInsertMenu={onToggleInsertMenu}
@@ -229,9 +259,7 @@ export function ChannelRackWindow() {
         onChangeValue={onRenamePanelChange}
         onKeyDown={onRenamePanelKeyDown}
         onSave={onSaveRenamePanel}
-        onCancel={function () {
-          setChannelRenamePanel(null);
-        }}
+        onCancel={handleCancelRename}
       />
     </section>
   );
