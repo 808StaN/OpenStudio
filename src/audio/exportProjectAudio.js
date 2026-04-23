@@ -12,7 +12,7 @@ import { getTimeStretchProfile } from "./domain/timeStretch";
 import { getPluginInstrument } from "../data/pluginInstruments";
 import { toSafeSampleUrl } from "../utils/sampleUrl";
 import { getNormalizeGain } from "./core/getNormalizeGain";
-import { createWsolaStretchedBufferFromSample } from "./wsolaStretch";
+import { getOrCreateStretchedBuffer } from "./core/getOrCreateStretchedBuffer";
 
 const DEFAULT_NOTE_VELOCITY = 95;
 const PLUGIN_INSTRUMENT_GAIN_BOOST = 1.5;
@@ -713,45 +713,13 @@ export async function renderPlaylistArrangementToFile(options) {
 
     let scheduledBuffer = sampleBuffer;
     if (stretchProfile.useGranularStretch) {
-      const desiredBufferedDuration = Math.max(
-        0.01,
+      scheduledBuffer = getOrCreateStretchedBuffer(
+        audioCtx,
+        sampleBuffer,
+        sampleReadDuration,
         voiceParams.sourcePlayDuration * voiceParams.playbackRate,
+        stretchedSampleBufferCache,
       );
-      const stretchFactor = clamp(
-        sampleReadDuration / desiredBufferedDuration,
-        0.25,
-        4,
-      );
-      const readFrames = Math.max(
-        16,
-        Math.floor(sampleReadDuration * sampleBuffer.sampleRate),
-      );
-      const cacheKey =
-        readFrames +
-        "|" +
-        stretchFactor.toFixed(4) +
-        "|" +
-        sampleBuffer.numberOfChannels;
-
-      let perSampleCache = stretchedSampleBufferCache.get(sampleBuffer);
-      if (!perSampleCache) {
-        perSampleCache = new Map();
-        stretchedSampleBufferCache.set(sampleBuffer, perSampleCache);
-      }
-
-      const cached = perSampleCache.get(cacheKey);
-      if (cached) {
-        scheduledBuffer = cached;
-      } else {
-        scheduledBuffer = createWsolaStretchedBufferFromSample(
-          audioCtx,
-          sampleBuffer,
-          sampleReadDuration,
-          stretchFactor,
-          false,
-        );
-        perSampleCache.set(cacheKey, scheduledBuffer);
-      }
     }
 
     const finalGain = Math.max(
@@ -925,42 +893,13 @@ export async function renderPlaylistArrangementToFile(options) {
         0.01,
         totalPlayableDuration * playbackRate,
       );
-      const stretchFactor = clamp(
-        sampleReadDuration / desiredBufferedDuration,
-        0.25,
-        4,
+      scheduledBuffer = getOrCreateStretchedBuffer(
+        audioCtx,
+        sampleBuffer,
+        sampleReadDuration,
+        desiredBufferedDuration,
+        stretchedSampleBufferCache,
       );
-      const readFrames = Math.max(
-        16,
-        Math.floor(sampleReadDuration * sampleBuffer.sampleRate),
-      );
-      const cacheKey =
-        readFrames +
-        "|" +
-        stretchFactor.toFixed(4) +
-        "|" +
-        sampleBuffer.numberOfChannels;
-
-      let perSampleCache = stretchedSampleBufferCache.get(sampleBuffer);
-      if (!perSampleCache) {
-        perSampleCache = new Map();
-        stretchedSampleBufferCache.set(sampleBuffer, perSampleCache);
-      }
-
-      const cached = perSampleCache.get(cacheKey);
-      if (cached) {
-        scheduledBuffer = cached;
-      } else {
-        scheduledBuffer = createWsolaStretchedBufferFromSample(
-          audioCtx,
-          sampleBuffer,
-          sampleReadDuration,
-          stretchFactor,
-          false,
-        );
-        perSampleCache.set(cacheKey, scheduledBuffer);
-      }
-
       maxReadableDuration = Math.max(
         0.01,
         Math.min(scheduledBuffer.duration, desiredBufferedDuration),

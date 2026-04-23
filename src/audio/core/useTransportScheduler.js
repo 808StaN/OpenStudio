@@ -20,7 +20,7 @@ import { getPluginInstrument } from "../../data/pluginInstruments";
 import { setPlayheadStep, setPlaying } from "../../store";
 import { getNormalizeGain } from "./getNormalizeGain";
 import { toSafeSampleUrl } from "../../utils/sampleUrl";
-import { createWsolaStretchedBufferFromSample } from "../wsolaStretch";
+import { getOrCreateStretchedBuffer } from "./getOrCreateStretchedBuffer";
 import {
   getPluginInstrumentCacheKey,
   routeInstrumentOutputToNode,
@@ -171,49 +171,13 @@ export function useTransportScheduler({
 
         let scheduledBuffer = sampleBuffer;
         if (stretchProfile.useGranularStretch) {
-          const desiredBufferedDuration = Math.max(
-            0.01,
+          scheduledBuffer = getOrCreateStretchedBuffer(
+            audioCtx,
+            sampleBuffer,
+            sampleReadDuration,
             voiceParams.sourcePlayDuration * voiceParams.playbackRate,
+            stretchedSampleBufferCacheRef.current,
           );
-          const stretchFactor = clamp(
-            sampleReadDuration / desiredBufferedDuration,
-            0.25,
-            4,
-          );
-          const readFrames = Math.max(
-            16,
-            Math.floor(sampleReadDuration * sampleBuffer.sampleRate),
-          );
-          const cacheKey =
-            readFrames +
-            "|" +
-            stretchFactor.toFixed(4) +
-            "|" +
-            sampleBuffer.numberOfChannels;
-
-          let perSampleCache =
-            stretchedSampleBufferCacheRef.current.get(sampleBuffer);
-          if (!perSampleCache) {
-            perSampleCache = new Map();
-            stretchedSampleBufferCacheRef.current.set(
-              sampleBuffer,
-              perSampleCache,
-            );
-          }
-
-          const cached = perSampleCache.get(cacheKey);
-          if (cached) {
-            scheduledBuffer = cached;
-          } else {
-            scheduledBuffer = createWsolaStretchedBufferFromSample(
-              audioCtx,
-              sampleBuffer,
-              sampleReadDuration,
-              stretchFactor,
-              false,
-            );
-            perSampleCache.set(cacheKey, scheduledBuffer);
-          }
         }
 
         const finalGain = Math.max(0, gainAmount * (normalizeGain || 1));
@@ -328,46 +292,13 @@ export function useTransportScheduler({
             0.01,
             totalPlayableDuration * playbackRate,
           );
-          const stretchFactor = clamp(
-            sampleReadDuration / desiredBufferedDuration,
-            0.25,
-            4,
+          scheduledBuffer = getOrCreateStretchedBuffer(
+            audioCtx,
+            sampleBuffer,
+            sampleReadDuration,
+            desiredBufferedDuration,
+            stretchedSampleBufferCacheRef.current,
           );
-          const readFrames = Math.max(
-            16,
-            Math.floor(sampleReadDuration * sampleBuffer.sampleRate),
-          );
-          const cacheKey =
-            readFrames +
-            "|" +
-            stretchFactor.toFixed(4) +
-            "|" +
-            sampleBuffer.numberOfChannels;
-
-          let perSampleCache =
-            stretchedSampleBufferCacheRef.current.get(sampleBuffer);
-          if (!perSampleCache) {
-            perSampleCache = new Map();
-            stretchedSampleBufferCacheRef.current.set(
-              sampleBuffer,
-              perSampleCache,
-            );
-          }
-
-          const cached = perSampleCache.get(cacheKey);
-          if (cached) {
-            scheduledBuffer = cached;
-          } else {
-            scheduledBuffer = createWsolaStretchedBufferFromSample(
-              audioCtx,
-              sampleBuffer,
-              sampleReadDuration,
-              stretchFactor,
-              false,
-            );
-            perSampleCache.set(cacheKey, scheduledBuffer);
-          }
-
           maxReadableDuration = Math.max(
             0.01,
             Math.min(scheduledBuffer.duration, desiredBufferedDuration),
