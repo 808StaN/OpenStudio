@@ -3536,6 +3536,10 @@ export function useAudioScheduler() {
         }
       };
     },
+    // Intentionally omit transport.currentStep16: the scheduler initializes
+    // the playhead offset once when playback starts and must not re-run when
+    // the step changes mid-playback (that update happens inside the rAF loop).
+    // eslint-disable-next-line react-hooks/exhaustive-deps
     [
       transport.isPlaying,
       transport.bpm,

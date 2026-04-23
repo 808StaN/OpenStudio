@@ -26,4 +26,10 @@ export default defineConfig([
       'no-unused-vars': ['error', { varsIgnorePattern: '^[A-Z_]' }],
     },
   },
+  {
+    files: ['vite.config.js', 'scripts/**/*.mjs', 'scripts/**/*.js', 'electron/**/*.mjs'],
+    languageOptions: {
+      globals: globals.node,
+    },
+  },
 ])
