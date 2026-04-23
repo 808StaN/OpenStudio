@@ -1,5 +1,4 @@
 import { useCallback, useRef } from "react";
-import Soundfont from "soundfont-player";
 import { getPluginInstrument } from "../../data/pluginInstruments";
 
 /**
@@ -81,6 +80,7 @@ export function usePluginInstruments(ensureContext) {
 
       const audioCtx = ensureContext();
       const defaultDestination = destinationNode || audioCtx.destination;
+      const { default: Soundfont } = await import("soundfont-player");
       const request = Soundfont.instrument(audioCtx, plugin.soundfont, {
         destination: defaultDestination,
       })

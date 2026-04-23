@@ -1,4 +1,3 @@
-import Soundfont from "soundfont-player";
 import { useCallback, useRef } from "react";
 import { getPluginInstrument } from "../../data/pluginInstruments";
 import { toSafeSampleUrl } from "../../utils/sampleUrl";
@@ -84,6 +83,7 @@ export const usePianoRollPreviewLoaders = function () {
         return pending;
       }
 
+      const { default: Soundfont } = await import("soundfont-player");
       const request = Soundfont.instrument(
         ensurePreviewContext(),
         plugin.soundfont,
