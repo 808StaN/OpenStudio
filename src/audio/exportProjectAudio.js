@@ -1076,11 +1076,34 @@ export async function renderPlaylistArrangementToFile(options) {
     return true;
   };
 
+  const activeSynthVoicesByChannel = new Map();
+
+  const stopActiveChannelSynthVoices = function (channelId, atTime) {
+    const voices = activeSynthVoicesByChannel.get(channelId);
+    if (!voices || voices.size === 0) {
+      return false;
+    }
+
+    voices.forEach(function (voice) {
+      try {
+        if (voice.node && typeof voice.node.stop === "function") {
+          voice.node.stop(atTime);
+        }
+      } catch {
+        return;
+      }
+    });
+
+    voices.clear();
+    return true;
+  };
+
   events.forEach(function (event) {
     const channel = event.channel;
     const settings = getSafeSampleSettings(channel.sampleSettings);
     const insertNode = inserts.insertMap.get(channel.mixerInsertId);
     const insertInput = insertNode?.inputGain || inserts.fallbackInsertInput;
+    const channelId = String(channel?.id || "").trim();
 
     const noteStartTime = Math.max(
       0,
@@ -1119,8 +1142,12 @@ export async function renderPlaylistArrangementToFile(options) {
         channelBaseGain * 2.2 * PLUGIN_INSTRUMENT_GAIN_BOOST,
       );
 
+      if (settings.monoMode && channelId) {
+        stopActiveChannelSynthVoices(channelId, noteStartTime);
+      }
+
       try {
-        plugin.play(transposedPitch, noteStartTime, {
+        const voiceNode = plugin.play(transposedPitch, noteStartTime, {
           duration: noteDuration,
           gain: noteGain,
           attack: attackSec,
@@ -1128,6 +1155,15 @@ export async function renderPlaylistArrangementToFile(options) {
           pan: clamp(Number(channel.pan || 0), -1, 1),
           destination: insertInput,
         });
+
+        if (voiceNode && typeof voiceNode.stop === "function") {
+          const channelVoices =
+            activeSynthVoicesByChannel.get(channelId) || new Set();
+          if (!activeSynthVoicesByChannel.has(channelId)) {
+            activeSynthVoicesByChannel.set(channelId, channelVoices);
+          }
+          channelVoices.add({ node: voiceNode });
+        }
       } catch {
         return;
       }
@@ -1195,7 +1231,6 @@ export async function renderPlaylistArrangementToFile(options) {
     const sampleStopAt = noteStartTime + sourcePlayDuration;
     const fadeOutStart = Math.max(noteStartTime, sampleStopAt - finalFadeOut);
 
-    const channelId = String(channel?.id || "").trim();
     let didRetriggerCut = false;
     if (settings.cutItself && channelId) {
       didRetriggerCut = stopActiveChannelSamples(channelId, noteStartTime);
