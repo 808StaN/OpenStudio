@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 import { useDispatch, useSelector } from "react-redux";
-import { DEFAULT_SAMPLE_SETTINGS } from "../audio/domain/sampleSettings";
+import { getSafeSampleSettings } from "../audio/domain/sampleSettings";
 import { getPluginInstrument } from "../data/pluginInstruments";
 import { EnvelopeTabSection } from "./sample-settings/EnvelopeTabSection";
 import { PluginSettingsSection } from "./sample-settings/PluginSettingsSection";
@@ -22,17 +22,7 @@ export function SampleSettingsDialog({ channel }) {
   const plugin = getPluginInstrument(channel.pluginRef);
   const isPluginChannel = Boolean(plugin && plugin.soundfont);
   const sampleRef = channel.sampleRef;
-  const settings = {
-    ...DEFAULT_SAMPLE_SETTINGS,
-    ...(channel.sampleSettings || {}),
-  };
-
-  if (
-    !Object.hasOwn(settings, "pitchCents") &&
-    Object.hasOwn(settings, "pitchSemitones")
-  ) {
-    settings.pitchCents = Number(settings.pitchSemitones || 0) * 100;
-  }
+  const settings = getSafeSampleSettings(channel.sampleSettings);
 
   const [sampleTabState, setSampleTabState] = useState(function () {
     return {
