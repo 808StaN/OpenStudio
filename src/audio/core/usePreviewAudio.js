@@ -9,9 +9,9 @@
 import { useRef, useCallback, useEffect } from "react";
 import { clamp } from "../../store/utils";
 import { setInsertMeter } from "../../store";
+import { BASE_CHANNEL_TRIGGER_GAIN } from "../domain/constants";
 
 const PACK_PREVIEW_EVENT = "openstudio:packs-preview";
-const BASE_CHANNEL_TRIGGER_GAIN = 0.75;
 
 const MIXER_METER_RMS_GAIN = 4.2;
 const MIXER_METER_PEAK_GAIN = 1.9;

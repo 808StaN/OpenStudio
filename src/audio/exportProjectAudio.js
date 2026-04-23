@@ -15,10 +15,16 @@ import { getNormalizeGain } from "./core/getNormalizeGain";
 import { getOrCreateStretchedBuffer } from "./core/getOrCreateStretchedBuffer";
 import { audioBufferToWavBlob, getSafeWavEncoding } from "./export/wavEncoder";
 import { audioBufferToMp3Blob } from "./export/mp3Encoder";
+import {
+  BASE_CHANNEL_TRIGGER_GAIN,
+  CLIP_GAIN_SCALE,
+  MAX_PLAYBACK_RATE,
+  MIN_DURATION_SEC,
+  MIN_PLAYBACK_RATE,
+} from "./domain/constants";
 
 const DEFAULT_NOTE_VELOCITY = 95;
 const PLUGIN_INSTRUMENT_GAIN_BOOST = 1.5;
-const BASE_CHANNEL_TRIGGER_GAIN = 0.75;
 const CUT_ITSELF_RELEASE_SEC = 0.01;
 const CUT_ITSELF_MAX_RETRIGGER_RELEASE_SEC = 0.016;
 const CUT_ITSELF_STOP_PADDING_SEC = 0.003;
@@ -500,11 +506,11 @@ export async function renderPlaylistArrangementToFile(options) {
       : DEFAULT_SAMPLE_MIDI_PITCH;
     const pitchRate = Math.pow(2, Number(settings.pitchCents || 0) / 1200);
     const basePlaybackRate = Math.max(
-      0.125,
-      Math.min(8, midiPitchToPlaybackRate(safeMidiPitch) * pitchRate),
+      MIN_PLAYBACK_RATE,
+      Math.min(MAX_PLAYBACK_RATE, midiPitchToPlaybackRate(safeMidiPitch) * pitchRate),
     );
     const sampleReadDuration = Math.max(
-      0.01,
+      MIN_DURATION_SEC,
       sampleBuffer.duration * (settings.lengthPct / 100),
     );
     const stretchProfile = getTimeStretchProfile(
@@ -567,7 +573,7 @@ export async function renderPlaylistArrangementToFile(options) {
     );
 
     const requiredBufferDuration = Math.max(
-      0.01,
+      MIN_DURATION_SEC,
       voiceParams.sourcePlayDuration * voiceParams.playbackRate,
     );
     source.start(
@@ -663,7 +669,7 @@ export async function renderPlaylistArrangementToFile(options) {
 
     const clipStartTime = clipStartStep * sixteenth + renderStartOffsetSec;
     const clipOffsetSec = clipOffsetSteps * sixteenth;
-    const clipTotalDurationSec = Math.max(0.01, clipLengthSteps * sixteenth);
+    const clipTotalDurationSec = Math.max(MIN_DURATION_SEC, clipLengthSteps * sixteenth);
     const clipRemainingDurationSec = Math.max(
       0,
       clipTotalDurationSec - clipOffsetSec,
@@ -673,12 +679,12 @@ export async function renderPlaylistArrangementToFile(options) {
     }
 
     const sampleReadDuration = Math.max(
-      0.01,
+      MIN_DURATION_SEC,
       Number(sampleBuffer.duration || 0) * (settings.lengthPct / 100),
     );
     const basePlaybackRate = Math.max(
-      0.125,
-      Math.min(8, Math.pow(2, Number(settings.pitchCents || 0) / 1200)),
+      MIN_PLAYBACK_RATE,
+      Math.min(MAX_PLAYBACK_RATE, Math.pow(2, Number(settings.pitchCents || 0) / 1200)),
     );
     const stretchProfile = getTimeStretchProfile(
       settings,
@@ -688,11 +694,11 @@ export async function renderPlaylistArrangementToFile(options) {
     );
     const playbackRate = stretchProfile.playbackRate;
     const naturalPlayableDuration = Math.max(
-      0.01,
+      MIN_DURATION_SEC,
       sampleReadDuration / playbackRate,
     );
     const totalPlayableDuration = Math.max(
-      0.01,
+      MIN_DURATION_SEC,
       stretchProfile.useGranularStretch
         ? stretchProfile.targetDurationSec
         : naturalPlayableDuration,
@@ -713,7 +719,7 @@ export async function renderPlaylistArrangementToFile(options) {
     let maxReadableDuration = sampleReadDuration;
     if (stretchProfile.useGranularStretch) {
       const desiredBufferedDuration = Math.max(
-        0.01,
+        MIN_DURATION_SEC,
         totalPlayableDuration * playbackRate,
       );
       scheduledBuffer = getOrCreateStretchedBuffer(
@@ -724,7 +730,7 @@ export async function renderPlaylistArrangementToFile(options) {
         stretchedSampleBufferCache,
       );
       maxReadableDuration = Math.max(
-        0.01,
+        MIN_DURATION_SEC,
         Math.min(scheduledBuffer.duration, desiredBufferedDuration),
       );
     }
@@ -735,7 +741,7 @@ export async function renderPlaylistArrangementToFile(options) {
     }
 
     const sourceReadDuration = Math.max(
-      0.01,
+      MIN_DURATION_SEC,
       Math.min(
         maxReadableDuration - sourceOffsetSec,
         playDuration * playbackRate,
@@ -743,9 +749,9 @@ export async function renderPlaylistArrangementToFile(options) {
     );
     const fadeOutAt = clipStartTime + Math.max(0, playDuration - 0.012);
     const clipGain = Math.max(
-      0.01,
+      MIN_DURATION_SEC,
       Number(channel?.volume ?? 0.75) *
-        0.36 *
+        CLIP_GAIN_SCALE *
         (settings.normalize
           ? getNormalizeGain(sampleBuffer, normalizeGainByBuffer)
           : 1),

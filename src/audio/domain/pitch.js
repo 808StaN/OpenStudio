@@ -1,3 +1,5 @@
+import { MAX_PLAYBACK_RATE, MIN_PLAYBACK_RATE } from "./constants";
+
 // C5 is the neutral sample pitch anchor used across preview/playback code.
 export const DEFAULT_SAMPLE_MIDI_PITCH = 72;
 
@@ -6,5 +8,5 @@ export function midiPitchToPlaybackRate(midiPitch) {
   const semitoneOffset = Number(midiPitch || DEFAULT_SAMPLE_MIDI_PITCH) - DEFAULT_SAMPLE_MIDI_PITCH;
   const rawRate = Math.pow(2, semitoneOffset / 12);
   // Keep rate in an audio-safe range expected by scheduler and renderer.
-  return Math.max(0.125, Math.min(8, rawRate));
+  return Math.max(MIN_PLAYBACK_RATE, Math.min(MAX_PLAYBACK_RATE, rawRate));
 }

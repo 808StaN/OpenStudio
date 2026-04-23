@@ -18,6 +18,11 @@
  * @returns {object}
  */
 import { DEFAULT_SAMPLE_MIDI_PITCH } from "../domain/pitch";
+import {
+  MAX_PLAYBACK_RATE,
+  MIN_DURATION_SEC,
+  MIN_PLAYBACK_RATE,
+} from "../domain/constants";
 
 export function computeSamplePlaybackParams(
   sampleBuffer,
@@ -33,8 +38,8 @@ export function computeSamplePlaybackParams(
     : DEFAULT_SAMPLE_MIDI_PITCH;
   const pitchRate = Math.pow(2, Number(settings.pitchCents || 0) / 1200);
   const computedPlaybackRate = Math.max(
-    0.125,
-    Math.min(8, Math.pow(2, (safeMidiPitch - DEFAULT_SAMPLE_MIDI_PITCH) / 12) * pitchRate),
+    MIN_PLAYBACK_RATE,
+    Math.min(MAX_PLAYBACK_RATE, Math.pow(2, (safeMidiPitch - DEFAULT_SAMPLE_MIDI_PITCH) / 12) * pitchRate),
   );
   const playbackRate =
     Number.isFinite(overrides.playbackRate)
@@ -42,11 +47,11 @@ export function computeSamplePlaybackParams(
       : computedPlaybackRate;
 
   const sampleReadDuration = Math.max(
-    0.01,
+    MIN_DURATION_SEC,
     sampleBuffer.duration * (settings.lengthPct / 100),
   );
   const naturalPlayableDuration = Math.max(
-    0.01,
+    MIN_DURATION_SEC,
     sampleReadDuration / playbackRate,
   );
   const samplePlayableDuration = Number.isFinite(
@@ -55,7 +60,7 @@ export function computeSamplePlaybackParams(
     ? overrides.samplePlayableDuration
     : naturalPlayableDuration;
   const noteGateDuration = Math.max(
-    0.01,
+    MIN_DURATION_SEC,
     Number(noteLengthSteps || 1) * sixteenth,
   );
   const shouldApplyEnvelope = Boolean(settings.envEnabled);
@@ -64,12 +69,12 @@ export function computeSamplePlaybackParams(
     : 0;
   const sourcePlayDuration = shouldApplyEnvelope
     ? Math.max(
-        0.01,
+        MIN_DURATION_SEC,
         Math.min(samplePlayableDuration, noteGateDuration + envReleaseSec),
       )
     : samplePlayableDuration;
   const envelopeGateDuration = shouldApplyEnvelope
-    ? Math.max(0.01, Math.min(noteGateDuration, sourcePlayDuration))
+    ? Math.max(MIN_DURATION_SEC, Math.min(noteGateDuration, sourcePlayDuration))
     : sourcePlayDuration;
 
   const fadeInSec = sourcePlayDuration * (settings.fadeInPct / 100);

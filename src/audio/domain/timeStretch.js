@@ -1,6 +1,8 @@
+import { MAX_PLAYBACK_RATE, MIN_DURATION_SEC, MIN_PLAYBACK_RATE } from "./constants";
+
 // Resolves desired sample duration from stretch settings and current transport BPM.
 export function getStretchTargetDurationSeconds(settings, sampleReadDuration, bpm) {
-  const safeDuration = Math.max(0.01, Number(sampleReadDuration || 0.01));
+  const safeDuration = Math.max(MIN_DURATION_SEC, Number(sampleReadDuration || MIN_DURATION_SEC));
   const safeBpm = Math.max(1, Number(bpm || 120));
   const quarterSec = 60 / safeBpm;
   const timeMode = String(settings.stretchTimeMode || "none")
@@ -8,7 +10,7 @@ export function getStretchTargetDurationSeconds(settings, sampleReadDuration, bp
     .toLowerCase();
   const mul = Math.max(
     0.25,
-    Math.min(8, Number(settings.stretchMultiplier || 1)),
+    Math.min(MAX_PLAYBACK_RATE, Number(settings.stretchMultiplier || 1)),
   );
 
   if (timeMode === "set-bpm") {
@@ -17,7 +19,7 @@ export function getStretchTargetDurationSeconds(settings, sampleReadDuration, bp
       20,
       Math.min(300, Number(settings.stretchSourceBpm || 120)),
     );
-    return Math.max(0.01, safeDuration * (sourceBpm / safeBpm) * mul);
+    return Math.max(MIN_DURATION_SEC, safeDuration * (sourceBpm / safeBpm) * mul);
   }
 
   if (timeMode === "project-tempo") {
@@ -26,7 +28,7 @@ export function getStretchTargetDurationSeconds(settings, sampleReadDuration, bp
       20,
       Math.min(300, Number(settings.stretchProjectTempoBpm || safeBpm)),
     );
-    return Math.max(0.01, safeDuration * (projectLockBpm / safeBpm) * mul);
+    return Math.max(MIN_DURATION_SEC, safeDuration * (projectLockBpm / safeBpm) * mul);
   }
 
   if (timeMode === "beat-1") {
@@ -48,7 +50,7 @@ export function getStretchTargetDurationSeconds(settings, sampleReadDuration, bp
     return quarterSec * 16 * mul;
   }
 
-  return Math.max(0.01, safeDuration * mul);
+  return Math.max(MIN_DURATION_SEC, safeDuration * mul);
 }
 
 // Option allows callers (offline export) to force non-granular stretching.
@@ -63,7 +65,7 @@ export function getTimeStretchProfile(
   const stretchMode = String(settings.stretchMode || "none")
     .trim()
     .toLowerCase();
-  const safeBaseRate = Math.max(0.125, Math.min(8, Number(baseRate || 1)));
+  const safeBaseRate = Math.max(MIN_PLAYBACK_RATE, Math.min(MAX_PLAYBACK_RATE, Number(baseRate || 1)));
   const targetDurationSec = getStretchTargetDurationSeconds(
     settings,
     sampleReadDuration,
@@ -75,7 +77,7 @@ export function getTimeStretchProfile(
     // No algorithmic stretching: regular playback-rate conversion only.
     return {
       playbackRate: safeBaseRate,
-      targetDurationSec: Math.max(0.01, sampleReadDuration / safeBaseRate),
+      targetDurationSec: Math.max(MIN_DURATION_SEC, sampleReadDuration / safeBaseRate),
       useGranularStretch: false,
     };
   }
@@ -89,24 +91,24 @@ export function getTimeStretchProfile(
   if (stretchMode === "stretch") {
     // Pitch shift is applied, while duration is controlled by granular stretch engine.
     return {
-      playbackRate: Math.max(0.125, Math.min(8, safeBaseRate * pitchShiftRate)),
-      targetDurationSec: Math.max(0.01, targetDurationSec),
+      playbackRate: Math.max(MIN_PLAYBACK_RATE, Math.min(MAX_PLAYBACK_RATE, safeBaseRate * pitchShiftRate)),
+      targetDurationSec: Math.max(MIN_DURATION_SEC, targetDurationSec),
       useGranularStretch: supportsGranularStretch,
     };
   }
 
   const durationRate = Math.max(
-    0.125,
-    Math.min(8, sampleReadDuration / targetDurationSec),
+    MIN_PLAYBACK_RATE,
+    Math.min(MAX_PLAYBACK_RATE, sampleReadDuration / targetDurationSec),
   );
 
   return {
     // "Resample" mode maps duration into playback-rate directly (no granular engine).
     playbackRate: Math.max(
-      0.125,
-      Math.min(8, safeBaseRate * pitchShiftRate * durationRate),
+      MIN_PLAYBACK_RATE,
+      Math.min(MAX_PLAYBACK_RATE, safeBaseRate * pitchShiftRate * durationRate),
     ),
-    targetDurationSec: Math.max(0.01, sampleReadDuration / durationRate),
+    targetDurationSec: Math.max(MIN_DURATION_SEC, sampleReadDuration / durationRate),
     useGranularStretch: false,
   };
 }

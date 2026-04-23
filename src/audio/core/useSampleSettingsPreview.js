@@ -14,12 +14,12 @@ import { toSafeSampleUrl } from "../../utils/sampleUrl";
 import {
   getPluginInstrumentCacheKey,
 } from "./usePluginInstruments";
+import { BASE_CHANNEL_TRIGGER_GAIN } from "../domain/constants";
 
 const SAMPLE_SETTINGS_PREVIEW_PLAY_EVENT =
   "openstudio:sample-settings-preview-play";
 const SAMPLE_SETTINGS_PREVIEW_STOP_EVENT =
   "openstudio:sample-settings-preview-stop";
-const BASE_CHANNEL_TRIGGER_GAIN = 0.75;
 
 export function useSampleSettingsPreview({
   dispatch,

@@ -27,10 +27,16 @@ import {
 } from "./usePluginInstruments";
 import { useVisualTail } from "./useVisualTail";
 import { useSampleSettingsPreview } from "./useSampleSettingsPreview";
+import {
+  BASE_CHANNEL_TRIGGER_GAIN,
+  CLIP_GAIN_SCALE,
+  MAX_PLAYBACK_RATE,
+  MIN_DURATION_SEC,
+  MIN_PLAYBACK_RATE,
+} from "../domain/constants";
 
 const DEFAULT_NOTE_VELOCITY = 95;
 const PLUGIN_INSTRUMENT_GAIN_BOOST = 1.5;
-const BASE_CHANNEL_TRIGGER_GAIN = 0.75;
 
 export function useTransportScheduler({
   transport,
@@ -137,11 +143,11 @@ export function useTransportScheduler({
           Number(settings.pitchCents || 0) / 1200,
         );
         const basePlaybackRate = Math.max(
-          0.125,
-          Math.min(8, midiPitchToPlaybackRate(safeMidiPitch) * pitchRate),
+          MIN_PLAYBACK_RATE,
+          Math.min(MAX_PLAYBACK_RATE, midiPitchToPlaybackRate(safeMidiPitch) * pitchRate),
         );
         const sampleReadDuration = Math.max(
-          0.01,
+          MIN_DURATION_SEC,
           sampleBuffer.duration * (settings.lengthPct / 100),
         );
         const stretchProfile = getTimeStretchProfile(
@@ -208,7 +214,7 @@ export function useTransportScheduler({
         };
 
         const requiredBufferDuration = Math.max(
-          0.01,
+          MIN_DURATION_SEC,
           voiceParams.sourcePlayDuration * voiceParams.playbackRate,
         );
         source.start(
@@ -241,7 +247,7 @@ export function useTransportScheduler({
           Number(clipOffsetSteps || 0) * sixteenth,
         );
         const clipTotalDurationSec = Math.max(
-          0.01,
+          MIN_DURATION_SEC,
           Number(clipLengthSteps || 1) * sixteenth,
         );
         const clipRemainingDurationSec = Math.max(
@@ -249,12 +255,12 @@ export function useTransportScheduler({
           clipTotalDurationSec - clipOffsetSec,
         );
         const sampleReadDuration = Math.max(
-          0.01,
+          MIN_DURATION_SEC,
           Number(sampleBuffer.duration || 0) * (settings.lengthPct / 100),
         );
         const basePlaybackRate = Math.max(
-          0.125,
-          Math.min(8, Math.pow(2, Number(settings.pitchCents || 0) / 1200)),
+          MIN_PLAYBACK_RATE,
+          Math.min(MAX_PLAYBACK_RATE, Math.pow(2, Number(settings.pitchCents || 0) / 1200)),
         );
         const stretchProfile = getTimeStretchProfile(
           settings,
@@ -264,11 +270,11 @@ export function useTransportScheduler({
         );
         const playbackRate = stretchProfile.playbackRate;
         const naturalPlayableDuration = Math.max(
-          0.01,
+          MIN_DURATION_SEC,
           sampleReadDuration / playbackRate,
         );
         const totalPlayableDuration = Math.max(
-          0.01,
+          MIN_DURATION_SEC,
           stretchProfile.useGranularStretch
             ? stretchProfile.targetDurationSec
             : naturalPlayableDuration,
@@ -289,7 +295,7 @@ export function useTransportScheduler({
         let maxReadableDuration = sampleReadDuration;
         if (stretchProfile.useGranularStretch) {
           const desiredBufferedDuration = Math.max(
-            0.01,
+            MIN_DURATION_SEC,
             totalPlayableDuration * playbackRate,
           );
           scheduledBuffer = getOrCreateStretchedBuffer(
@@ -300,7 +306,7 @@ export function useTransportScheduler({
             stretchedSampleBufferCacheRef.current,
           );
           maxReadableDuration = Math.max(
-            0.01,
+            MIN_DURATION_SEC,
             Math.min(scheduledBuffer.duration, desiredBufferedDuration),
           );
         }
@@ -310,7 +316,7 @@ export function useTransportScheduler({
           return;
         }
         const sourceReadDuration = Math.max(
-          0.01,
+          MIN_DURATION_SEC,
           Math.min(
             maxReadableDuration - sourceOffsetSec,
             playDuration * playbackRate,
@@ -319,9 +325,9 @@ export function useTransportScheduler({
 
         const fadeOutAt = time + Math.max(0, playDuration - 0.012);
         const clipGain = Math.max(
-          0.01,
+          MIN_DURATION_SEC,
           Number(channel?.volume ?? 0.75) *
-            0.36 *
+            CLIP_GAIN_SCALE *
             (settings.normalize
               ? getNormalizeGain(sampleBuffer, sampleNormalizeGainRef.current)
               : 1),
