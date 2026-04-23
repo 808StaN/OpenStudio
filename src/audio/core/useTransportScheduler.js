@@ -17,7 +17,7 @@ import {
 import { getSafeSampleSettings } from "../domain/sampleSettings";
 import { getTimeStretchProfile } from "../domain/timeStretch";
 import { getPluginInstrument } from "../../data/pluginInstruments";
-import { setInsertMeter, setPlayheadStep, setPlaying } from "../../store";
+import { setPlayheadStep, setPlaying } from "../../store";
 import { toSafeSampleUrl } from "../../utils/sampleUrl";
 import { createWsolaStretchedBufferFromSample } from "../wsolaStretch";
 import {
@@ -25,6 +25,7 @@ import {
   routeInstrumentOutputToNode,
 } from "./usePluginInstruments";
 import { useVisualTail } from "./useVisualTail";
+import { useSampleSettingsPreview } from "./useSampleSettingsPreview";
 
 const DEFAULT_NOTE_VELOCITY = 95;
 const PLUGIN_INSTRUMENT_GAIN_BOOST = 1.5;
@@ -76,8 +77,8 @@ export function useTransportScheduler({
   const stepRef = useRef(0);
   const startedAtRef = useRef(0);
   const scheduledAudioClipStartRef = useRef(new Map());
-  const sampleSettingsPreviewMeterRafRef = useRef(null);
-  const sampleSettingsPreviewMeterInsertIdRef = useRef(null);
+  const scheduleSampleRef = useRef(null);
+  const schedulePluginInstrumentRef = useRef(null);
 
   const {
     stopVisualTailUntilRef,
@@ -85,6 +86,30 @@ export function useTransportScheduler({
     runVisualTailTick,
     resetVisualTail,
   } = useVisualTail();
+
+  useSampleSettingsPreview({
+    dispatch,
+    audioCtxRef,
+    ensureContext,
+    mixerGraphRef,
+    mixerSettingsRef,
+    ensureMixerGraph,
+    applyMixerSettingsToGraph,
+    getInsertInputNodeForChannel,
+    updateMixerMeters,
+    stopActiveChannelSamples,
+    stopActiveChannelSynthVoices,
+    channelsRef,
+    pluginInstrumentRef,
+    pluginInstrumentFailedRef,
+    loadPluginInstrument,
+    sampleBufferCacheRef,
+    sampleLoadFailedRef,
+    loadSampleBuffer,
+    transportIsPlaying: transport.isPlaying,
+    scheduleSampleRef,
+    schedulePluginInstrumentRef,
+  });
 
   useEffect(
     function () {
@@ -469,6 +494,8 @@ export function useTransportScheduler({
         source.stop(time + playDuration + 0.005);
       };
 
+      scheduleSampleRef.current = scheduleSample;
+
       const schedulePluginInstrument = function (
         pluginRef,
         time,
@@ -595,215 +622,7 @@ export function useTransportScheduler({
         }, removeAfterMs);
       };
 
-      const onSampleSettingsPreviewPlay = function (event) {
-        const channelId = String(event?.detail?.channelId || "").trim();
-        if (!channelId) {
-          return;
-        }
-
-        const channel = (channelsRef.current || []).find(function (item) {
-          return item.id === channelId;
-        });
-        if (!channel) {
-          return;
-        }
-
-        const previewContext = ensureContext();
-        if (previewContext.state === "suspended") {
-          void previewContext.resume();
-        }
-
-        ensureMixerGraph();
-        applyMixerSettingsToGraph();
-
-        const outputNode = getInsertInputNodeForChannel(channel);
-        const targetInsertId =
-          String(channel.mixerInsertId || "master").trim() || "master";
-        sampleSettingsPreviewMeterInsertIdRef.current = targetInsertId;
-
-        const stopSampleSettingsPreviewMeterLoop = function () {
-          if (sampleSettingsPreviewMeterRafRef.current) {
-            cancelAnimationFrame(sampleSettingsPreviewMeterRafRef.current);
-            sampleSettingsPreviewMeterRafRef.current = null;
-          }
-        };
-
-        const startSampleSettingsPreviewMeterLoop = function () {
-          if (transport.isPlaying) {
-            return;
-          }
-
-          stopSampleSettingsPreviewMeterLoop();
-
-          const tickPreviewMeters = function () {
-            if (transport.isPlaying) {
-              stopSampleSettingsPreviewMeterLoop();
-              return;
-            }
-
-            const nowCtx = audioCtxRef.current || ensureContext();
-            updateMixerMeters(nowCtx.currentTime);
-            sampleSettingsPreviewMeterRafRef.current =
-              requestAnimationFrame(tickPreviewMeters);
-          };
-
-          sampleSettingsPreviewMeterRafRef.current =
-            requestAnimationFrame(tickPreviewMeters);
-        };
-
-        startSampleSettingsPreviewMeterLoop();
-
-        const pluginRef = String(channel.pluginRef || "").trim();
-        const plugin = getPluginInstrument(pluginRef);
-        const hasPluginInstrument = Boolean(plugin && plugin.soundfont);
-
-        const gainAmount =
-          BASE_CHANNEL_TRIGGER_GAIN *
-          clamp(Number(channel.volume ?? 1), 0, 1);
-
-        const scheduleSampleSettingsPlugin = function () {
-          const nowCtx = audioCtxRef.current || previewContext;
-          const startAt = nowCtx.currentTime + 0.002;
-
-          stopActiveChannelSamples(channel.id, startAt);
-          stopActiveChannelSynthVoices(channel.id, startAt);
-
-          schedulePluginInstrument(
-            pluginRef,
-            startAt,
-            gainAmount,
-            channel.pan,
-            channel,
-            outputNode,
-            DEFAULT_SAMPLE_MIDI_PITCH,
-            1,
-            getSafeSampleSettings(channel.sampleSettings),
-          );
-        };
-
-        const scheduleSampleSettingsSample = function (buffer) {
-          if (!buffer) {
-            return;
-          }
-
-          const nowCtx = audioCtxRef.current || previewContext;
-          const startAt = nowCtx.currentTime + 0.002;
-
-          stopActiveChannelSamples(channel.id, startAt);
-          stopActiveChannelSynthVoices(channel.id, startAt);
-
-          scheduleSample(
-            buffer,
-            startAt,
-            gainAmount,
-            channel.pan,
-            channel,
-            outputNode,
-            DEFAULT_SAMPLE_MIDI_PITCH,
-            1,
-          );
-        };
-
-        if (hasPluginInstrument) {
-          const key = getPluginInstrumentCacheKey(pluginRef, channel.id);
-          const cachedInstrument = pluginInstrumentRef.current.get(key);
-          if (cachedInstrument) {
-            scheduleSampleSettingsPlugin();
-            return;
-          }
-
-          void loadPluginInstrument(pluginRef, channel.id, outputNode).then(
-            function (loadedInstrument) {
-              if (!loadedInstrument) {
-                return;
-              }
-
-              scheduleSampleSettingsPlugin();
-            },
-          );
-          return;
-        }
-
-        const safeSampleRef = toSafeSampleUrl(channel.sampleRef);
-        if (!safeSampleRef) {
-          return;
-        }
-
-        const cached = sampleBufferCacheRef.current.get(safeSampleRef);
-        if (cached) {
-          scheduleSampleSettingsSample(cached);
-          return;
-        }
-
-        if (!sampleLoadFailedRef.current.has(safeSampleRef)) {
-          void loadSampleBuffer(safeSampleRef).then(
-            scheduleSampleSettingsSample,
-          );
-        }
-      };
-
-      const onSampleSettingsPreviewStop = function (event) {
-        const channelId = String(event?.detail?.channelId || "").trim();
-        if (!channelId || !audioCtxRef.current) {
-          return;
-        }
-
-        if (sampleSettingsPreviewMeterRafRef.current) {
-          cancelAnimationFrame(sampleSettingsPreviewMeterRafRef.current);
-          sampleSettingsPreviewMeterRafRef.current = null;
-        }
-
-        const stopAt = audioCtxRef.current.currentTime;
-        stopActiveChannelSamples(channelId, stopAt);
-        stopActiveChannelSynthVoices(channelId, stopAt);
-
-        const insertId =
-          sampleSettingsPreviewMeterInsertIdRef.current ||
-          String(
-            (channelsRef.current || []).find(function (item) {
-              return item.id === channelId;
-            })?.mixerInsertId || "master",
-          );
-        sampleSettingsPreviewMeterInsertIdRef.current = null;
-
-        dispatch(
-          setInsertMeter({
-            insertId,
-            meter: 0,
-          }),
-        );
-        dispatch(
-          setInsertMeter({
-            insertId: "master",
-            meter: 0,
-          }),
-        );
-      };
-
-      window.addEventListener(
-        SAMPLE_SETTINGS_PREVIEW_PLAY_EVENT,
-        onSampleSettingsPreviewPlay,
-      );
-      window.addEventListener(
-        SAMPLE_SETTINGS_PREVIEW_STOP_EVENT,
-        onSampleSettingsPreviewStop,
-      );
-
-      const removeSampleSettingsPreviewListeners = function () {
-        if (sampleSettingsPreviewMeterRafRef.current) {
-          cancelAnimationFrame(sampleSettingsPreviewMeterRafRef.current);
-          sampleSettingsPreviewMeterRafRef.current = null;
-        }
-
-        window.removeEventListener(
-          SAMPLE_SETTINGS_PREVIEW_PLAY_EVENT,
-          onSampleSettingsPreviewPlay,
-        );
-        window.removeEventListener(
-          SAMPLE_SETTINGS_PREVIEW_STOP_EVENT,
-          onSampleSettingsPreviewStop,
-        );
-      };
+      schedulePluginInstrumentRef.current = schedulePluginInstrument;
 
       if (!transport.isPlaying) {
         if (audioCtxRef.current) {
@@ -821,9 +640,7 @@ export function useTransportScheduler({
           }
           resetMeterState();
           resetVisualTail();
-          return function () {
-            removeSampleSettingsPreviewListeners();
-          };
+          return;
         }
 
         const nowPerf = performance.now();
@@ -854,7 +671,6 @@ export function useTransportScheduler({
         }
 
         return function () {
-          removeSampleSettingsPreviewListeners();
           if (rafIdRef.current) {
             cancelAnimationFrame(rafIdRef.current);
             rafIdRef.current = null;
@@ -1279,8 +1095,6 @@ export function useTransportScheduler({
       rafIdRef.current = requestAnimationFrame(tick);
 
       return function () {
-        removeSampleSettingsPreviewListeners();
-
         if (rafIdRef.current) {
           cancelAnimationFrame(rafIdRef.current);
           rafIdRef.current = null;
