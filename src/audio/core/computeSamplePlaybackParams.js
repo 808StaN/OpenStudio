@@ -17,6 +17,8 @@
  * @param {number} [overrides.samplePlayableDuration]
  * @returns {object}
  */
+import { DEFAULT_SAMPLE_MIDI_PITCH } from "../domain/pitch";
+
 export function computeSamplePlaybackParams(
   sampleBuffer,
   settings,
@@ -26,14 +28,13 @@ export function computeSamplePlaybackParams(
   normalizeGain,
   overrides = {},
 ) {
-  const DEFAULT_SAMPLE_MIDI_PITCH = 60;
   const safeMidiPitch = Number.isFinite(midiPitch)
     ? midiPitch
     : DEFAULT_SAMPLE_MIDI_PITCH;
   const pitchRate = Math.pow(2, Number(settings.pitchCents || 0) / 1200);
   const computedPlaybackRate = Math.max(
     0.125,
-    Math.min(8, Math.pow(2, (safeMidiPitch - 60) / 12) * pitchRate),
+    Math.min(8, Math.pow(2, (safeMidiPitch - DEFAULT_SAMPLE_MIDI_PITCH) / 12) * pitchRate),
   );
   const playbackRate =
     Number.isFinite(overrides.playbackRate)
