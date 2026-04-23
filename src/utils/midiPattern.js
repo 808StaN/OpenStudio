@@ -1,14 +1,11 @@
 import { C5_PITCH, getChannelMergedNotes } from "./patternNotes";
+import { clamp } from "../store/utils";
 
 export const MIDI_PATTERN_DND_MIME = "application/x-openstudio-midi-pattern";
 
 const MIDI_PATTERN_TYPE = "openstudio-midi-pattern";
 const MIDI_PATTERN_VERSION = 1;
 const DEFAULT_NOTE_VELOCITY = 95;
-
-function clamp(value, min, max) {
-  return Math.max(min, Math.min(max, value));
-}
 
 function sanitizeNote(note) {
   if (!note) {

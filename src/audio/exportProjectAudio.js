@@ -19,10 +19,7 @@ const CUT_ITSELF_MAX_RETRIGGER_RELEASE_SEC = 0.016;
 const CUT_ITSELF_STOP_PADDING_SEC = 0.003;
 const CUT_ITSELF_RETRIGGER_FADE_IN_SEC = 0.0025;
 
-// Generic clamp utility used by render-time parameter normalization.
-function clamp(value, min, max) {
-  return Math.max(min, Math.min(max, value));
-}
+import { clamp } from "../store/utils";
 
 // Builds the offline mixer graph once; each scheduled source only plugs into insert inputs.
 function buildInsertInputNodes(audioCtx, mixerInserts) {

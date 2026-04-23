@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useRef } from "react";
 import Soundfont from "soundfont-player";
 import { useDispatch, useSelector } from "react-redux";
+import { clamp } from "../store/utils";
 import { applyVolumeEnvelopeToGain } from "./domain/envelope";
 import { getActiveFxState } from "./core/getActiveFxState";
 import { applyInsertSettings } from "./core/applyInsertSettings";
@@ -43,9 +44,7 @@ const CUT_ITSELF_RELEASE_SEC = 0.01;
 const CUT_ITSELF_STOP_PADDING_SEC = 0.003;
 
 // Generic clamp utility for scheduler-side parameter safety.
-function clamp(value, min, max) {
-  return Math.max(min, Math.min(max, value));
-}
+
 
 // Smoothly ramps a gain node to near-silence and returns safe stop time.
 function scheduleSmoothGainStop(param, atTime, releaseSec) {

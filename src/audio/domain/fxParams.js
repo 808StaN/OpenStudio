@@ -18,11 +18,9 @@ export const GRAPHIC_EQ_BAND_TYPES = [
   "highpass",
 ];
 
-const MAXIMIZER_MODES = ["irc-ll", "irc-i", "irc-ii", "irc-iii", "irc-iv"];
+import { clamp } from "../../store/utils";
 
-function clamp(value, min, max) {
-  return Math.max(min, Math.min(max, value));
-}
+const MAXIMIZER_MODES = ["irc-ll", "irc-i", "irc-ii", "irc-iii", "irc-iv"];
 
 export function getDefaultEqBandType(index) {
   // Outer points default to shelves, middle points to bell filters.

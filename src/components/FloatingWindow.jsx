@@ -8,10 +8,7 @@ import {
   setWindowRect,
   toggleWindowMaximize,
 } from "../store";
-
-function clamp(value, min, max) {
-  return Math.max(min, Math.min(max, value));
-}
+import { clamp } from "../store/utils";
 
 export function FloatingWindow({
   id,

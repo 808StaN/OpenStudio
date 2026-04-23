@@ -1,11 +1,9 @@
+import { clamp } from "../store/utils";
+
 const MIDI_HEADER_CHUNK = [0x4d, 0x54, 0x68, 0x64]; // MThd
 const MIDI_TRACK_CHUNK = [0x4d, 0x54, 0x72, 0x6b]; // MTrk
 const TICKS_PER_QUARTER = 480;
 const TICKS_PER_STEP = TICKS_PER_QUARTER / 4;
-
-function clamp(value, min, max) {
-  return Math.max(min, Math.min(max, value));
-}
 
 function encodeUint16(value) {
   return [(value >> 8) & 0xff, value & 0xff];

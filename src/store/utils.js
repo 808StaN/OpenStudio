@@ -19,6 +19,19 @@ import {
 } from "./constants";
 
 // ------------------------------------------------------------------
+// Generic helpers
+// ------------------------------------------------------------------
+
+/**
+ * Clamp a number between inclusive bounds.
+ * Defined once here and imported everywhere else so we never have to
+ * repeat this one-liner across the codebase again.
+ */
+export function clamp(value, min, max) {
+  return Math.max(min, Math.min(max, value));
+}
+
+// ------------------------------------------------------------------
 // UI / Theme
 // ------------------------------------------------------------------
 

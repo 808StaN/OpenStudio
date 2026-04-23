@@ -1,8 +1,6 @@
-export const MIDI_FILE_DND_MIME = "application/x-openstudio-midi-file";
+import { clamp } from "../store/utils";
 
-function clamp(value, min, max) {
-  return Math.max(min, Math.min(max, value));
-}
+export const MIDI_FILE_DND_MIME = "application/x-openstudio-midi-file";
 
 function readUint16(bytes, offset) {
   return (bytes[offset] << 8) | bytes[offset + 1];

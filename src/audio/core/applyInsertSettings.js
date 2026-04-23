@@ -6,14 +6,7 @@ import {
   sanitizeEqBandType,
   sanitizeMaximizerMode,
 } from "../domain/fxParams";
-
-/**
- * Simple numeric clamp used inside this module to avoid a cross-module
- * dependency for a one-liner.
- */
-function clamp(value, min, max) {
-  return Math.max(min, Math.min(max, value));
-}
+import { clamp } from "../../store/utils";
 
 /**
  * Applies all mixer-insert parameters (pan, stereo width, EQ, reverb,
