@@ -24,6 +24,7 @@ import {
   getPluginInstrumentCacheKey,
   routeInstrumentOutputToNode,
 } from "./usePluginInstruments";
+import { useVisualTail } from "./useVisualTail";
 
 const DEFAULT_NOTE_VELOCITY = 95;
 const PLUGIN_INSTRUMENT_GAIN_BOOST = 1.5;
@@ -77,9 +78,13 @@ export function useTransportScheduler({
   const scheduledAudioClipStartRef = useRef(new Map());
   const sampleSettingsPreviewMeterRafRef = useRef(null);
   const sampleSettingsPreviewMeterInsertIdRef = useRef(null);
-  const stopVisualTailUntilRef = useRef(0);
-  const stopVisualTailStartedAtRef = useRef(0);
-  const stopVisualTailStateRef = useRef(new Map());
+
+  const {
+    stopVisualTailUntilRef,
+    startVisualTail,
+    runVisualTailTick,
+    resetVisualTail,
+  } = useVisualTail();
 
   useEffect(
     function () {
@@ -815,134 +820,37 @@ export function useTransportScheduler({
             rafIdRef.current = null;
           }
           resetMeterState();
-          stopVisualTailUntilRef.current = 0;
+          resetVisualTail();
           return function () {
             removeSampleSettingsPreviewListeners();
           };
         }
 
         const nowPerf = performance.now();
-        if (stopVisualTailUntilRef.current <= nowPerf) {
-          const waveformTailDurationMs = 2500;
-          stopVisualTailStartedAtRef.current = nowPerf;
-          stopVisualTailUntilRef.current = nowPerf + waveformTailDurationMs;
-          stopVisualTailStateRef.current = new Map();
-          mixerSettingsRef.current.forEach(function (insert) {
-            const insertId = insert.id;
-            const outDb = Number(
-              lastMaximizerOutputDbRef.current.get(insertId) || -96,
-            );
-            const stereo =
-              lastMaximizerStereoMeterRef.current.get(insertId) || {
-                leftVolumeDb: -96,
-                leftReductionDb: 0,
-                rightReductionDb: 0,
-                rightVolumeDb: -96,
-              };
-            const lastWaveform = lastMeterWaveformRef.current.get(insertId);
-            stopVisualTailStateRef.current.set(insertId, {
-              meter: Number(lastMeterLevelsRef.current.get(insertId) || 0),
-              reduction: Number(
-                lastMaximizerReductionRef.current.get(insertId) || 0,
-              ),
-              outDb,
-              stereo,
-              initialMeter: Number(
-                lastMeterLevelsRef.current.get(insertId) || 0,
-              ),
-              initialReduction: Number(
-                lastMaximizerReductionRef.current.get(insertId) || 0,
-              ),
-              initialOutDb: outDb,
-              initialLeftDb: Number(stereo.leftVolumeDb || -96),
-              initialRightDb: Number(stereo.rightVolumeDb || -96),
-              initialLeftReduction: Number(stereo.leftReductionDb || 0),
-              initialRightReduction: Number(stereo.rightReductionDb || 0),
-              waveform: Array.isArray(lastWaveform)
-                ? lastWaveform.slice(0, 220)
-                : Array.from({ length: 220 }).map(function () {
-                    return 0;
-                  }),
-            });
+        if (
+          !stopVisualTailUntilRef.current ||
+          stopVisualTailUntilRef.current <= nowPerf
+        ) {
+          startVisualTail(nowPerf, mixerSettingsRef, {
+            lastMeterLevelsRef,
+            lastMeterWaveformRef,
+            lastMaximizerReductionRef,
+            lastMaximizerOutputDbRef,
+            lastMaximizerStereoMeterRef,
           });
         }
 
-        const tickStopVisuals = function () {
-          const nowCtx = audioCtxRef.current;
-          if (!nowCtx) {
-            resetMeterState();
-            stopVisualTailUntilRef.current = 0;
-            stopVisualTailStartedAtRef.current = 0;
-            stopVisualTailStateRef.current.clear();
-            rafIdRef.current = null;
-            return;
-          }
-
-          const nowPerfTick = performance.now();
-          const tailDuration = Math.max(
-            1,
-            stopVisualTailUntilRef.current -
-              stopVisualTailStartedAtRef.current,
-          );
-          const waveformProgress = clamp(
-            (nowPerfTick - stopVisualTailStartedAtRef.current) / tailDuration,
-            0,
-            1,
-          );
-          const barProgress = clamp(
-            (nowPerfTick - stopVisualTailStartedAtRef.current) / 900,
-            0,
-            1,
-          );
-          const fade = 1 - barProgress;
-
-          mixerSettingsRef.current.forEach(function (insert) {
-            const state = stopVisualTailStateRef.current.get(insert.id);
-            if (!state) {
-              return;
-            }
-            state.meter = state.initialMeter * fade;
-            state.reduction = state.initialReduction * fade;
-            state.outDb =
-              state.initialOutDb + (-96 - state.initialOutDb) * barProgress;
-            state.stereo = {
-              leftVolumeDb:
-                state.initialLeftDb +
-                (-96 - state.initialLeftDb) * barProgress,
-              leftReductionDb: state.initialLeftReduction * fade,
-              rightReductionDb: state.initialRightReduction * fade,
-              rightVolumeDb:
-                state.initialRightDb +
-                (-96 - state.initialRightDb) * barProgress,
-            };
-            state.waveform = [0, 0].concat(state.waveform.slice(0, 218));
-
-            dispatch(
-              setInsertMeter({
-                insertId: insert.id,
-                meter: state.meter,
-                waveform: state.waveform,
-                maximizerReduction: state.reduction,
-                maximizerOutputDb: state.outDb,
-                maximizerStereoMeter: state.stereo,
-              }),
-            );
-          });
-
-          if (waveformProgress < 1) {
-            rafIdRef.current = requestAnimationFrame(tickStopVisuals);
-            return;
-          }
-
-          resetMeterState();
-          stopVisualTailUntilRef.current = 0;
-          stopVisualTailStartedAtRef.current = 0;
-          stopVisualTailStateRef.current.clear();
-          rafIdRef.current = null;
-        };
-
         if (!rafIdRef.current) {
-          rafIdRef.current = requestAnimationFrame(tickStopVisuals);
+          rafIdRef.current = requestAnimationFrame(function () {
+            runVisualTailTick({
+              nowPerfTick: performance.now(),
+              audioCtxRef,
+              mixerSettingsRef,
+              resetMeterState,
+              dispatch,
+              rafIdRef,
+            });
+          });
         }
 
         return function () {
@@ -954,7 +862,7 @@ export function useTransportScheduler({
         };
       }
 
-      stopVisualTailUntilRef.current = 0;
+      resetVisualTail();
       if (audioCtx.state === "suspended") {
         void audioCtx.resume();
       }
