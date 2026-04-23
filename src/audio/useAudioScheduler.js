@@ -2,6 +2,7 @@ import { useCallback, useEffect, useRef } from "react";
 import Soundfont from "soundfont-player";
 import { useDispatch, useSelector } from "react-redux";
 import { applyVolumeEnvelopeToGain } from "./domain/envelope";
+import { getActiveFxState } from "./core/getActiveFxState";
 import {
   buildSoftClipCurve,
   FX_EFFECT_GRAPHIC_EQ,
@@ -68,44 +69,7 @@ function scheduleSmoothGainStop(param, atTime, releaseSec) {
   return stopAt;
 }
 
-// Reads active insert effects and normalizes all effect params for runtime usage.
-function getActiveFxState(insert) {
-  const fxSlots = Array.isArray(insert?.fxSlots) ? insert.fxSlots : [];
-  const state = {
-    eqEnabled: false,
-    eqParams: getSafeGraphicEqParams(null),
-    reverbEnabled: false,
-    reverbParams: getSafeReverbParams(null),
-    maximizerEnabled: false,
-    maximizerParams: getSafeMaximizerParams(null),
-  };
 
-  fxSlots.forEach(function (slot) {
-    if (!slot?.enabled) {
-      return;
-    }
-
-    const effectType = String(slot.effectType || "none");
-    if (effectType === FX_EFFECT_GRAPHIC_EQ) {
-      state.eqEnabled = true;
-      state.eqParams = getSafeGraphicEqParams(slot.params);
-      return;
-    }
-
-    if (effectType === FX_EFFECT_REVERB) {
-      state.reverbEnabled = true;
-      state.reverbParams = getSafeReverbParams(slot.params);
-      return;
-    }
-
-    if (effectType === FX_EFFECT_MAXIMIZER) {
-      state.maximizerEnabled = true;
-      state.maximizerParams = getSafeMaximizerParams(slot.params);
-    }
-  });
-
-  return state;
-}
 
 function areMixerSettingsEqual(prev, next) {
   if (prev === next) {

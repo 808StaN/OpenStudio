@@ -2,17 +2,12 @@ import Soundfont from "soundfont-player";
 import { applyVolumeEnvelopeToGain } from "./domain/envelope";
 import {
   buildSoftClipCurve,
-  FX_EFFECT_GRAPHIC_EQ,
-  FX_EFFECT_MAXIMIZER,
-  FX_EFFECT_REVERB,
   getDefaultEqBandType,
-  getSafeGraphicEqParams,
-  getSafeMaximizerParams,
-  getSafeReverbParams,
   GRAPHIC_EQ_DEFAULT_POINT_FREQUENCIES,
   sanitizeEqBandType,
   sanitizeMaximizerMode,
 } from "./domain/fxParams";
+import { getActiveFxState } from "./core/getActiveFxState";
 import { DEFAULT_SAMPLE_MIDI_PITCH, midiPitchToPlaybackRate } from "./domain/pitch";
 import { getSafeSampleSettings } from "./domain/sampleSettings";
 import { getTimeStretchProfile } from "./domain/timeStretch";
@@ -30,45 +25,6 @@ const CUT_ITSELF_RETRIGGER_FADE_IN_SEC = 0.0025;
 // Generic clamp utility used by render-time parameter normalization.
 function clamp(value, min, max) {
   return Math.max(min, Math.min(max, value));
-}
-
-// Resolves enabled insert effects into a compact, sanitized render snapshot.
-function getActiveFxState(insert) {
-  const fxSlots = Array.isArray(insert?.fxSlots) ? insert.fxSlots : [];
-  const state = {
-    eqEnabled: false,
-    eqParams: getSafeGraphicEqParams(null),
-    reverbEnabled: false,
-    reverbParams: getSafeReverbParams(null),
-    maximizerEnabled: false,
-    maximizerParams: getSafeMaximizerParams(null),
-  };
-
-  fxSlots.forEach(function (slot) {
-    if (!slot?.enabled) {
-      return;
-    }
-
-    const effectType = String(slot.effectType || "none");
-    if (effectType === FX_EFFECT_GRAPHIC_EQ) {
-      state.eqEnabled = true;
-      state.eqParams = getSafeGraphicEqParams(slot.params);
-      return;
-    }
-
-    if (effectType === FX_EFFECT_REVERB) {
-      state.reverbEnabled = true;
-      state.reverbParams = getSafeReverbParams(slot.params);
-      return;
-    }
-
-    if (effectType === FX_EFFECT_MAXIMIZER) {
-      state.maximizerEnabled = true;
-      state.maximizerParams = getSafeMaximizerParams(slot.params);
-    }
-  });
-
-  return state;
 }
 
 // Builds the offline mixer graph once; each scheduled source only plugs into insert inputs.
