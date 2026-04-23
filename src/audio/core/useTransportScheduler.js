@@ -58,6 +58,11 @@ export function useTransportScheduler({
   stopAllActiveSamples,
   updateMixerMeters,
   resetMeterState,
+  lastMeterLevelsRef,
+  lastMeterWaveformRef,
+  lastMaximizerReductionRef,
+  lastMaximizerOutputDbRef,
+  lastMaximizerStereoMeterRef,
   channelsRef,
   activePatternRef,
   patternsRef,
@@ -75,11 +80,6 @@ export function useTransportScheduler({
   const stopVisualTailUntilRef = useRef(0);
   const stopVisualTailStartedAtRef = useRef(0);
   const stopVisualTailStateRef = useRef(new Map());
-  const lastMeterLevelsRef = useRef(new Map());
-  const lastMeterWaveformRef = useRef(new Map());
-  const lastMaximizerReductionRef = useRef(new Map());
-  const lastMaximizerOutputDbRef = useRef(new Map());
-  const lastMaximizerStereoMeterRef = useRef(new Map());
 
   useEffect(
     function () {

@@ -126,7 +126,15 @@ export function useAudioScheduler() {
     String(fxEditorTarget?.insertId || selectedInsertId || ""),
   );
 
-  const { updateMixerMeters, resetMeterState } = useMixerMeters(
+  const {
+    updateMixerMeters,
+    resetMeterState,
+    lastMeterLevelsRef,
+    lastMeterWaveformRef,
+    lastMaximizerReductionRef,
+    lastMaximizerOutputDbRef,
+    lastMaximizerStereoMeterRef,
+  } = useMixerMeters(
     dispatch,
     mixerGraphRef,
     mixerSettingsRef,
@@ -295,6 +303,11 @@ export function useAudioScheduler() {
     stopAllActiveSamples,
     updateMixerMeters,
     resetMeterState,
+    lastMeterLevelsRef,
+    lastMeterWaveformRef,
+    lastMaximizerReductionRef,
+    lastMaximizerOutputDbRef,
+    lastMaximizerStereoMeterRef,
     channelsRef,
     activePatternRef,
     patternsRef,

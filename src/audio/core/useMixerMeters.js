@@ -595,5 +595,11 @@ export function useMixerMeters(
   return {
     updateMixerMeters,
     resetMeterState,
+    lastMeterLevelsRef,
+    lastMeterSpectrumRef,
+    lastMeterWaveformRef,
+    lastMaximizerReductionRef,
+    lastMaximizerOutputDbRef,
+    lastMaximizerStereoMeterRef,
   };
 }
