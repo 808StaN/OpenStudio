@@ -2,6 +2,7 @@ import { useCallback, useEffect, useRef } from "react";
 import Soundfont from "soundfont-player";
 import { useDispatch, useSelector } from "react-redux";
 import { clamp } from "../store/utils";
+import { useAudioContext } from "./core/useAudioContext";
 import { getActiveFxState } from "./core/getActiveFxState";
 import { applyInsertSettings } from "./core/applyInsertSettings";
 import { createMixerInsertNodes } from "./core/createMixerInsertNodes";
@@ -370,13 +371,14 @@ export function useAudioScheduler() {
     return state.daw.ui.fxEditorTarget;
   });
 
-  const audioCtxRef = useRef(null);
   const rafIdRef = useRef(null);
   const nextNoteTimeRef = useRef(0);
   const stepRef = useRef(0);
   const startedAtRef = useRef(0);
   const sampleBufferCacheRef = useRef(new Map());
   const sampleLoadPromiseRef = useRef(new Map());
+  const { audioCtxRef, ensureContext } = useAudioContext();
+
   const sampleLoadFailedRef = useRef(new Set());
   const sampleNormalizeGainRef = useRef(new WeakMap());
   const stretchedSampleBufferCacheRef = useRef(new WeakMap());
@@ -422,13 +424,6 @@ export function useAudioScheduler() {
     },
     [fxEditorTarget?.insertId, selectedInsertId],
   );
-
-  const ensureContext = useCallback(function () {
-    if (!audioCtxRef.current) {
-      audioCtxRef.current = new AudioContext();
-    }
-    return audioCtxRef.current;
-  }, []);
 
   const loadPluginInstrument = useCallback(
     async function (pluginRef, channelId, destinationNode) {
