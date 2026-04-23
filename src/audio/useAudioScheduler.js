@@ -2,10 +2,11 @@ import { useCallback, useEffect, useRef } from "react";
 import Soundfont from "soundfont-player";
 import { useDispatch, useSelector } from "react-redux";
 import { clamp } from "../store/utils";
-import { applyVolumeEnvelopeToGain } from "./domain/envelope";
 import { getActiveFxState } from "./core/getActiveFxState";
 import { applyInsertSettings } from "./core/applyInsertSettings";
 import { createMixerInsertNodes } from "./core/createMixerInsertNodes";
+import { computeSamplePlaybackParams } from "./core/computeSamplePlaybackParams";
+import { createSamplePlaybackNodes } from "./core/createSamplePlaybackNodes";
 import {
   FX_EFFECT_GRAPHIC_EQ,
   FX_EFFECT_MAXIMIZER,
@@ -1625,11 +1626,6 @@ export function useAudioScheduler() {
         midiPitch,
         noteLengthSteps,
       ) {
-        const source = audioCtx.createBufferSource();
-        const gain = audioCtx.createGain();
-        const envelopeGain = audioCtx.createGain();
-        const panner = audioCtx.createStereoPanner();
-
         const settings = getSafeSampleSettings(channel.sampleSettings);
 
         const getNormalizeGain = function () {
@@ -1667,6 +1663,10 @@ export function useAudioScheduler() {
           return normalized;
         };
 
+        if (settings.cutItself) {
+          stopActiveChannelSamples(channel.id, time);
+        }
+
         const safeMidiPitch = Number.isFinite(midiPitch)
           ? midiPitch
           : DEFAULT_SAMPLE_MIDI_PITCH;
@@ -1685,65 +1685,28 @@ export function useAudioScheduler() {
           transport.bpm,
           basePlaybackRate,
         );
-        const playbackRate = stretchProfile.playbackRate;
 
-        if (settings.cutItself) {
-          stopActiveChannelSamples(channel.id, time);
-        }
-
-        const naturalPlayableDuration = Math.max(
-          0.01,
-          sampleReadDuration / playbackRate,
-        );
-        const samplePlayableDuration = Math.max(
-          0.01,
-          stretchProfile.useGranularStretch
-            ? stretchProfile.targetDurationSec
-            : naturalPlayableDuration,
-        );
-        const noteGateDuration = Math.max(
-          0.01,
-          Number(noteLengthSteps || 1) * sixteenth,
-        );
-        const shouldApplyEnvelope = Boolean(settings.envEnabled);
-        const envReleaseSec = shouldApplyEnvelope
-          ? Math.max(0, Number(settings.envReleaseMs ?? 0) / 1000)
-          : 0;
-        const sourcePlayDuration = shouldApplyEnvelope
-          ? Math.max(
-              0.01,
-              Math.min(
-                samplePlayableDuration,
-                noteGateDuration + envReleaseSec,
-              ),
-            )
-          : samplePlayableDuration;
-        const envelopeGateDuration = shouldApplyEnvelope
-          ? Math.max(0.01, Math.min(noteGateDuration, sourcePlayDuration))
-          : sourcePlayDuration;
-        const fadeInSec = sourcePlayDuration * (settings.fadeInPct / 100);
-        const shapedFadeOutPct = Math.pow(settings.fadeOutPct / 100, 0.7) * 100;
-        const fadeOutSec = sourcePlayDuration * (shapedFadeOutPct / 100);
-        const fadeTotal = fadeInSec + fadeOutSec;
-        const fadeScale =
-          fadeTotal > sourcePlayDuration * 0.98
-            ? (sourcePlayDuration * 0.98) / fadeTotal
-            : 1;
-        const finalFadeIn = fadeInSec * fadeScale;
-        const finalFadeOut = fadeOutSec * fadeScale;
-        const finalGain = Math.max(0, gainAmount * getNormalizeGain());
-        const sampleStopAt = time + sourcePlayDuration;
-        const fadeOutStart = Math.max(time, sampleStopAt - finalFadeOut);
-        const requiredBufferDuration = Math.max(
-          0.01,
-          sourcePlayDuration * playbackRate,
+        const normalizeGain = settings.normalize ? getNormalizeGain() : null;
+        const voiceParams = computeSamplePlaybackParams(
+          sampleBuffer,
+          settings,
+          midiPitch,
+          noteLengthSteps,
+          sixteenth,
+          normalizeGain,
+          {
+            playbackRate: stretchProfile.playbackRate,
+            samplePlayableDuration: stretchProfile.useGranularStretch
+              ? stretchProfile.targetDurationSec
+              : undefined,
+          },
         );
 
         let scheduledBuffer = sampleBuffer;
         if (stretchProfile.useGranularStretch) {
           const desiredBufferedDuration = Math.max(
             0.01,
-            sourcePlayDuration * playbackRate,
+            voiceParams.sourcePlayDuration * voiceParams.playbackRate,
           );
           const stretchFactor = clamp(
             sampleReadDuration / desiredBufferedDuration,
@@ -1786,39 +1749,17 @@ export function useAudioScheduler() {
           }
         }
 
-        source.buffer = scheduledBuffer;
-
-        source.playbackRate.setValueAtTime(playbackRate, time);
-        if (finalFadeIn > 0.001) {
-          gain.gain.setValueAtTime(MIN_AUDIO_GAIN, time);
-          gain.gain.linearRampToValueAtTime(finalGain, time + finalFadeIn);
-        } else {
-          gain.gain.setValueAtTime(finalGain, time);
-        }
-
-        gain.gain.setValueAtTime(finalGain, fadeOutStart);
-        if (finalFadeOut > 0.001) {
-          gain.gain.exponentialRampToValueAtTime(MIN_AUDIO_GAIN, sampleStopAt);
-        } else {
-          gain.gain.setValueAtTime(MIN_AUDIO_GAIN, sampleStopAt);
-        }
-
-        panner.pan.setValueAtTime(Math.max(-1, Math.min(1, panValue)), time);
-
-        source.connect(gain);
-        gain.connect(envelopeGain);
-        if (shouldApplyEnvelope) {
-          applyVolumeEnvelopeToGain(
-            envelopeGain.gain,
-            time,
-            envelopeGateDuration,
-            settings,
-          );
-        } else {
-          envelopeGain.gain.setValueAtTime(1, time);
-        }
-        envelopeGain.connect(panner);
-        panner.connect(outputNode);
+        const finalGain = Math.max(0, gainAmount * (normalizeGain || 1));
+        const { source, gain } = createSamplePlaybackNodes(
+          audioCtx,
+          scheduledBuffer,
+          voiceParams,
+          outputNode,
+          time,
+          panValue,
+          finalGain,
+          settings,
+        );
 
         const channelVoices =
           activeSampleVoicesRef.current.get(channel.id) || new Set();
@@ -1835,12 +1776,16 @@ export function useAudioScheduler() {
           }
         };
 
+        const requiredBufferDuration = Math.max(
+          0.01,
+          voiceParams.sourcePlayDuration * voiceParams.playbackRate,
+        );
         source.start(
           time,
           0,
           Math.min(scheduledBuffer.duration, requiredBufferDuration),
         );
-        source.stop(sampleStopAt + 0.005);
+        source.stop(time + voiceParams.sourcePlayDuration + 0.005);
       };
 
       const schedulePlaylistAudioClip = function (

@@ -1,11 +1,12 @@
 import Soundfont from "soundfont-player";
-import { applyVolumeEnvelopeToGain } from "./domain/envelope";
 import {
   GRAPHIC_EQ_DEFAULT_POINT_FREQUENCIES,
 } from "./domain/fxParams";
 import { applyInsertSettings } from "./core/applyInsertSettings";
 import { createMixerInsertNodes } from "./core/createMixerInsertNodes";
-import { DEFAULT_SAMPLE_MIDI_PITCH, midiPitchToPlaybackRate } from "./domain/pitch";
+import { computeSamplePlaybackParams } from "./core/computeSamplePlaybackParams";
+import { createSamplePlaybackNodes } from "./core/createSamplePlaybackNodes";
+import { DEFAULT_SAMPLE_MIDI_PITCH } from "./domain/pitch";
 import { getSafeSampleSettings } from "./domain/sampleSettings";
 import { getTimeStretchProfile } from "./domain/timeStretch";
 import { getPluginInstrument } from "../data/pluginInstruments";
@@ -693,123 +694,54 @@ export async function renderPlaylistArrangementToFile(options) {
       return;
     }
 
-    const source = audioCtx.createBufferSource();
-    const gain = audioCtx.createGain();
-    const envelopeGain = audioCtx.createGain();
-    const panner = audioCtx.createStereoPanner();
-
-    const safeMidiPitch = Number.isFinite(event.midiPitch)
-      ? event.midiPitch
-      : DEFAULT_SAMPLE_MIDI_PITCH;
-    const pitchRate = Math.pow(2, Number(settings.pitchCents || 0) / 1200);
-    const playbackRate = clamp(
-      midiPitchToPlaybackRate(safeMidiPitch) * pitchRate,
-      0.125,
-      8,
+    const normalizeGain = settings.normalize
+      ? getNormalizeGain(sampleBuffer)
+      : null;
+    const voiceParams = computeSamplePlaybackParams(
+      sampleBuffer,
+      settings,
+      event.midiPitch,
+      noteLengthSteps,
+      sixteenth,
+      normalizeGain,
     );
-
-    const sampleReadDuration = Math.max(
-      0.01,
-      sampleBuffer.duration * (settings.lengthPct / 100),
-    );
-    const samplePlayableDuration = Math.max(
-      0.01,
-      sampleReadDuration / playbackRate,
-    );
-    const noteGateDuration = Math.max(0.01, noteLengthSteps * sixteenth);
-    const shouldApplyEnvelope = Boolean(settings.envEnabled);
-    const envReleaseSec = shouldApplyEnvelope
-      ? Math.max(0, Number(settings.envReleaseMs ?? 0) / 1000)
-      : 0;
-    const sourcePlayDuration = shouldApplyEnvelope
-      ? Math.max(
-          0.01,
-          Math.min(samplePlayableDuration, noteGateDuration + envReleaseSec),
-        )
-      : samplePlayableDuration;
-    const envelopeGateDuration = shouldApplyEnvelope
-      ? Math.max(0.01, Math.min(noteGateDuration, sourcePlayDuration))
-      : sourcePlayDuration;
-
-    const fadeInSec = sourcePlayDuration * (settings.fadeInPct / 100);
-    const shapedFadeOutPct = Math.pow(settings.fadeOutPct / 100, 0.7) * 100;
-    const fadeOutSec = sourcePlayDuration * (shapedFadeOutPct / 100);
-    const fadeTotal = fadeInSec + fadeOutSec;
-    const fadeScale =
-      fadeTotal > sourcePlayDuration * 0.98
-        ? (sourcePlayDuration * 0.98) / Math.max(0.0001, fadeTotal)
-        : 1;
-    const finalFadeIn = fadeInSec * fadeScale;
-    const finalFadeOut = fadeOutSec * fadeScale;
-    const finalGain = Math.max(
-      0,
-      channelBaseGain *
-        (settings.normalize ? getNormalizeGain(sampleBuffer) : 1),
-    );
-    const sampleStopAt = noteStartTime + sourcePlayDuration;
-    const fadeOutStart = Math.max(noteStartTime, sampleStopAt - finalFadeOut);
 
     let didRetriggerCut = false;
     if (settings.cutItself && channelId) {
       didRetriggerCut = stopActiveChannelSamples(channelId, noteStartTime);
     }
 
-    source.buffer = sampleBuffer;
-    source.playbackRate.setValueAtTime(playbackRate, noteStartTime);
-
-    const retriggerFadeIn = didRetriggerCut
-      ? Math.max(finalFadeIn, CUT_ITSELF_RETRIGGER_FADE_IN_SEC)
-      : finalFadeIn;
-
-    if (retriggerFadeIn > 0.001) {
-      gain.gain.setValueAtTime(0.0001, noteStartTime);
-      gain.gain.linearRampToValueAtTime(
-        finalGain,
-        noteStartTime + retriggerFadeIn,
-      );
-    } else {
-      gain.gain.setValueAtTime(finalGain, noteStartTime);
-    }
-
-    gain.gain.setValueAtTime(finalGain, fadeOutStart);
-    if (finalFadeOut > 0.001) {
-      gain.gain.exponentialRampToValueAtTime(0.0001, sampleStopAt);
-    } else {
-      gain.gain.setValueAtTime(0.0001, sampleStopAt);
-    }
-
-    panner.pan.setValueAtTime(
-      clamp(Number(channel.pan || 0), -1, 1),
-      noteStartTime,
+    const finalGain = Math.max(
+      0,
+      channelBaseGain * (normalizeGain || 1),
     );
 
-    source.connect(gain);
-    gain.connect(envelopeGain);
-
-    if (shouldApplyEnvelope) {
-      applyVolumeEnvelopeToGain(
-        envelopeGain.gain,
-        noteStartTime,
-        envelopeGateDuration,
-        settings,
-      );
-    } else {
-      envelopeGain.gain.setValueAtTime(1, noteStartTime);
-    }
-
-    envelopeGain.connect(panner);
-    panner.connect(insertInput);
+    const { source, gain } = createSamplePlaybackNodes(
+      audioCtx,
+      sampleBuffer,
+      voiceParams,
+      insertInput,
+      noteStartTime,
+      clamp(Number(channel.pan || 0), -1, 1),
+      finalGain,
+      settings,
+      {
+        retriggerFadeInSec: didRetriggerCut
+          ? CUT_ITSELF_RETRIGGER_FADE_IN_SEC
+          : 0,
+      },
+    );
 
     source.start(
       noteStartTime,
       0,
       Math.min(
-        sampleReadDuration,
+        voiceParams.sampleReadDuration,
         sampleBuffer.duration,
-        sourcePlayDuration * playbackRate,
+        voiceParams.sourcePlayDuration * voiceParams.playbackRate,
       ),
     );
-    source.stop(sampleStopAt + 0.005);
+    source.stop(noteStartTime + voiceParams.sourcePlayDuration + 0.005);
 
     if (channelId) {
       const channelVoices =
@@ -821,7 +753,10 @@ export async function renderPlaylistArrangementToFile(options) {
       const voice = {
         source,
         gain,
-        cutReleaseSec: Math.max(CUT_ITSELF_RELEASE_SEC, finalFadeOut),
+        cutReleaseSec: Math.max(
+          CUT_ITSELF_RELEASE_SEC,
+          voiceParams.finalFadeOut,
+        ),
       };
 
       channelVoices.add(voice);
