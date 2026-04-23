@@ -2,6 +2,7 @@ import { useCallback, useEffect, useRef } from "react";
 import { useDispatch, useSelector } from "react-redux";
 import { clamp } from "../store/utils";
 import { useAudioContext } from "./core/useAudioContext";
+import { useSampleBuffers } from "./core/useSampleBuffers";
 import {
   usePluginInstruments,
   getPluginInstrumentCacheKey,
@@ -344,11 +345,14 @@ export function useAudioScheduler() {
   const nextNoteTimeRef = useRef(0);
   const stepRef = useRef(0);
   const startedAtRef = useRef(0);
-  const sampleBufferCacheRef = useRef(new Map());
-  const sampleLoadPromiseRef = useRef(new Map());
   const { audioCtxRef, ensureContext } = useAudioContext();
 
-  const sampleLoadFailedRef = useRef(new Set());
+  const {
+    sampleBufferCacheRef,
+    sampleLoadFailedRef,
+    loadSampleBuffer,
+  } = useSampleBuffers(ensureContext);
+
   const sampleNormalizeGainRef = useRef(new WeakMap());
   const stretchedSampleBufferCacheRef = useRef(new WeakMap());
   const activeSampleVoicesRef = useRef(new Map());
@@ -396,52 +400,6 @@ export function useAudioScheduler() {
       );
     },
     [fxEditorTarget?.insertId, selectedInsertId],
-  );
-
-  const loadSampleBuffer = useCallback(
-    async function (sampleRef) {
-      const sampleUrl = toSafeSampleUrl(sampleRef);
-      if (!sampleUrl) {
-        return null;
-      }
-
-      const cached = sampleBufferCacheRef.current.get(sampleUrl);
-      if (cached) {
-        return cached;
-      }
-
-      const pending = sampleLoadPromiseRef.current.get(sampleUrl);
-      if (pending) {
-        return pending;
-      }
-
-      const request = (async function () {
-        const audioCtx = ensureContext();
-        const response = await fetch(sampleUrl);
-        if (!response.ok) {
-          throw new Error("Sample request failed");
-        }
-
-        const data = await response.arrayBuffer();
-        const decodedBuffer = await audioCtx.decodeAudioData(data.slice(0));
-
-        sampleBufferCacheRef.current.set(sampleUrl, decodedBuffer);
-        sampleLoadFailedRef.current.delete(sampleUrl);
-        return decodedBuffer;
-      })();
-
-      sampleLoadPromiseRef.current.set(sampleUrl, request);
-
-      try {
-        return await request;
-      } catch {
-        sampleLoadFailedRef.current.add(sampleUrl);
-        return null;
-      } finally {
-        sampleLoadPromiseRef.current.delete(sampleUrl);
-      }
-    },
-    [ensureContext],
   );
 
   const ensureMixerGraph = useCallback(
