@@ -1,15 +1,17 @@
 import { useCallback, useEffect, useRef } from "react";
 import { getPluginInstrument } from "../../data/pluginInstruments";
-import {
-  clamp,
-  midiPitchToPlaybackRate,
-} from "./pianoRollUtils";
+import { clamp } from "./pianoRollUtils";
 import {
   DEFAULT_SAMPLE_MIDI_PITCH,
   PITCH_MAX,
   PITCH_MIN,
 } from "./pianoRollConstants";
 import { usePianoRollPreviewLoaders } from "./usePianoRollPreviewLoaders";
+import {
+  createSamplePreviewVoice,
+  resolvePluginPreviewParams,
+  resolveSamplePreviewParams,
+} from "./pianoRollPreviewVoiceUtils";
 
 // One place for all Piano Roll preview audio concerns:
 // - creating/resuming AudioContext
@@ -171,26 +173,18 @@ export const usePianoRollPreviewAudio = function ({ activeChannel }) {
             return;
           }
 
-          const transposedPitch = clamp(
-            normalizedPitch + Number(settings.pitchCents || 0) / 100,
-            0,
-            127,
-          );
-          const attackSec = Math.max(
-            0,
-            Math.min(0.4, Number(settings.attackMs || 0) / 1000),
-          );
-          const releaseSec = Math.max(
-            0.01,
-            Math.min(1, Number(settings.releaseMs ?? 420) / 1000),
-          );
+          const pluginPreview = resolvePluginPreviewParams({
+            normalizedPitch,
+            settings,
+            activeChannel,
+          });
 
-          const node = instrument.play(transposedPitch, context.currentTime, {
+          const node = instrument.play(pluginPreview.transposedPitch, context.currentTime, {
             duration: 120,
-            gain: Math.max(0.04, Number(activeChannel.volume ?? 0.7) * 0.24),
-            pan: clamp(Number(activeChannel.pan || 0), -1, 1),
-            attack: attackSec,
-            release: releaseSec,
+            gain: pluginPreview.gain,
+            pan: pluginPreview.pan,
+            attack: pluginPreview.attackSec,
+            release: pluginPreview.releaseSec,
             destination: context.destination,
           });
 
@@ -213,77 +207,28 @@ export const usePianoRollPreviewAudio = function ({ activeChannel }) {
           return;
         }
 
-        const source = context.createBufferSource();
-        const gain = context.createGain();
-        const panner = context.createStereoPanner();
-
-        const playbackRate = clamp(
-          midiPitchToPlaybackRate(normalizedPitch) *
-            Math.pow(2, Number(settings.pitchCents || 0) / 1200),
-          0.125,
-          8,
-        );
-        const readDuration = Math.max(
-          0.01,
-          sampleBuffer.duration *
-            (Math.max(5, Math.min(100, Number(settings.lengthPct ?? 100))) /
-              100),
-        );
-        const normalizeGain = settings.normalize
-          ? getNormalizeGainForBuffer(sampleBuffer)
-          : 1;
-        const targetGain = Math.max(
-          0.03,
-          Math.min(
-            1.4,
-            Number(activeChannel.volume ?? 0.7) * 0.58 * normalizeGain,
-          ),
-        );
-        const attackSec = Math.max(
-          0,
-          Math.min(0.4, Number(settings.attackMs ?? 8) / 1000),
-        );
-        // Keep preview release short to avoid overlap "echo" on quick clicks.
-        const releaseSec = Math.max(
-          0.01,
-          Math.min(0.08, Number(settings.releaseMs ?? 420) / 1000),
-        );
-
-        source.buffer = sampleBuffer;
-        source.playbackRate.setValueAtTime(playbackRate, context.currentTime);
-        // Piano Roll preview should be one-shot while pressed, not looped.
-        source.loop = false;
-
-        if (attackSec > 0.001) {
-          gain.gain.setValueAtTime(0.0001, context.currentTime);
-          gain.gain.linearRampToValueAtTime(
-            targetGain,
-            context.currentTime + attackSec,
-          );
-        } else {
-          gain.gain.setValueAtTime(targetGain, context.currentTime);
-        }
-
-        panner.pan.setValueAtTime(
-          clamp(Number(activeChannel.pan || 0), -1, 1),
-          context.currentTime,
-        );
-
-        source.connect(gain);
-        gain.connect(panner);
-        panner.connect(context.destination);
-
-        source.start(
-          context.currentTime,
-          0,
-          Math.min(readDuration, sampleBuffer.duration),
-        );
+        const samplePreview = resolveSamplePreviewParams({
+          normalizedPitch,
+          settings,
+          activeChannel,
+          sampleBuffer,
+          getNormalizeGainForBuffer,
+        });
+        const { source, gain } = createSamplePreviewVoice({
+          context,
+          sampleBuffer,
+          playbackRate: samplePreview.playbackRate,
+          readDuration: samplePreview.readDuration,
+          targetGain: samplePreview.targetGain,
+          attackSec: samplePreview.attackSec,
+          pan: samplePreview.pan,
+        });
 
         previewVoiceRef.current = {
           type: "sample",
           source,
           gain,
-          releaseSec,
+          releaseSec: samplePreview.releaseSec,
         };
         previewPitchRef.current = normalizedPitch;
         previewChannelKeyRef.current = channelPreviewKey;
