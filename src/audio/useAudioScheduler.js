@@ -5,6 +5,7 @@ import { useAudioContext } from "./core/useAudioContext";
 import { useSampleBuffers } from "./core/useSampleBuffers";
 import { useMixerGraph, areMixerSettingsEqual } from "./core/useMixerGraph";
 import { useMixerMeters } from "./core/useMixerMeters";
+import { useAudioVoices } from "./core/useAudioVoices";
 import {
   usePluginInstruments,
   getPluginInstrumentCacheKey,
@@ -37,33 +38,6 @@ const SAMPLE_SETTINGS_PREVIEW_PLAY_EVENT =
   "openstudio:sample-settings-preview-play";
 const SAMPLE_SETTINGS_PREVIEW_STOP_EVENT =
   "openstudio:sample-settings-preview-stop";
-const MIN_AUDIO_GAIN = 0.0001;
-const CUT_ITSELF_RELEASE_SEC = 0.01;
-const CUT_ITSELF_STOP_PADDING_SEC = 0.003;
-
-// Generic clamp utility for scheduler-side parameter safety.
-
-
-// Smoothly ramps a gain node to near-silence and returns safe stop time.
-function scheduleSmoothGainStop(param, atTime, releaseSec) {
-  const safeReleaseSec = Math.max(0.003, Number(releaseSec || 0));
-  const stopAt = atTime + safeReleaseSec;
-  const tau = Math.max(0.001, safeReleaseSec * 0.25);
-
-  if (typeof param.cancelAndHoldAtTime === "function") {
-    param.cancelAndHoldAtTime(atTime);
-    const heldGain = Math.max(MIN_AUDIO_GAIN, Number(param.value || 0));
-    param.setValueAtTime(heldGain, atTime);
-  } else {
-    const nowGain = Math.max(MIN_AUDIO_GAIN, Number(param.value || 0));
-    param.cancelScheduledValues(atTime);
-    param.setValueAtTime(nowGain, atTime);
-  }
-
-  param.setTargetAtTime(MIN_AUDIO_GAIN, atTime, tau);
-  return stopAt;
-}
-
 
 
 
@@ -141,8 +115,14 @@ export function useAudioScheduler() {
 
   const sampleNormalizeGainRef = useRef(new WeakMap());
   const stretchedSampleBufferCacheRef = useRef(new WeakMap());
-  const activeSampleVoicesRef = useRef(new Map());
-  const activeSynthVoicesRef = useRef(new Map());
+
+  const {
+    activeSampleVoicesRef,
+    activeSynthVoicesRef,
+    stopActiveChannelSamples,
+    stopActiveChannelSynthVoices,
+    stopAllActiveSamples,
+  } = useAudioVoices();
 
   const {
     pluginInstrumentRef,
@@ -555,76 +535,6 @@ export function useAudioScheduler() {
 
   useEffect(
     function () {
-      const stopActiveChannelSamples = function (channelId, atTime) {
-        const voices = activeSampleVoicesRef.current.get(channelId);
-        if (!voices || voices.size === 0) {
-          return;
-        }
-
-        voices.forEach(function (voice) {
-          try {
-            const voiceStopAt = scheduleSmoothGainStop(
-              voice.gain.gain,
-              atTime,
-              CUT_ITSELF_RELEASE_SEC,
-            );
-
-            if (Array.isArray(voice.sources)) {
-              voice.sources.forEach(function (sourceNode) {
-                try {
-                  sourceNode.stop(voiceStopAt + CUT_ITSELF_STOP_PADDING_SEC);
-                } catch {
-                  return;
-                }
-              });
-            } else if (voice.source) {
-              voice.source.stop(voiceStopAt + CUT_ITSELF_STOP_PADDING_SEC);
-            }
-
-            if (voice.cleanupTimeout) {
-              clearTimeout(voice.cleanupTimeout);
-            }
-          } catch {
-            return;
-          }
-        });
-
-        voices.clear();
-      };
-
-      const stopActiveChannelSynthVoices = function (channelId, atTime) {
-        const voices = activeSynthVoicesRef.current.get(channelId);
-        if (!voices || voices.size === 0) {
-          return;
-        }
-
-        voices.forEach(function (voice) {
-          try {
-            if (voice.node && typeof voice.node.stop === "function") {
-              voice.node.stop(atTime);
-            }
-          } catch {
-            return;
-          }
-        });
-
-        voices.clear();
-      };
-
-      const stopAllActiveSamples = function (atTime) {
-        Array.from(activeSampleVoicesRef.current.keys()).forEach(
-          function (channelId) {
-            stopActiveChannelSamples(channelId, atTime);
-          },
-        );
-
-        Array.from(activeSynthVoicesRef.current.keys()).forEach(
-          function (channelId) {
-            stopActiveChannelSynthVoices(channelId, atTime);
-          },
-        );
-      };
-
       const audioCtx = ensureContext();
       const sixteenth = 60 / transport.bpm / 4;
 
