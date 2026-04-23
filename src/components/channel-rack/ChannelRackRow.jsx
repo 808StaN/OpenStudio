@@ -10,6 +10,7 @@ import {
 import { ChannelRackRowControls } from "./ChannelRackRowControls";
 import { ChannelRackStepGrid } from "./ChannelRackStepGrid";
 import { ChannelRackPianoPreview } from "./ChannelRackPianoPreview";
+import { useChannelRackRowHandlers } from "./useChannelRackRowHandlers";
 
 /**
  * Derives the visible step row, merged notes, pitch bounds and preview mode
@@ -118,48 +119,23 @@ export const ChannelRackRow = memo(function ChannelRackRow({
     channelRackMode,
   });
 
+  const { handleMouseDown, handleDragOver, handleDrop } =
+    useChannelRackRowHandlers({
+      channel,
+      onActivateChannel,
+      onAssignPluginToChannel,
+      onAssignSampleToChannel,
+    });
+
   return (
     <article
       className={
         "rack-row" +
         (openInsertMenuChannelId === channel.id ? " is-menu-open" : "")
       }
-      onMouseDown={function () {
-        onActivateChannel(channel.id);
-      }}
-      onDragOver={function (event) {
-        event.preventDefault();
-      }}
-      onDrop={function (event) {
-        event.preventDefault();
-
-        const rawPlugin = event.dataTransfer.getData(
-          "application/x-daw-plugin",
-        );
-        if (rawPlugin) {
-          try {
-            const payload = JSON.parse(rawPlugin);
-            onAssignPluginToChannel(channel.id, payload);
-            return;
-          } catch {
-            return;
-          }
-        }
-
-        const rawSample = event.dataTransfer.getData(
-          "application/x-daw-sample",
-        );
-        if (!rawSample) {
-          return;
-        }
-
-        try {
-          const payload = JSON.parse(rawSample);
-          onAssignSampleToChannel(channel.id, payload);
-        } catch {
-          return;
-        }
-      }}
+      onMouseDown={handleMouseDown}
+      onDragOver={handleDragOver}
+      onDrop={handleDrop}
     >
       <ChannelRackRowControls
         channel={channel}
