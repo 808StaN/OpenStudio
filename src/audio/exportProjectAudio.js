@@ -1,742 +1,47 @@
 import Soundfont from "soundfont-player";
+import {
+  GRAPHIC_EQ_DEFAULT_POINT_FREQUENCIES,
+} from "./domain/fxParams";
+import { applyInsertSettings } from "./core/applyInsertSettings";
+import { createMixerInsertNodes } from "./core/createMixerInsertNodes";
+import { computeSamplePlaybackParams } from "./core/computeSamplePlaybackParams";
+import { createSamplePlaybackNodes } from "./core/createSamplePlaybackNodes";
+import { DEFAULT_SAMPLE_MIDI_PITCH, midiPitchToPlaybackRate } from "./domain/pitch";
+import { getSafeSampleSettings } from "./domain/sampleSettings";
+import { getTimeStretchProfile } from "./domain/timeStretch";
 import { getPluginInstrument } from "../data/pluginInstruments";
 import { toSafeSampleUrl } from "../utils/sampleUrl";
+import { getNormalizeGain } from "./core/getNormalizeGain";
+import { getOrCreateStretchedBuffer } from "./core/getOrCreateStretchedBuffer";
+import { audioBufferToWavBlob, getSafeWavEncoding } from "./export/wavEncoder";
+import { audioBufferToMp3Blob } from "./export/mp3Encoder";
+import {
+  BASE_CHANNEL_TRIGGER_GAIN,
+  CLIP_GAIN_SCALE,
+  MAX_PLAYBACK_RATE,
+  MIN_DURATION_SEC,
+  MIN_PLAYBACK_RATE,
+} from "./domain/constants";
 
-const DEFAULT_SAMPLE_MIDI_PITCH = 72;
 const DEFAULT_NOTE_VELOCITY = 95;
 const PLUGIN_INSTRUMENT_GAIN_BOOST = 1.5;
-const BASE_CHANNEL_TRIGGER_GAIN = 0.75;
 const CUT_ITSELF_RELEASE_SEC = 0.01;
 const CUT_ITSELF_MAX_RETRIGGER_RELEASE_SEC = 0.016;
 const CUT_ITSELF_STOP_PADDING_SEC = 0.003;
 const CUT_ITSELF_RETRIGGER_FADE_IN_SEC = 0.0025;
-const FX_EFFECT_GRAPHIC_EQ = "graphic-eq";
-const FX_EFFECT_REVERB = "reverb";
-const FX_EFFECT_MAXIMIZER = "maximizer";
-const GRAPHIC_EQ_DEFAULT_POINT_FREQUENCIES = [
-  50, 100, 250, 500, 1000, 3000, 8000,
-];
-const GRAPHIC_EQ_BAND_TYPES = [
-  "peaking",
-  "lowshelf",
-  "highshelf",
-  "lowpass",
-  "highpass",
-];
-const MAXIMIZER_MODES = ["irc-ll", "irc-i", "irc-ii", "irc-iii", "irc-iv"];
 
-const defaultSampleSettings = {
-  cutItself: false,
-  normalize: false,
-  lengthPct: 100,
-  fadeInPct: 0,
-  fadeOutPct: 0,
-  envEnabled: false,
-  envDelayMs: 0,
-  envAttackMs: 0,
-  envHoldMs: 0,
-  envDecayMs: 0,
-  envSustainPct: 100,
-  envReleaseMs: 0,
-  attackMs: 8,
-  releaseMs: 420,
-  pitchCents: 0,
-  monoMode: false,
-  stretchMode: "resample",
-  stretchPitchSemitones: 0,
-  stretchMultiplier: 1,
-  stretchSourceBpm: 120,
-  stretchProjectTempoBpm: 120,
-  stretchTimeMode: "none",
-};
+import { clamp } from "../store/utils";
 
-function clamp(value, min, max) {
-  return Math.max(min, Math.min(max, value));
-}
-
-function scheduleSmoothGainStop(param, atTime, releaseSec) {
-  const safeReleaseSec = Math.max(0.003, Number(releaseSec || 0));
-  const stopAt = atTime + safeReleaseSec;
-  const tau = Math.max(0.001, safeReleaseSec * 0.25);
-
-  if (typeof param.cancelAndHoldAtTime === "function") {
-    param.cancelAndHoldAtTime(atTime);
-    const heldGain = Math.max(0.0001, Number(param.value || 0));
-    param.setValueAtTime(heldGain, atTime);
-  } else {
-    const nowGain = Math.max(0.0001, Number(param.value || 0));
-    param.cancelScheduledValues(atTime);
-    param.setValueAtTime(nowGain, atTime);
-  }
-
-  param.setTargetAtTime(0.0001, atTime, tau);
-  return stopAt;
-}
-
-function getDefaultEqBandType(index) {
-  if (index === 0) {
-    return "lowshelf";
-  }
-
-  if (index === GRAPHIC_EQ_DEFAULT_POINT_FREQUENCIES.length - 1) {
-    return "highshelf";
-  }
-
-  return "peaking";
-}
-
-function sanitizeEqBandType(raw, fallback) {
-  const requested = String(raw || "")
-    .trim()
-    .toLowerCase();
-  if (GRAPHIC_EQ_BAND_TYPES.includes(requested)) {
-    return requested;
-  }
-
-  const safeFallback = String(fallback || "")
-    .trim()
-    .toLowerCase();
-  if (GRAPHIC_EQ_BAND_TYPES.includes(safeFallback)) {
-    return safeFallback;
-  }
-
-  return "peaking";
-}
-
-function getSafeGraphicEqParams(raw) {
-  const requestedPoints = Array.isArray(raw?.points) ? raw.points : [];
-  const legacyBands = Array.isArray(raw?.bands) ? raw.bands : [];
-  return {
-    points: GRAPHIC_EQ_DEFAULT_POINT_FREQUENCIES.map(
-      function (defaultFreq, index) {
-        const requestedPoint = requestedPoints[index];
-        const legacyGain = legacyBands[index];
-        return {
-          frequencyHz: clamp(
-            Number(requestedPoint?.frequencyHz || defaultFreq),
-            20,
-            20000,
-          ),
-          gainDb: clamp(
-            Number(
-              requestedPoint?.gainDb ??
-                (Number.isFinite(legacyGain) ? legacyGain : 0),
-            ),
-            -18,
-            18,
-          ),
-          q: clamp(Number(requestedPoint?.q || 1.2), 0.25, 8),
-          bandType: sanitizeEqBandType(
-            requestedPoint?.bandType,
-            getDefaultEqBandType(index),
-          ),
-        };
-      },
-    ),
-  };
-}
-
-function getSafeReverbParams(raw) {
-  const base = {
-    decayTime: 2.8,
-    preDelayMs: 24,
-    size: 0.62,
-    damping: 0.45,
-    hiCutHz: 9000,
-    loCutHz: 130,
-    earlyReflections: 0.38,
-    diffusion: 0.72,
-    modulationDepth: 0.22,
-    modulationRateHz: 0.35,
-    width: 0.9,
-    dryWet: 0.34,
-    freeze: false,
-    ...(raw || {}),
-  };
-
-  return {
-    decayTime: clamp(Number(base.decayTime ?? 2.8), 0.2, 20),
-    preDelayMs: clamp(Number(base.preDelayMs ?? 24), 0, 250),
-    size: clamp(Number(base.size ?? 0.62), 0, 1),
-    damping: clamp(Number(base.damping ?? 0.45), 0, 1),
-    hiCutHz: clamp(Number(base.hiCutHz ?? 9000), 1200, 18000),
-    loCutHz: clamp(Number(base.loCutHz ?? 130), 20, 1200),
-    earlyReflections: clamp(Number(base.earlyReflections ?? 0.38), 0, 1),
-    diffusion: clamp(Number(base.diffusion ?? 0.72), 0, 1),
-    modulationDepth: clamp(Number(base.modulationDepth ?? 0.22), 0, 1),
-    modulationRateHz: clamp(Number(base.modulationRateHz ?? 0.35), 0, 8),
-    width: clamp(Number(base.width ?? 0.9), 0, 1),
-    dryWet: clamp(Number(base.dryWet ?? 0.34), 0, 1),
-    freeze: Boolean(base.freeze),
-  };
-}
-
-function sanitizeMaximizerMode(rawMode) {
-  const requested = String(rawMode || "")
-    .trim()
-    .toLowerCase();
-  if (MAXIMIZER_MODES.includes(requested)) {
-    return requested;
-  }
-  return "irc-ii";
-}
-
-function getSafeMaximizerParams(raw) {
-  const legacyThreshold = Number(raw?.thresholdDb);
-  const legacyCeiling = Number(raw?.ceilingDb);
-  const legacyCharacter = Number(raw?.character);
-  const legacyMode = sanitizeMaximizerMode(raw?.mode);
-  const isLegacyDefault =
-    Number.isFinite(legacyThreshold) &&
-    Number.isFinite(legacyCeiling) &&
-    Number.isFinite(legacyCharacter) &&
-    Math.abs(legacyThreshold + 6) < 0.001 &&
-    Math.abs(legacyCeiling + 0.1) < 0.001 &&
-    Math.abs(legacyCharacter - 0.58) < 0.001 &&
-    legacyMode === "irc-ii" &&
-    Boolean(raw?.truePeakEnabled ?? true);
-
-  const base = {
-    mode: "irc-ii",
-    truePeakEnabled: true,
-    thresholdDb: 0,
-    ceilingDb: -1,
-    character: 0.5,
-    ...(raw || {}),
-  };
-
-  if (isLegacyDefault) {
-    base.thresholdDb = 0;
-    base.ceilingDb = -1;
-    base.character = 0.5;
-  }
-
-  return {
-    mode: sanitizeMaximizerMode(base.mode),
-    truePeakEnabled: Boolean(base.truePeakEnabled),
-    thresholdDb: clamp(Number(base.thresholdDb ?? 0), -24, 0),
-    ceilingDb: clamp(Number(base.ceilingDb ?? -1), -18, 0),
-    character: clamp(Number(base.character ?? 0.5), 0, 1),
-  };
-}
-
-function buildSoftClipCurve(strength) {
-  const safeStrength = clamp(Number(strength || 0), 0, 1);
-  const samples = 4096;
-  const curve = new Float32Array(samples);
-  const drive = 1 + safeStrength * 6;
-
-  for (let index = 0; index < samples; index += 1) {
-    const x = (index / (samples - 1)) * 2 - 1;
-    curve[index] = Math.tanh(x * drive) / Math.tanh(drive);
-  }
-
-  return curve;
-}
-
-function getActiveFxState(insert) {
-  const fxSlots = Array.isArray(insert?.fxSlots) ? insert.fxSlots : [];
-  const state = {
-    eqEnabled: false,
-    eqParams: getSafeGraphicEqParams(null),
-    reverbEnabled: false,
-    reverbParams: getSafeReverbParams(null),
-    maximizerEnabled: false,
-    maximizerParams: getSafeMaximizerParams(null),
-  };
-
-  fxSlots.forEach(function (slot) {
-    if (!slot?.enabled) {
-      return;
-    }
-
-    const effectType = String(slot.effectType || "none");
-    if (effectType === FX_EFFECT_GRAPHIC_EQ) {
-      state.eqEnabled = true;
-      state.eqParams = getSafeGraphicEqParams(slot.params);
-      return;
-    }
-
-    if (effectType === FX_EFFECT_REVERB) {
-      state.reverbEnabled = true;
-      state.reverbParams = getSafeReverbParams(slot.params);
-      return;
-    }
-
-    if (effectType === FX_EFFECT_MAXIMIZER) {
-      state.maximizerEnabled = true;
-      state.maximizerParams = getSafeMaximizerParams(slot.params);
-    }
-  });
-
-  return state;
-}
-
-function midiPitchToPlaybackRate(midiPitch) {
-  const semitoneOffset = midiPitch - DEFAULT_SAMPLE_MIDI_PITCH;
-  const rawRate = Math.pow(2, semitoneOffset / 12);
-  return Math.max(0.125, Math.min(8, rawRate));
-}
-
-function getSafeSampleSettings(raw) {
-  const hasPitchCents = Object.hasOwn(raw || {}, "pitchCents");
-  const base = {
-    ...defaultSampleSettings,
-    attackMs: 8,
-    releaseMs: 420,
-    pitchCents: hasPitchCents
-      ? Number(raw?.pitchCents)
-      : Number(raw?.pitchSemitones || 0) * 100,
-    monoMode: false,
-    ...(raw || {}),
-  };
-
-  const next = {
-    cutItself: Boolean(base.cutItself),
-    normalize: Boolean(base.normalize),
-    lengthPct: Math.max(5, Math.min(100, Number(base.lengthPct ?? 100))),
-    fadeInPct: Math.max(0, Math.min(95, Number(base.fadeInPct ?? 0))),
-    fadeOutPct: Math.max(0, Math.min(95, Number(base.fadeOutPct ?? 0))),
-    envEnabled: Boolean(base.envEnabled),
-    envDelayMs: Math.max(0, Math.min(3000, Number(base.envDelayMs ?? 0))),
-    envAttackMs: Math.max(0, Math.min(3000, Number(base.envAttackMs ?? 0))),
-    envHoldMs: Math.max(0, Math.min(3000, Number(base.envHoldMs ?? 0))),
-    envDecayMs: Math.max(0, Math.min(3000, Number(base.envDecayMs ?? 0))),
-    envSustainPct: Math.max(
-      0,
-      Math.min(100, Number(base.envSustainPct ?? 100)),
-    ),
-    envReleaseMs: Math.max(0, Math.min(3000, Number(base.envReleaseMs ?? 0))),
-    attackMs: Math.max(0, Math.min(400, Number(base.attackMs ?? 8))),
-    releaseMs: Math.max(0, Math.min(1000, Number(base.releaseMs ?? 420))),
-    pitchCents: Math.max(
-      -100,
-      Math.min(100, Math.round(Number(base.pitchCents ?? 0))),
-    ),
-    monoMode: Boolean(base.monoMode),
-    stretchMode: ["none", "resample", "stretch", "realtime"].includes(
-      String(base.stretchMode || "")
-        .trim()
-        .toLowerCase(),
-    )
-      ? String(base.stretchMode || "none")
-          .trim()
-          .toLowerCase()
-      : "none",
-    stretchPitchSemitones: Math.max(
-      -24,
-      Math.min(24, Number(base.stretchPitchSemitones ?? 0)),
-    ),
-    stretchMultiplier: Math.max(
-      0.25,
-      Math.min(8, Number(base.stretchMultiplier ?? 1)),
-    ),
-    stretchSourceBpm: Math.max(
-      20,
-      Math.min(300, Number(base.stretchSourceBpm ?? 120)),
-    ),
-    stretchProjectTempoBpm: Math.max(
-      20,
-      Math.min(300, Number(base.stretchProjectTempoBpm ?? 120)),
-    ),
-    stretchTimeMode: [
-      "none",
-      "set-bpm",
-      "project-tempo",
-      "beat-1",
-      "beat-2",
-      "bar-1",
-      "bar-2",
-      "bar-3",
-      "bar-4",
-    ].includes(
-      String(base.stretchTimeMode || "")
-        .trim()
-        .toLowerCase(),
-    )
-      ? String(base.stretchTimeMode || "none")
-          .trim()
-          .toLowerCase()
-      : "none",
-  };
-
-  const fadeTotal = next.fadeInPct + next.fadeOutPct;
-  if (fadeTotal > 98) {
-    const scale = 98 / fadeTotal;
-    next.fadeInPct = Math.max(0, Math.round(next.fadeInPct * scale));
-    next.fadeOutPct = Math.max(0, Math.round(next.fadeOutPct * scale));
-  }
-
-  return next;
-}
-
-function getStretchTargetDurationSeconds(settings, sampleReadDuration, bpm) {
-  const safeDuration = Math.max(0.01, Number(sampleReadDuration || 0.01));
-  const safeBpm = Math.max(1, Number(bpm || 120));
-  const quarterSec = 60 / safeBpm;
-  const timeMode = String(settings.stretchTimeMode || "none")
-    .trim()
-    .toLowerCase();
-  const mul = Math.max(
-    0.25,
-    Math.min(8, Number(settings.stretchMultiplier || 1)),
-  );
-
-  if (timeMode === "set-bpm") {
-    const sourceBpm = Math.max(
-      20,
-      Math.min(300, Number(settings.stretchSourceBpm || 120)),
-    );
-    return Math.max(0.01, safeDuration * (sourceBpm / safeBpm) * mul);
-  }
-
-  if (timeMode === "project-tempo") {
-    const projectLockBpm = Math.max(
-      20,
-      Math.min(300, Number(settings.stretchProjectTempoBpm || safeBpm)),
-    );
-    return Math.max(0.01, safeDuration * (projectLockBpm / safeBpm) * mul);
-  }
-
-  if (timeMode === "beat-1") {
-    return quarterSec * mul;
-  }
-  if (timeMode === "beat-2") {
-    return quarterSec * 2 * mul;
-  }
-  if (timeMode === "bar-1") {
-    return quarterSec * 4 * mul;
-  }
-  if (timeMode === "bar-2") {
-    return quarterSec * 8 * mul;
-  }
-  if (timeMode === "bar-3") {
-    return quarterSec * 12 * mul;
-  }
-  if (timeMode === "bar-4") {
-    return quarterSec * 16 * mul;
-  }
-
-  return Math.max(0.01, safeDuration * mul);
-}
-
-function getTimeStretchProfile(settings, sampleReadDuration, bpm, baseRate) {
-  const stretchMode = String(settings.stretchMode || "none")
-    .trim()
-    .toLowerCase();
-  const safeBaseRate = Math.max(0.125, Math.min(8, Number(baseRate || 1)));
-  const targetDurationSec = getStretchTargetDurationSeconds(
-    settings,
-    sampleReadDuration,
-    bpm,
-  );
-
-  if (stretchMode === "none") {
-    return {
-      playbackRate: safeBaseRate,
-      targetDurationSec: Math.max(0.01, sampleReadDuration / safeBaseRate),
-      useGranularStretch: false,
-    };
-  }
-
-  const pitchShiftSemitones = Math.max(
-    -24,
-    Math.min(24, Number(settings.stretchPitchSemitones || 0)),
-  );
-  const pitchShiftRate = Math.pow(2, pitchShiftSemitones / 12);
-
-  if (stretchMode === "stretch") {
-    return {
-      playbackRate: Math.max(0.125, Math.min(8, safeBaseRate * pitchShiftRate)),
-      targetDurationSec: Math.max(0.01, targetDurationSec),
-      useGranularStretch: false,
-    };
-  }
-
-  const durationRate = Math.max(
-    0.125,
-    Math.min(8, sampleReadDuration / targetDurationSec),
-  );
-
-  return {
-    playbackRate: Math.max(
-      0.125,
-      Math.min(8, safeBaseRate * pitchShiftRate * durationRate),
-    ),
-    targetDurationSec: Math.max(0.01, sampleReadDuration / durationRate),
-    useGranularStretch: false,
-  };
-}
-
-function applyVolumeEnvelopeToGain(
-  gainParam,
-  startTime,
-  gateDuration,
-  settings,
-) {
-  const minGain = 0.0001;
-  const envDelay = Math.max(0, Number(settings.envDelayMs ?? 0) / 1000);
-  const envAttack = Math.max(0, Number(settings.envAttackMs ?? 0) / 1000);
-  const envHold = Math.max(0, Number(settings.envHoldMs ?? 0) / 1000);
-  const envDecay = Math.max(0, Number(settings.envDecayMs ?? 0) / 1000);
-  const envRelease = Math.max(0, Number(settings.envReleaseMs ?? 0) / 1000);
-  const envSustain = Math.max(
-    minGain,
-    Math.min(1, Number(settings.envSustainPct ?? 100) / 100),
-  );
-
-  const noteOffTime = startTime + Math.max(0.001, Number(gateDuration || 0));
-  let cursor = startTime;
-
-  gainParam.cancelScheduledValues(startTime);
-  gainParam.setValueAtTime(minGain, startTime);
-
-  const advanceWithHold = function (seconds, value) {
-    const endTime = Math.min(noteOffTime, cursor + Math.max(0, seconds));
-    gainParam.setValueAtTime(value, endTime);
-    cursor = endTime;
-  };
-
-  const advanceWithRamp = function (seconds, targetValue) {
-    const endTime = Math.min(noteOffTime, cursor + Math.max(0, seconds));
-    if (endTime <= cursor) {
-      gainParam.setValueAtTime(targetValue, cursor);
-      return;
-    }
-
-    if (seconds > 0.0005) {
-      gainParam.linearRampToValueAtTime(targetValue, endTime);
-    } else {
-      gainParam.setValueAtTime(targetValue, endTime);
-    }
-
-    cursor = endTime;
-  };
-
-  if (envDelay > 0) {
-    advanceWithHold(envDelay, minGain);
-  }
-
-  if (cursor < noteOffTime) {
-    advanceWithRamp(envAttack, 1);
-  }
-
-  if (cursor < noteOffTime) {
-    advanceWithHold(envHold, 1);
-  }
-
-  if (cursor < noteOffTime) {
-    advanceWithRamp(envDecay, envSustain);
-  }
-
-  gainParam.setValueAtTime(envSustain, noteOffTime);
-
-  if (envRelease > 0.0005) {
-    gainParam.linearRampToValueAtTime(minGain, noteOffTime + envRelease);
-  } else {
-    gainParam.setValueAtTime(minGain, noteOffTime);
-  }
-}
-
+// Builds the offline mixer graph once; each scheduled source only plugs into insert inputs.
 function buildInsertInputNodes(audioCtx, mixerInserts) {
   const inserts = Array.isArray(mixerInserts) ? mixerInserts : [];
-  const insertMap = new Map();
+  const { insertMap, getOutputNode } = createMixerInsertNodes(
+    audioCtx,
+    inserts,
+    { includeAnalysers: false },
+  );
 
-  inserts.forEach(function (insert) {
-    const inputGain = audioCtx.createGain();
-    const splitter = audioCtx.createChannelSplitter(2);
-    const leftToLeft = audioCtx.createGain();
-    const rightToLeft = audioCtx.createGain();
-    const leftToRight = audioCtx.createGain();
-    const rightToRight = audioCtx.createGain();
-    const merger = audioCtx.createChannelMerger(2);
-    const panner = audioCtx.createStereoPanner();
-    const fxDryGain = audioCtx.createGain();
-    const fxWetGain = audioCtx.createGain();
-    const eqInput = audioCtx.createGain();
-    const eqLowCut = audioCtx.createBiquadFilter();
-    const eqBands = GRAPHIC_EQ_DEFAULT_POINT_FREQUENCIES.map(
-      function (frequencyHz, index) {
-        const band = audioCtx.createBiquadFilter();
-        band.type = getDefaultEqBandType(index);
-        band.frequency.value = frequencyHz;
-        band.Q.value = 1.08;
-        band.gain.value = 0;
-        return band;
-      },
-    );
-    const reverbInput = audioCtx.createGain();
-    const reverbPreDelay = audioCtx.createDelay(0.5);
-    const reverbLoCut = audioCtx.createBiquadFilter();
-    const reverbHiCut = audioCtx.createBiquadFilter();
-    const reverbEarlyGain = audioCtx.createGain();
-    const reverbLateInput = audioCtx.createGain();
-    const reverbLateLeftDelay = audioCtx.createDelay(1.25);
-    const reverbLateRightDelay = audioCtx.createDelay(1.25);
-    const reverbLeftFeedback = audioCtx.createGain();
-    const reverbRightFeedback = audioCtx.createGain();
-    const reverbLeftDamping = audioCtx.createBiquadFilter();
-    const reverbRightDamping = audioCtx.createBiquadFilter();
-    const reverbLeftToLeft = audioCtx.createGain();
-    const reverbRightToLeft = audioCtx.createGain();
-    const reverbLeftToRight = audioCtx.createGain();
-    const reverbRightToRight = audioCtx.createGain();
-    const reverbWidthMerger = audioCtx.createChannelMerger(2);
-    const reverbWetGain = audioCtx.createGain();
-    const maximizerInput = audioCtx.createGain();
-    const maximizerPreGain = audioCtx.createGain();
-    const maximizerCompressor = audioCtx.createDynamicsCompressor();
-    const maximizerSoftClip = audioCtx.createWaveShaper();
-    const maximizerCeilingGain = audioCtx.createGain();
-    const outputGain = audioCtx.createGain();
-
-    inputGain.connect(splitter);
-
-    splitter.connect(leftToLeft, 0);
-    splitter.connect(rightToLeft, 1);
-    splitter.connect(leftToRight, 0);
-    splitter.connect(rightToRight, 1);
-
-    leftToLeft.connect(merger, 0, 0);
-    rightToLeft.connect(merger, 0, 0);
-    leftToRight.connect(merger, 0, 1);
-    rightToRight.connect(merger, 0, 1);
-
-    merger.connect(panner);
-    panner.connect(fxDryGain);
-    panner.connect(eqInput);
-    panner.connect(reverbInput);
-    panner.connect(maximizerInput);
-
-    eqLowCut.type = "highpass";
-    eqLowCut.frequency.value = 20;
-    eqLowCut.Q.value = 0.707;
-    eqInput.connect(eqLowCut);
-
-    let eqTail = eqLowCut;
-    eqBands.forEach(function (band) {
-      eqTail.connect(band);
-      eqTail = band;
-    });
-    eqTail.connect(fxWetGain);
-
-    reverbInput.connect(reverbPreDelay);
-    reverbLoCut.type = "highpass";
-    reverbHiCut.type = "lowpass";
-    reverbPreDelay.connect(reverbLoCut);
-    reverbLoCut.connect(reverbHiCut);
-
-    const earlyTapTimes = [0.011, 0.019, 0.031, 0.043];
-    const earlyTapGains = [0.5, 0.36, 0.26, 0.2];
-    const reverbEarlyTaps = earlyTapTimes.map(function (timeSeconds, idx) {
-      const delay = audioCtx.createDelay(0.25);
-      const gain = audioCtx.createGain();
-      delay.delayTime.value = timeSeconds;
-      gain.gain.value = earlyTapGains[idx] || 0.2;
-      reverbHiCut.connect(delay);
-      delay.connect(gain);
-      gain.connect(reverbEarlyGain);
-      return {
-        delay,
-        gain,
-        baseTime: timeSeconds,
-      };
-    });
-    reverbEarlyGain.connect(reverbWetGain);
-
-    reverbHiCut.connect(reverbLateInput);
-    reverbLateInput.connect(reverbLateLeftDelay);
-    reverbLateInput.connect(reverbLateRightDelay);
-
-    reverbLateLeftDelay.connect(reverbLeftDamping);
-    reverbLateRightDelay.connect(reverbRightDamping);
-
-    reverbLeftDamping.type = "lowpass";
-    reverbRightDamping.type = "lowpass";
-
-    reverbLeftDamping.connect(reverbLeftFeedback);
-    reverbRightDamping.connect(reverbRightFeedback);
-    reverbLeftFeedback.connect(reverbLateRightDelay);
-    reverbRightFeedback.connect(reverbLateLeftDelay);
-
-    reverbLeftDamping.connect(reverbLeftToLeft);
-    reverbLeftDamping.connect(reverbLeftToRight);
-    reverbRightDamping.connect(reverbRightToLeft);
-    reverbRightDamping.connect(reverbRightToRight);
-
-    reverbLeftToLeft.connect(reverbWidthMerger, 0, 0);
-    reverbRightToLeft.connect(reverbWidthMerger, 0, 0);
-    reverbLeftToRight.connect(reverbWidthMerger, 0, 1);
-    reverbRightToRight.connect(reverbWidthMerger, 0, 1);
-
-    reverbWidthMerger.connect(reverbWetGain);
-    reverbWetGain.connect(fxWetGain);
-
-    maximizerInput.connect(maximizerPreGain);
-    maximizerPreGain.connect(maximizerCompressor);
-    maximizerCompressor.connect(maximizerSoftClip);
-    maximizerSoftClip.connect(maximizerCeilingGain);
-    maximizerCeilingGain.connect(fxWetGain);
-
-    const reverbModulators = [reverbLateLeftDelay, reverbLateRightDelay].map(
-      function (targetDelay, index) {
-        const lfo = audioCtx.createOscillator();
-        const depth = audioCtx.createGain();
-        lfo.type = "sine";
-        lfo.frequency.value = 0.35 + index * 0.09;
-        depth.gain.value = 0;
-        lfo.connect(depth);
-        depth.connect(targetDelay.delayTime);
-        lfo.start();
-        return {
-          lfo,
-          depth,
-        };
-      },
-    );
-
-    fxDryGain.connect(outputGain);
-    fxWetGain.connect(outputGain);
-
-    insertMap.set(insert.id, {
-      inputGain,
-      leftToLeft,
-      rightToLeft,
-      leftToRight,
-      rightToRight,
-      panner,
-      fxDryGain,
-      fxWetGain,
-      eqInput,
-      eqLowCut,
-      eqBands,
-      reverbInput,
-      reverbPreDelay,
-      reverbLoCut,
-      reverbHiCut,
-      reverbEarlyGain,
-      reverbEarlyTaps,
-      reverbLateLeftDelay,
-      reverbLateRightDelay,
-      reverbLeftFeedback,
-      reverbRightFeedback,
-      reverbLeftDamping,
-      reverbRightDamping,
-      reverbLeftToLeft,
-      reverbRightToLeft,
-      reverbLeftToRight,
-      reverbRightToRight,
-      reverbModulators,
-      reverbWetGain,
-      maximizerInput,
-      maximizerPreGain,
-      maximizerCompressor,
-      maximizerSoftClip,
-      maximizerCeilingGain,
-      outputGain,
-    });
-  });
-
+  // Wire inter-insert routes.
   inserts.forEach(function (insert) {
     const node = insertMap.get(insert.id);
     if (!node) {
@@ -756,264 +61,22 @@ function buildInsertInputNodes(audioCtx, mixerInserts) {
       if (!target) {
         return;
       }
-      node.outputGain.connect(target.inputGain);
+      getOutputNode(node).connect(target.inputGain);
       hasConnectedRoute = true;
     });
 
     if (insert.isMaster || !hasConnectedRoute) {
-      node.outputGain.connect(audioCtx.destination);
+      getOutputNode(node).connect(audioCtx.destination);
     }
   });
 
+  // Apply initial parameter values at time 0.
   inserts.forEach(function (insert) {
     const node = insertMap.get(insert.id);
     if (!node) {
       return;
     }
-
-    const targetFader = insert.active
-      ? Math.max(0, Math.min(1.25, Number(insert.fader ?? 1)))
-      : 0;
-    const targetPan = Math.max(-1, Math.min(1, Number(insert.pan || 0)));
-    const targetSeparation = Math.max(
-      -1,
-      Math.min(1, Number(insert.stereoSeparation || 0)),
-    );
-    const activeFx = getActiveFxState(insert);
-    const eqEnabled = activeFx.eqEnabled;
-    const reverbEnabled = activeFx.reverbEnabled;
-    const maximizerEnabled = activeFx.maximizerEnabled;
-    const eqParams = activeFx.eqParams;
-    const reverbParams = activeFx.reverbParams;
-    const maximizerParams = activeFx.maximizerParams;
-    const hasInsertFx = eqEnabled || maximizerEnabled;
-
-    const width = 1 - targetSeparation;
-    const directGain = 0.5 * (1 + width);
-    const crossGain = 0.5 * (1 - width);
-
-    node.leftToLeft.gain.setValueAtTime(directGain, 0);
-    node.rightToRight.gain.setValueAtTime(directGain, 0);
-    node.rightToLeft.gain.setValueAtTime(crossGain, 0);
-    node.leftToRight.gain.setValueAtTime(crossGain, 0);
-    node.panner.pan.setValueAtTime(targetPan, 0);
-
-    const dryMix = hasInsertFx
-      ? 0
-      : reverbEnabled
-        ? clamp(1 - reverbParams.dryWet, 0, 1)
-        : 1;
-    const wetMix = hasInsertFx || reverbEnabled
-      ? 1
-      : 0;
-
-    node.fxDryGain.gain.setValueAtTime(dryMix, 0);
-    node.fxWetGain.gain.setValueAtTime(wetMix, 0);
-    node.eqInput.gain.setValueAtTime(eqEnabled ? 1 : 0, 0);
-    node.eqLowCut.frequency.setValueAtTime(20, 0);
-    node.eqLowCut.Q.setValueAtTime(0.707, 0);
-
-    if (Array.isArray(node.eqBands)) {
-      node.eqBands.forEach(function (bandNode, index) {
-        const point = eqParams.points[index] || {
-          frequencyHz: GRAPHIC_EQ_DEFAULT_POINT_FREQUENCIES[index],
-          gainDb: 0,
-          q: 1.2,
-          bandType: getDefaultEqBandType(index),
-        };
-        bandNode.type = sanitizeEqBandType(
-          point.bandType,
-          getDefaultEqBandType(index),
-        );
-        bandNode.frequency.setValueAtTime(point.frequencyHz, 0);
-        bandNode.Q.setValueAtTime(point.q, 0);
-        bandNode.gain.setValueAtTime(eqEnabled ? point.gainDb : 0, 0);
-      });
-    }
-
-    const reverbSize = reverbEnabled ? clamp(reverbParams.size, 0, 1) : 0.62;
-    const reverbDiffusion = reverbEnabled
-      ? clamp(reverbParams.diffusion, 0, 1)
-      : 0.72;
-    const reverbDamping = reverbEnabled
-      ? clamp(reverbParams.damping, 0, 1)
-      : 0.45;
-    const reverbDecay = reverbEnabled
-      ? clamp(reverbParams.decayTime, 0.2, 20)
-      : 2.8;
-    const isFreeze = reverbEnabled && Boolean(reverbParams.freeze);
-    const preDelaySec =
-      (reverbEnabled ? clamp(reverbParams.preDelayMs, 0, 250) : 24) / 1000;
-    const hiCutHz = reverbEnabled
-      ? clamp(reverbParams.hiCutHz, 1200, 18000)
-      : 9000;
-    const loCutHz = reverbEnabled ? clamp(reverbParams.loCutHz, 20, 1200) : 130;
-    const earlyMix = reverbEnabled
-      ? clamp(reverbParams.earlyReflections, 0, 1)
-      : 0.38;
-    const widthValue = reverbEnabled ? clamp(reverbParams.width, 0, 1) : 0.9;
-    const modDepth = reverbEnabled
-      ? clamp(reverbParams.modulationDepth, 0, 1)
-      : 0.22;
-    const modRate = reverbEnabled
-      ? clamp(reverbParams.modulationRateHz, 0, 8)
-      : 0.35;
-
-    const leftBaseDelay = 0.029 + reverbSize * 0.053 + reverbDiffusion * 0.011;
-    const rightBaseDelay = 0.037 + reverbSize * 0.061 + reverbDiffusion * 0.013;
-    const feedbackBase = isFreeze
-      ? 0.988
-      : clamp(
-          0.24 + reverbDecay / 34 + reverbSize * 0.14 + reverbDiffusion * 0.1,
-          0.2,
-          0.82,
-        );
-    const earlyLevel = isFreeze ? 0 : earlyMix;
-    const reverbInputLevel = reverbEnabled ? (isFreeze ? 0 : 1) : 0;
-    const dampFreq = Math.max(900, hiCutHz * (1 - reverbDamping * 0.55));
-    const directWidth = 0.5 * (1 + widthValue);
-    const crossWidth = 0.5 * (1 - widthValue);
-
-    node.reverbInput.gain.setValueAtTime(reverbInputLevel, 0);
-    node.reverbPreDelay.delayTime.setValueAtTime(preDelaySec, 0);
-    node.reverbLoCut.frequency.setValueAtTime(loCutHz, 0);
-    node.reverbLoCut.Q.setValueAtTime(0.707, 0);
-    node.reverbHiCut.frequency.setValueAtTime(hiCutHz, 0);
-    node.reverbHiCut.Q.setValueAtTime(0.62, 0);
-    node.reverbLateLeftDelay.delayTime.setValueAtTime(leftBaseDelay, 0);
-    node.reverbLateRightDelay.delayTime.setValueAtTime(rightBaseDelay, 0);
-    node.reverbLeftFeedback.gain.setValueAtTime(feedbackBase, 0);
-    node.reverbRightFeedback.gain.setValueAtTime(feedbackBase * 0.985, 0);
-    node.reverbLeftDamping.frequency.setValueAtTime(dampFreq, 0);
-    node.reverbRightDamping.frequency.setValueAtTime(dampFreq * 0.96, 0);
-    node.reverbLeftDamping.Q.setValueAtTime(0.68, 0);
-    node.reverbRightDamping.Q.setValueAtTime(0.68, 0);
-    node.reverbEarlyGain.gain.setValueAtTime(earlyLevel, 0);
-
-    if (Array.isArray(node.reverbEarlyTaps)) {
-      node.reverbEarlyTaps.forEach(function (tap, tapIndex) {
-        const spread = reverbSize * 0.018 + reverbDiffusion * 0.011;
-        const base = Number(tap.baseTime || 0.012);
-        tap.delay.delayTime.setValueAtTime(base + spread, 0);
-        const tapBaseGain = [0.5, 0.36, 0.26, 0.2][tapIndex] || 0.2;
-        tap.gain.gain.setValueAtTime(tapBaseGain * earlyLevel, 0);
-      });
-    }
-
-    node.reverbLeftToLeft.gain.setValueAtTime(directWidth, 0);
-    node.reverbRightToRight.gain.setValueAtTime(directWidth, 0);
-    node.reverbRightToLeft.gain.setValueAtTime(crossWidth, 0);
-    node.reverbLeftToRight.gain.setValueAtTime(crossWidth, 0);
-    node.reverbWetGain.gain.setValueAtTime(
-      reverbEnabled
-        ? hasInsertFx
-          ? clamp(reverbParams.dryWet, 0, 1)
-          : 1
-        : 0,
-      0,
-    );
-
-    if (Array.isArray(node.reverbModulators)) {
-      node.reverbModulators.forEach(function (modNode, index) {
-        modNode.lfo.frequency.setValueAtTime(
-          modRate * (index === 0 ? 1 : 1.17),
-          0,
-        );
-        modNode.depth.gain.setValueAtTime(
-          (0.0004 + modDepth * 0.0032) * (index === 0 ? 1 : -1),
-          0,
-        );
-      });
-    }
-
-    const mode = sanitizeMaximizerMode(maximizerParams.mode);
-    const modeConfigById = {
-      "irc-ll": {
-        ratio: 12,
-        knee: 1.2,
-        attackFast: 0.0015,
-        attackSlow: 0.006,
-        releaseFast: 0.04,
-        releaseSlow: 0.16,
-      },
-      "irc-i": {
-        ratio: 16,
-        knee: 1.8,
-        attackFast: 0.001,
-        attackSlow: 0.005,
-        releaseFast: 0.05,
-        releaseSlow: 0.2,
-      },
-      "irc-ii": {
-        ratio: 18,
-        knee: 2.3,
-        attackFast: 0.0006,
-        attackSlow: 0.004,
-        releaseFast: 0.06,
-        releaseSlow: 0.24,
-      },
-      "irc-iii": {
-        ratio: 24,
-        knee: 3.1,
-        attackFast: 0.0008,
-        attackSlow: 0.0045,
-        releaseFast: 0.07,
-        releaseSlow: 0.28,
-      },
-      "irc-iv": {
-        ratio: 28,
-        knee: 4.2,
-        attackFast: 0.0012,
-        attackSlow: 0.006,
-        releaseFast: 0.08,
-        releaseSlow: 0.32,
-      },
-    };
-    const modeConfig = modeConfigById[mode] || modeConfigById["irc-ii"];
-    const thresholdDb = clamp(maximizerParams.thresholdDb, -24, 0);
-    const ceilingDb = clamp(maximizerParams.ceilingDb, -18, 0);
-    const character = clamp(maximizerParams.character, 0, 1);
-    const truePeakEnabled = Boolean(maximizerParams.truePeakEnabled);
-    const driveDb = Math.max(0, -thresholdDb);
-    const preGainDb = driveDb;
-    const compressorThresholdDb = -0.8;
-    const truePeakHeadroomDb = truePeakEnabled ? 0.3 : 0;
-    const ceilingGain = Math.pow(10, (ceilingDb - truePeakHeadroomDb) / 20);
-    const attackSec =
-      modeConfig.attackFast +
-      character * (modeConfig.attackSlow - modeConfig.attackFast);
-    const releaseSec =
-      modeConfig.releaseFast +
-      character * (modeConfig.releaseSlow - modeConfig.releaseFast);
-    const kneeDb = modeConfig.knee + character * 1.6;
-    const ratio = modeConfig.ratio + (1 - character) * 6;
-    const clipStrength = clamp(
-      (driveDb / 24) * (0.06 + (1 - character) * 0.12),
-      0,
-      0.18,
-    );
-
-    node.maximizerInput.gain.setValueAtTime(maximizerEnabled ? 1 : 0, 0);
-    node.maximizerPreGain.gain.setValueAtTime(
-      maximizerEnabled ? Math.pow(10, preGainDb / 20) : 1,
-      0,
-    );
-    node.maximizerCompressor.threshold.setValueAtTime(compressorThresholdDb, 0);
-    node.maximizerCompressor.ratio.setValueAtTime(ratio, 0);
-    node.maximizerCompressor.knee.setValueAtTime(kneeDb, 0);
-    node.maximizerCompressor.attack.setValueAtTime(attackSec, 0);
-    node.maximizerCompressor.release.setValueAtTime(releaseSec, 0);
-    node.maximizerSoftClip.curve =
-      maximizerEnabled && clipStrength > 0.001
-        ? buildSoftClipCurve(clipStrength)
-        : null;
-    node.maximizerSoftClip.oversample = truePeakEnabled ? "4x" : "2x";
-    node.maximizerCeilingGain.gain.setValueAtTime(
-      maximizerEnabled ? ceilingGain : 1,
-      0,
-    );
-
-    node.outputGain.gain.setValueAtTime(targetFader, 0);
+    applyInsertSettings(node, insert, 0, { useSmoothing: false });
   });
 
   const masterNode =
@@ -1181,185 +244,6 @@ function collectEvents(project) {
   return events;
 }
 
-function floatTo16BitPCM(input) {
-  const output = new Int16Array(input.length);
-  for (let i = 0; i < input.length; i += 1) {
-    const sample = clamp(input[i], -1, 1);
-    output[i] = sample < 0 ? sample * 0x8000 : sample * 0x7fff;
-  }
-  return output;
-}
-
-function writeString(view, offset, value) {
-  for (let i = 0; i < value.length; i += 1) {
-    view.setUint8(offset + i, value.charCodeAt(i));
-  }
-}
-
-function getSafeWavEncoding(requestedBitDepth) {
-  const bitDepth = Math.round(Number(requestedBitDepth || 32));
-
-  if (bitDepth === 16) {
-    return {
-      bitDepth: 16,
-      audioFormat: 1,
-      label: "16Bit int",
-    };
-  }
-
-  if (bitDepth === 24) {
-    return {
-      bitDepth: 24,
-      audioFormat: 1,
-      label: "24Bit int",
-    };
-  }
-
-  return {
-    bitDepth: 32,
-    audioFormat: 3,
-    label: "32Bit float",
-  };
-}
-
-function audioBufferToWavBlob(audioBuffer, requestedBitDepth, options) {
-  const startFrame = Math.max(0, Math.floor(Number(options?.startFrame || 0)));
-  const maxFrames = Math.max(1, audioBuffer.length - startFrame);
-  const requestedFrames = Number(options?.frameLength || maxFrames);
-  const frameLength = Math.max(
-    1,
-    Math.min(maxFrames, Math.floor(requestedFrames)),
-  );
-  const numChannels = audioBuffer.numberOfChannels;
-  const sampleRate = audioBuffer.sampleRate;
-  const wavEncoding = getSafeWavEncoding(requestedBitDepth);
-  const format = wavEncoding.audioFormat;
-  const bitDepth = wavEncoding.bitDepth;
-  const bytesPerSample = bitDepth / 8;
-
-  const channelData = Array.from({ length: numChannels }).map(
-    function (_, index) {
-      return audioBuffer.getChannelData(index);
-    },
-  );
-
-  const interleaved = new Float32Array(frameLength * numChannels);
-
-  for (let i = 0; i < frameLength; i += 1) {
-    const sourceIndex = startFrame + i;
-    for (let channel = 0; channel < numChannels; channel += 1) {
-      interleaved[i * numChannels + channel] =
-        channelData[channel][sourceIndex] || 0;
-    }
-  }
-
-  const blockAlign = (numChannels * bitDepth) / 8;
-  const byteRate = sampleRate * blockAlign;
-  const dataSize = interleaved.length * bytesPerSample;
-  const buffer = new ArrayBuffer(44 + dataSize);
-  const view = new DataView(buffer);
-
-  writeString(view, 0, "RIFF");
-  view.setUint32(4, 36 + dataSize, true);
-  writeString(view, 8, "WAVE");
-  writeString(view, 12, "fmt ");
-  view.setUint32(16, 16, true);
-  view.setUint16(20, format, true);
-  view.setUint16(22, numChannels, true);
-  view.setUint32(24, sampleRate, true);
-  view.setUint32(28, byteRate, true);
-  view.setUint16(32, blockAlign, true);
-  view.setUint16(34, bitDepth, true);
-  writeString(view, 36, "data");
-  view.setUint32(40, dataSize, true);
-
-  let offset = 44;
-  for (let i = 0; i < interleaved.length; i += 1) {
-    const sample = clamp(interleaved[i], -1, 1);
-
-    if (bitDepth === 16) {
-      const int16Sample = Math.round(
-        sample < 0 ? sample * 0x8000 : sample * 0x7fff,
-      );
-      view.setInt16(offset, int16Sample, true);
-      offset += 2;
-      continue;
-    }
-
-    if (bitDepth === 24) {
-      let int24Sample = Math.round(
-        sample < 0 ? sample * 0x800000 : sample * 0x7fffff,
-      );
-      int24Sample = Math.max(-0x800000, Math.min(0x7fffff, int24Sample));
-
-      if (int24Sample < 0) {
-        int24Sample += 0x1000000;
-      }
-
-      view.setUint8(offset, int24Sample & 0xff);
-      view.setUint8(offset + 1, (int24Sample >> 8) & 0xff);
-      view.setUint8(offset + 2, (int24Sample >> 16) & 0xff);
-      offset += 3;
-      continue;
-    }
-
-    view.setFloat32(offset, sample, true);
-    offset += 4;
-  }
-
-  return new Blob([buffer], { type: "audio/wav" });
-}
-
-async function audioBufferToMp3Blob(audioBuffer, requestedBitrateKbps, options) {
-  const startFrame = Math.max(0, Math.floor(Number(options?.startFrame || 0)));
-  const maxFrames = Math.max(1, audioBuffer.length - startFrame);
-  const requestedFrames = Number(options?.frameLength || maxFrames);
-  const frameLength = Math.max(
-    1,
-    Math.min(maxFrames, Math.floor(requestedFrames)),
-  );
-
-  const lamejsModule = await import("@breezystack/lamejs");
-  const lamejs = lamejsModule?.default || lamejsModule;
-  const Mp3Encoder = lamejs.Mp3Encoder;
-
-  const bitrateKbps = clamp(Math.round(requestedBitrateKbps), 96, 320);
-
-  const sampleRate = audioBuffer.sampleRate;
-  const leftData = audioBuffer
-    .getChannelData(0)
-    .subarray(startFrame, startFrame + frameLength);
-  const rightData =
-    audioBuffer.numberOfChannels > 1
-      ? audioBuffer
-          .getChannelData(1)
-          .subarray(startFrame, startFrame + frameLength)
-      : leftData;
-
-  const left = floatTo16BitPCM(leftData);
-  const right = floatTo16BitPCM(rightData);
-
-  const encoder = new Mp3Encoder(2, sampleRate, bitrateKbps);
-  const chunkSize = 1152;
-  const mp3Data = [];
-
-  for (let i = 0; i < left.length; i += chunkSize) {
-    const leftChunk = left.subarray(i, i + chunkSize);
-    const rightChunk = right.subarray(i, i + chunkSize);
-    const mp3buf = encoder.encodeBuffer(leftChunk, rightChunk);
-    if (mp3buf.length > 0) {
-      mp3Data.push(new Uint8Array(mp3buf));
-    }
-  }
-
-  const endBuf = encoder.flush();
-  if (endBuf.length > 0) {
-    mp3Data.push(new Uint8Array(endBuf));
-  }
-
-  return new Blob(mp3Data, { type: "audio/mpeg" });
-}
-
 function triggerBrowserDownload(blob, fileName) {
   const downloadUrl = URL.createObjectURL(blob);
   const anchor = document.createElement("a");
@@ -1483,35 +367,7 @@ export async function renderPlaylistArrangementToFile(options) {
   );
 
   const normalizeGainByBuffer = new WeakMap();
-
-  const getNormalizeGain = function (sampleBuffer) {
-    const cached = normalizeGainByBuffer.get(sampleBuffer);
-    if (Number.isFinite(cached)) {
-      return cached;
-    }
-
-    let peak = 0;
-    const channelsCount = Math.max(
-      1,
-      Number(sampleBuffer.numberOfChannels || 1),
-    );
-
-    for (let ch = 0; ch < channelsCount; ch += 1) {
-      const channelData = sampleBuffer.getChannelData(ch);
-      const step = Math.max(1, Math.floor(channelData.length / 64000));
-      for (let i = 0; i < channelData.length; i += step) {
-        const abs = Math.abs(channelData[i]);
-        if (abs > peak) {
-          peak = abs;
-        }
-      }
-    }
-
-    const normalizeGain =
-      peak > 0.0001 ? Math.max(0.25, Math.min(4, 0.9 / peak)) : 1;
-    normalizeGainByBuffer.set(sampleBuffer, normalizeGain);
-    return normalizeGain;
-  };
+  const stretchedSampleBufferCache = new WeakMap();
 
   const activeSampleVoicesByChannel = new Map();
 
@@ -1542,11 +398,34 @@ export async function renderPlaylistArrangementToFile(options) {
     return true;
   };
 
+  const activeSynthVoicesByChannel = new Map();
+
+  const stopActiveChannelSynthVoices = function (channelId, atTime) {
+    const voices = activeSynthVoicesByChannel.get(channelId);
+    if (!voices || voices.size === 0) {
+      return false;
+    }
+
+    voices.forEach(function (voice) {
+      try {
+        if (voice.node && typeof voice.node.stop === "function") {
+          voice.node.stop(atTime);
+        }
+      } catch {
+        return;
+      }
+    });
+
+    voices.clear();
+    return true;
+  };
+
   events.forEach(function (event) {
     const channel = event.channel;
     const settings = getSafeSampleSettings(channel.sampleSettings);
     const insertNode = inserts.insertMap.get(channel.mixerInsertId);
     const insertInput = insertNode?.inputGain || inserts.fallbackInsertInput;
+    const channelId = String(channel?.id || "").trim();
 
     const noteStartTime = Math.max(
       0,
@@ -1585,8 +464,12 @@ export async function renderPlaylistArrangementToFile(options) {
         channelBaseGain * 2.2 * PLUGIN_INSTRUMENT_GAIN_BOOST,
       );
 
+      if (settings.monoMode && channelId) {
+        stopActiveChannelSynthVoices(channelId, noteStartTime);
+      }
+
       try {
-        plugin.play(transposedPitch, noteStartTime, {
+        const voiceNode = plugin.play(transposedPitch, noteStartTime, {
           duration: noteDuration,
           gain: noteGain,
           attack: attackSec,
@@ -1594,6 +477,15 @@ export async function renderPlaylistArrangementToFile(options) {
           pan: clamp(Number(channel.pan || 0), -1, 1),
           destination: insertInput,
         });
+
+        if (voiceNode && typeof voiceNode.stop === "function") {
+          const channelVoices =
+            activeSynthVoicesByChannel.get(channelId) || new Set();
+          if (!activeSynthVoicesByChannel.has(channelId)) {
+            activeSynthVoicesByChannel.set(channelId, channelVoices);
+          }
+          channelVoices.add({ node: voiceNode });
+        }
       } catch {
         return;
       }
@@ -1605,124 +497,91 @@ export async function renderPlaylistArrangementToFile(options) {
       return;
     }
 
-    const source = audioCtx.createBufferSource();
-    const gain = audioCtx.createGain();
-    const envelopeGain = audioCtx.createGain();
-    const panner = audioCtx.createStereoPanner();
+    const normalizeGain = settings.normalize
+      ? getNormalizeGain(sampleBuffer, normalizeGainByBuffer)
+      : null;
 
     const safeMidiPitch = Number.isFinite(event.midiPitch)
       ? event.midiPitch
       : DEFAULT_SAMPLE_MIDI_PITCH;
     const pitchRate = Math.pow(2, Number(settings.pitchCents || 0) / 1200);
-    const playbackRate = clamp(
-      midiPitchToPlaybackRate(safeMidiPitch) * pitchRate,
-      0.125,
-      8,
+    const basePlaybackRate = Math.max(
+      MIN_PLAYBACK_RATE,
+      Math.min(MAX_PLAYBACK_RATE, midiPitchToPlaybackRate(safeMidiPitch) * pitchRate),
     );
-
     const sampleReadDuration = Math.max(
-      0.01,
+      MIN_DURATION_SEC,
       sampleBuffer.duration * (settings.lengthPct / 100),
     );
-    const samplePlayableDuration = Math.max(
-      0.01,
-      sampleReadDuration / playbackRate,
+    const stretchProfile = getTimeStretchProfile(
+      settings,
+      sampleReadDuration,
+      bpm,
+      basePlaybackRate,
     );
-    const noteGateDuration = Math.max(0.01, noteLengthSteps * sixteenth);
-    const shouldApplyEnvelope = Boolean(settings.envEnabled);
-    const envReleaseSec = shouldApplyEnvelope
-      ? Math.max(0, Number(settings.envReleaseMs ?? 0) / 1000)
-      : 0;
-    const sourcePlayDuration = shouldApplyEnvelope
-      ? Math.max(
-          0.01,
-          Math.min(samplePlayableDuration, noteGateDuration + envReleaseSec),
-        )
-      : samplePlayableDuration;
-    const envelopeGateDuration = shouldApplyEnvelope
-      ? Math.max(0.01, Math.min(noteGateDuration, sourcePlayDuration))
-      : sourcePlayDuration;
 
-    const fadeInSec = sourcePlayDuration * (settings.fadeInPct / 100);
-    const shapedFadeOutPct = Math.pow(settings.fadeOutPct / 100, 0.7) * 100;
-    const fadeOutSec = sourcePlayDuration * (shapedFadeOutPct / 100);
-    const fadeTotal = fadeInSec + fadeOutSec;
-    const fadeScale =
-      fadeTotal > sourcePlayDuration * 0.98
-        ? (sourcePlayDuration * 0.98) / Math.max(0.0001, fadeTotal)
-        : 1;
-    const finalFadeIn = fadeInSec * fadeScale;
-    const finalFadeOut = fadeOutSec * fadeScale;
-    const finalGain = Math.max(
-      0,
-      channelBaseGain *
-        (settings.normalize ? getNormalizeGain(sampleBuffer) : 1),
+    const voiceParams = computeSamplePlaybackParams(
+      sampleBuffer,
+      settings,
+      event.midiPitch,
+      noteLengthSteps,
+      sixteenth,
+      normalizeGain,
+      {
+        playbackRate: stretchProfile.playbackRate,
+        samplePlayableDuration: stretchProfile.useGranularStretch
+          ? stretchProfile.targetDurationSec
+          : undefined,
+      },
     );
-    const sampleStopAt = noteStartTime + sourcePlayDuration;
-    const fadeOutStart = Math.max(noteStartTime, sampleStopAt - finalFadeOut);
 
-    const channelId = String(channel?.id || "").trim();
     let didRetriggerCut = false;
     if (settings.cutItself && channelId) {
       didRetriggerCut = stopActiveChannelSamples(channelId, noteStartTime);
     }
 
-    source.buffer = sampleBuffer;
-    source.playbackRate.setValueAtTime(playbackRate, noteStartTime);
-
-    const retriggerFadeIn = didRetriggerCut
-      ? Math.max(finalFadeIn, CUT_ITSELF_RETRIGGER_FADE_IN_SEC)
-      : finalFadeIn;
-
-    if (retriggerFadeIn > 0.001) {
-      gain.gain.setValueAtTime(0.0001, noteStartTime);
-      gain.gain.linearRampToValueAtTime(
-        finalGain,
-        noteStartTime + retriggerFadeIn,
+    let scheduledBuffer = sampleBuffer;
+    if (stretchProfile.useGranularStretch) {
+      scheduledBuffer = getOrCreateStretchedBuffer(
+        audioCtx,
+        sampleBuffer,
+        sampleReadDuration,
+        voiceParams.sourcePlayDuration * voiceParams.playbackRate,
+        stretchedSampleBufferCache,
       );
-    } else {
-      gain.gain.setValueAtTime(finalGain, noteStartTime);
     }
 
-    gain.gain.setValueAtTime(finalGain, fadeOutStart);
-    if (finalFadeOut > 0.001) {
-      gain.gain.exponentialRampToValueAtTime(0.0001, sampleStopAt);
-    } else {
-      gain.gain.setValueAtTime(0.0001, sampleStopAt);
-    }
-
-    panner.pan.setValueAtTime(
-      clamp(Number(channel.pan || 0), -1, 1),
-      noteStartTime,
+    const finalGain = Math.max(
+      0,
+      channelBaseGain * (normalizeGain || 1),
     );
 
-    source.connect(gain);
-    gain.connect(envelopeGain);
+    const { source, gain } = createSamplePlaybackNodes(
+      audioCtx,
+      scheduledBuffer,
+      voiceParams,
+      insertInput,
+      noteStartTime,
+      clamp(Number(channel.pan || 0), -1, 1),
+      finalGain,
+      settings,
+      {
+        retriggerFadeInSec: didRetriggerCut
+          ? CUT_ITSELF_RETRIGGER_FADE_IN_SEC
+          : 0,
+      },
+    );
 
-    if (shouldApplyEnvelope) {
-      applyVolumeEnvelopeToGain(
-        envelopeGain.gain,
-        noteStartTime,
-        envelopeGateDuration,
-        settings,
-      );
-    } else {
-      envelopeGain.gain.setValueAtTime(1, noteStartTime);
-    }
-
-    envelopeGain.connect(panner);
-    panner.connect(insertInput);
-
+    const requiredBufferDuration = Math.max(
+      MIN_DURATION_SEC,
+      voiceParams.sourcePlayDuration * voiceParams.playbackRate,
+    );
     source.start(
       noteStartTime,
       0,
-      Math.min(
-        sampleReadDuration,
-        sampleBuffer.duration,
-        sourcePlayDuration * playbackRate,
-      ),
+      Math.min(scheduledBuffer.duration, requiredBufferDuration),
     );
-    source.stop(sampleStopAt + 0.005);
+    source.stop(noteStartTime + voiceParams.sourcePlayDuration + 0.005);
 
     if (channelId) {
       const channelVoices =
@@ -1734,7 +593,10 @@ export async function renderPlaylistArrangementToFile(options) {
       const voice = {
         source,
         gain,
-        cutReleaseSec: Math.max(CUT_ITSELF_RELEASE_SEC, finalFadeOut),
+        cutReleaseSec: Math.max(
+          CUT_ITSELF_RELEASE_SEC,
+          voiceParams.finalFadeOut,
+        ),
       };
 
       channelVoices.add(voice);
@@ -1807,7 +669,7 @@ export async function renderPlaylistArrangementToFile(options) {
 
     const clipStartTime = clipStartStep * sixteenth + renderStartOffsetSec;
     const clipOffsetSec = clipOffsetSteps * sixteenth;
-    const clipTotalDurationSec = Math.max(0.01, clipLengthSteps * sixteenth);
+    const clipTotalDurationSec = Math.max(MIN_DURATION_SEC, clipLengthSteps * sixteenth);
     const clipRemainingDurationSec = Math.max(
       0,
       clipTotalDurationSec - clipOffsetSec,
@@ -1817,12 +679,12 @@ export async function renderPlaylistArrangementToFile(options) {
     }
 
     const sampleReadDuration = Math.max(
-      0.01,
+      MIN_DURATION_SEC,
       Number(sampleBuffer.duration || 0) * (settings.lengthPct / 100),
     );
     const basePlaybackRate = Math.max(
-      0.125,
-      Math.min(8, Math.pow(2, Number(settings.pitchCents || 0) / 1200)),
+      MIN_PLAYBACK_RATE,
+      Math.min(MAX_PLAYBACK_RATE, Math.pow(2, Number(settings.pitchCents || 0) / 1200)),
     );
     const stretchProfile = getTimeStretchProfile(
       settings,
@@ -1832,11 +694,11 @@ export async function renderPlaylistArrangementToFile(options) {
     );
     const playbackRate = stretchProfile.playbackRate;
     const naturalPlayableDuration = Math.max(
-      0.01,
+      MIN_DURATION_SEC,
       sampleReadDuration / playbackRate,
     );
     const totalPlayableDuration = Math.max(
-      0.01,
+      MIN_DURATION_SEC,
       stretchProfile.useGranularStretch
         ? stretchProfile.targetDurationSec
         : naturalPlayableDuration,
@@ -1853,14 +715,33 @@ export async function renderPlaylistArrangementToFile(options) {
       return;
     }
 
-    const maxReadableDuration = sampleReadDuration;
+    let scheduledBuffer = sampleBuffer;
+    let maxReadableDuration = sampleReadDuration;
+    if (stretchProfile.useGranularStretch) {
+      const desiredBufferedDuration = Math.max(
+        MIN_DURATION_SEC,
+        totalPlayableDuration * playbackRate,
+      );
+      scheduledBuffer = getOrCreateStretchedBuffer(
+        audioCtx,
+        sampleBuffer,
+        sampleReadDuration,
+        desiredBufferedDuration,
+        stretchedSampleBufferCache,
+      );
+      maxReadableDuration = Math.max(
+        MIN_DURATION_SEC,
+        Math.min(scheduledBuffer.duration, desiredBufferedDuration),
+      );
+    }
+
     const sourceOffsetSec = clipOffsetSec * playbackRate;
     if (sourceOffsetSec >= maxReadableDuration) {
       return;
     }
 
     const sourceReadDuration = Math.max(
-      0.01,
+      MIN_DURATION_SEC,
       Math.min(
         maxReadableDuration - sourceOffsetSec,
         playDuration * playbackRate,
@@ -1868,10 +749,12 @@ export async function renderPlaylistArrangementToFile(options) {
     );
     const fadeOutAt = clipStartTime + Math.max(0, playDuration - 0.012);
     const clipGain = Math.max(
-      0.01,
+      MIN_DURATION_SEC,
       Number(channel?.volume ?? 0.75) *
-        0.36 *
-        (settings.normalize ? getNormalizeGain(sampleBuffer) : 1),
+        CLIP_GAIN_SCALE *
+        (settings.normalize
+          ? getNormalizeGain(sampleBuffer, normalizeGainByBuffer)
+          : 1),
     );
     const clipPan = clamp(Number(channel?.pan ?? 0), -1, 1);
 
@@ -1879,7 +762,7 @@ export async function renderPlaylistArrangementToFile(options) {
     const gain = audioCtx.createGain();
     const panner = audioCtx.createStereoPanner();
 
-    source.buffer = sampleBuffer;
+    source.buffer = scheduledBuffer;
     source.playbackRate.setValueAtTime(playbackRate, clipStartTime);
     gain.gain.setValueAtTime(clipGain, clipStartTime);
     gain.gain.setValueAtTime(clipGain, fadeOutAt);

@@ -27,3 +27,5 @@ build/uninstallerSidebar.bmp
 *.sw?
 guidelines.md
 project_documentation.tex
+bundle-stats.json
+public/packs/manifest.json

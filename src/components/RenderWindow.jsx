@@ -1,6 +1,5 @@
 import { useMemo, useState } from "react";
 import { useSelector } from "react-redux";
-import { renderPlaylistArrangementToFile } from "../audio/exportProjectAudio";
 
 const FORMAT_OPTIONS = [
   { value: "wav", label: "WAV" },
@@ -67,6 +66,9 @@ export function RenderWindow() {
     setErrorMessage("");
 
     try {
+      const { renderPlaylistArrangementToFile } = await import(
+        "../audio/exportProjectAudio"
+      );
       const result = await renderPlaylistArrangementToFile({
         project,
         mixerInserts,

@@ -1,6 +1,4 @@
-function clamp(value, min, max) {
-  return Math.max(min, Math.min(max, value));
-}
+import { clamp } from "../store/utils";
 
 function buildKaliParams(sampleRate, factor) {
   const safeFactor = Math.max(0.25, Math.min(4, Number(factor || 1)));

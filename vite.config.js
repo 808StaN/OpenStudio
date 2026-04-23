@@ -83,5 +83,22 @@ function packsRescanPlugin() {
 // https://vite.dev/config/
 export default defineConfig({
   plugins: [react(), packsRescanPlugin()],
+  build: {
+    rollupOptions: {
+      output: {
+        manualChunks(id) {
+          // Keep node_modules in a separate vendor chunk so browser caching
+          // is independent of application code changes.
+          if (id.includes("node_modules")) {
+            // lamejs is only needed for MP3 export; keep it isolated.
+            if (id.includes("lamejs")) {
+              return "lamejs";
+            }
+            return "vendor";
+          }
+        },
+      },
+    },
+  },
 });
 
