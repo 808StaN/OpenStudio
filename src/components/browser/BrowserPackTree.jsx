@@ -4,18 +4,18 @@ import {
 } from "../../utils/midiImport";
 import { toSafeSampleUrl } from "../../utils/sampleUrl";
 
+// Resolve the parent key used by toggleFolder in useBrowserPacksManager.
+// Must stay 1:1 with getPackParentPath in browserPackUtils.js so that
+// expandedByParent lookups hit the same key that toggleFolder writes.
 function getParentPath(folderPath) {
   if (!folderPath || folderPath === "Root") {
-    return "__root__";
+    return "";
   }
-  const normalized = String(folderPath)
-    .split("/")
-    .filter(Boolean);
-  if (normalized.length <= 1) {
-    return "__root__";
+  const lastSlash = folderPath.lastIndexOf("/");
+  if (lastSlash === -1) {
+    return "";
   }
-
-  return normalized.slice(0, -1).join("/");
+  return folderPath.slice(0, lastSlash);
 }
 
 // Renders recursive packs tree with audio preview and drag payload handling.
