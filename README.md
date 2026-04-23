@@ -176,6 +176,8 @@ Installer artifacts are generated in `release/`.
 ```text
 src/
   audio/         realtime scheduler + offline renderer
+    core/        modular audio engine (mixer, voices, preview, transport)
+    domain/      audio domain models (pitch, samples, time-stretch, FX params)
   components/    windows and DAW UI components
   styles/        app and theme styles
   data/          plugin/instrument metadata
