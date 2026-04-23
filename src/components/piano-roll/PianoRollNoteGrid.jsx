@@ -5,9 +5,9 @@ import {
   midiVelocityToPercent,
   toPitchClass,
 } from "./pianoRollUtils";
+import { PITCH_MAX } from "./pianoRollConstants";
 
 const DEFAULT_NOTE_VELOCITY = 95;
-const PIANO_PITCH_MAX = 127;
 const STEPS_PER_BAR = 16;
 
 /**
@@ -128,7 +128,7 @@ export function PianoRollNoteGrid({
         })}
 
         {pianoNotes.map(function (note) {
-          const top = (PIANO_PITCH_MAX - note.pitch) * rowHeight + 2;
+          const top = (PITCH_MAX - note.pitch) * rowHeight + 2;
           const left = note.start * stepWidth + 1;
           const width = Math.max(8, note.length * stepWidth - 2);
           const velocityAlpha = clamp(
