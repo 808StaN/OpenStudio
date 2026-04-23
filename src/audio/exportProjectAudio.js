@@ -1,10 +1,10 @@
 import Soundfont from "soundfont-player";
 import { applyVolumeEnvelopeToGain } from "./domain/envelope";
 import {
-  getDefaultEqBandType,
   GRAPHIC_EQ_DEFAULT_POINT_FREQUENCIES,
 } from "./domain/fxParams";
 import { applyInsertSettings } from "./core/applyInsertSettings";
+import { createMixerInsertNodes } from "./core/createMixerInsertNodes";
 import { DEFAULT_SAMPLE_MIDI_PITCH, midiPitchToPlaybackRate } from "./domain/pitch";
 import { getSafeSampleSettings } from "./domain/sampleSettings";
 import { getTimeStretchProfile } from "./domain/timeStretch";
@@ -27,203 +27,13 @@ function clamp(value, min, max) {
 // Builds the offline mixer graph once; each scheduled source only plugs into insert inputs.
 function buildInsertInputNodes(audioCtx, mixerInserts) {
   const inserts = Array.isArray(mixerInserts) ? mixerInserts : [];
-  const insertMap = new Map();
+  const { insertMap, getOutputNode } = createMixerInsertNodes(
+    audioCtx,
+    inserts,
+    { includeAnalysers: false },
+  );
 
-  inserts.forEach(function (insert) {
-    const inputGain = audioCtx.createGain();
-    const splitter = audioCtx.createChannelSplitter(2);
-    const leftToLeft = audioCtx.createGain();
-    const rightToLeft = audioCtx.createGain();
-    const leftToRight = audioCtx.createGain();
-    const rightToRight = audioCtx.createGain();
-    const merger = audioCtx.createChannelMerger(2);
-    const panner = audioCtx.createStereoPanner();
-    const fxDryGain = audioCtx.createGain();
-    const fxWetGain = audioCtx.createGain();
-    const eqInput = audioCtx.createGain();
-    const eqLowCut = audioCtx.createBiquadFilter();
-    const eqBands = GRAPHIC_EQ_DEFAULT_POINT_FREQUENCIES.map(
-      function (frequencyHz, index) {
-        const band = audioCtx.createBiquadFilter();
-        band.type = getDefaultEqBandType(index);
-        band.frequency.value = frequencyHz;
-        band.Q.value = 1.08;
-        band.gain.value = 0;
-        return band;
-      },
-    );
-    const reverbInput = audioCtx.createGain();
-    const reverbPreDelay = audioCtx.createDelay(0.5);
-    const reverbLoCut = audioCtx.createBiquadFilter();
-    const reverbHiCut = audioCtx.createBiquadFilter();
-    const reverbEarlyGain = audioCtx.createGain();
-    const reverbLateInput = audioCtx.createGain();
-    const reverbLateLeftDelay = audioCtx.createDelay(1.25);
-    const reverbLateRightDelay = audioCtx.createDelay(1.25);
-    const reverbLeftFeedback = audioCtx.createGain();
-    const reverbRightFeedback = audioCtx.createGain();
-    const reverbLeftDamping = audioCtx.createBiquadFilter();
-    const reverbRightDamping = audioCtx.createBiquadFilter();
-    const reverbLeftToLeft = audioCtx.createGain();
-    const reverbRightToLeft = audioCtx.createGain();
-    const reverbLeftToRight = audioCtx.createGain();
-    const reverbRightToRight = audioCtx.createGain();
-    const reverbWidthMerger = audioCtx.createChannelMerger(2);
-    const reverbWetGain = audioCtx.createGain();
-    const maximizerInput = audioCtx.createGain();
-    const maximizerPreGain = audioCtx.createGain();
-    const maximizerCompressor = audioCtx.createDynamicsCompressor();
-    const maximizerSoftClip = audioCtx.createWaveShaper();
-    const maximizerCeilingGain = audioCtx.createGain();
-    const outputGain = audioCtx.createGain();
-
-    inputGain.connect(splitter);
-
-    splitter.connect(leftToLeft, 0);
-    splitter.connect(rightToLeft, 1);
-    splitter.connect(leftToRight, 0);
-    splitter.connect(rightToRight, 1);
-
-    leftToLeft.connect(merger, 0, 0);
-    rightToLeft.connect(merger, 0, 0);
-    leftToRight.connect(merger, 0, 1);
-    rightToRight.connect(merger, 0, 1);
-
-    merger.connect(panner);
-    panner.connect(fxDryGain);
-    panner.connect(eqInput);
-    panner.connect(reverbInput);
-    panner.connect(maximizerInput);
-
-    eqLowCut.type = "highpass";
-    eqLowCut.frequency.value = 20;
-    eqLowCut.Q.value = 0.707;
-    eqInput.connect(eqLowCut);
-
-    let eqTail = eqLowCut;
-    eqBands.forEach(function (band) {
-      eqTail.connect(band);
-      eqTail = band;
-    });
-    eqTail.connect(fxWetGain);
-
-    reverbInput.connect(reverbPreDelay);
-    reverbLoCut.type = "highpass";
-    reverbHiCut.type = "lowpass";
-    reverbPreDelay.connect(reverbLoCut);
-    reverbLoCut.connect(reverbHiCut);
-
-    const earlyTapTimes = [0.011, 0.019, 0.031, 0.043];
-    const earlyTapGains = [0.5, 0.36, 0.26, 0.2];
-    const reverbEarlyTaps = earlyTapTimes.map(function (timeSeconds, idx) {
-      const delay = audioCtx.createDelay(0.25);
-      const gain = audioCtx.createGain();
-      delay.delayTime.value = timeSeconds;
-      gain.gain.value = earlyTapGains[idx] || 0.2;
-      reverbHiCut.connect(delay);
-      delay.connect(gain);
-      gain.connect(reverbEarlyGain);
-      return {
-        delay,
-        gain,
-        baseTime: timeSeconds,
-      };
-    });
-    reverbEarlyGain.connect(reverbWetGain);
-
-    reverbHiCut.connect(reverbLateInput);
-    reverbLateInput.connect(reverbLateLeftDelay);
-    reverbLateInput.connect(reverbLateRightDelay);
-
-    reverbLateLeftDelay.connect(reverbLeftDamping);
-    reverbLateRightDelay.connect(reverbRightDamping);
-
-    reverbLeftDamping.type = "lowpass";
-    reverbRightDamping.type = "lowpass";
-
-    reverbLeftDamping.connect(reverbLeftFeedback);
-    reverbRightDamping.connect(reverbRightFeedback);
-    reverbLeftFeedback.connect(reverbLateRightDelay);
-    reverbRightFeedback.connect(reverbLateLeftDelay);
-
-    reverbLeftDamping.connect(reverbLeftToLeft);
-    reverbLeftDamping.connect(reverbLeftToRight);
-    reverbRightDamping.connect(reverbRightToLeft);
-    reverbRightDamping.connect(reverbRightToRight);
-
-    reverbLeftToLeft.connect(reverbWidthMerger, 0, 0);
-    reverbRightToLeft.connect(reverbWidthMerger, 0, 0);
-    reverbLeftToRight.connect(reverbWidthMerger, 0, 1);
-    reverbRightToRight.connect(reverbWidthMerger, 0, 1);
-
-    reverbWidthMerger.connect(reverbWetGain);
-    reverbWetGain.connect(fxWetGain);
-
-    maximizerInput.connect(maximizerPreGain);
-    maximizerPreGain.connect(maximizerCompressor);
-    maximizerCompressor.connect(maximizerSoftClip);
-    maximizerSoftClip.connect(maximizerCeilingGain);
-    maximizerCeilingGain.connect(fxWetGain);
-
-    const reverbModulators = [reverbLateLeftDelay, reverbLateRightDelay].map(
-      function (targetDelay, index) {
-        const lfo = audioCtx.createOscillator();
-        const depth = audioCtx.createGain();
-        lfo.type = "sine";
-        lfo.frequency.value = 0.35 + index * 0.09;
-        depth.gain.value = 0;
-        lfo.connect(depth);
-        depth.connect(targetDelay.delayTime);
-        lfo.start();
-        return {
-          lfo,
-          depth,
-        };
-      },
-    );
-
-    fxDryGain.connect(outputGain);
-    fxWetGain.connect(outputGain);
-
-    insertMap.set(insert.id, {
-      inputGain,
-      leftToLeft,
-      rightToLeft,
-      leftToRight,
-      rightToRight,
-      panner,
-      fxDryGain,
-      fxWetGain,
-      eqInput,
-      eqLowCut,
-      eqBands,
-      reverbInput,
-      reverbPreDelay,
-      reverbLoCut,
-      reverbHiCut,
-      reverbEarlyGain,
-      reverbEarlyTaps,
-      reverbLateLeftDelay,
-      reverbLateRightDelay,
-      reverbLeftFeedback,
-      reverbRightFeedback,
-      reverbLeftDamping,
-      reverbRightDamping,
-      reverbLeftToLeft,
-      reverbRightToLeft,
-      reverbLeftToRight,
-      reverbRightToRight,
-      reverbModulators,
-      reverbWetGain,
-      maximizerInput,
-      maximizerPreGain,
-      maximizerCompressor,
-      maximizerSoftClip,
-      maximizerCeilingGain,
-      outputGain,
-    });
-  });
-
+  // Wire inter-insert routes.
   inserts.forEach(function (insert) {
     const node = insertMap.get(insert.id);
     if (!node) {
@@ -243,15 +53,16 @@ function buildInsertInputNodes(audioCtx, mixerInserts) {
       if (!target) {
         return;
       }
-      node.outputGain.connect(target.inputGain);
+      getOutputNode(node).connect(target.inputGain);
       hasConnectedRoute = true;
     });
 
     if (insert.isMaster || !hasConnectedRoute) {
-      node.outputGain.connect(audioCtx.destination);
+      getOutputNode(node).connect(audioCtx.destination);
     }
   });
 
+  // Apply initial parameter values at time 0.
   inserts.forEach(function (insert) {
     const node = insertMap.get(insert.id);
     if (!node) {
