@@ -18,6 +18,7 @@ import { getSafeSampleSettings } from "../domain/sampleSettings";
 import { getTimeStretchProfile } from "../domain/timeStretch";
 import { getPluginInstrument } from "../../data/pluginInstruments";
 import { setPlayheadStep, setPlaying } from "../../store";
+import { getNormalizeGain } from "./getNormalizeGain";
 import { toSafeSampleUrl } from "../../utils/sampleUrl";
 import { createWsolaStretchedBufferFromSample } from "../wsolaStretch";
 import {
@@ -30,10 +31,6 @@ import { useSampleSettingsPreview } from "./useSampleSettingsPreview";
 const DEFAULT_NOTE_VELOCITY = 95;
 const PLUGIN_INSTRUMENT_GAIN_BOOST = 1.5;
 const BASE_CHANNEL_TRIGGER_GAIN = 0.75;
-const SAMPLE_SETTINGS_PREVIEW_PLAY_EVENT =
-  "openstudio:sample-settings-preview-play";
-const SAMPLE_SETTINGS_PREVIEW_STOP_EVENT =
-  "openstudio:sample-settings-preview-stop";
 
 export function useTransportScheduler({
   transport,
@@ -128,41 +125,6 @@ export function useTransportScheduler({
       ) {
         const settings = getSafeSampleSettings(channel.sampleSettings);
 
-        const getNormalizeGain = function () {
-          if (!settings.normalize) {
-            return 1;
-          }
-
-          const cached = sampleNormalizeGainRef.current.get(sampleBuffer);
-          if (Number.isFinite(cached)) {
-            return cached;
-          }
-
-          let peak = 0;
-          const channelsCount = Math.max(
-            1,
-            Number(sampleBuffer.numberOfChannels || 1),
-          );
-
-          for (let ch = 0; ch < channelsCount; ch += 1) {
-            const channelData = sampleBuffer.getChannelData(ch);
-            const step = Math.max(1, Math.floor(channelData.length / 64000));
-
-            for (let i = 0; i < channelData.length; i += step) {
-              const abs = Math.abs(channelData[i]);
-              if (abs > peak) {
-                peak = abs;
-              }
-            }
-          }
-
-          const normalized =
-            peak > 0.0001 ? Math.max(0.25, Math.min(4, 0.9 / peak)) : 1;
-
-          sampleNormalizeGainRef.current.set(sampleBuffer, normalized);
-          return normalized;
-        };
-
         if (settings.cutItself) {
           stopActiveChannelSamples(channel.id, time);
         }
@@ -189,7 +151,9 @@ export function useTransportScheduler({
           basePlaybackRate,
         );
 
-        const normalizeGain = settings.normalize ? getNormalizeGain() : null;
+        const normalizeGain = settings.normalize
+          ? getNormalizeGain(sampleBuffer, sampleNormalizeGainRef.current)
+          : 1;
         const voiceParams = computeSamplePlaybackParams(
           sampleBuffer,
           settings,
@@ -357,40 +321,6 @@ export function useTransportScheduler({
           return;
         }
 
-        const getNormalizeGain = function () {
-          if (!settings.normalize) {
-            return 1;
-          }
-
-          const cached = sampleNormalizeGainRef.current.get(sampleBuffer);
-          if (Number.isFinite(cached)) {
-            return cached;
-          }
-
-          let peak = 0;
-          const channelsCount = Math.max(
-            1,
-            Number(sampleBuffer.numberOfChannels || 1),
-          );
-
-          for (let ch = 0; ch < channelsCount; ch += 1) {
-            const channelData = sampleBuffer.getChannelData(ch);
-            const step = Math.max(1, Math.floor(channelData.length / 64000));
-
-            for (let i = 0; i < channelData.length; i += step) {
-              const abs = Math.abs(channelData[i]);
-              if (abs > peak) {
-                peak = abs;
-              }
-            }
-          }
-
-          const normalized =
-            peak > 0.0001 ? Math.max(0.25, Math.min(4, 0.9 / peak)) : 1;
-          sampleNormalizeGainRef.current.set(sampleBuffer, normalized);
-          return normalized;
-        };
-
         let scheduledBuffer = sampleBuffer;
         let maxReadableDuration = sampleReadDuration;
         if (stretchProfile.useGranularStretch) {
@@ -459,7 +389,11 @@ export function useTransportScheduler({
         const fadeOutAt = time + Math.max(0, playDuration - 0.012);
         const clipGain = Math.max(
           0.01,
-          Number(channel?.volume ?? 0.75) * 0.36 * getNormalizeGain(),
+          Number(channel?.volume ?? 0.75) *
+            0.36 *
+            (settings.normalize
+              ? getNormalizeGain(sampleBuffer, sampleNormalizeGainRef.current)
+              : 1),
         );
         const clipPan = clamp(Number(channel?.pan ?? 0), -1, 1);
 

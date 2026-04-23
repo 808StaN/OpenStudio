@@ -11,6 +11,7 @@ import { getSafeSampleSettings } from "./domain/sampleSettings";
 import { getTimeStretchProfile } from "./domain/timeStretch";
 import { getPluginInstrument } from "../data/pluginInstruments";
 import { toSafeSampleUrl } from "../utils/sampleUrl";
+import { getNormalizeGain } from "./core/getNormalizeGain";
 
 const DEFAULT_NOTE_VELOCITY = 95;
 const PLUGIN_INSTRUMENT_GAIN_BOOST = 1.5;
@@ -537,35 +538,6 @@ export async function renderPlaylistArrangementToFile(options) {
 
   const normalizeGainByBuffer = new WeakMap();
 
-  const getNormalizeGain = function (sampleBuffer) {
-    const cached = normalizeGainByBuffer.get(sampleBuffer);
-    if (Number.isFinite(cached)) {
-      return cached;
-    }
-
-    let peak = 0;
-    const channelsCount = Math.max(
-      1,
-      Number(sampleBuffer.numberOfChannels || 1),
-    );
-
-    for (let ch = 0; ch < channelsCount; ch += 1) {
-      const channelData = sampleBuffer.getChannelData(ch);
-      const step = Math.max(1, Math.floor(channelData.length / 64000));
-      for (let i = 0; i < channelData.length; i += step) {
-        const abs = Math.abs(channelData[i]);
-        if (abs > peak) {
-          peak = abs;
-        }
-      }
-    }
-
-    const normalizeGain =
-      peak > 0.0001 ? Math.max(0.25, Math.min(4, 0.9 / peak)) : 1;
-    normalizeGainByBuffer.set(sampleBuffer, normalizeGain);
-    return normalizeGain;
-  };
-
   const activeSampleVoicesByChannel = new Map();
 
   const stopActiveChannelSamples = function (channelId, atTime) {
@@ -695,7 +667,7 @@ export async function renderPlaylistArrangementToFile(options) {
     }
 
     const normalizeGain = settings.normalize
-      ? getNormalizeGain(sampleBuffer)
+      ? getNormalizeGain(sampleBuffer, normalizeGainByBuffer)
       : null;
     const voiceParams = computeSamplePlaybackParams(
       sampleBuffer,
@@ -894,7 +866,9 @@ export async function renderPlaylistArrangementToFile(options) {
       0.01,
       Number(channel?.volume ?? 0.75) *
         0.36 *
-        (settings.normalize ? getNormalizeGain(sampleBuffer) : 1),
+        (settings.normalize
+          ? getNormalizeGain(sampleBuffer, normalizeGainByBuffer)
+          : 1),
     );
     const clipPan = clamp(Number(channel?.pan ?? 0), -1, 1);
 
