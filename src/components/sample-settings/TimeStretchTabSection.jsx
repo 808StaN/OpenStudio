@@ -90,9 +90,7 @@ export function TimeStretchTabSection({
               className="rack-modern-select-trigger"
               aria-label="Time stretch mode"
               onClick={function () {
-                setOpenStretchSelect(function (value) {
-                  return value === "time" ? null : "time";
-                });
+                setOpenStretchSelect(openStretchSelect === "time" ? null : "time");
               }}
             >
               <span className="rack-modern-select-value">
@@ -151,9 +149,7 @@ export function TimeStretchTabSection({
               className="rack-modern-select-trigger"
               aria-label="Time stretch algorithm"
               onClick={function () {
-                setOpenStretchSelect(function (value) {
-                  return value === "mode" ? null : "mode";
-                });
+                setOpenStretchSelect(openStretchSelect === "mode" ? null : "mode");
               }}
             >
               <span className="rack-modern-select-value">
