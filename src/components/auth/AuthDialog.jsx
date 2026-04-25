@@ -62,47 +62,51 @@ export function AuthDialog({ onClose }) {
   const handleLogin = useCallback(
     async function () {
       dispatch(setAuthLoading(true));
+      try {
+        const { data: profile, error: profileError } = await supabase
+          .from("profiles")
+          .select("email")
+          .eq("username", username.trim())
+          .single();
 
-      const { data: profile, error: profileError } = await supabase
-        .from("profiles")
-        .select("email")
-        .eq("username", username.trim())
-        .single();
+        if (profileError || !profile) {
+          dispatch(setAuthError("Invalid username or password."));
+          dispatch(setAuthLoading(false));
+          return;
+        }
 
-      if (profileError || !profile) {
-        dispatch(setAuthError("Invalid username or password."));
+        const { data: authData, error: authError } =
+          await supabase.auth.signInWithPassword({
+            email: profile.email,
+            password,
+          });
+
+        if (authError) {
+          dispatch(setAuthError(authError.message));
+          dispatch(setAuthLoading(false));
+          return;
+        }
+
+        const { data: userProfile } = await supabase
+          .from("profiles")
+          .select("username,nickname,email")
+          .eq("id", authData.user.id)
+          .single();
+
+        dispatch(
+          setUser({
+            id: authData.user.id,
+            username: userProfile.username,
+            nickname: userProfile.nickname,
+            email: userProfile.email,
+          }),
+        );
         dispatch(setAuthLoading(false));
-        return;
-      }
-
-      const { data: authData, error: authError } =
-        await supabase.auth.signInWithPassword({
-          email: profile.email,
-          password,
-        });
-
-      if (authError) {
-        dispatch(setAuthError(authError.message));
+        onClose();
+      } catch (err) {
+        dispatch(setAuthError(err.message || "Login failed."));
         dispatch(setAuthLoading(false));
-        return;
       }
-
-      const { data: userProfile } = await supabase
-        .from("profiles")
-        .select("username,nickname,email")
-        .eq("id", authData.user.id)
-        .single();
-
-      dispatch(
-        setUser({
-          id: authData.user.id,
-          username: userProfile.username,
-          nickname: userProfile.nickname,
-          email: userProfile.email,
-        }),
-      );
-      dispatch(setAuthLoading(false));
-      onClose();
     },
     [dispatch, username, password, onClose],
   );
@@ -110,54 +114,58 @@ export function AuthDialog({ onClose }) {
   const handleRegister = useCallback(
     async function () {
       dispatch(setAuthLoading(true));
+      try {
+        const { data: existing } = await supabase
+          .from("profiles")
+          .select("username")
+          .eq("username", username.trim())
+          .single();
 
-      const { data: existing } = await supabase
-        .from("profiles")
-        .select("username")
-        .eq("username", username.trim())
-        .single();
-
-      if (existing) {
-        dispatch(setAuthError("Username already taken."));
-        dispatch(setAuthLoading(false));
-        return;
-      }
-
-      const { data: authData, error: authError } = await supabase.auth.signUp({
-        email: email.trim(),
-        password,
-      });
-
-      if (authError) {
-        dispatch(setAuthError(authError.message));
-        dispatch(setAuthLoading(false));
-        return;
-      }
-
-      if (authData.user) {
-        const { error: insertError } = await supabase.from("profiles").insert({
-          id: authData.user.id,
-          username: username.trim(),
-          nickname: nickname.trim(),
-          email: email.trim(),
-        });
-
-        if (insertError) {
-          dispatch(setAuthError(insertError.message));
+        if (existing) {
+          dispatch(setAuthError("Username already taken."));
           dispatch(setAuthLoading(false));
           return;
         }
 
-        dispatch(
-          setUser({
+        const { data: authData, error: authError } = await supabase.auth.signUp({
+          email: email.trim(),
+          password,
+        });
+
+        if (authError) {
+          dispatch(setAuthError(authError.message));
+          dispatch(setAuthLoading(false));
+          return;
+        }
+
+        if (authData.user) {
+          const { error: insertError } = await supabase.from("profiles").insert({
             id: authData.user.id,
             username: username.trim(),
             nickname: nickname.trim(),
             email: email.trim(),
-          }),
-        );
+          });
+
+          if (insertError) {
+            dispatch(setAuthError(insertError.message));
+            dispatch(setAuthLoading(false));
+            return;
+          }
+
+          dispatch(
+            setUser({
+              id: authData.user.id,
+              username: username.trim(),
+              nickname: nickname.trim(),
+              email: email.trim(),
+            }),
+          );
+          dispatch(setAuthLoading(false));
+          onClose();
+        }
+      } catch (err) {
+        dispatch(setAuthError(err.message || "Registration failed."));
         dispatch(setAuthLoading(false));
-        onClose();
       }
     },
     [dispatch, username, nickname, email, password, onClose],
