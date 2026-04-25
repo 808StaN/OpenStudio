@@ -10,10 +10,9 @@
 }
 
 .auth-dialog {
-  background:
-    linear-gradient(180deg, #182236 0%, #111d2f 100%);
-  border: 1px solid rgba(138, 170, 214, 0.28);
-  border-radius: 8px;
+  background: linear-gradient(180deg, #111f34 0%, #0d1a2b 100%);
+  border: 1px solid rgba(138, 170, 214, 0.24);
+  border-radius: 9px;
   width: 360px;
   max-width: 90vw;
   padding: 0;
@@ -21,7 +20,7 @@
   box-shadow:
     0 18px 45px rgba(2, 9, 18, 0.55),
     0 0 0 1px rgba(0, 0, 0, 0.35),
-    inset 0 1px 0 rgba(255, 255, 255, 0.06);
+    inset 0 1px 0 rgba(255, 255, 255, 0.05);
   overflow: hidden;
   font-family: "Rajdhani", "Segoe UI", sans-serif;
 }
@@ -31,17 +30,18 @@
   justify-content: space-between;
   align-items: center;
   padding: 14px 16px 12px;
-  background:
-    linear-gradient(180deg, #1e2d44 0%, #162236 100%);
-  border-bottom: 1px solid rgba(138, 170, 214, 0.18);
-  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.05);
+  background: linear-gradient(180deg, #1b2f4b 0%, #13253e 100%);
+  border-bottom: 1px solid rgba(138, 170, 214, 0.24);
+  box-shadow:
+    inset 0 1px 0 rgba(255, 255, 255, 0.08),
+    0 4px 12px rgba(4, 12, 24, 0.34);
 }
 
 .auth-dialog-header h3 {
   margin: 0;
-  font-size: 16px;
+  font-size: 15px;
   font-weight: 600;
-  color: #f0f6ff;
+  color: #e8f1ff;
   letter-spacing: 0.4px;
 }
 
@@ -57,7 +57,7 @@
   display: flex;
   align-items: center;
   justify-content: center;
-  border-radius: 5px;
+  border-radius: 6px;
   transition: background 120ms ease, color 120ms ease;
 }
 
@@ -74,12 +74,12 @@
 }
 
 .auth-dialog-error {
-  background: rgba(239, 68, 68, 0.1);
+  background: rgba(239, 68, 68, 0.08);
   color: #ff9aa5;
   padding: 8px 10px;
-  border-radius: 6px;
+  border-radius: 7px;
   font-size: 12px;
-  border: 1px solid rgba(255, 90, 90, 0.25);
+  border: 1px solid rgba(255, 90, 90, 0.2);
   letter-spacing: 0.2px;
 }
 
@@ -91,27 +91,33 @@
 
 .auth-dialog-field span {
   font-size: 12px;
-  color: #9cb3d7;
+  color: #b9c7dc;
   font-weight: 500;
   letter-spacing: 0.25px;
 }
 
 .auth-dialog-field input {
-  height: 34px;
+  height: 36px;
   border-radius: 7px;
   border: 1px solid #3a4558;
   background: linear-gradient(180deg, #1f2a39 0%, #131a24 100%);
   color: #edf3ff;
   font-size: 13px;
-  padding: 0 10px;
+  padding: 0 12px;
   font-family: "Rajdhani", "Segoe UI", sans-serif;
   outline: none;
-  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.04);
+  box-shadow:
+    inset 0 1px 0 rgba(255, 255, 255, 0.04),
+    0 1px 2px rgba(0, 0, 0, 0.3);
   transition: border-color 120ms ease, box-shadow 120ms ease;
 }
 
 .auth-dialog-field input::placeholder {
   color: #6a7d99;
+}
+
+.auth-dialog-field input:hover {
+  border-color: #4a5a71;
 }
 
 .auth-dialog-field input:focus {
@@ -122,21 +128,21 @@
 }
 
 .auth-dialog-submit {
-  height: 34px;
+  height: 36px;
   width: 100%;
   border: 1px solid #506180;
   border-radius: 8px;
   color: #f7fbff;
-  font-size: 14px;
+  font-size: 13px;
   font-weight: 600;
-  letter-spacing: 0.35px;
+  letter-spacing: 0.25px;
   background: linear-gradient(180deg, #4f6ea0 0%, #29446f 100%);
   cursor: pointer;
   margin-top: 4px;
   font-family: "Rajdhani", "Segoe UI", sans-serif;
   box-shadow:
-    inset 0 1px 0 rgba(255, 255, 255, 0.1),
-    0 1px 2px rgba(0, 0, 0, 0.45);
+    inset 0 1px 0 rgba(255, 255, 255, 0.08),
+    0 4px 12px rgba(4, 12, 24, 0.34);
   transition:
     transform 120ms ease,
     filter 120ms ease,
@@ -146,7 +152,7 @@
 
 .auth-dialog-submit:hover {
   transform: translateY(-1px);
-  filter: brightness(1.06);
+  filter: brightness(1.05);
 }
 
 .auth-dialog-submit:active {
@@ -154,7 +160,7 @@
 }
 
 .auth-dialog-submit:disabled {
-  opacity: 0.5;
+  opacity: 0.55;
   cursor: not-allowed;
   transform: none;
   filter: none;
@@ -196,8 +202,8 @@
   position: absolute;
   top: calc(100% + 6px);
   right: 0;
-  background: linear-gradient(180deg, #1a2a40 0%, #111f34 100%);
-  border: 1px solid rgba(138, 170, 214, 0.25);
+  background: linear-gradient(180deg, #162943 0%, #101f34 100%);
+  border: 1px solid rgba(138, 170, 214, 0.24);
   border-radius: 7px;
   padding: 4px;
   min-width: 150px;
