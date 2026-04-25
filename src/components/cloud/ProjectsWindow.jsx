@@ -1,10 +1,11 @@
 import { useState, useEffect, useCallback } from "react";
 import { useSelector, useDispatch } from "react-redux";
+import { FolderOpen } from "lucide-react";
 import { fetchProjects, loadProjectFromCloud, deleteProjectFromCloud } from "../../lib/projectApi";
 import { deserializeProject } from "../../lib/projectSerializer";
 import { loadProjectFromFile } from "../../store";
 
-export function CloudProjectsWindow({ onClose }) {
+export function ProjectsWindow({ onClose, onLoadLocal }) {
   const dispatch = useDispatch();
   const currentUser = useSelector(function (state) {
     return state.user.currentUser;
@@ -104,7 +105,7 @@ export function CloudProjectsWindow({ onClose }) {
     <div className="cloud-projects-overlay">
       <div className="cloud-projects-window">
         <header className="cloud-projects-header">
-          <h3>My Projects</h3>
+          <h3>Load Project</h3>
           <button className="auth-dialog-close" onClick={onClose} aria-label="Close">
             ×
           </button>
@@ -113,10 +114,22 @@ export function CloudProjectsWindow({ onClose }) {
         <div className="cloud-projects-body">
           {error ? <div className="auth-dialog-error">{error}</div> : null}
 
+          <button
+            className="cloud-projects-local-btn"
+            onClick={function () {
+              if (typeof onLoadLocal === "function") {
+                onLoadLocal();
+              }
+            }}
+          >
+            <FolderOpen size={14} />
+            Load from computer
+          </button>
+
           {isLoading && projects.length === 0 ? (
-            <p className="cloud-projects-empty">Loading...</p>
+            <p className="cloud-projects-empty">Loading cloud projects...</p>
           ) : projects.length === 0 ? (
-            <p className="cloud-projects-empty">No projects yet.</p>
+            <p className="cloud-projects-empty">No cloud projects yet.</p>
           ) : (
             <div className="cloud-projects-list">
               {projects.map(function (project) {

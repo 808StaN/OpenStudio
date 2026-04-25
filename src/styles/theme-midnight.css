@@ -244,6 +244,94 @@
   background: linear-gradient(180deg, #ff7f96 0%, #df4968 100%) !important;
 }
 
+/* Project dropdown menu (midnight theme overrides) ------------------------ */
+
+.theme-midnight .project-menu-trigger {
+  border: 1px solid var(--modern-border) !important;
+  border-radius: 9px !important;
+  color: var(--modern-text) !important;
+  background: linear-gradient(180deg, #223754 0%, #172a43 100%) !important;
+  box-shadow:
+    inset 0 1px 0 rgba(255, 255, 255, 0.08),
+    0 4px 12px rgba(4, 12, 24, 0.34) !important;
+}
+
+.theme-midnight .project-menu-trigger:hover {
+  transform: translateY(-1px);
+  border-color: var(--modern-border-strong) !important;
+  filter: brightness(1.04);
+}
+
+.theme-midnight .project-menu-trigger:active {
+  transform: translateY(0);
+}
+
+.theme-midnight .project-dropdown {
+  border: 1px solid var(--modern-border) !important;
+  background: linear-gradient(180deg, #15263d 0%, #0f1c30 100%) !important;
+  box-shadow: var(--modern-shadow-lg) !important;
+}
+
+.theme-midnight .project-dropdown-item {
+  color: var(--modern-text) !important;
+  border-radius: 7px !important;
+}
+
+.theme-midnight .project-dropdown-item:hover {
+  background: rgba(90, 200, 255, 0.12) !important;
+  color: #fff !important;
+}
+
+.theme-midnight .project-dropdown-item:active {
+  background: rgba(90, 200, 255, 0.2) !important;
+}
+
+.theme-midnight .cloud-projects-local-btn {
+  border-color: var(--modern-border) !important;
+  color: var(--modern-text-soft) !important;
+  background: rgba(255, 255, 255, 0.02) !important;
+}
+
+.theme-midnight .cloud-projects-local-btn:hover {
+  border-color: var(--modern-accent) !important;
+  color: #fff !important;
+  background: rgba(90, 200, 255, 0.1) !important;
+}
+
+/* Theme dialog tile layout (midnight theme overrides) --------------------- */
+
+.theme-midnight .theme-dialog-tile {
+  border: 1px solid var(--modern-border) !important;
+  background: linear-gradient(180deg, #1a2f4a 0%, #111f34 100%) !important;
+  box-shadow:
+    0 4px 12px rgba(2, 9, 18, 0.45),
+    inset 0 1px 0 rgba(255, 255, 255, 0.06) !important;
+}
+
+.theme-midnight .theme-dialog-tile:hover {
+  border-color: var(--modern-accent) !important;
+  box-shadow:
+    0 8px 20px rgba(2, 9, 18, 0.55),
+    0 0 14px rgba(90, 200, 255, 0.22),
+    inset 0 1px 0 rgba(255, 255, 255, 0.08) !important;
+}
+
+.theme-midnight .theme-dialog-tile.is-active {
+  border-color: var(--modern-accent) !important;
+  box-shadow:
+    0 0 16px rgba(90, 200, 255, 0.32),
+    inset 0 1px 0 rgba(255, 255, 255, 0.08) !important;
+}
+
+.theme-midnight .theme-dialog-tile-footer {
+  border-top-color: var(--modern-border) !important;
+  color: var(--modern-text) !important;
+}
+
+.theme-midnight .theme-dialog-tile-check {
+  color: var(--modern-accent) !important;
+}
+
 .transport-bpm,
 .rack-pattern-picker,
 .rack-pattern-picker select,

@@ -221,7 +221,32 @@
   overflow: visible;
   display: flex;
   align-items: center;
+  justify-content: center;
+  flex: 1;
   gap: 8px;
+}
+
+.transport-left,
+.transport-center,
+.transport-right {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.transport-left {
+  flex: 1;
+  justify-content: flex-start;
+}
+
+.transport-center {
+  flex: 0 0 auto;
+  justify-content: center;
+}
+
+.transport-right {
+  flex: 1;
+  justify-content: flex-end;
 }
 
 .theme-picker {
@@ -563,6 +588,188 @@
   margin: 0;
   color: #9fb0c8;
   font-size: 13px;
+}
+
+/* Project dropdown menu (default theme) ----------------------------------- */
+
+.project-menu {
+  position: relative;
+  display: inline-block;
+}
+
+.project-menu-trigger {
+  height: 30px;
+  min-width: 70px;
+  border: 1px solid #4a4e59;
+  border-radius: 6px;
+  color: #dbe3ef;
+  background: linear-gradient(180deg, #495263 0%, #2b3342 52%, #1d2431 100%);
+  box-shadow:
+    inset 0 1px 0 rgba(255, 255, 255, 0.13),
+    inset 0 -2px 2px rgba(0, 0, 0, 0.35),
+    0 1px 2px rgba(0, 0, 0, 0.6);
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  padding: 0 10px;
+  cursor: pointer;
+  font-size: 13px;
+  transition:
+    transform 120ms ease,
+    filter 120ms ease,
+    border-color 120ms ease,
+    box-shadow 120ms ease;
+}
+
+.project-menu-trigger:hover {
+  transform: translateY(-1px);
+  filter: brightness(1.04);
+}
+
+.project-menu-trigger:active {
+  transform: translateY(0);
+}
+
+.project-dropdown {
+  position: absolute;
+  top: calc(100% + 6px);
+  left: 0;
+  z-index: 10020;
+  width: max-content;
+  min-width: 0;
+  border: 1px solid #4b4f58;
+  border-radius: 8px;
+  background: linear-gradient(180deg, #1c222e 0%, #141a26 100%);
+  box-shadow:
+    0 18px 35px rgba(0, 0, 0, 0.52),
+    inset 0 1px 0 rgba(255, 255, 255, 0.08);
+  padding: 4px;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.project-dropdown-item {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 8px 12px;
+  border: 0;
+  border-radius: 6px;
+  color: #dbe3ef;
+  background: transparent;
+  font-size: 13px;
+  cursor: pointer;
+  text-align: left;
+}
+
+.project-dropdown-item:hover {
+  background: rgba(255, 255, 255, 0.08);
+}
+
+.project-dropdown-item:active {
+  background: rgba(255, 255, 255, 0.12);
+}
+
+/* Theme dialog tile layout ------------------------------------------------ */
+
+.theme-dialog .auth-dialog-form {
+  gap: 0;
+}
+
+.theme-dialog-body {
+  display: flex;
+  gap: 12px;
+  padding: 12px;
+}
+
+.theme-dialog-tile {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  border: 1px solid #4b4f58;
+  border-radius: 10px;
+  overflow: hidden;
+  background: linear-gradient(180deg, #232933 0%, #151922 100%);
+  box-shadow:
+    0 4px 12px rgba(0, 0, 0, 0.4),
+    inset 0 1px 0 rgba(255, 255, 255, 0.08);
+  cursor: pointer;
+  transition:
+    transform 120ms ease,
+    border-color 120ms ease,
+    box-shadow 120ms ease;
+}
+
+.theme-dialog-tile:hover {
+  transform: translateY(-2px);
+  border-color: #48f598;
+  box-shadow:
+    0 8px 20px rgba(0, 0, 0, 0.5),
+    0 0 12px rgba(72, 245, 152, 0.18),
+    inset 0 1px 0 rgba(255, 255, 255, 0.1);
+}
+
+.theme-dialog-tile:active {
+  transform: translateY(0);
+}
+
+.theme-dialog-tile.is-active {
+  border-color: #48f598;
+  box-shadow:
+    0 0 14px rgba(72, 245, 152, 0.25),
+    inset 0 1px 0 rgba(255, 255, 255, 0.1);
+}
+
+.theme-dialog-tile-preview {
+  height: 64px;
+  width: 100%;
+}
+
+.theme-dialog-tile-footer {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  padding: 10px 12px;
+  border-top: 1px solid #353b46;
+  color: #dbe3ef;
+  font-size: 13px;
+  font-weight: 500;
+}
+
+.theme-dialog-tile-check {
+  color: #48f598;
+  flex-shrink: 0;
+}
+
+/* Local file load button inside ProjectsWindow ---------------------------- */
+
+.cloud-projects-local-btn {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  width: 100%;
+  margin-bottom: 12px;
+  padding: 10px;
+  border: 1px dashed #4b5462;
+  border-radius: 8px;
+  color: #9fb3d6;
+  background: rgba(255, 255, 255, 0.03);
+  font-size: 13px;
+  cursor: pointer;
+  transition:
+    border-color 120ms ease,
+    background 120ms ease,
+    color 120ms ease;
+}
+
+.cloud-projects-local-btn:hover {
+  border-color: #5ac8ff;
+  color: #e8f1ff;
+  background: rgba(90, 200, 255, 0.08);
 }
 
 @media (max-width: 1280px) {
