@@ -134,7 +134,7 @@ export function SaveProjectDialog({ onClose }) {
 
           <div className="auth-dialog-field">
             <span>Save to</span>
-            <label className="auth-dialog-remember">
+            <label className="auth-dialog-toggle">
               <input
                 type="checkbox"
                 checked={saveLocal}
@@ -142,9 +142,9 @@ export function SaveProjectDialog({ onClose }) {
                   setSaveLocal(event.target.checked);
                 }}
               />
-              <span>Local file (.os)</span>
+              <span>Local file</span>
             </label>
-            <label className="auth-dialog-remember">
+            <label className="auth-dialog-toggle">
               <input
                 type="checkbox"
                 checked={saveCloud}

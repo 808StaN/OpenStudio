@@ -225,6 +225,75 @@
   user-select: none;
 }
 
+.auth-dialog-toggle {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  cursor: pointer;
+  margin-top: -2px;
+}
+
+.auth-dialog-toggle input[type="checkbox"] {
+  appearance: none;
+  -webkit-appearance: none;
+  width: 30px;
+  height: 18px;
+  border-radius: 999px;
+  border: 1px solid #3a4558;
+  background: linear-gradient(180deg, #1f2a39 0%, #131a24 100%);
+  cursor: pointer;
+  position: relative;
+  flex-shrink: 0;
+  box-shadow:
+    inset 0 1px 0 rgba(255, 255, 255, 0.04),
+    0 1px 2px rgba(0, 0, 0, 0.24);
+  transition:
+    border-color 120ms ease,
+    background 120ms ease,
+    box-shadow 120ms ease;
+}
+
+.auth-dialog-toggle input[type="checkbox"]::after {
+  content: "";
+  position: absolute;
+  top: 2px;
+  left: 2px;
+  width: 11px;
+  height: 11px;
+  border-radius: 50%;
+  background: linear-gradient(180deg, #dbe6f8 0%, #aab9d2 100%);
+  box-shadow:
+    inset 0 1px 0 rgba(255, 255, 255, 0.4),
+    0 1px 2px rgba(0, 0, 0, 0.35);
+  transition: transform 120ms ease, background 120ms ease;
+}
+
+.auth-dialog-toggle input[type="checkbox"]:hover {
+  border-color: #4a5a71;
+}
+
+.auth-dialog-toggle input[type="checkbox"]:checked {
+  border-color: #506180;
+  background: linear-gradient(180deg, #4f6ea0 0%, #29446f 100%);
+}
+
+.auth-dialog-toggle input[type="checkbox"]:checked::after {
+  transform: translateX(13px);
+  background: linear-gradient(180deg, #f7fbff 0%, #d9e7ff 100%);
+}
+
+.auth-dialog-toggle input[type="checkbox"]:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+.auth-dialog-toggle span {
+  font-size: 12px;
+  color: #b9c7dc;
+  letter-spacing: 0.25px;
+  user-select: none;
+}
+
 .auth-dialog-footer {
   padding: 0 16px 16px;
   text-align: center;

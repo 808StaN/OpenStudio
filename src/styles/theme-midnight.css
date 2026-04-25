@@ -885,3 +885,32 @@
   color: var(--modern-text-soft) !important;
 }
 
+.auth-dialog-toggle input[type="checkbox"] {
+  border-color: var(--modern-border) !important;
+  background: linear-gradient(180deg, #14263d 0%, #101f34 100%) !important;
+}
+
+.auth-dialog-toggle input[type="checkbox"]::after {
+  background: linear-gradient(180deg, #dff2ff 0%, #9fc4ef 100%) !important;
+}
+
+.auth-dialog-toggle input[type="checkbox"]:hover {
+  border-color: var(--modern-border-strong) !important;
+}
+
+.auth-dialog-toggle input[type="checkbox"]:checked {
+  border-color: var(--modern-border) !important;
+  background: linear-gradient(180deg, #3f6aa1 0%, #254772 100%) !important;
+  box-shadow:
+    inset 0 1px 0 rgba(255, 255, 255, 0.12),
+    0 0 0 1px rgba(90, 200, 255, 0.16) !important;
+}
+
+.auth-dialog-toggle input[type="checkbox"]:checked::after {
+  background: linear-gradient(180deg, #ffffff 0%, #dff2ff 100%) !important;
+}
+
+.auth-dialog-toggle span {
+  color: var(--modern-text-soft) !important;
+}
+
