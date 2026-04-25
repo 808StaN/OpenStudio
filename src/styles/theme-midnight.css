@@ -709,6 +709,28 @@
   border-color: var(--modern-border-strong) !important;
 }
 
+.auth-dialog-close {
+  width: 22px !important;
+  height: 22px !important;
+  border-radius: 8px !important;
+  border: 1px solid var(--modern-border) !important;
+  color: #dff2ff !important;
+  background: linear-gradient(180deg, #254061 0%, #1b314e 100%) !important;
+  box-shadow:
+    inset 0 1px 0 rgba(255, 255, 255, 0.09),
+    0 3px 10px rgba(4, 10, 20, 0.33) !important;
+  display: inline-flex !important;
+  align-items: center !important;
+  justify-content: center !important;
+  transition: transform 120ms ease, filter 120ms ease, border-color 120ms ease !important;
+}
+
+.auth-dialog-close:hover {
+  transform: translateY(-1px) !important;
+  border-color: var(--modern-border-strong) !important;
+  filter: brightness(1.04) !important;
+}
+
 .auth-dialog-footer {
   color: var(--modern-text-soft) !important;
 }
