@@ -13,6 +13,7 @@ export function AuthDialog({ onClose }) {
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [confirmPassword, setConfirmPassword] = useState("");
+  const [rememberMe, setRememberMe] = useState(false);
   const [validationError, setValidationError] = useState(null);
 
   const resetForm = useCallback(function () {
@@ -88,13 +89,8 @@ export function AuthDialog({ onClose }) {
   const displayError = validationError || error;
 
   return (
-    <div className="auth-dialog-overlay" onClick={onClose}>
-      <div
-        className="auth-dialog"
-        onClick={function (event) {
-          event.stopPropagation();
-        }}
-      >
+    <div className="auth-dialog-overlay">
+      <div className="auth-dialog">
         <header className="auth-dialog-header">
           <h3>{mode === "login" ? "Sign In" : "Create Account"}</h3>
           <button
@@ -167,6 +163,19 @@ export function AuthDialog({ onClose }) {
               autoComplete={mode === "login" ? "current-password" : "new-password"}
             />
           </label>
+
+          {mode === "login" ? (
+            <label className="auth-dialog-remember">
+              <input
+                type="checkbox"
+                checked={rememberMe}
+                onChange={function (event) {
+                  setRememberMe(event.target.checked);
+                }}
+              />
+              <span>Remember password</span>
+            </label>
+          ) : null}
 
           {mode === "register" ? (
             <label className="auth-dialog-field">

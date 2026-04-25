@@ -175,6 +175,56 @@
   filter: none;
 }
 
+.auth-dialog-remember {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  cursor: pointer;
+  margin-top: -4px;
+}
+
+.auth-dialog-remember input[type="checkbox"] {
+  appearance: none;
+  -webkit-appearance: none;
+  width: 16px;
+  height: 16px;
+  border-radius: 4px;
+  border: 1px solid #3a4558;
+  background: linear-gradient(180deg, #1f2a39 0%, #131a24 100%);
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+  transition: border-color 120ms ease, box-shadow 120ms ease;
+}
+
+.auth-dialog-remember input[type="checkbox"]:hover {
+  border-color: #4a5a71;
+}
+
+.auth-dialog-remember input[type="checkbox"]:checked {
+  border-color: #506180;
+  background: linear-gradient(180deg, #4f6ea0 0%, #29446f 100%);
+}
+
+.auth-dialog-remember input[type="checkbox"]:checked::after {
+  content: "";
+  width: 8px;
+  height: 5px;
+  border-left: 2px solid #f7fbff;
+  border-bottom: 2px solid #f7fbff;
+  transform: rotate(-45deg) translateY(-1px);
+  display: block;
+}
+
+.auth-dialog-remember span {
+  font-size: 12px;
+  color: #b9c7dc;
+  letter-spacing: 0.25px;
+  user-select: none;
+}
+
 .auth-dialog-footer {
   padding: 0 16px 16px;
   text-align: center;

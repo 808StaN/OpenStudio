@@ -766,3 +766,21 @@
   color: var(--modern-accent) !important;
 }
 
+.auth-dialog-remember input[type="checkbox"] {
+  border-color: var(--modern-border) !important;
+  background: linear-gradient(180deg, #14263d 0%, #101f34 100%) !important;
+}
+
+.auth-dialog-remember input[type="checkbox"]:hover {
+  border-color: var(--modern-border-strong) !important;
+}
+
+.auth-dialog-remember input[type="checkbox"]:checked {
+  border-color: var(--modern-border) !important;
+  background: linear-gradient(180deg, #223754 0%, #172a43 100%) !important;
+}
+
+.auth-dialog-remember span {
+  color: var(--modern-text-soft) !important;
+}
+
