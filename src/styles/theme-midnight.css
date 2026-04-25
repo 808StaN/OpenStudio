@@ -744,6 +744,30 @@
   color: var(--modern-text-soft) !important;
 }
 
+.auth-confirm-dialog {
+  border-color: var(--modern-border) !important;
+  background: linear-gradient(180deg, #111f34 0%, #0d1a2b 100%) !important;
+  box-shadow: var(--modern-shadow-lg) !important;
+}
+
+.auth-confirm-dialog h4 {
+  color: var(--modern-text) !important;
+}
+
+.auth-confirm-dialog p {
+  color: var(--modern-text-soft) !important;
+}
+
+.auth-confirm-secondary {
+  border-color: var(--modern-border) !important;
+  color: var(--modern-text) !important;
+  background: linear-gradient(180deg, #162943 0%, #101f34 100%) !important;
+}
+
+.auth-confirm-secondary:hover {
+  border-color: var(--modern-border-strong) !important;
+}
+
 .auth-dialog-link {
   color: var(--modern-accent) !important;
 }

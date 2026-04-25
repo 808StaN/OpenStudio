@@ -1,6 +1,7 @@
 import { useState, useEffect, useCallback } from "react";
 import { useSelector, useDispatch } from "react-redux";
 import { fetchProjects, loadProjectFromCloud, deleteProjectFromCloud } from "../../lib/projectApi";
+import { deserializeProject } from "../../lib/projectSerializer";
 import { loadProjectFromFile } from "../../store";
 
 export function CloudProjectsWindow({ onClose }) {
@@ -19,7 +20,7 @@ export function CloudProjectsWindow({ onClose }) {
       setIsLoading(true);
       setError(null);
       try {
-        const list = await fetchProjects(currentUser.id);
+        const list = await fetchProjects();
         setProjects(list);
       } catch (err) {
         setError(err.message);
@@ -44,7 +45,7 @@ export function CloudProjectsWindow({ onClose }) {
       setError(null);
       try {
         const data = await loadProjectFromCloud(selectedId);
-        dispatch(loadProjectFromFile(data));
+        dispatch(loadProjectFromFile(deserializeProject(data)));
         onClose();
       } catch (err) {
         setError(err.message);

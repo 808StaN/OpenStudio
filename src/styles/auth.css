@@ -233,6 +233,90 @@
   letter-spacing: 0.2px;
 }
 
+.auth-confirm-overlay {
+  position: absolute;
+  inset: 0;
+  background: rgba(7, 10, 16, 0.58);
+  backdrop-filter: blur(3px);
+  -webkit-backdrop-filter: blur(3px);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 16px;
+}
+
+.auth-confirm-dialog {
+  width: 100%;
+  max-width: 320px;
+  border: 1px solid #4b4f58;
+  border-radius: 9px;
+  background: linear-gradient(180deg, #171c26 0%, #121722 100%);
+  box-shadow:
+    0 18px 35px rgba(0, 0, 0, 0.52),
+    inset 0 1px 0 rgba(255, 255, 255, 0.08);
+  padding: 16px;
+}
+
+.auth-confirm-dialog h4 {
+  margin: 0 0 8px;
+  font-size: 15px;
+  font-weight: 600;
+  color: #e4e8ef;
+  letter-spacing: 0.3px;
+}
+
+.auth-confirm-dialog p {
+  margin: 0;
+  font-size: 13px;
+  line-height: 1.4;
+  color: #b9c7dc;
+}
+
+.auth-confirm-actions {
+  display: flex;
+  gap: 10px;
+  margin-top: 14px;
+}
+
+.auth-confirm-btn {
+  margin-top: 0;
+}
+
+.auth-confirm-secondary {
+  flex: 1;
+  height: 36px;
+  border: 1px solid #3a4558;
+  border-radius: 8px;
+  color: #e4e8ef;
+  font-size: 13px;
+  font-weight: 600;
+  letter-spacing: 0.25px;
+  background: linear-gradient(180deg, #2a3442 0%, #1a212d 100%);
+  cursor: pointer;
+  font-family: "Rajdhani", "Segoe UI", sans-serif;
+  transition:
+    transform 120ms ease,
+    filter 120ms ease,
+    border-color 120ms ease;
+}
+
+.auth-confirm-secondary:hover {
+  transform: translateY(-1px);
+  border-color: #4a5a71;
+  filter: brightness(1.04);
+}
+
+.auth-confirm-secondary:active {
+  transform: translateY(0);
+}
+
+.auth-confirm-secondary:disabled {
+  opacity: 0.55;
+  cursor: not-allowed;
+  transform: none;
+  filter: none;
+}
+
 .auth-dialog-link {
   background: none;
   border: none;
