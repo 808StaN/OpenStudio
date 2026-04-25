@@ -24,60 +24,68 @@ export function TopToolbar() {
   return (
     <header className="transport-shell">
       <div className="transport-main">
-        {/* Project-level actions collapsed into a single dropdown */}
-        <ProjectMenu />
-
-        <button
-          className="transport-btn"
-          title={transport.isPlaying ? "Stop" : "Play"}
-          aria-label={transport.isPlaying ? "Stop" : "Play"}
-          onClick={function () {
-            dispatch(setPlaying(!transport.isPlaying));
-          }}
-        >
-          {transport.isPlaying ? <Square size={15} /> : <Play size={15} />}
-        </button>
-        <button
-          className={"transport-btn" + (transport.isRecording ? " is-rec" : "")}
-          onClick={function () {
-            dispatch(setRecording(!transport.isRecording));
-          }}
-        >
-          <Circle size={15} />
-        </button>
-
-        <DraggableBpm
-          value={transport.bpm}
-          min={40}
-          max={300}
-          onChange={function (next) {
-            dispatch(setBpm(next));
-          }}
-        />
-
-        <div className="mode-toggle">
-          <button
-            className={transport.mode === "pattern" ? "is-active" : ""}
-            onClick={function () {
-              dispatch(setTransportMode("pattern"));
-            }}
-          >
-            Pattern
-          </button>
-          <button
-            className={transport.mode === "song" ? "is-active" : ""}
-            onClick={function () {
-              dispatch(setTransportMode("song"));
-            }}
-          >
-            Song
-          </button>
+        {/* Left group: project actions + auth */}
+        <div className="transport-left">
+          <ProjectMenu />
+          <UserMenu onOpenAuth={function () { setAuthDialogOpen(true); }} />
         </div>
 
-        <ThemePicker />
+        {/* Center group: transport controls */}
+        <div className="transport-center">
+          <button
+            className="transport-btn"
+            title={transport.isPlaying ? "Stop" : "Play"}
+            aria-label={transport.isPlaying ? "Stop" : "Play"}
+            onClick={function () {
+              dispatch(setPlaying(!transport.isPlaying));
+            }}
+          >
+            {transport.isPlaying ? <Square size={15} /> : <Play size={15} />}
+          </button>
+          <button
+            className={"transport-btn" + (transport.isRecording ? " is-rec" : "")}
+            onClick={function () {
+              dispatch(setRecording(!transport.isRecording));
+            }}
+          >
+            <Circle size={15} />
+          </button>
+
+          <DraggableBpm
+            value={transport.bpm}
+            min={40}
+            max={300}
+            onChange={function (next) {
+              dispatch(setBpm(next));
+            }}
+          />
+
+          <div className="mode-toggle">
+            <button
+              className={transport.mode === "pattern" ? "is-active" : ""}
+              onClick={function () {
+                dispatch(setTransportMode("pattern"));
+              }}
+            >
+              Pattern
+            </button>
+            <button
+              className={transport.mode === "song" ? "is-active" : ""}
+              onClick={function () {
+                dispatch(setTransportMode("song"));
+              }}
+            >
+              Song
+            </button>
+          </div>
+        </div>
+
+        {/* Right group: theme picker */}
+        <div className="transport-right">
+          <ThemePicker />
+        </div>
       </div>
 
-      <UserMenu onOpenAuth={function () { setAuthDialogOpen(true); }} />
       <WindowToggleButtons />
       {authDialogOpen ? (
         <AuthDialog onClose={function () { setAuthDialogOpen(false); }} />
