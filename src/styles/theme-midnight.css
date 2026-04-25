@@ -696,6 +696,15 @@
     0 0 0 1px rgba(90, 200, 255, 0.25) !important;
 }
 
+.auth-dialog-field input:-webkit-autofill,
+.auth-dialog-field input:-webkit-autofill:hover,
+.auth-dialog-field input:-webkit-autofill:focus {
+  -webkit-text-fill-color: var(--modern-text) !important;
+  -webkit-box-shadow: 0 0 0 1000px #101f34 inset !important;
+  box-shadow: 0 0 0 1000px #101f34 inset !important;
+  transition: background-color 5000s ease-in-out 0s;
+}
+
 .auth-dialog-submit {
   border-color: var(--modern-border) !important;
   color: var(--modern-text) !important;

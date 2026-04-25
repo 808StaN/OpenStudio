@@ -127,6 +127,15 @@
     inset 0 1px 0 rgba(255, 255, 255, 0.05);
 }
 
+.auth-dialog-field input:-webkit-autofill,
+.auth-dialog-field input:-webkit-autofill:hover,
+.auth-dialog-field input:-webkit-autofill:focus {
+  -webkit-text-fill-color: #edf3ff;
+  -webkit-box-shadow: 0 0 0 1000px #131a24 inset;
+  box-shadow: 0 0 0 1000px #131a24 inset;
+  transition: background-color 5000s ease-in-out 0s;
+}
+
 .auth-dialog-submit {
   height: 36px;
   width: 100%;
