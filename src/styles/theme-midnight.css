@@ -768,6 +768,83 @@
   border-color: var(--modern-border-strong) !important;
 }
 
+.cloud-projects-window {
+  border-color: var(--modern-border) !important;
+  background: linear-gradient(180deg, #111f34 0%, #0d1a2b 100%) !important;
+  box-shadow: var(--modern-shadow-lg) !important;
+  color: var(--modern-text) !important;
+}
+
+.cloud-projects-header {
+  border-bottom-color: var(--modern-border) !important;
+  background: linear-gradient(180deg, #1b2f4b 0%, #13253e 100%) !important;
+  box-shadow: var(--modern-shadow-md) !important;
+}
+
+.cloud-projects-header h3 {
+  color: var(--modern-text) !important;
+}
+
+.cloud-projects-body {
+  background: linear-gradient(180deg, #111f34 0%, #0d1a2b 100%) !important;
+}
+
+.cloud-projects-empty {
+  color: var(--modern-text-soft) !important;
+}
+
+.cloud-project-row:hover {
+  background: rgba(90, 200, 255, 0.08) !important;
+}
+
+.cloud-project-row.is-selected {
+  background: rgba(90, 200, 255, 0.12) !important;
+  border-color: var(--modern-border-strong) !important;
+  box-shadow: 0 0 0 1px rgba(90, 200, 255, 0.18) !important;
+}
+
+.cloud-project-name {
+  color: var(--modern-text) !important;
+}
+
+.cloud-project-bpm,
+.cloud-project-date {
+  color: var(--modern-text-soft) !important;
+}
+
+.cloud-projects-footer {
+  border-top-color: var(--modern-border) !important;
+  background: linear-gradient(180deg, #162943 0%, #101f34 100%) !important;
+}
+
+.cloud-projects-btn {
+  border-color: var(--modern-border) !important;
+  color: var(--modern-text) !important;
+}
+
+.cloud-projects-btn.primary {
+  background: linear-gradient(180deg, #223754 0%, #172a43 100%) !important;
+  box-shadow:
+    inset 0 1px 0 rgba(255, 255, 255, 0.08),
+    0 4px 12px rgba(4, 12, 24, 0.34) !important;
+}
+
+.cloud-projects-btn.primary:hover {
+  border-color: var(--modern-border-strong) !important;
+}
+
+.cloud-projects-btn.danger {
+  border-color: var(--modern-border) !important;
+  background: linear-gradient(180deg, #254061 0%, #1b314e 100%) !important;
+  box-shadow:
+    inset 0 1px 0 rgba(255, 255, 255, 0.09),
+    0 3px 10px rgba(4, 10, 20, 0.33) !important;
+}
+
+.cloud-projects-btn.danger:hover {
+  border-color: var(--modern-border-strong) !important;
+}
+
 .auth-dialog-link {
   color: var(--modern-accent) !important;
 }
