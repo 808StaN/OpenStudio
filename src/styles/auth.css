@@ -1,0 +1,294 @@
+.auth-dialog-overlay {
+  position: fixed;
+  inset: 0;
+  background: rgba(7, 10, 16, 0.38);
+  backdrop-filter: blur(4px);
+  -webkit-backdrop-filter: blur(4px);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 9999;
+}
+
+.auth-dialog {
+  border: 1px solid #4b4f58;
+  border-radius: 9px;
+  width: 360px;
+  max-width: 90vw;
+  padding: 0;
+  color: #e4e8ef;
+  background: linear-gradient(180deg, #171c26 0%, #121722 100%);
+  box-shadow:
+    0 18px 35px rgba(0, 0, 0, 0.52),
+    inset 0 1px 0 rgba(255, 255, 255, 0.08);
+  overflow: hidden;
+  font-family: "Rajdhani", "Segoe UI", sans-serif;
+}
+
+.auth-dialog-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 14px 16px 12px;
+  border-bottom: 1px solid #484c54;
+  background: linear-gradient(180deg, #383f4c 0%, #242a35 48%, #1a202a 100%);
+}
+
+.auth-dialog-header h3 {
+  margin: 0;
+  font-size: 15px;
+  font-weight: 600;
+  color: #e4e8ef;
+  letter-spacing: 0.4px;
+}
+
+.auth-dialog-close {
+  width: 22px;
+  height: 22px;
+  border-radius: 5px;
+  border: 1px solid #7b4044;
+  color: #ffd7db;
+  background: linear-gradient(180deg, #7d3f4a 0%, #5a2831 100%);
+  box-shadow:
+    inset 0 1px 0 rgba(255, 255, 255, 0.18),
+    inset 0 -1px 1px rgba(0, 0, 0, 0.32);
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  font-size: 18px;
+  padding: 0;
+  line-height: 1;
+  transition: filter 120ms ease;
+}
+
+.auth-dialog-close:hover {
+  filter: brightness(1.08);
+}
+
+.auth-dialog-form {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  padding: 16px;
+}
+
+.auth-dialog-error {
+  color: #ff9aa5;
+  padding: 8px 10px;
+  border-radius: 7px;
+  font-size: 12px;
+  background: rgba(239, 68, 68, 0.08);
+  border: 1px solid rgba(255, 90, 90, 0.2);
+  letter-spacing: 0.2px;
+}
+
+.auth-dialog-field {
+  display: flex;
+  flex-direction: column;
+  gap: 5px;
+}
+
+.auth-dialog-field span {
+  font-size: 12px;
+  color: #b9c7dc;
+  font-weight: 500;
+  letter-spacing: 0.25px;
+}
+
+.auth-dialog-field input {
+  height: 36px;
+  border-radius: 7px;
+  border: 1px solid #3a4558;
+  background: linear-gradient(180deg, #1f2a39 0%, #131a24 100%);
+  color: #edf3ff;
+  font-size: 13px;
+  padding: 0 12px;
+  font-family: "Rajdhani", "Segoe UI", sans-serif;
+  outline: none;
+  box-shadow:
+    inset 0 1px 0 rgba(255, 255, 255, 0.04),
+    0 1px 2px rgba(0, 0, 0, 0.3);
+  transition: border-color 120ms ease, box-shadow 120ms ease;
+}
+
+.auth-dialog-field input::placeholder {
+  color: #6a7d99;
+}
+
+.auth-dialog-field input:hover {
+  border-color: #4a5a71;
+}
+
+.auth-dialog-field input:focus {
+  border-color: #6d87b0;
+  box-shadow:
+    0 0 0 1px rgba(139, 168, 212, 0.35),
+    inset 0 1px 0 rgba(255, 255, 255, 0.05);
+}
+
+.auth-dialog-field input:-webkit-autofill,
+.auth-dialog-field input:-webkit-autofill:hover,
+.auth-dialog-field input:-webkit-autofill:focus {
+  -webkit-text-fill-color: #edf3ff;
+  -webkit-box-shadow: 0 0 0 1000px #131a24 inset;
+  box-shadow: 0 0 0 1000px #131a24 inset;
+  transition: background-color 5000s ease-in-out 0s;
+}
+
+.auth-dialog-submit {
+  height: 36px;
+  width: 100%;
+  border: 1px solid #506180;
+  border-radius: 8px;
+  color: #f7fbff;
+  font-size: 13px;
+  font-weight: 600;
+  letter-spacing: 0.25px;
+  background: linear-gradient(180deg, #4f6ea0 0%, #29446f 100%);
+  cursor: pointer;
+  margin-top: 4px;
+  font-family: "Rajdhani", "Segoe UI", sans-serif;
+  box-shadow:
+    inset 0 1px 0 rgba(255, 255, 255, 0.08),
+    0 4px 12px rgba(4, 12, 24, 0.34);
+  transition:
+    transform 120ms ease,
+    filter 120ms ease,
+    border-color 120ms ease,
+    box-shadow 120ms ease;
+}
+
+.auth-dialog-submit:hover {
+  transform: translateY(-1px);
+  filter: brightness(1.05);
+}
+
+.auth-dialog-submit:active {
+  transform: translateY(0);
+}
+
+.auth-dialog-submit:disabled {
+  opacity: 0.55;
+  cursor: not-allowed;
+  transform: none;
+  filter: none;
+}
+
+.auth-dialog-remember {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  cursor: pointer;
+  margin-top: -4px;
+}
+
+.auth-dialog-remember input[type="checkbox"] {
+  appearance: none;
+  -webkit-appearance: none;
+  width: 16px;
+  height: 16px;
+  border-radius: 4px;
+  border: 1px solid #3a4558;
+  background: linear-gradient(180deg, #1f2a39 0%, #131a24 100%);
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+  transition: border-color 120ms ease, box-shadow 120ms ease;
+}
+
+.auth-dialog-remember input[type="checkbox"]:hover {
+  border-color: #4a5a71;
+}
+
+.auth-dialog-remember input[type="checkbox"]:checked {
+  border-color: #506180;
+  background: linear-gradient(180deg, #4f6ea0 0%, #29446f 100%);
+}
+
+.auth-dialog-remember input[type="checkbox"]:checked::after {
+  content: "";
+  width: 8px;
+  height: 5px;
+  border-left: 2px solid #f7fbff;
+  border-bottom: 2px solid #f7fbff;
+  transform: rotate(-45deg) translateY(-1px);
+  display: block;
+}
+
+.auth-dialog-remember span {
+  font-size: 12px;
+  color: #b9c7dc;
+  letter-spacing: 0.25px;
+  user-select: none;
+}
+
+.auth-dialog-footer {
+  padding: 0 16px 16px;
+  text-align: center;
+  font-size: 12px;
+  color: #8aa3c7;
+  letter-spacing: 0.2px;
+}
+
+.auth-dialog-link {
+  background: none;
+  border: none;
+  color: #5ac8ff;
+  cursor: pointer;
+  font-size: 12px;
+  padding: 0;
+  font-family: "Rajdhani", "Segoe UI", sans-serif;
+  font-weight: 600;
+  letter-spacing: 0.2px;
+  text-decoration: underline;
+  text-underline-offset: 2px;
+  transition: color 120ms ease;
+}
+
+.auth-dialog-link:hover {
+  color: #8ddbff;
+}
+
+/* UserMenu */
+.user-menu {
+  position: relative;
+}
+
+.user-menu-dropdown {
+  position: absolute;
+  top: calc(100% + 6px);
+  right: 0;
+  background: linear-gradient(180deg, #1f2a39 0%, #131a24 100%);
+  border: 1px solid #3a4558;
+  border-radius: 7px;
+  padding: 4px;
+  min-width: 150px;
+  box-shadow:
+    0 10px 28px rgba(4, 11, 22, 0.4),
+    0 0 0 1px rgba(0, 0, 0, 0.3);
+  z-index: 100;
+  overflow: hidden;
+}
+
+.user-menu-dropdown button {
+  width: 100%;
+  background: none;
+  border: none;
+  color: #c5d5ec;
+  padding: 8px 10px;
+  font-size: 12px;
+  text-align: left;
+  cursor: pointer;
+  border-radius: 5px;
+  font-family: "Rajdhani", "Segoe UI", sans-serif;
+  letter-spacing: 0.2px;
+  transition: background 120ms ease, color 120ms ease;
+}
+
+.user-menu-dropdown button:hover {
+  background: rgba(90, 200, 255, 0.1);
+  color: #5ac8ff;
+}

@@ -70,6 +70,25 @@ When adding new magic numbers related to audio, prefer extracting them:
 
 These are scattered across ~10 files and should eventually live in `src/audio/domain/constants.js`.
 
+## Component Boundaries & Incremental Delivery
+
+Avoid building large, monolithic features that later require multi-week refactoring to extract. Instead, decompose new work into small, focused modules from day one:
+
+- **Keep components under ~150 lines.** If a JSX file exceeds this, split it into sub-components or custom hooks.
+- **One hook = one concern.** A hook that manages transport, preview audio, and meter rendering is too big. Extract each concern separately.
+- **Feature branches should be mergeable within 1–2 weeks.** If a branch grows to 50+ commits before a PR, it is a signal to break the work into smaller, stacked PRs.
+- **Extract shared helpers early.** When you notice the same arithmetic or DOM logic appearing twice, extract a pure helper immediately rather than copying it a third time.
+
+This project already paid the price of a 93-commit, monolithic refactor. Future work should land incrementally: UI first, logic second, wiring third—each in its own PR.
+
+## Code Comments & Documentation
+
+- **Comment the "why", not the "what".** The code shows what it does; comments should explain business rules, edge cases, and architectural decisions that are not obvious from reading the implementation.
+- **Every non-trivial function deserves a JSDoc block.** At minimum document parameters, return value, and any side effects. Pure helpers are especially valuable to document because they are reused across modules.
+- **Leave inline comments for tricky logic.** If a line required debugging, research, or a workaround, add a short comment so the next person (including yourself in three months) does not have to rediscover it.
+- **Update comments when you change code.** Stale comments are worse than no comments. If a refactor makes a comment obsolete, delete or rewrite it in the same commit.
+- **Use TODO/FIXME sparingly and track them.** An occasional `// TODO: extract to shared helper` is fine, but do not let them pile up. If a TODO survives more than one PR, turn it into an issue or fix it immediately.
+
 ## Common Pitfalls
 
 ### Time-Stretch Modes
@@ -128,6 +147,6 @@ npm run desktop:pack   # Electron build
 
 ## Git
 
-- Branch: currently on `refactor`
+
 - Commit style: `type(scope): description` (follows existing history)
 - Types used: `fix`, `feat`, `refactor`, `perf`, `docs`
