@@ -4,14 +4,30 @@ import { Check, Palette, X } from "lucide-react";
 import { setTheme } from "../../store";
 
 const THEME_OPTIONS = [
-  { value: "default", label: "Default" },
-  { value: "midnight", label: "Midnight" },
+  {
+    value: "default",
+    label: "Default",
+    preview: [
+      { color: "#232933", pos: 0 },
+      { color: "#151922", pos: 50 },
+      { color: "#0d1a2a", pos: 100 },
+    ],
+  },
+  {
+    value: "midnight",
+    label: "Midnight",
+    preview: [
+      { color: "#18273c", pos: 0 },
+      { color: "#101b2d", pos: 50 },
+      { color: "#0b1728", pos: 100 },
+    ],
+  },
 ];
 
 /**
  * ThemeDialog is a centered modal that lets the user pick between the
- * available app themes. It replaces the old inline ThemePicker dropdown
- * so the top toolbar stays uncluttered.
+ * available app themes. Each theme is shown as a visual tile with a
+ * mini colour preview so the choice is immediately obvious.
  */
 export function ThemeDialog({ onClose }) {
   const dispatch = useDispatch();
@@ -21,7 +37,7 @@ export function ThemeDialog({ onClose }) {
   });
 
   /**
-   * Close on Escape and trap focus inside the modal.
+   * Close on Escape so keyboard users can dismiss the modal quickly.
    */
   useEffect(
     function () {
@@ -43,7 +59,7 @@ export function ThemeDialog({ onClose }) {
   return (
     <div className="auth-dialog-overlay" onClick={onClose}>
       <div
-        className="auth-dialog"
+        className="auth-dialog theme-dialog"
         ref={dialogRef}
         onClick={function (event) {
           event.stopPropagation();
@@ -59,23 +75,41 @@ export function ThemeDialog({ onClose }) {
           </button>
         </header>
 
-        <div className="auth-dialog-form" style={{ gap: 8 }}>
+        <div className="theme-dialog-body">
           {THEME_OPTIONS.map(function (option) {
             const isActive = option.value === activeTheme;
+            const gradient = option.preview
+              .map(function (stop) {
+                return stop.color + " " + stop.pos + "%";
+              })
+              .join(", ");
+
             return (
               <button
                 key={option.value}
                 type="button"
                 className={
-                  "theme-dialog-option" + (isActive ? " is-active" : "")
+                  "theme-dialog-tile" + (isActive ? " is-active" : "")
                 }
                 onClick={function () {
                   dispatch(setTheme(option.value));
                   onClose();
                 }}
               >
-                <span className="theme-dialog-option-label">{option.label}</span>
-                {isActive ? <Check size={16} /> : null}
+                <div
+                  className="theme-dialog-tile-preview"
+                  style={{
+                    background: "linear-gradient(135deg, " + gradient + ")",
+                  }}
+                />
+                <div className="theme-dialog-tile-footer">
+                  <span className="theme-dialog-tile-label">
+                    {option.label}
+                  </span>
+                  {isActive ? (
+                    <Check size={14} className="theme-dialog-tile-check" />
+                  ) : null}
+                </div>
               </button>
             );
           })}

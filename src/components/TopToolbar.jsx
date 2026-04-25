@@ -80,9 +80,13 @@ export function TopToolbar() {
             </button>
           </div>
         </div>
+
+        {/* Right group: window toggles (mirrors left so center stays true) */}
+        <div className="transport-right">
+          <WindowToggleButtons />
+        </div>
       </div>
 
-      <WindowToggleButtons />
       {authDialogOpen ? (
         <AuthDialog onClose={function () { setAuthDialogOpen(false); }} />
       ) : null}

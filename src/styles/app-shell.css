@@ -221,7 +221,7 @@
   overflow: visible;
   display: flex;
   align-items: center;
-  justify-content: space-between;
+  justify-content: center;
   flex: 1;
   gap: 8px;
 }
@@ -234,8 +234,19 @@
   gap: 8px;
 }
 
+.transport-left {
+  flex: 1;
+  justify-content: flex-start;
+}
+
 .transport-center {
+  flex: 0 0 auto;
   justify-content: center;
+}
+
+.transport-right {
+  flex: 1;
+  justify-content: flex-end;
 }
 
 .theme-picker {
@@ -661,50 +672,76 @@
   background: rgba(255, 255, 255, 0.12);
 }
 
-/* Theme dialog option rows ---------------------------------------------- */
+/* Theme dialog tile layout ------------------------------------------------ */
 
-.theme-dialog-option {
+.theme-dialog .auth-dialog-form {
+  gap: 0;
+}
+
+.theme-dialog-body {
   display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: 10px;
-  width: 100%;
-  padding: 10px 14px;
-  border: 1px solid transparent;
-  border-radius: 8px;
-  color: #dbe3ef;
-  background: linear-gradient(180deg, #495263 0%, #2b3342 52%, #1d2431 100%);
+  gap: 12px;
+  padding: 12px;
+}
+
+.theme-dialog-tile {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  border: 1px solid #4b4f58;
+  border-radius: 10px;
+  overflow: hidden;
+  background: linear-gradient(180deg, #232933 0%, #151922 100%);
   box-shadow:
-    inset 0 1px 0 rgba(255, 255, 255, 0.13),
-    inset 0 -2px 2px rgba(0, 0, 0, 0.35),
-    0 1px 2px rgba(0, 0, 0, 0.6);
-  font-size: 14px;
+    0 4px 12px rgba(0, 0, 0, 0.4),
+    inset 0 1px 0 rgba(255, 255, 255, 0.08);
   cursor: pointer;
   transition:
     transform 120ms ease,
-    filter 120ms ease,
     border-color 120ms ease,
     box-shadow 120ms ease;
 }
 
-.theme-dialog-option:hover {
-  transform: translateY(-1px);
-  filter: brightness(1.04);
+.theme-dialog-tile:hover {
+  transform: translateY(-2px);
+  border-color: #5ac8ff;
+  box-shadow:
+    0 8px 20px rgba(0, 0, 0, 0.5),
+    0 0 12px rgba(90, 200, 255, 0.18),
+    inset 0 1px 0 rgba(255, 255, 255, 0.1);
 }
 
-.theme-dialog-option:active {
+.theme-dialog-tile:active {
   transform: translateY(0);
 }
 
-.theme-dialog-option.is-active {
-  border-color: #48f598;
+.theme-dialog-tile.is-active {
+  border-color: #5ac8ff;
   box-shadow:
-    inset 0 1px 0 rgba(255, 255, 255, 0.13),
-    0 0 10px rgba(72, 245, 152, 0.25);
+    0 0 14px rgba(90, 200, 255, 0.3),
+    inset 0 1px 0 rgba(255, 255, 255, 0.1);
 }
 
-.theme-dialog-option-label {
+.theme-dialog-tile-preview {
+  height: 64px;
+  width: 100%;
+}
+
+.theme-dialog-tile-footer {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  padding: 10px 12px;
+  border-top: 1px solid #353b46;
+  color: #dbe3ef;
+  font-size: 13px;
   font-weight: 500;
+}
+
+.theme-dialog-tile-check {
+  color: #5ac8ff;
+  flex-shrink: 0;
 }
 
 /* Local file load button inside ProjectsWindow ---------------------------- */
