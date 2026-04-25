@@ -616,7 +616,8 @@
 .piano-grid-wrap,
 .pattern-list-body,
 .mixer-left,
-.sample-settings-panel {
+.sample-settings-panel,
+.cloud-projects-body {
   scrollbar-width: thin;
   scrollbar-color: rgba(131, 170, 220, 0.7) rgba(12, 24, 39, 0.65) !important;
 }
@@ -627,7 +628,8 @@
 .piano-grid-wrap::-webkit-scrollbar-track,
 .pattern-list-body::-webkit-scrollbar-track,
 .mixer-left::-webkit-scrollbar-track,
-.sample-settings-panel::-webkit-scrollbar-track {
+.sample-settings-panel::-webkit-scrollbar-track,
+.cloud-projects-body::-webkit-scrollbar-track {
   background: rgba(8, 18, 30, 0.85) !important;
   border: 1px solid rgba(122, 154, 196, 0.22) !important;
 }
@@ -638,7 +640,8 @@
 .piano-grid-wrap::-webkit-scrollbar-thumb,
 .pattern-list-body::-webkit-scrollbar-thumb,
 .mixer-left::-webkit-scrollbar-thumb,
-.sample-settings-panel::-webkit-scrollbar-thumb {
+.sample-settings-panel::-webkit-scrollbar-thumb,
+.cloud-projects-body::-webkit-scrollbar-thumb {
   border: 1px solid rgba(158, 198, 248, 0.54) !important;
   background: linear-gradient(180deg, #8fc8ff 0%, #5e9fde 100%) !important;
 }

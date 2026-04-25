@@ -230,7 +230,6 @@ function App() {
         }
 
         if (shouldIgnoreSpaceShortcut(event.target)) {
-          event.preventDefault();
           return;
         }
 
