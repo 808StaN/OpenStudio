@@ -1,6 +1,6 @@
 import { useState, useRef, useEffect } from "react";
 import { useDispatch, useSelector } from "react-redux";
-import { User } from "lucide-react";
+import { User, LogOut } from "lucide-react";
 import { clearUser } from "../../store/userSlice";
 import { supabase } from "../../lib/supabase";
 
@@ -83,6 +83,7 @@ export function UserMenu({ onOpenAuth }) {
             }}
             role="menuitem"
           >
+            <LogOut size={14} />
             <span>Sign Out</span>
           </button>
         </div>
