@@ -1,6 +1,7 @@
 import { useState, useRef, useEffect } from "react";
 import { useDispatch, useSelector } from "react-redux";
 import { clearUser } from "../../store/userSlice";
+import { supabase } from "../../lib/supabase";
 
 export function UserMenu({ onOpenAuth }) {
   const dispatch = useDispatch();
@@ -55,7 +56,8 @@ export function UserMenu({ onOpenAuth }) {
         <div className="user-menu-dropdown">
           <button
             type="button"
-            onClick={function () {
+            onClick={async function () {
+              await supabase.auth.signOut();
               dispatch(clearUser());
               setMenuOpen(false);
             }}

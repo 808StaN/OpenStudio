@@ -29,3 +29,6 @@ guidelines.md
 project_documentation.tex
 bundle-stats.json
 public/packs/manifest.json
+.env
+.env.local
+.env.*.local
