@@ -1,6 +1,7 @@
 import { useState, useCallback } from "react";
 import { useDispatch, useSelector } from "react-redux";
 import { setUser, setAuthLoading, setAuthError } from "../../store/userSlice";
+import { supabase } from "../../lib/supabase";
 
 export function AuthDialog({ onClose }) {
   const dispatch = useDispatch();
@@ -58,6 +59,110 @@ export function AuthDialog({ onClose }) {
     return null;
   }, [username, nickname, email, password, confirmPassword, mode]);
 
+  const handleLogin = useCallback(
+    async function () {
+      dispatch(setAuthLoading(true));
+
+      const { data: profile, error: profileError } = await supabase
+        .from("profiles")
+        .select("email")
+        .eq("username", username.trim())
+        .single();
+
+      if (profileError || !profile) {
+        dispatch(setAuthError("Invalid username or password."));
+        dispatch(setAuthLoading(false));
+        return;
+      }
+
+      const { data: authData, error: authError } =
+        await supabase.auth.signInWithPassword({
+          email: profile.email,
+          password,
+        });
+
+      if (authError) {
+        dispatch(setAuthError(authError.message));
+        dispatch(setAuthLoading(false));
+        return;
+      }
+
+      const { data: userProfile } = await supabase
+        .from("profiles")
+        .select("username,nickname,email")
+        .eq("id", authData.user.id)
+        .single();
+
+      dispatch(
+        setUser({
+          id: authData.user.id,
+          username: userProfile.username,
+          nickname: userProfile.nickname,
+          email: userProfile.email,
+        }),
+      );
+      dispatch(setAuthLoading(false));
+      onClose();
+    },
+    [dispatch, username, password, onClose],
+  );
+
+  const handleRegister = useCallback(
+    async function () {
+      dispatch(setAuthLoading(true));
+
+      const { data: existing } = await supabase
+        .from("profiles")
+        .select("username")
+        .eq("username", username.trim())
+        .single();
+
+      if (existing) {
+        dispatch(setAuthError("Username already taken."));
+        dispatch(setAuthLoading(false));
+        return;
+      }
+
+      const { data: authData, error: authError } = await supabase.auth.signUp({
+        email: email.trim(),
+        password,
+      });
+
+      if (authError) {
+        dispatch(setAuthError(authError.message));
+        dispatch(setAuthLoading(false));
+        return;
+      }
+
+      if (authData.user) {
+        const { error: insertError } = await supabase.from("profiles").insert({
+          id: authData.user.id,
+          username: username.trim(),
+          nickname: nickname.trim(),
+          email: email.trim(),
+        });
+
+        if (insertError) {
+          dispatch(setAuthError(insertError.message));
+          dispatch(setAuthLoading(false));
+          return;
+        }
+
+        dispatch(
+          setUser({
+            id: authData.user.id,
+            username: username.trim(),
+            nickname: nickname.trim(),
+            email: email.trim(),
+          }),
+        );
+        dispatch(setAuthLoading(false));
+        onClose();
+      }
+    },
+    [dispatch, username, nickname, email, password, onClose],
+  );
+
   const handleSubmit = useCallback(
     function (event) {
       event.preventDefault();
@@ -67,23 +172,14 @@ export function AuthDialog({ onClose }) {
         return;
       }
       setValidationError(null);
-      dispatch(setAuthLoading(true));
 
-      // Mock auth — no backend yet. Simulate network delay.
-      window.setTimeout(function () {
-        dispatch(
-          setUser({
-            id: "mock-user-" + Date.now(),
-            username: username.trim(),
-            nickname: mode === "register" ? nickname.trim() : username.trim(),
-            email: email.trim() || undefined,
-          }),
-        );
-        dispatch(setAuthLoading(false));
-        onClose();
-      }, 800);
+      if (mode === "login") {
+        handleLogin();
+      } else {
+        handleRegister();
+      }
     },
-    [dispatch, username, nickname, email, mode, validate, onClose],
+    [mode, validate, handleLogin, handleRegister],
   );
 
   const displayError = validationError || error;

@@ -14,6 +14,8 @@ import { RenderWindow } from "./components/RenderWindow";
 import { SampleSettingsWindow } from "./components/SampleSettingsWindow";
 import { TopToolbar } from "./components/TopToolbar";
 import { setPlaying, undoLastChange, toggleWindowMaximize } from "./store";
+import { setUser, clearUser } from "./store/userSlice";
+import { supabase } from "./lib/supabase";
 import { MIDI_FILE_DND_MIME } from "./utils/midiImport";
 import { MIDI_PATTERN_DND_MIME } from "./utils/midiPattern";
 import "./styles/app-shell.css";
@@ -276,6 +278,37 @@ function App() {
       window.removeEventListener("drop", onWindowDrop);
     };
   }, []);
+
+  useEffect(function () {
+    const { data: listener } = supabase.auth.onAuthStateChange(
+      async function (event, session) {
+        if (event === "SIGNED_IN" && session) {
+          const { data: profile } = await supabase
+            .from("profiles")
+            .select("username,nickname,email")
+            .eq("id", session.user.id)
+            .single();
+
+          if (profile) {
+            dispatch(
+              setUser({
+                id: session.user.id,
+                username: profile.username,
+                nickname: profile.nickname,
+                email: profile.email,
+              }),
+            );
+          }
+        } else if (event === "SIGNED_OUT") {
+          dispatch(clearUser());
+        }
+      },
+    );
+
+    return function () {
+      listener.subscription.unsubscribe();
+    };
+  }, [dispatch]);
 
   const onAppContextMenu = function (event) {
     event.preventDefault();
