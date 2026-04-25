@@ -24,6 +24,7 @@ import "./styles/playlist.css";
 import "./styles/mixer.css";
 import "./styles/pattern-list.css";
 import "./styles/render-window.css";
+import "./styles/auth.css";
 import midnightThemeCss from "./styles/theme-midnight.css?raw";
 
 function shouldIgnoreSpaceShortcut(target) {

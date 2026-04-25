@@ -5,6 +5,7 @@ import { transportReducers } from "./store/reducers/transport";
 import { uiReducers } from "./store/reducers/ui";
 import { projectReducers } from "./store/reducers/project";
 import { mixerReducers } from "./store/reducers/mixer";
+import { userReducer } from "./store/userSlice";
 
 // ------------------------------------------------------------------
 // Undo / redo bookkeeping
@@ -154,6 +155,7 @@ const dawReducerWithUndo = function (state = initialState, action) {
 export const store = configureStore({
   reducer: {
     daw: dawReducerWithUndo,
+    user: userReducer,
   },
 });
 

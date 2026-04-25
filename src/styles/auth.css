@@ -1,0 +1,171 @@
+.auth-dialog-overlay {
+  position: fixed;
+  inset: 0;
+  background: rgba(0, 0, 0, 0.6);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 9999;
+}
+
+.auth-dialog {
+  background: #1e293b;
+  border: 1px solid #334155;
+  border-radius: 8px;
+  width: 360px;
+  max-width: 90vw;
+  padding: 20px;
+  color: #e2e8f0;
+  box-shadow: 0 10px 30px rgba(0, 0, 0, 0.4);
+}
+
+.auth-dialog-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 16px;
+}
+
+.auth-dialog-header h3 {
+  margin: 0;
+  font-size: 16px;
+  font-weight: 600;
+}
+
+.auth-dialog-close {
+  background: none;
+  border: none;
+  color: #94a3b8;
+  font-size: 20px;
+  cursor: pointer;
+  padding: 0;
+  width: 28px;
+  height: 28px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 4px;
+}
+
+.auth-dialog-close:hover {
+  background: rgba(255, 255, 255, 0.08);
+  color: #e2e8f0;
+}
+
+.auth-dialog-form {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.auth-dialog-error {
+  background: rgba(239, 68, 68, 0.15);
+  color: #fca5a5;
+  padding: 8px 12px;
+  border-radius: 6px;
+  font-size: 12px;
+  border: 1px solid rgba(239, 68, 68, 0.3);
+}
+
+.auth-dialog-field {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.auth-dialog-field span {
+  font-size: 12px;
+  color: #94a3b8;
+  font-weight: 500;
+}
+
+.auth-dialog-field input {
+  background: #0f172a;
+  border: 1px solid #334155;
+  border-radius: 6px;
+  padding: 8px 10px;
+  color: #e2e8f0;
+  font-size: 13px;
+  outline: none;
+}
+
+.auth-dialog-field input:focus {
+  border-color: #3b82f6;
+}
+
+.auth-dialog-submit {
+  background: #3b82f6;
+  color: #fff;
+  border: none;
+  border-radius: 6px;
+  padding: 10px;
+  font-size: 13px;
+  font-weight: 600;
+  cursor: pointer;
+  margin-top: 4px;
+}
+
+.auth-dialog-submit:hover {
+  background: #2563eb;
+}
+
+.auth-dialog-submit:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+}
+
+.auth-dialog-footer {
+  margin-top: 16px;
+  text-align: center;
+  font-size: 12px;
+  color: #94a3b8;
+}
+
+.auth-dialog-link {
+  background: none;
+  border: none;
+  color: #60a5fa;
+  cursor: pointer;
+  font-size: 12px;
+  padding: 0;
+  text-decoration: underline;
+}
+
+.auth-dialog-link:hover {
+  color: #93c5fd;
+}
+
+/* UserMenu */
+.user-menu {
+  position: relative;
+}
+
+.user-menu-dropdown {
+  position: absolute;
+  top: 100%;
+  right: 0;
+  margin-top: 4px;
+  background: #1e293b;
+  border: 1px solid #334155;
+  border-radius: 6px;
+  padding: 4px;
+  min-width: 140px;
+  box-shadow: 0 6px 20px rgba(0, 0, 0, 0.3);
+  z-index: 100;
+}
+
+.user-menu-dropdown button {
+  width: 100%;
+  background: none;
+  border: none;
+  color: #e2e8f0;
+  padding: 8px 10px;
+  font-size: 12px;
+  text-align: left;
+  cursor: pointer;
+  border-radius: 4px;
+}
+
+.user-menu-dropdown button:hover {
+  background: rgba(255, 255, 255, 0.08);
+}

@@ -1,3 +1,4 @@
+import { useState } from "react";
 import {
   Circle,
   Download,
@@ -12,6 +13,8 @@ import { DraggableBpm } from "./top-toolbar/DraggableBpm";
 import { ThemePicker } from "./top-toolbar/ThemePicker";
 import { useProjectFileActions } from "./top-toolbar/useProjectFileActions";
 import { WindowToggleButtons } from "./top-toolbar/WindowToggleButtons";
+import { UserMenu } from "./auth/UserMenu";
+import { AuthDialog } from "./auth/AuthDialog";
 import {
   openWindow,
   resetToDefaultProject,
@@ -26,6 +29,7 @@ import {
 
 export function TopToolbar() {
   const dispatch = useDispatch();
+  const [authDialogOpen, setAuthDialogOpen] = useState(false);
   const {
     projectFileInputRef,
     onSaveProjectClick,
@@ -162,7 +166,11 @@ export function TopToolbar() {
         />
       </div>
 
+      <UserMenu onOpenAuth={function () { setAuthDialogOpen(true); }} />
       <WindowToggleButtons />
+      {authDialogOpen ? (
+        <AuthDialog onClose={function () { setAuthDialogOpen(false); }} />
+      ) : null}
     </header>
   );
 }
