@@ -48,7 +48,7 @@ export function UserMenu({ onOpenAuth }) {
           });
         }}
       >
-        {currentUser.email}
+        {currentUser.nickname || currentUser.username || currentUser.email}
       </button>
 
       {menuOpen ? (

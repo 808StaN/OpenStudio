@@ -8,12 +8,16 @@ export function AuthDialog({ onClose }) {
     return state.user;
   });
   const [mode, setMode] = useState("login"); // "login" | "register"
+  const [username, setUsername] = useState("");
+  const [nickname, setNickname] = useState("");
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [confirmPassword, setConfirmPassword] = useState("");
   const [validationError, setValidationError] = useState(null);
 
   const resetForm = useCallback(function () {
+    setUsername("");
+    setNickname("");
     setEmail("");
     setPassword("");
     setConfirmPassword("");
@@ -29,17 +33,29 @@ export function AuthDialog({ onClose }) {
   }, [resetForm]);
 
   const validate = useCallback(function () {
-    if (!email.trim() || !password.trim()) {
-      return "Email and password are required.";
+    if (!username.trim() || !password.trim()) {
+      return "Username and password are required.";
     }
     if (password.length < 6) {
       return "Password must be at least 6 characters.";
     }
-    if (mode === "register" && password !== confirmPassword) {
-      return "Passwords do not match.";
+    if (mode === "register") {
+      if (!nickname.trim()) {
+        return "Nickname is required.";
+      }
+      if (!email.trim()) {
+        return "Email is required.";
+      }
+      const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+      if (!emailRegex.test(email.trim())) {
+        return "Please enter a valid email address.";
+      }
+      if (password !== confirmPassword) {
+        return "Passwords do not match.";
+      }
     }
     return null;
-  }, [email, password, confirmPassword, mode]);
+  }, [username, nickname, email, password, confirmPassword, mode]);
 
   const handleSubmit = useCallback(
     function (event) {
@@ -57,14 +73,16 @@ export function AuthDialog({ onClose }) {
         dispatch(
           setUser({
             id: "mock-user-" + Date.now(),
-            email: email.trim(),
+            username: username.trim(),
+            nickname: mode === "register" ? nickname.trim() : username.trim(),
+            email: email.trim() || undefined,
           }),
         );
         dispatch(setAuthLoading(false));
         onClose();
       }, 800);
     },
-    [dispatch, email, password, validate, onClose],
+    [dispatch, username, nickname, email, mode, validate, onClose],
   );
 
   const displayError = validationError || error;
@@ -95,18 +113,47 @@ export function AuthDialog({ onClose }) {
           ) : null}
 
           <label className="auth-dialog-field">
-            <span>Email</span>
+            <span>Username</span>
             <input
-              type="email"
-              value={email}
+              type="text"
+              value={username}
               onChange={function (event) {
-                setEmail(event.target.value);
+                setUsername(event.target.value);
               }}
-              placeholder="you@example.com"
-              autoComplete="email"
-              required
+              placeholder="your_username"
+              autoComplete="username"
             />
           </label>
+
+          {mode === "register" ? (
+            <label className="auth-dialog-field">
+              <span>Nickname</span>
+              <input
+                type="text"
+                value={nickname}
+                onChange={function (event) {
+                  setNickname(event.target.value);
+                }}
+                placeholder="Your display name"
+                autoComplete="nickname"
+              />
+            </label>
+          ) : null}
+
+          {mode === "register" ? (
+            <label className="auth-dialog-field">
+              <span>Email</span>
+              <input
+                type="text"
+                value={email}
+                onChange={function (event) {
+                  setEmail(event.target.value);
+                }}
+                placeholder="you@example.com"
+                autoComplete="email"
+              />
+            </label>
+          ) : null}
 
           <label className="auth-dialog-field">
             <span>Password</span>
@@ -118,7 +165,6 @@ export function AuthDialog({ onClose }) {
               }}
               placeholder="••••••••"
               autoComplete={mode === "login" ? "current-password" : "new-password"}
-              required
             />
           </label>
 
@@ -133,7 +179,6 @@ export function AuthDialog({ onClose }) {
                 }}
                 placeholder="••••••••"
                 autoComplete="new-password"
-                required
               />
             </label>
           ) : null}
