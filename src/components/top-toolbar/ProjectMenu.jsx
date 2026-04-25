@@ -5,6 +5,7 @@ import {
   FolderOpen,
   Save,
   Download,
+  Folder,
 } from "lucide-react";
 import {
   openWindow,
@@ -178,6 +179,7 @@ export function ProjectMenu() {
         aria-haspopup="true"
         aria-expanded={isOpen}
       >
+        <Folder size={14} />
         Project
       </button>
 

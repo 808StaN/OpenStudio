@@ -2,8 +2,8 @@ import { useState } from "react";
 import { Circle, Play, Square } from "lucide-react";
 import { useDispatch, useSelector } from "react-redux";
 import { DraggableBpm } from "./top-toolbar/DraggableBpm";
-import { ThemePicker } from "./top-toolbar/ThemePicker";
 import { ProjectMenu } from "./top-toolbar/ProjectMenu";
+import { OptionsMenu } from "./top-toolbar/OptionsMenu";
 import { WindowToggleButtons } from "./top-toolbar/WindowToggleButtons";
 import { UserMenu } from "./auth/UserMenu";
 import { AuthDialog } from "./auth/AuthDialog";
@@ -24,9 +24,10 @@ export function TopToolbar() {
   return (
     <header className="transport-shell">
       <div className="transport-main">
-        {/* Left group: project actions + auth */}
+        {/* Left group: project actions, options, auth */}
         <div className="transport-left">
           <ProjectMenu />
+          <OptionsMenu />
           <UserMenu onOpenAuth={function () { setAuthDialogOpen(true); }} />
         </div>
 
@@ -78,11 +79,6 @@ export function TopToolbar() {
               Song
             </button>
           </div>
-        </div>
-
-        {/* Right group: theme picker */}
-        <div className="transport-right">
-          <ThemePicker />
         </div>
       </div>
 
