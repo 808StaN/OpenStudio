@@ -70,6 +70,17 @@ When adding new magic numbers related to audio, prefer extracting them:
 
 These are scattered across ~10 files and should eventually live in `src/audio/domain/constants.js`.
 
+## Component Boundaries & Incremental Delivery
+
+Avoid building large, monolithic features that later require multi-week refactoring to extract. Instead, decompose new work into small, focused modules from day one:
+
+- **Keep components under ~150 lines.** If a JSX file exceeds this, split it into sub-components or custom hooks.
+- **One hook = one concern.** A hook that manages transport, preview audio, and meter rendering is too big. Extract each concern separately.
+- **Feature branches should be mergeable within 1–2 weeks.** If a branch grows to 50+ commits before a PR, it is a signal to break the work into smaller, stacked PRs.
+- **Extract shared helpers early.** When you notice the same arithmetic or DOM logic appearing twice, extract a pure helper immediately rather than copying it a third time.
+
+This project already paid the price of a 93-commit, monolithic refactor. Future work should land incrementally: UI first, logic second, wiring third—each in its own PR.
+
 ## Common Pitfalls
 
 ### Time-Stretch Modes
@@ -128,6 +139,6 @@ npm run desktop:pack   # Electron build
 
 ## Git
 
-- Branch: currently on `refactor`
+
 - Commit style: `type(scope): description` (follows existing history)
 - Types used: `fix`, `feat`, `refactor`, `perf`, `docs`
