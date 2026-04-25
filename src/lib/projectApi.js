@@ -1,9 +1,35 @@
 import { supabase } from "./supabase";
 
-export async function saveProjectToCloud(userId, name, projectData) {
+function getProjectBpm(projectData) {
+  return projectData?.daw?.transport?.bpm || projectData?.transport?.bpm || 140;
+}
+
+function serializeProjectFile(projectData) {
+  return JSON.stringify(projectData, null, 2);
+}
+
+async function getAuthenticatedUserId() {
+  const {
+    data: { user },
+    error,
+  } = await supabase.auth.getUser();
+
+  if (error) {
+    throw new Error(error.message);
+  }
+
+  if (!user) {
+    throw new Error("You must be signed in to use cloud projects.");
+  }
+
+  return user.id;
+}
+
+export async function saveProjectToCloud(name, projectData) {
+  const authenticatedUserId = await getAuthenticatedUserId();
   const id = crypto.randomUUID();
-  const storagePath = `${userId}/${id}.os`;
-  const blob = new Blob([JSON.stringify(projectData)], { type: "application/octet-stream" });
+  const storagePath = `${authenticatedUserId}/${id}.os`;
+  const blob = new Blob([serializeProjectFile(projectData)], { type: "application/json" });
 
   const { error: uploadError } = await supabase.storage
     .from("projects")
@@ -15,9 +41,9 @@ export async function saveProjectToCloud(userId, name, projectData) {
 
   const { error: dbError } = await supabase.from("projects").insert({
     id,
-    user_id: userId,
+    user_id: authenticatedUserId,
     name: name.trim(),
-    bpm: projectData.transport?.bpm || 140,
+    bpm: getProjectBpm(projectData),
     storage_path: storagePath,
     file_size: blob.size,
   });
@@ -29,9 +55,10 @@ export async function saveProjectToCloud(userId, name, projectData) {
   return id;
 }
 
-export async function overwriteProjectInCloud(projectId, userId, name, projectData) {
-  const storagePath = `${userId}/${projectId}.os`;
-  const blob = new Blob([JSON.stringify(projectData)], { type: "application/octet-stream" });
+export async function overwriteProjectInCloud(projectId, name, projectData) {
+  const authenticatedUserId = await getAuthenticatedUserId();
+  const storagePath = `${authenticatedUserId}/${projectId}.os`;
+  const blob = new Blob([serializeProjectFile(projectData)], { type: "application/json" });
 
   const { error: uploadError } = await supabase.storage
     .from("projects")
@@ -45,7 +72,7 @@ export async function overwriteProjectInCloud(projectId, userId, name, projectDa
     .from("projects")
     .update({
       name: name.trim(),
-      bpm: projectData.transport?.bpm || 140,
+      bpm: getProjectBpm(projectData),
       file_size: blob.size,
       updated_at: new Date().toISOString(),
     })
@@ -56,11 +83,12 @@ export async function overwriteProjectInCloud(projectId, userId, name, projectDa
   }
 }
 
-export async function fetchProjects(userId) {
+export async function fetchProjects() {
+  const authenticatedUserId = await getAuthenticatedUserId();
   const { data, error } = await supabase
     .from("projects")
     .select("id, name, bpm, updated_at")
-    .eq("user_id", userId)
+    .eq("user_id", authenticatedUserId)
     .order("updated_at", { ascending: false });
 
   if (error) {
@@ -94,6 +122,7 @@ export async function loadProjectFromCloud(projectId) {
 }
 
 export async function deleteProjectFromCloud(projectId) {
+  await getAuthenticatedUserId();
   const { data: meta } = await supabase
     .from("projects")
     .select("storage_path")
@@ -111,11 +140,12 @@ export async function deleteProjectFromCloud(projectId) {
   }
 }
 
-export async function findProjectByName(userId, name) {
+export async function findProjectByName(name) {
+  const authenticatedUserId = await getAuthenticatedUserId();
   const { data, error } = await supabase
     .from("projects")
     .select("id, name, updated_at")
-    .eq("user_id", userId)
+    .eq("user_id", authenticatedUserId)
     .eq("name", name.trim())
     .single();
 

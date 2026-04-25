@@ -41,4 +41,5 @@ alter table projects enable row level security;
 -- Polityki RLS
 create policy "Users CRUD own projects"
   on projects for all
-  using (auth.uid() = user_id);
+  using (auth.uid() = user_id)
+  with check (auth.uid() = user_id);

@@ -36,6 +36,77 @@
   box-shadow: none;
 }
 
+.browser-tree,
+.rack-scroll-area,
+.playlist-body,
+.piano-grid-wrap,
+.pattern-list-body,
+.mixer-left,
+.sample-settings-panel,
+.cloud-projects-body {
+  scrollbar-width: thin;
+  scrollbar-color: #7f8ca2 #202838;
+}
+
+.browser-tree::-webkit-scrollbar,
+.rack-scroll-area::-webkit-scrollbar,
+.playlist-body::-webkit-scrollbar,
+.piano-grid-wrap::-webkit-scrollbar,
+.pattern-list-body::-webkit-scrollbar,
+.mixer-left::-webkit-scrollbar,
+.sample-settings-panel::-webkit-scrollbar,
+.cloud-projects-body::-webkit-scrollbar {
+  width: 12px;
+  height: 12px;
+}
+
+.browser-tree::-webkit-scrollbar-track,
+.rack-scroll-area::-webkit-scrollbar-track,
+.playlist-body::-webkit-scrollbar-track,
+.piano-grid-wrap::-webkit-scrollbar-track,
+.pattern-list-body::-webkit-scrollbar-track,
+.mixer-left::-webkit-scrollbar-track,
+.sample-settings-panel::-webkit-scrollbar-track,
+.cloud-projects-body::-webkit-scrollbar-track {
+  background: linear-gradient(180deg, #1f2736 0%, #141c2a 100%);
+  border: 1px solid #3f4b62;
+  border-radius: 999px;
+  box-shadow: inset 0 1px 3px rgba(0, 0, 0, 0.45);
+}
+
+.browser-tree::-webkit-scrollbar-thumb,
+.rack-scroll-area::-webkit-scrollbar-thumb,
+.playlist-body::-webkit-scrollbar-thumb,
+.piano-grid-wrap::-webkit-scrollbar-thumb,
+.pattern-list-body::-webkit-scrollbar-thumb,
+.mixer-left::-webkit-scrollbar-thumb,
+.sample-settings-panel::-webkit-scrollbar-thumb,
+.cloud-projects-body::-webkit-scrollbar-thumb {
+  border-radius: 999px;
+  border: 1px solid #9aa7bd;
+  background: linear-gradient(180deg, #d9deea 0%, #9ca8bc 48%, #7a879d 100%);
+  box-shadow:
+    inset 0 1px 0 rgba(255, 255, 255, 0.35),
+    inset 0 -1px 0 rgba(0, 0, 0, 0.25),
+    0 0 6px rgba(130, 150, 179, 0.35);
+}
+
+.browser-tree::-webkit-scrollbar-thumb:hover,
+.rack-scroll-area::-webkit-scrollbar-thumb:hover,
+.playlist-body::-webkit-scrollbar-thumb:hover,
+.piano-grid-wrap::-webkit-scrollbar-thumb:hover,
+.pattern-list-body::-webkit-scrollbar-thumb:hover,
+.mixer-left::-webkit-scrollbar-thumb:hover,
+.sample-settings-panel::-webkit-scrollbar-thumb:hover,
+.cloud-projects-body::-webkit-scrollbar-thumb:hover {
+  filter: brightness(1.08);
+}
+
+.sample-settings-panel::-webkit-scrollbar-corner,
+.cloud-projects-body::-webkit-scrollbar-corner {
+  background: #141c2a;
+}
+
 .app-titlebar {
   position: relative;
   z-index: 11000;

@@ -616,7 +616,8 @@
 .piano-grid-wrap,
 .pattern-list-body,
 .mixer-left,
-.sample-settings-panel {
+.sample-settings-panel,
+.cloud-projects-body {
   scrollbar-width: thin;
   scrollbar-color: rgba(131, 170, 220, 0.7) rgba(12, 24, 39, 0.65) !important;
 }
@@ -627,7 +628,8 @@
 .piano-grid-wrap::-webkit-scrollbar-track,
 .pattern-list-body::-webkit-scrollbar-track,
 .mixer-left::-webkit-scrollbar-track,
-.sample-settings-panel::-webkit-scrollbar-track {
+.sample-settings-panel::-webkit-scrollbar-track,
+.cloud-projects-body::-webkit-scrollbar-track {
   background: rgba(8, 18, 30, 0.85) !important;
   border: 1px solid rgba(122, 154, 196, 0.22) !important;
 }
@@ -638,7 +640,8 @@
 .piano-grid-wrap::-webkit-scrollbar-thumb,
 .pattern-list-body::-webkit-scrollbar-thumb,
 .mixer-left::-webkit-scrollbar-thumb,
-.sample-settings-panel::-webkit-scrollbar-thumb {
+.sample-settings-panel::-webkit-scrollbar-thumb,
+.cloud-projects-body::-webkit-scrollbar-thumb {
   border: 1px solid rgba(158, 198, 248, 0.54) !important;
   background: linear-gradient(180deg, #8fc8ff 0%, #5e9fde 100%) !important;
 }
@@ -744,6 +747,107 @@
   color: var(--modern-text-soft) !important;
 }
 
+.auth-confirm-dialog {
+  border-color: var(--modern-border) !important;
+  background: linear-gradient(180deg, #111f34 0%, #0d1a2b 100%) !important;
+  box-shadow: var(--modern-shadow-lg) !important;
+}
+
+.auth-confirm-dialog h4 {
+  color: var(--modern-text) !important;
+}
+
+.auth-confirm-dialog p {
+  color: var(--modern-text-soft) !important;
+}
+
+.auth-confirm-secondary {
+  border-color: var(--modern-border) !important;
+  color: var(--modern-text) !important;
+  background: linear-gradient(180deg, #162943 0%, #101f34 100%) !important;
+}
+
+.auth-confirm-secondary:hover {
+  border-color: var(--modern-border-strong) !important;
+}
+
+.cloud-projects-window {
+  border-color: var(--modern-border) !important;
+  background: linear-gradient(180deg, #111f34 0%, #0d1a2b 100%) !important;
+  box-shadow: var(--modern-shadow-lg) !important;
+  color: var(--modern-text) !important;
+}
+
+.cloud-projects-header {
+  border-bottom-color: var(--modern-border) !important;
+  background: linear-gradient(180deg, #1b2f4b 0%, #13253e 100%) !important;
+  box-shadow: var(--modern-shadow-md) !important;
+}
+
+.cloud-projects-header h3 {
+  color: var(--modern-text) !important;
+}
+
+.cloud-projects-body {
+  background: linear-gradient(180deg, #111f34 0%, #0d1a2b 100%) !important;
+}
+
+.cloud-projects-empty {
+  color: var(--modern-text-soft) !important;
+}
+
+.cloud-project-row:hover {
+  background: rgba(90, 200, 255, 0.08) !important;
+}
+
+.cloud-project-row.is-selected {
+  background: rgba(90, 200, 255, 0.12) !important;
+  border-color: var(--modern-border-strong) !important;
+  box-shadow: 0 0 0 1px rgba(90, 200, 255, 0.18) !important;
+}
+
+.cloud-project-name {
+  color: var(--modern-text) !important;
+}
+
+.cloud-project-bpm,
+.cloud-project-date {
+  color: var(--modern-text-soft) !important;
+}
+
+.cloud-projects-footer {
+  border-top-color: var(--modern-border) !important;
+  background: linear-gradient(180deg, #162943 0%, #101f34 100%) !important;
+}
+
+.cloud-projects-btn {
+  border-color: var(--modern-border) !important;
+  color: var(--modern-text) !important;
+}
+
+.cloud-projects-btn.primary {
+  background: linear-gradient(180deg, #223754 0%, #172a43 100%) !important;
+  box-shadow:
+    inset 0 1px 0 rgba(255, 255, 255, 0.08),
+    0 4px 12px rgba(4, 12, 24, 0.34) !important;
+}
+
+.cloud-projects-btn.primary:hover {
+  border-color: var(--modern-border-strong) !important;
+}
+
+.cloud-projects-btn.danger {
+  border-color: var(--modern-border) !important;
+  background: linear-gradient(180deg, #254061 0%, #1b314e 100%) !important;
+  box-shadow:
+    inset 0 1px 0 rgba(255, 255, 255, 0.09),
+    0 3px 10px rgba(4, 10, 20, 0.33) !important;
+}
+
+.cloud-projects-btn.danger:hover {
+  border-color: var(--modern-border-strong) !important;
+}
+
 .auth-dialog-link {
   color: var(--modern-accent) !important;
 }
@@ -781,6 +885,35 @@
 }
 
 .auth-dialog-remember span {
+  color: var(--modern-text-soft) !important;
+}
+
+.auth-dialog-toggle input[type="checkbox"] {
+  border-color: var(--modern-border) !important;
+  background: linear-gradient(180deg, #14263d 0%, #101f34 100%) !important;
+}
+
+.auth-dialog-toggle input[type="checkbox"]::after {
+  background: linear-gradient(180deg, #dff2ff 0%, #9fc4ef 100%) !important;
+}
+
+.auth-dialog-toggle input[type="checkbox"]:hover {
+  border-color: var(--modern-border-strong) !important;
+}
+
+.auth-dialog-toggle input[type="checkbox"]:checked {
+  border-color: var(--modern-border) !important;
+  background: linear-gradient(180deg, #3f6aa1 0%, #254772 100%) !important;
+  box-shadow:
+    inset 0 1px 0 rgba(255, 255, 255, 0.12),
+    0 0 0 1px rgba(90, 200, 255, 0.16) !important;
+}
+
+.auth-dialog-toggle input[type="checkbox"]:checked::after {
+  background: linear-gradient(180deg, #ffffff 0%, #dff2ff 100%) !important;
+}
+
+.auth-dialog-toggle span {
   color: var(--modern-text-soft) !important;
 }
 

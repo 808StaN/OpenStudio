@@ -230,7 +230,6 @@ function App() {
         }
 
         if (shouldIgnoreSpaceShortcut(event.target)) {
-          event.preventDefault();
           return;
         }
 
@@ -280,25 +279,31 @@ function App() {
   }, []);
 
   useEffect(function () {
-    const { data: listener } = supabase.auth.onAuthStateChange(
-      async function (event, session) {
-        if (event === "SIGNED_IN" && session) {
-          const { data: profile } = await supabase
-            .from("profiles")
-            .select("username,nickname,email")
-            .eq("id", session.user.id)
-            .single();
+    const syncUserProfile = async function (session) {
+      const { data: profile } = await supabase
+        .from("profiles")
+        .select("username,nickname,email")
+        .eq("id", session.user.id)
+        .single();
 
-          if (profile) {
-            dispatch(
-              setUser({
-                id: session.user.id,
-                username: profile.username,
-                nickname: profile.nickname,
-                email: profile.email,
-              }),
-            );
-          }
+      if (profile) {
+        dispatch(
+          setUser({
+            id: session.user.id,
+            username: profile.username,
+            nickname: profile.nickname,
+            email: profile.email,
+          }),
+        );
+      }
+    };
+
+    const { data: listener } = supabase.auth.onAuthStateChange(
+      function (event, session) {
+        if ((event === "SIGNED_IN" || event === "INITIAL_SESSION") && session) {
+          window.setTimeout(function () {
+            syncUserProfile(session);
+          }, 0);
         } else if (event === "SIGNED_OUT") {
           dispatch(clearUser());
         }

@@ -1,6 +1,7 @@
 import { useState, useEffect, useCallback } from "react";
 import { useSelector, useDispatch } from "react-redux";
 import { fetchProjects, loadProjectFromCloud, deleteProjectFromCloud } from "../../lib/projectApi";
+import { deserializeProject } from "../../lib/projectSerializer";
 import { loadProjectFromFile } from "../../store";
 
 export function CloudProjectsWindow({ onClose }) {
@@ -12,6 +13,7 @@ export function CloudProjectsWindow({ onClose }) {
   const [selectedId, setSelectedId] = useState(null);
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState(null);
+  const [deleteTarget, setDeleteTarget] = useState(null);
 
   const loadList = useCallback(
     async function () {
@@ -19,7 +21,7 @@ export function CloudProjectsWindow({ onClose }) {
       setIsLoading(true);
       setError(null);
       try {
-        const list = await fetchProjects(currentUser.id);
+        const list = await fetchProjects();
         setProjects(list);
       } catch (err) {
         setError(err.message);
@@ -44,7 +46,7 @@ export function CloudProjectsWindow({ onClose }) {
       setError(null);
       try {
         const data = await loadProjectFromCloud(selectedId);
-        dispatch(loadProjectFromFile(data));
+        dispatch(loadProjectFromFile(deserializeProject(data)));
         onClose();
       } catch (err) {
         setError(err.message);
@@ -56,31 +58,47 @@ export function CloudProjectsWindow({ onClose }) {
   );
 
   const handleDelete = useCallback(
-    async function () {
+    function () {
       if (!selectedId) return;
       const project = projects.find(function (p) {
         return p.id === selectedId;
       });
-      if (!window.confirm(`Delete project "${project?.name}"? This cannot be undone.`)) {
+      if (!project) {
         return;
       }
-      setIsLoading(true);
-      try {
-        await deleteProjectFromCloud(selectedId);
-        setProjects(function (prev) {
-          return prev.filter(function (p) {
-            return p.id !== selectedId;
-          });
-        });
-        setSelectedId(null);
-      } catch (err) {
-        setError(err.message);
-      } finally {
-        setIsLoading(false);
-      }
+      setDeleteTarget(project);
     },
     [selectedId, projects],
   );
+
+  const handleConfirmDelete = useCallback(async function () {
+    if (!deleteTarget) {
+      return;
+    }
+
+    const target = deleteTarget;
+    setDeleteTarget(null);
+    setIsLoading(true);
+    setError(null);
+
+    try {
+      await deleteProjectFromCloud(target.id);
+      setProjects(function (prev) {
+        return prev.filter(function (p) {
+          return p.id !== target.id;
+        });
+      });
+      setSelectedId(null);
+    } catch (err) {
+      setError(err.message);
+    } finally {
+      setIsLoading(false);
+    }
+  }, [deleteTarget]);
+
+  const handleCancelDelete = useCallback(function () {
+    setDeleteTarget(null);
+  }, []);
 
   return (
     <div className="cloud-projects-overlay">
@@ -140,6 +158,35 @@ export function CloudProjectsWindow({ onClose }) {
             Delete
           </button>
         </footer>
+
+        {deleteTarget ? (
+          <div className="auth-confirm-overlay">
+            <div className="auth-confirm-dialog">
+              <h4>Delete Cloud Project?</h4>
+              <p>
+                Delete project "{deleteTarget.name}"? This cannot be undone.
+              </p>
+              <div className="auth-confirm-actions">
+                <button
+                  type="button"
+                  className="auth-dialog-submit auth-confirm-btn"
+                  onClick={handleConfirmDelete}
+                  disabled={isLoading}
+                >
+                  OK
+                </button>
+                <button
+                  type="button"
+                  className="auth-confirm-secondary"
+                  onClick={handleCancelDelete}
+                  disabled={isLoading}
+                >
+                  Cancel
+                </button>
+              </div>
+            </div>
+          </div>
+        ) : null}
       </div>
     </div>
   );
