@@ -1,6 +1,7 @@
 import { useState } from "react";
 import {
   Circle,
+  Cloud,
   Download,
   FilePlus2,
   FolderOpen,
@@ -15,6 +16,8 @@ import { useProjectFileActions } from "./top-toolbar/useProjectFileActions";
 import { WindowToggleButtons } from "./top-toolbar/WindowToggleButtons";
 import { UserMenu } from "./auth/UserMenu";
 import { AuthDialog } from "./auth/AuthDialog";
+import { CloudProjectsWindow } from "./cloud/CloudProjectsWindow";
+import { SaveProjectDialog } from "./cloud/SaveProjectDialog";
 import {
   openWindow,
   resetToDefaultProject,
@@ -30,9 +33,13 @@ import {
 export function TopToolbar() {
   const dispatch = useDispatch();
   const [authDialogOpen, setAuthDialogOpen] = useState(false);
+  const [cloudWindowOpen, setCloudWindowOpen] = useState(false);
+  const [saveDialogOpen, setSaveDialogOpen] = useState(false);
+  const currentUser = useSelector(function (state) {
+    return state.user.currentUser;
+  });
   const {
     projectFileInputRef,
-    onSaveProjectClick,
     onLoadProjectClick,
     onProjectFileSelected,
   } = useProjectFileActions();
@@ -93,7 +100,7 @@ export function TopToolbar() {
           <FolderOpen size={14} />
           Load project
         </button>
-        <button className="transport-btn small" onClick={onSaveProjectClick}>
+        <button className="transport-btn small" onClick={function () { setSaveDialogOpen(true); }}>
           <Save size={14} />
           Save project
         </button>
@@ -166,10 +173,25 @@ export function TopToolbar() {
         />
       </div>
 
+      {currentUser ? (
+        <button
+          className="transport-btn small"
+          onClick={function () { setCloudWindowOpen(true); }}
+        >
+          <Cloud size={14} />
+          My Projects
+        </button>
+      ) : null}
       <UserMenu onOpenAuth={function () { setAuthDialogOpen(true); }} />
       <WindowToggleButtons />
       {authDialogOpen ? (
         <AuthDialog onClose={function () { setAuthDialogOpen(false); }} />
+      ) : null}
+      {cloudWindowOpen ? (
+        <CloudProjectsWindow onClose={function () { setCloudWindowOpen(false); }} />
+      ) : null}
+      {saveDialogOpen ? (
+        <SaveProjectDialog onClose={function () { setSaveDialogOpen(false); }} />
       ) : null}
     </header>
   );

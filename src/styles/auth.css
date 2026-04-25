@@ -292,3 +292,170 @@
   background: rgba(90, 200, 255, 0.1);
   color: #5ac8ff;
 }
+
+/* Cloud Projects Window */
+.cloud-projects-overlay {
+  position: fixed;
+  inset: 0;
+  background: rgba(7, 10, 16, 0.38);
+  backdrop-filter: blur(4px);
+  -webkit-backdrop-filter: blur(4px);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 9999;
+}
+
+.cloud-projects-window {
+  border: 1px solid #4b4f58;
+  border-radius: 9px;
+  width: 520px;
+  max-width: 90vw;
+  max-height: 80vh;
+  padding: 0;
+  color: #e4e8ef;
+  background: linear-gradient(180deg, #171c26 0%, #121722 100%);
+  box-shadow:
+    0 18px 35px rgba(0, 0, 0, 0.52),
+    inset 0 1px 0 rgba(255, 255, 255, 0.08);
+  overflow: hidden;
+  font-family: "Rajdhani", "Segoe UI", sans-serif;
+  display: flex;
+  flex-direction: column;
+}
+
+.cloud-projects-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 14px 16px 12px;
+  border-bottom: 1px solid #484c54;
+  background: linear-gradient(180deg, #383f4c 0%, #242a35 48%, #1a202a 100%);
+  flex-shrink: 0;
+}
+
+.cloud-projects-header h3 {
+  margin: 0;
+  font-size: 15px;
+  font-weight: 600;
+  color: #e4e8ef;
+  letter-spacing: 0.4px;
+}
+
+.cloud-projects-body {
+  padding: 12px;
+  overflow-y: auto;
+  flex: 1;
+  min-height: 0;
+}
+
+.cloud-projects-empty {
+  text-align: center;
+  color: #8aa3c7;
+  font-size: 13px;
+  padding: 24px;
+}
+
+.cloud-projects-list {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.cloud-project-row {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 10px 12px;
+  border-radius: 6px;
+  cursor: pointer;
+  border: 1px solid transparent;
+  transition: background 120ms ease, border-color 120ms ease;
+}
+
+.cloud-project-row:hover {
+  background: rgba(255, 255, 255, 0.04);
+}
+
+.cloud-project-row.is-selected {
+  background: rgba(90, 200, 255, 0.1);
+  border-color: rgba(90, 200, 255, 0.3);
+}
+
+.cloud-project-name {
+  flex: 1;
+  font-size: 13px;
+  font-weight: 600;
+  color: #e8f1ff;
+  letter-spacing: 0.2px;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.cloud-project-bpm {
+  font-size: 11px;
+  color: #9cb3d7;
+  font-weight: 500;
+  letter-spacing: 0.2px;
+  min-width: 60px;
+  text-align: right;
+}
+
+.cloud-project-date {
+  font-size: 11px;
+  color: #8aa3c7;
+  letter-spacing: 0.2px;
+  min-width: 140px;
+  text-align: right;
+}
+
+.cloud-projects-footer {
+  display: flex;
+  gap: 10px;
+  padding: 12px 16px 14px;
+  border-top: 1px solid #484c54;
+  background: linear-gradient(180deg, #1e2735 0%, #171c26 100%);
+  flex-shrink: 0;
+}
+
+.cloud-projects-btn {
+  flex: 1;
+  height: 34px;
+  border: 1px solid #506180;
+  border-radius: 8px;
+  color: #f7fbff;
+  font-size: 13px;
+  font-weight: 600;
+  letter-spacing: 0.25px;
+  cursor: pointer;
+  font-family: "Rajdhani", "Segoe UI", sans-serif;
+  transition:
+    transform 120ms ease,
+    filter 120ms ease;
+}
+
+.cloud-projects-btn:hover {
+  transform: translateY(-1px);
+  filter: brightness(1.05);
+}
+
+.cloud-projects-btn:active {
+  transform: translateY(0);
+}
+
+.cloud-projects-btn:disabled {
+  opacity: 0.55;
+  cursor: not-allowed;
+  transform: none;
+  filter: none;
+}
+
+.cloud-projects-btn.primary {
+  background: linear-gradient(180deg, #4f6ea0 0%, #29446f 100%);
+}
+
+.cloud-projects-btn.danger {
+  background: linear-gradient(180deg, #7d3f4a 0%, #5a2831 100%);
+  border-color: #7b4044;
+}
