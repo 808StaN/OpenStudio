@@ -16,7 +16,7 @@ import { useProjectFileActions } from "./top-toolbar/useProjectFileActions";
 import { WindowToggleButtons } from "./top-toolbar/WindowToggleButtons";
 import { UserMenu } from "./auth/UserMenu";
 import { AuthDialog } from "./auth/AuthDialog";
-import { CloudProjectsWindow } from "./cloud/CloudProjectsWindow";
+import { ProjectsWindow } from "./cloud/ProjectsWindow";
 import { SaveProjectDialog } from "./cloud/SaveProjectDialog";
 import {
   openWindow,
