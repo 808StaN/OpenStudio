@@ -4,7 +4,6 @@ import {
   Cloud,
   FolderOpen,
   Search,
-  RefreshCw,
   ArrowUpDown,
   Check,
   Trash2,
@@ -21,13 +20,12 @@ import { loadProjectFromFile } from "../../store";
 /**
  * ProjectsWindow lets the user load a project from either cloud storage
  * or a local file. It shows a sortable/searchable list of cloud projects
- * with a sidebar for switching sources and a right-hand info panel.
+ * with a sidebar for switching sources.
  *
- * The window is split into three areas:
+ * The window is split into two main areas:
  *   - Sidebar: source selector (My Projects / Local File)
  *   - Center: search bar, sortable project table, footer stats
- *   - Right: contextual info panel (cloud storage illustration)
- *   - Bottom: action bar (Open Selected / Delete from Cloud)
+ *   - Bottom: action bar (Open Selected / Delete Selected)
  */
 export function ProjectsWindow({ onClose, onLoadLocal }) {
   const dispatch = useDispatch();
@@ -353,28 +351,8 @@ export function ProjectsWindow({ onClose, onLoadLocal }) {
               <span className="project-count">
                 {filteredProjects.length} projects
               </span>
-              <button
-                className="project-sync-btn"
-                onClick={loadList}
-                disabled={isLoading}
-                title="Refresh list"
-              >
-                <RefreshCw size={13} />
-                Sync
-              </button>
             </div>
           </div>
-
-          {/* Right info panel */}
-          <aside className="project-info-panel">
-            <div className="project-info-icon">
-              <Cloud size={48} />
-            </div>
-            <h4>Cloud storage</h4>
-            <p>
-              Projects saved to your account are available across devices
-            </p>
-          </aside>
         </div>
 
         {/* Bottom action bar */}
@@ -393,7 +371,7 @@ export function ProjectsWindow({ onClose, onLoadLocal }) {
             disabled={!selectedId || isLoading}
           >
             <Trash2 size={14} />
-            Delete from Cloud
+            Delete Selected
           </button>
         </footer>
 
