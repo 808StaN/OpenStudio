@@ -195,7 +195,7 @@ export function FloatingWindow({
         minHeight={minHeight}
         dragHandleClassName="window-title"
         cancel=".window-controls, .window-control-btn"
-        className="window-frame"
+        className={"window-frame" + (win.isMaximized ? " is-maximized" : "")}
         style={{ zIndex: modal ? Math.max(1000, win.z) : win.z }}
         onMouseDown={function () {
           dispatch(bringWindowToFront(id));

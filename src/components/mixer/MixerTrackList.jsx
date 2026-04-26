@@ -1,4 +1,13 @@
 // Renders mixer insert strips (left panel) and forwards UI events to parent handlers.
+function getBipolarKnobStyle(value) {
+  const normalizedValue = Math.min(1, Math.max(0, (Number(value) + 1) / 2))
+
+  return {
+    "--knob-angle": -135 + 270 * normalizedValue + "deg",
+    "--knob-fill": 270 * normalizedValue + "deg",
+  }
+}
+
 export function MixerTrackList({
   inserts,
   selectedInsertId,
@@ -39,6 +48,11 @@ export function MixerTrackList({
             <div className="knob-group">
               <label className="knob-wrap">
                 <span>Pan</span>
+                <span
+                  className="metal-knob-visual"
+                  style={getBipolarKnobStyle(insert.pan)}
+                  aria-hidden="true"
+                />
                 <input
                   className="metal-knob"
                   type="range"
@@ -58,6 +72,11 @@ export function MixerTrackList({
 
               <label className="knob-wrap">
                 <span>Stereo</span>
+                <span
+                  className="metal-knob-visual"
+                  style={getBipolarKnobStyle(insert.stereoSeparation)}
+                  aria-hidden="true"
+                />
                 <input
                   className="metal-knob"
                   type="range"
