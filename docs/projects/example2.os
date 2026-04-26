@@ -205,7 +205,7 @@
         {
           "id": "ch-hat",
           "name": "ↈↈↈ Hi Hat @th",
-          "sampleRef": "/packs/__safe__/Cxdy%20-%20Flying%20Nimbus%20Drumkit/Hi%20Hats/%E2%86%88%E2%86%88%E2%86%88%20Hi%20Hat%20_at_thecxdy.wav",
+          "sampleRef": "/packs/Cxdy%20-%20Flying%20Nimbus%20Drumkit/Hi%20Hats/%E2%86%88%E2%86%88%E2%86%88%20Hi%20Hat%20%40thecxdy.wav",
           "pluginRef": "",
           "sampleSettings": {
             "cutItself": false,
@@ -313,7 +313,7 @@
         {
           "id": "ch-mnqyhwrl-zltw",
           "name": "detox 143 bpm ",
-          "sampleRef": "/packs/__safe__/Cxdy%20-%20Flying%20Nimbus%20Drumkit/Bonus%20Loops/_at_omgzanoza/detox%20143%20bpm%20f%20min%20_at_omgzanoza.mp3",
+          "sampleRef": "/packs/Cxdy%20-%20Flying%20Nimbus%20Drumkit/Bonus%20Loops/%40omgzanoza/detox%20143%20bpm%20f%20min%20%40omgzanoza.mp3",
           "pluginRef": "",
           "sampleSettings": {
             "cutItself": false,
@@ -2424,7 +2424,7 @@
         {
           "id": "clip-mnqyhwrl-0ayk",
           "clipType": "audio",
-          "samplePath": "/packs/__safe__/Cxdy%20-%20Flying%20Nimbus%20Drumkit/Bonus%20Loops/_at_omgzanoza/detox%20143%20bpm%20f%20min%20_at_omgzanoza.mp3",
+          "samplePath": "/packs/Cxdy%20-%20Flying%20Nimbus%20Drumkit/Bonus%20Loops/%40omgzanoza/detox%20143%20bpm%20f%20min%20%40omgzanoza.mp3",
           "audioName": "detox 143 bpm f min @omgzanoza.mp3",
           "channelId": "ch-mnqyhwrl-zltw",
           "trackId": "trk-1",

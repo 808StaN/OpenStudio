@@ -1,139 +1,122 @@
+function encodePathSegment(segment) {
+  try {
+    return encodeURIComponent(decodeURIComponent(segment))
+  } catch {
+    return encodeURIComponent(segment)
+  }
+}
+
+function splitPathAndQuery(rawPath) {
+  const input = String(rawPath || "")
+  const queryIndex = input.indexOf("?")
+
+  return {
+    pathPart: queryIndex >= 0 ? input.slice(0, queryIndex) : input,
+    queryPart: queryIndex >= 0 ? input.slice(queryIndex) : "",
+  }
+}
+
+function encodePathname(pathname) {
+  return String(pathname || "")
+    .split("/")
+    .map(function (part, index) {
+      if (index === 0 && part === "") {
+        return ""
+      }
+
+      return encodePathSegment(part)
+    })
+    .join("/")
+}
+
+function encodePackRelativePath(relativePath) {
+  const { pathPart, queryPart } = splitPathAndQuery(relativePath)
+  const encodedPath = pathPart
+    .replace(/^\/+/, "")
+    .split("/")
+    .filter(Boolean)
+    .map(function (segment) {
+      return encodePathSegment(segment)
+    })
+    .join("/")
+
+  return encodedPath + queryPart
+}
+
+function isFileProtocolRuntime() {
+  return (
+    typeof window !== "undefined" &&
+    String(window.location?.protocol || "").toLowerCase() === "file:"
+  )
+}
+
 function normalizeRuntimePackPath(rawInput) {
-  const input = String(rawInput || "").trim();
+  const input = String(rawInput || "").trim()
   if (!input) {
-    return "";
+    return ""
   }
 
-  const hasWindow = typeof window !== "undefined";
-  const isFileProtocol =
-    hasWindow && String(window.location?.protocol || "").toLowerCase() === "file:";
-  const restoreSafeAliasSegment = function (segment) {
-    return String(segment || "")
-      .replace(/_at_/gi, "@")
-      .replace(/_plus_/gi, "+")
-      .replace(/_hash_/gi, "#");
-  };
-  const restoreSafeAliasRelativePath = function (relativePath) {
-    const rel = String(relativePath || "").replace(/^\/+/, "");
-    if (!rel) {
-      return "";
-    }
+  const openStudioPacksPrefix = /^openstudio:\/\/packs\/?/i
+  const isFileProtocol = isFileProtocolRuntime()
 
-    const segments = rel.split("/").filter(Boolean);
-    if (segments.length === 0) {
-      return "";
-    }
+  if (openStudioPacksPrefix.test(input)) {
+    const relative = input.replace(openStudioPacksPrefix, "")
+    const encodedRelative = encodePackRelativePath(relative)
 
-    const first = String(segments[0] || "").toLowerCase();
-    const hasSafePrefix = first === "__safe__" || first === "_safe_";
-    if (!hasSafePrefix) {
-      return rel;
-    }
-
-    return segments
-      .slice(1)
-      .map(function (segment) {
-        return restoreSafeAliasSegment(segment);
-      })
-      .join("/");
-  };
-
-  if (/^openstudio:\/\/packs(?:\/|$)/i.test(input)) {
     if (isFileProtocol) {
-      try {
-        const parsed = new URL(input);
-        const restoredRelative = restoreSafeAliasRelativePath(parsed.pathname);
-        if (!restoredRelative) {
-          return input;
-        }
-
-        return "openstudio://packs/" + restoredRelative + String(parsed.search || "");
-      } catch {
-        const relative = input.replace(/^openstudio:\/\/packs\/?/i, "");
-        const restoredRelative = restoreSafeAliasRelativePath(relative);
-        if (!restoredRelative) {
-          return input;
-        }
-        return "openstudio://packs/" + restoredRelative;
-      }
+      return "openstudio://packs/" + encodedRelative
     }
 
-    try {
-      const parsed = new URL(input);
-      const relative = String(parsed.pathname || "").replace(/^\/+/, "");
-      return "/packs/" + relative + String(parsed.search || "");
-    } catch {
-      return input.replace(/^openstudio:\/\/packs\/?/i, "/packs/");
-    }
+    return "/packs/" + encodedRelative
   }
 
   if (!isFileProtocol) {
-    return input;
+    return input
   }
 
-  const clean = input.replace(/^\/+/, "");
-  const safeOnly = restoreSafeAliasRelativePath(clean);
-  if (safeOnly !== clean && safeOnly) {
-    return "openstudio://packs/" + safeOnly;
-  }
-
+  const clean = input.replace(/^\/+/, "")
   if (!/^packs(?:\/|$)/i.test(clean)) {
-    return input;
+    return input
   }
 
-  const relative = clean.replace(/^packs\/?/i, "");
-  const restoredRelative = restoreSafeAliasRelativePath(relative);
-  return "openstudio://packs/" + (restoredRelative || relative);
+  const relative = clean.replace(/^packs\/?/i, "")
+  return "openstudio://packs/" + encodePackRelativePath(relative)
 }
 
+/**
+ * Normalize a sample reference into a fetchable URL without changing the
+ * stored project value. Pack filenames may contain characters like `#`, so
+ * local pack paths are encoded before they can be parsed as URLs.
+ *
+ * @param {string} rawPath Sample reference stored in state or manifest data.
+ * @returns {string} URL safe for fetch/audio loading.
+ */
 export function toSafeSampleUrl(rawPath) {
-  const input = normalizeRuntimePackPath(rawPath);
+  const input = normalizeRuntimePackPath(rawPath)
   if (!input) {
-    return "";
+    return ""
+  }
+
+  if (/^openstudio:\/\/packs(?:\/|$)/i.test(input)) {
+    const relative = input.replace(/^openstudio:\/\/packs\/?/i, "")
+    return "openstudio://packs/" + encodePackRelativePath(relative)
   }
 
   if (/^[a-zA-Z][a-zA-Z0-9+.-]*:\/\//.test(input)) {
     try {
-      const parsed = new URL(input);
-      const encodedPath = parsed.pathname
-        .split("/")
-        .map(function (part) {
-          if (!part) {
-            return "";
-          }
-
-          try {
-            return encodeURIComponent(decodeURIComponent(part));
-          } catch {
-            return encodeURIComponent(part);
-          }
-        })
-        .join("/");
-
-      return parsed.protocol + "//" + parsed.host + encodedPath + parsed.search;
+      const parsed = new URL(input)
+      return (
+        parsed.protocol +
+        "//" +
+        parsed.host +
+        encodePathname(parsed.pathname) +
+        parsed.search
+      )
     } catch {
-      return input;
+      return input
     }
   }
 
-  const queryIndex = input.indexOf("?");
-  const pathPart = queryIndex >= 0 ? input.slice(0, queryIndex) : input;
-  const queryPart = queryIndex >= 0 ? input.slice(queryIndex) : "";
-  const parts = pathPart.split("/");
-
-  const encodedPath = parts
-    .map(function (part, index) {
-      if (index === 0 && part === "") {
-        return "";
-      }
-
-      try {
-        return encodeURIComponent(decodeURIComponent(part));
-      } catch {
-        return encodeURIComponent(part);
-      }
-    })
-    .join("/");
-
-  return encodedPath + queryPart;
+  const { pathPart, queryPart } = splitPathAndQuery(input)
+  return encodePathname(pathPart) + queryPart
 }

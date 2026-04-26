@@ -312,7 +312,7 @@
         {
           "id": "ch-mnql9qsq-h3h1",
           "name": "android 162bpm",
-          "sampleRef": "/packs/__safe__/Cxdy%20-%20Flying%20Nimbus%20Drumkit/Bonus%20Loops/_at_northofikari/android%20162bpm%20Db%20min%20_at_northofikari.mp3",
+          "sampleRef": "/packs/Cxdy%20-%20Flying%20Nimbus%20Drumkit/Bonus%20Loops/%40northofikari/android%20162bpm%20Db%20min%20%40northofikari.mp3",
           "pluginRef": "",
           "sampleSettings": {
             "cutItself": false,
@@ -348,7 +348,7 @@
         {
           "id": "ch-mnqla8gh-x8ph",
           "name": "crouchwalk 160",
-          "sampleRef": "/packs/__safe__/Cxdy%20-%20Flying%20Nimbus%20Drumkit/Bonus%20Loops/_at_northofikari/crouchwalk%20160bpm%20Cminor%20_at_northofikari.mp3",
+          "sampleRef": "/packs/Cxdy%20-%20Flying%20Nimbus%20Drumkit/Bonus%20Loops/%40northofikari/crouchwalk%20160bpm%20Cminor%20%40northofikari.mp3",
           "pluginRef": "",
           "sampleSettings": {
             "cutItself": false,
@@ -6188,7 +6188,7 @@
         {
           "id": "clip-mnqla8gh-q0o6",
           "clipType": "audio",
-          "samplePath": "/packs/__safe__/Cxdy%20-%20Flying%20Nimbus%20Drumkit/Bonus%20Loops/_at_northofikari/crouchwalk%20160bpm%20Cminor%20_at_northofikari.mp3",
+          "samplePath": "/packs/Cxdy%20-%20Flying%20Nimbus%20Drumkit/Bonus%20Loops/%40northofikari/crouchwalk%20160bpm%20Cminor%20%40northofikari.mp3",
           "audioName": "crouchwalk 160bpm Cminor @northofikari.mp3",
           "channelId": "ch-mnqla8gh-x8ph",
           "trackId": "trk-1",

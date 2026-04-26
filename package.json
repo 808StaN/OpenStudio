@@ -65,9 +65,7 @@
         "to": "Packs",
         "filter": [
           "**/*",
-          "!**/manifest.json",
-          "!**/__safe__",
-          "!**/__safe__/**"
+          "!**/manifest.json"
         ]
       }
     ],
