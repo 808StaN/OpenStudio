@@ -726,6 +726,7 @@
   align-items: center;
   padding: 0 10px;
   height: 30px;
+  gap: 8px;
   border-bottom: 1px solid #353b46;
   background: linear-gradient(180deg, #1f2633 0%, #181d27 100%);
   flex-shrink: 0;
@@ -822,9 +823,6 @@
 
 .project-table-cell.name {
   flex: 1;
-  display: flex;
-  align-items: center;
-  gap: 8px;
   color: #e8f1ff;
   font-weight: 500;
 }

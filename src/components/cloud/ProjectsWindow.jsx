@@ -7,7 +7,6 @@ import {
   ArrowUpDown,
   Check,
   Trash2,
-  FileMusic,
 } from "lucide-react";
 import {
   fetchProjects,
@@ -330,7 +329,6 @@ export function ProjectsWindow({ onClose, onLoadLocal }) {
                         onDoubleClick={handleLoad}
                       >
                         <span className="project-table-cell name">
-                          <FileMusic size={14} />
                           {project.name}
                         </span>
                         <span className="project-table-cell bpm">

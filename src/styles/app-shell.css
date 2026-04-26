@@ -43,7 +43,8 @@
 .pattern-list-body,
 .mixer-left,
 .sample-settings-panel,
-.cloud-projects-body {
+.cloud-projects-body,
+.project-table-body {
   scrollbar-width: thin;
   scrollbar-color: #7f8ca2 #202838;
 }
@@ -55,7 +56,8 @@
 .pattern-list-body::-webkit-scrollbar,
 .mixer-left::-webkit-scrollbar,
 .sample-settings-panel::-webkit-scrollbar,
-.cloud-projects-body::-webkit-scrollbar {
+.cloud-projects-body::-webkit-scrollbar,
+.project-table-body::-webkit-scrollbar {
   width: 12px;
   height: 12px;
 }
@@ -67,7 +69,8 @@
 .pattern-list-body::-webkit-scrollbar-track,
 .mixer-left::-webkit-scrollbar-track,
 .sample-settings-panel::-webkit-scrollbar-track,
-.cloud-projects-body::-webkit-scrollbar-track {
+.cloud-projects-body::-webkit-scrollbar-track,
+.project-table-body::-webkit-scrollbar-track {
   background: linear-gradient(180deg, #1f2736 0%, #141c2a 100%);
   border: 1px solid #3f4b62;
   border-radius: 999px;
@@ -81,7 +84,8 @@
 .pattern-list-body::-webkit-scrollbar-thumb,
 .mixer-left::-webkit-scrollbar-thumb,
 .sample-settings-panel::-webkit-scrollbar-thumb,
-.cloud-projects-body::-webkit-scrollbar-thumb {
+.cloud-projects-body::-webkit-scrollbar-thumb,
+.project-table-body::-webkit-scrollbar-thumb {
   border-radius: 999px;
   border: 1px solid #9aa7bd;
   background: linear-gradient(180deg, #d9deea 0%, #9ca8bc 48%, #7a879d 100%);
@@ -98,12 +102,14 @@
 .pattern-list-body::-webkit-scrollbar-thumb:hover,
 .mixer-left::-webkit-scrollbar-thumb:hover,
 .sample-settings-panel::-webkit-scrollbar-thumb:hover,
-.cloud-projects-body::-webkit-scrollbar-thumb:hover {
+.cloud-projects-body::-webkit-scrollbar-thumb:hover,
+.project-table-body::-webkit-scrollbar-thumb:hover {
   filter: brightness(1.08);
 }
 
 .sample-settings-panel::-webkit-scrollbar-corner,
-.cloud-projects-body::-webkit-scrollbar-corner {
+.cloud-projects-body::-webkit-scrollbar-corner,
+.project-table-body::-webkit-scrollbar-corner {
   background: #141c2a;
 }
 
