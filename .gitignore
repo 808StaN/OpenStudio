@@ -28,7 +28,7 @@ build/uninstallerSidebar.bmp
 guidelines.md
 project_documentation.tex
 bundle-stats.json
-public/packs/manifest.json
+public/packs/
 .env
 .env.local
 .env.*.local
