@@ -464,7 +464,8 @@
   border-radius: 9px;
   width: 520px;
   max-width: 90vw;
-  max-height: 80vh;
+  height: 560px;
+  max-height: 90vh;
   padding: 0;
   color: #e4e8ef;
   background: linear-gradient(180deg, #171c26 0%, #121722 100%);
@@ -788,7 +789,7 @@
   flex: 1;
   overflow-y: auto;
   min-height: 0;
-  max-height: 400px;
+  height: 400px;
 }
 
 .project-table-row {
@@ -829,7 +830,10 @@
 
 .project-table-cell.bpm {
   width: 80px;
-  text-align: center;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding-left: 6px;
   color: #9cb3d7;
 }
 
