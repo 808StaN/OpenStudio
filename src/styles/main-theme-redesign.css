@@ -1099,30 +1099,13 @@
   background:
     radial-gradient(circle at 50% 50%, #171b1f 0 48%, transparent 49%),
     conic-gradient(
-      from 270deg,
+      from 0deg,
       #232b33 0deg var(--knob-fill-start, 0deg),
       var(--ui-accent) var(--knob-fill-start, 0deg) var(--knob-fill-end, 0deg),
       #232b33 var(--knob-fill-end, 0deg) 360deg
     );
   box-shadow: inset 0 0 0 4px #0a0e13;
   pointer-events: none;
-}
-
-.theme-default .metal-knob-visual::after {
-  content: "";
-  position: absolute;
-  left: 50%;
-  top: 50%;
-  width: 2px;
-  height: 8px;
-  border-radius: 999px;
-  background: #d3d8d7;
-  transform: translate(-50%, -100%) rotate(var(--knob-angle, 0deg));
-  transform-origin: 50% 100%;
-}
-
-.theme-default .knob-wrap:focus-within .metal-knob-visual {
-  border-color: rgba(163, 178, 190, 0.22);
 }
 
 .theme-default .metal-knob-visual::after {

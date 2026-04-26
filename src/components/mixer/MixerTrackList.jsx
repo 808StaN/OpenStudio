@@ -4,17 +4,18 @@ function clampBipolarValue(value) {
 
 function getKnobStyle(value) {
   const clamped = clampBipolarValue(value)
+  const sweep = 180 * Math.abs(clamped)
   if (clamped < 0) {
     return {
-      "--knob-angle": 90 * clamped + "deg",
-      "--knob-fill-start": 360 - 180 * Math.abs(clamped) + "deg",
+      "--knob-angle": 180 * clamped + "deg",
+      "--knob-fill-start": 360 - sweep + "deg",
       "--knob-fill-end": "360deg",
     }
   }
   return {
-    "--knob-angle": 90 * clamped + "deg",
+    "--knob-angle": 180 * clamped + "deg",
     "--knob-fill-start": "0deg",
-    "--knob-fill-end": 180 * clamped + "deg",
+    "--knob-fill-end": sweep + "deg",
   }
 }
 
