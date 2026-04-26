@@ -759,6 +759,7 @@
   background: transparent;
   box-shadow: none;
   padding: 8px;
+  min-height: 580px;
 }
 
 .theme-default .mixer-left {
@@ -768,6 +769,7 @@
   border-radius: var(--ui-radius-lg);
   background: #0b1015;
   overflow-x: auto;
+  align-items: flex-start;
 }
 
 .theme-default .mixer-track {
@@ -1084,15 +1086,6 @@
   cursor: ns-resize;
   user-select: none;
   outline: none;
-}
-
-.theme-default .knob-value {
-  color: var(--ui-muted);
-  font-size: 9px;
-  font-weight: 500;
-  letter-spacing: -0.5px;
-  min-width: 24px;
-  text-align: center;
 }
 
 .theme-default .fader-block {

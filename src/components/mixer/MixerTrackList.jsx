@@ -52,9 +52,6 @@ export function MixerTrackList({
                   }}
                   className="mixer-knob"
                 />
-                <span className="knob-value">
-                  {Math.round(insert.pan * 100)}
-                </span>
               </div>
 
               <div className="knob-wrap">
@@ -69,9 +66,6 @@ export function MixerTrackList({
                   }}
                   className="mixer-knob"
                 />
-                <span className="knob-value">
-                  {Math.round(insert.stereoSeparation * 100)}
-                </span>
               </div>
             </div>
 
@@ -96,7 +90,7 @@ export function MixerTrackList({
 
               <div className="meter-column">
                 {Array.from({ length: 14 }).map(function (_, index) {
-                  const threshold = (index + 1) / 14
+                  const threshold = (14 - index) / 14
                   const isActive = insert.meter >= threshold
                   return (
                     <span
