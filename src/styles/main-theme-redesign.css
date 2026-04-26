@@ -1099,11 +1099,9 @@
   background:
     radial-gradient(circle at 50% 50%, #171b1f 0 48%, transparent 49%),
     conic-gradient(
-      from 270deg,
-      #232b33 0deg var(--knob-fill-start, 90deg),
-      var(--ui-accent) var(--knob-fill-start, 90deg) var(--knob-fill-end, 90deg),
-      #232b33 var(--knob-fill-end, 90deg) 180deg,
-      #0a0e13 180deg 360deg
+      from 0deg,
+      var(--ui-accent) var(--knob-fill-start, 0deg) var(--knob-fill-end, 0deg),
+      #232b33 var(--knob-fill-end, 0deg) 360deg
     );
   box-shadow: inset 0 0 0 4px #0a0e13;
   pointer-events: none;

@@ -2,29 +2,20 @@ function clampBipolarValue(value) {
   return Math.min(1, Math.max(-1, Number(value) || 0))
 }
 
-function getPanKnobStyle(value) {
+function getKnobStyle(value) {
   const clamped = clampBipolarValue(value)
+  const absFill = 180 * Math.abs(clamped)
   if (clamped < 0) {
     return {
       "--knob-angle": 90 * clamped + "deg",
-      "--knob-fill-start": 90 + 90 * clamped + "deg",
-      "--knob-fill-end": "90deg",
+      "--knob-fill-start": 360 - absFill + "deg",
+      "--knob-fill-end": "360deg",
     }
   }
   return {
     "--knob-angle": 90 * clamped + "deg",
-    "--knob-fill-start": "90deg",
-    "--knob-fill-end": 90 + 90 * clamped + "deg",
-  }
-}
-
-function getStereoKnobStyle(value) {
-  const clamped = clampBipolarValue(value)
-  const normalized = (clamped + 1) / 2
-  return {
-    "--knob-angle": 90 * normalized + "deg",
-    "--knob-fill-start": "90deg",
-    "--knob-fill-end": 90 + 90 * normalized + "deg",
+    "--knob-fill-start": "0deg",
+    "--knob-fill-end": absFill + "deg",
   }
 }
 
@@ -72,7 +63,7 @@ export function MixerTrackList({
                 <span>Pan</span>
                 <span
                   className="metal-knob-visual"
-                  style={getPanKnobStyle(insert.pan)}
+                  style={getKnobStyle(insert.pan)}
                   aria-hidden="true"
                 />
                 <input
@@ -96,7 +87,7 @@ export function MixerTrackList({
                 <span>Stereo</span>
                 <span
                   className="metal-knob-visual"
-                  style={getStereoKnobStyle(insert.stereoSeparation)}
+                  style={getKnobStyle(insert.stereoSeparation)}
                   aria-hidden="true"
                 />
                 <input
