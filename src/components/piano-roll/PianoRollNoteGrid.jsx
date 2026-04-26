@@ -133,7 +133,7 @@ export function PianoRollNoteGrid({
           const width = Math.max(8, note.length * stepWidth - 2);
           const velocityAlpha = clamp(
             midiVelocityToPercent(Number(note.velocity || DEFAULT_NOTE_VELOCITY)) / 100,
-            0.78,
+            0.35,
             1,
           );
 

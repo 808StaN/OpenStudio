@@ -4,18 +4,17 @@ function clampBipolarValue(value) {
 
 function getPanKnobStyle(value) {
   const clamped = clampBipolarValue(value)
-  const abs = Math.abs(clamped)
   if (clamped < 0) {
     return {
       "--knob-angle": 90 * clamped + "deg",
-      "--knob-fill-start": 360 - 90 * abs + "deg",
-      "--knob-fill-end": "360deg",
+      "--knob-fill-start": 90 + 90 * clamped + "deg",
+      "--knob-fill-end": "90deg",
     }
   }
   return {
     "--knob-angle": 90 * clamped + "deg",
-    "--knob-fill-start": "0deg",
-    "--knob-fill-end": 90 * abs + "deg",
+    "--knob-fill-start": "90deg",
+    "--knob-fill-end": 90 + 90 * clamped + "deg",
   }
 }
 
@@ -23,9 +22,9 @@ function getStereoKnobStyle(value) {
   const clamped = clampBipolarValue(value)
   const normalized = (clamped + 1) / 2
   return {
-    "--knob-angle": 90 * clamped + "deg",
-    "--knob-fill-start": "270deg",
-    "--knob-fill-end": 270 + 180 * normalized + "deg",
+    "--knob-angle": 90 * normalized + "deg",
+    "--knob-fill-start": "90deg",
+    "--knob-fill-end": 90 + 90 * normalized + "deg",
   }
 }
 

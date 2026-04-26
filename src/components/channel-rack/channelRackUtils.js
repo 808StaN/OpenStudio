@@ -4,8 +4,8 @@ export const MIDI_PITCH_MIN = 0;
 export const MIDI_PITCH_MAX = 127;
 export const PREVIEW_TOP_MIN_PERCENT = 9;
 export const PREVIEW_TOP_MAX_PERCENT = 91;
-export const STEP_CELL_WIDTH_PX = 24;
-export const STEP_CELL_GAP_PX = 5;
+export const STEP_CELL_WIDTH_PX = 18;
+export const STEP_CELL_GAP_PX = 4;
 export const STEPS_PER_BEAT = 4;
 export const DEFAULT_PATTERN_COLOR = "#4bef9f";
 
