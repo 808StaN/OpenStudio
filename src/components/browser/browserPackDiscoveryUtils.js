@@ -32,11 +32,6 @@ export const buildPackGroupsFromRelativePaths = function ({
     }
 
     const folderSegments = segments.slice(0, -1);
-    // Ignore legacy mirrored safe folders in browser listing.
-    if (folderSegments[0] === "__safe__") {
-      return;
-    }
-
     const folder = folderSegments.length > 0 ? folderSegments.join("/") : "Root";
     const encodedPath = makePacksPath(
       "packs/" +
@@ -149,10 +144,6 @@ export const discoverPacksFromDirectoryIndex = async function ({
       }
 
       if (pathname.endsWith("/")) {
-        if (pathname.includes("/__safe__/")) {
-          return;
-        }
-
         queue.push(pathname);
         return;
       }
