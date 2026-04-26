@@ -1005,3 +1005,148 @@
   color: var(--modern-text-soft) !important;
 }
 
+/* Load Project window redesign (midnight theme overrides) ----------------- */
+
+.theme-midnight .project-sidebar {
+  border-right-color: var(--modern-border) !important;
+  background: linear-gradient(180deg, #111f34 0%, #0d1a2b 100%) !important;
+}
+
+.theme-midnight .project-sidebar-item {
+  color: var(--modern-text-soft) !important;
+}
+
+.theme-midnight .project-sidebar-item:hover {
+  background: rgba(255, 255, 255, 0.04) !important;
+  color: var(--modern-text) !important;
+}
+
+.theme-midnight .project-sidebar-item.is-active {
+  background: rgba(90, 200, 255, 0.1) !important;
+  border-color: var(--modern-border-strong) !important;
+  color: var(--modern-text) !important;
+}
+
+.theme-midnight .project-search-bar {
+  border-color: var(--modern-border) !important;
+  background: linear-gradient(180deg, #15263d 0%, #101f34 100%) !important;
+  color: var(--modern-text-soft) !important;
+}
+
+.theme-midnight .project-search-bar input {
+  color: var(--modern-text) !important;
+}
+
+.theme-midnight .project-search-bar input::placeholder {
+  color: #4a6385 !important;
+}
+
+.theme-midnight .project-table-wrapper {
+  border-color: var(--modern-border) !important;
+}
+
+.theme-midnight .project-table-header {
+  border-bottom-color: var(--modern-border) !important;
+  background: linear-gradient(180deg, #162943 0%, #101f34 100%) !important;
+}
+
+.theme-midnight .project-table-header-cell {
+  color: var(--modern-text-soft) !important;
+}
+
+.theme-midnight .project-table-header-cell:hover {
+  color: var(--modern-text) !important;
+}
+
+.theme-midnight .project-table-header-cell.is-active {
+  color: var(--modern-accent) !important;
+}
+
+.theme-midnight .project-table-row {
+  border-bottom-color: rgba(138, 170, 214, 0.12) !important;
+}
+
+.theme-midnight .project-table-row:hover {
+  background: rgba(90, 200, 255, 0.06) !important;
+}
+
+.theme-midnight .project-table-row.is-selected {
+  background: rgba(90, 200, 255, 0.12) !important;
+}
+
+.theme-midnight .project-table-cell.name {
+  color: var(--modern-text) !important;
+}
+
+.theme-midnight .project-table-cell.bpm,
+.theme-midnight .project-table-cell.date {
+  color: var(--modern-text-soft) !important;
+}
+
+.theme-midnight .project-table-footer {
+  border-top-color: var(--modern-border) !important;
+  background: linear-gradient(180deg, #111f34 0%, #0d1a2b 100%) !important;
+}
+
+.theme-midnight .project-count {
+  color: #4a6385 !important;
+}
+
+.theme-midnight .project-sync-btn {
+  color: #4a6385 !important;
+}
+
+.theme-midnight .project-sync-btn:hover {
+  color: var(--modern-accent) !important;
+}
+
+.theme-midnight .project-info-panel {
+  border-left-color: var(--modern-border) !important;
+  background: linear-gradient(180deg, #111f34 0%, #0d1a2b 100%) !important;
+}
+
+.theme-midnight .project-info-icon {
+  color: var(--modern-accent) !important;
+}
+
+.theme-midnight .project-info-panel h4 {
+  color: var(--modern-text) !important;
+}
+
+.theme-midnight .project-info-panel p {
+  color: var(--modern-text-soft) !important;
+}
+
+.theme-midnight .project-actions-bar {
+  border-top-color: var(--modern-border) !important;
+  background: linear-gradient(180deg, #162943 0%, #101f34 100%) !important;
+}
+
+.theme-midnight .project-action-btn {
+  border-color: var(--modern-border) !important;
+  color: var(--modern-text) !important;
+}
+
+.theme-midnight .project-action-btn.primary {
+  background: linear-gradient(180deg, #223754 0%, #172a43 100%) !important;
+  box-shadow:
+    inset 0 1px 0 rgba(255, 255, 255, 0.08),
+    0 4px 12px rgba(4, 12, 24, 0.34) !important;
+}
+
+.theme-midnight .project-action-btn.primary:hover {
+  border-color: var(--modern-border-strong) !important;
+}
+
+.theme-midnight .project-action-btn.danger {
+  border-color: var(--modern-border) !important;
+  background: linear-gradient(180deg, #254061 0%, #1b314e 100%) !important;
+  box-shadow:
+    inset 0 1px 0 rgba(255, 255, 255, 0.09),
+    0 3px 10px rgba(4, 10, 20, 0.33) !important;
+}
+
+.theme-midnight .project-action-btn.danger:hover {
+  border-color: var(--modern-border-strong) !important;
+}
+
