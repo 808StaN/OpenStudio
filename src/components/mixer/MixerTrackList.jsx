@@ -1,12 +1,39 @@
-// Renders mixer insert strips (left panel) and forwards UI events to parent handlers.
-function getBipolarKnobStyle(value) {
-  const normalizedValue = Math.min(1, Math.max(0, (Number(value) + 1) / 2))
+const KNOB_CENTER_DEG = 135
+const KNOB_HALF_SWEEP_DEG = 135
+
+function clampBipolarValue(value) {
+  return Math.min(1, Math.max(-1, Number(value) || 0))
+}
+
+function getPanKnobStyle(value) {
+  const clampedValue = clampBipolarValue(value)
+  const fillSweep = KNOB_HALF_SWEEP_DEG * Math.abs(clampedValue)
+  const fillStart = clampedValue < 0
+    ? KNOB_CENTER_DEG - fillSweep
+    : KNOB_CENTER_DEG
+  const fillEnd = clampedValue < 0
+    ? KNOB_CENTER_DEG
+    : KNOB_CENTER_DEG + fillSweep
 
   return {
-    "--knob-angle": -135 + 270 * normalizedValue + "deg",
-    "--knob-fill": 270 * normalizedValue + "deg",
+    "--knob-angle": 90 * clampedValue + "deg",
+    "--knob-fill-start": fillStart + "deg",
+    "--knob-fill-end": fillEnd + "deg",
   }
 }
+
+function getStereoKnobStyle(value) {
+  const clampedValue = clampBipolarValue(value)
+  const fillEnd = KNOB_CENTER_DEG + KNOB_HALF_SWEEP_DEG * Math.max(0, clampedValue)
+
+  return {
+    "--knob-angle": 90 * clampedValue + "deg",
+    "--knob-fill-start": KNOB_CENTER_DEG + "deg",
+    "--knob-fill-end": fillEnd + "deg",
+  }
+}
+
+// Renders mixer insert strips (left panel) and forwards UI events to parent handlers.
 
 export function MixerTrackList({
   inserts,
@@ -50,7 +77,7 @@ export function MixerTrackList({
                 <span>Pan</span>
                 <span
                   className="metal-knob-visual"
-                  style={getBipolarKnobStyle(insert.pan)}
+                  style={getPanKnobStyle(insert.pan)}
                   aria-hidden="true"
                 />
                 <input
@@ -74,7 +101,7 @@ export function MixerTrackList({
                 <span>Stereo</span>
                 <span
                   className="metal-knob-visual"
-                  style={getBipolarKnobStyle(insert.stereoSeparation)}
+                  style={getStereoKnobStyle(insert.stereoSeparation)}
                   aria-hidden="true"
                 />
                 <input

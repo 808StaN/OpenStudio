@@ -9,9 +9,9 @@
   --ui-text: #edf2ee;
   --ui-muted: #9aa5ad;
   --ui-faint: #606b73;
-  --ui-accent: #62c874;
-  --ui-accent-strong: #55ba68;
-  --ui-accent-soft: rgba(98, 200, 116, 0.12);
+  --ui-accent: #58b867;
+  --ui-accent-strong: #4faa5e;
+  --ui-accent-soft: rgba(88, 184, 103, 0.12);
   --ui-danger: #f26d78;
   --ui-radius-lg: 12px;
   --ui-radius-md: 10px;
@@ -163,7 +163,7 @@
 }
 
 .theme-default .browser-tabs button:hover {
-  border-color: rgba(98, 200, 116, 0.28);
+  border-color: rgba(88, 184, 103, 0.28);
   background: rgba(255, 255, 255, 0.025);
 }
 
@@ -173,9 +173,19 @@
 
 .theme-default .tree-folder {
   height: 28px;
+  gap: 5px;
   border-radius: var(--ui-radius-sm);
   color: #dfe5df;
   font-weight: 600;
+}
+
+.theme-default .tree-folder-icon {
+  flex: 0 0 auto;
+  color: var(--ui-muted);
+}
+
+.theme-default .plugin-folder .tree-folder-icon {
+  color: var(--ui-accent);
 }
 
 .theme-default .tree-item {
@@ -299,7 +309,8 @@
 }
 
 .theme-default .mode-toggle,
-.theme-default .rack-mode-toggle {
+.theme-default .rack-mode-toggle,
+.theme-default .edit-mode-toggle {
   gap: 0;
   padding: 0;
   overflow: hidden;
@@ -316,14 +327,20 @@
 }
 
 .theme-default .mode-toggle button,
-.theme-default .rack-mode-toggle button {
-  height: 32px;
+.theme-default .rack-mode-toggle button,
+.theme-default .edit-mode-toggle button {
   border-radius: 0;
   background: #0f151b;
 }
 
+.theme-default .mode-toggle button,
+.theme-default .rack-mode-toggle button {
+  height: 32px;
+}
+
 .theme-default .mode-toggle button + button,
-.theme-default .rack-mode-toggle button + button {
+.theme-default .rack-mode-toggle button + button,
+.theme-default .edit-mode-toggle button + button {
   border-left: 1px solid var(--ui-border);
 }
 
@@ -346,7 +363,7 @@
 .theme-default .cloud-projects-btn.primary,
 .theme-default .auth-dialog-submit {
   color: #061208;
-  border-color: rgba(98, 200, 116, 0.42);
+  border-color: rgba(88, 184, 103, 0.42);
   background: var(--ui-accent);
   box-shadow: none;
 }
@@ -354,7 +371,7 @@
 .theme-default .browser-tabs button.is-active {
   color: var(--ui-accent);
   border-bottom-color: var(--ui-accent);
-  background: rgba(98, 200, 116, 0.06);
+  background: rgba(88, 184, 103, 0.06);
   box-shadow: none;
   margin-bottom: -1px;
 }
@@ -400,8 +417,8 @@
   .sample-time-select-row select,
   .auth-dialog-field input
 ):focus {
-  border-color: rgba(98, 200, 116, 0.5);
-  box-shadow: 0 0 0 2px rgba(98, 200, 116, 0.12);
+  border-color: rgba(88, 184, 103, 0.5);
+  box-shadow: 0 0 0 2px rgba(88, 184, 103, 0.12);
 }
 
 .theme-default .window-frame,
@@ -415,6 +432,11 @@
 }
 
 .theme-default .window-frame.is-maximized {
+  inset: 0 !important;
+  width: 100% !important;
+  height: 100% !important;
+  max-width: 100%;
+  max-height: 100%;
   border-radius: var(--ui-radius-lg);
   box-shadow: none;
 }
@@ -586,7 +608,7 @@
 
 .theme-default .pattern-length-control button:hover {
   color: var(--ui-text);
-  border-color: rgba(98, 200, 116, 0.36);
+  border-color: rgba(88, 184, 103, 0.36);
   background: #151d25;
 }
 
@@ -617,11 +639,12 @@
 }
 
 .theme-default .step-grid {
+  --step-cell-width: 18px;
   gap: 4px;
 }
 
 .theme-default .step {
-  height: 18px;
+  height: 27px;
   border: 1px solid rgba(163, 178, 190, 0.08);
   border-radius: 4px;
   background: #171d24;
@@ -667,16 +690,16 @@
 
 .theme-default .clip,
 .theme-default .clip.is-audio {
-  border: 1px solid rgba(98, 200, 116, 0.38);
+  border: 1px solid rgba(88, 184, 103, 0.38);
   border-radius: var(--ui-radius-sm);
   color: var(--ui-text);
-  background: rgba(98, 200, 116, 0.12);
+  background: rgba(88, 184, 103, 0.12);
   box-shadow: none;
 }
 
 .theme-default .clip.is-active {
-  border-color: rgba(98, 200, 116, 0.7);
-  background: rgba(98, 200, 116, 0.18);
+  border-color: rgba(88, 184, 103, 0.7);
+  background: rgba(88, 184, 103, 0.18);
   box-shadow: none;
 }
 
@@ -685,17 +708,17 @@
 }
 
 .theme-default .clip-wave-fill {
-  fill: rgba(98, 200, 116, 0.34);
+  fill: rgba(88, 184, 103, 0.34);
   stroke: rgba(164, 220, 172, 0.66);
   filter: none;
 }
 
 .theme-default .piano-scale-row {
   background: rgba(255, 255, 255, 0.045);
-  box-shadow: inset 0 -1px 0 rgba(0, 0, 0, 0.72);
 }
 
 .theme-default .piano-major-line {
+  width: 1.5px;
   background: rgba(0, 0, 0, 0.9);
 }
 
@@ -718,7 +741,7 @@
 }
 
 .theme-default .piano-velocity-bar::after {
-  background: #b4f8c8;
+  background: #9bd1a2;
 }
 
 .theme-default .piano-velocity-bar.is-selected::before,
@@ -729,9 +752,9 @@
 .theme-default .mixer-root {
   grid-template-columns: minmax(0, 1fr) 220px;
   gap: 8px;
-  border-color: var(--ui-border);
-  border-radius: var(--ui-radius-lg);
-  background: var(--ui-bg-elevated);
+  border: 0;
+  border-radius: 0;
+  background: transparent;
   box-shadow: none;
   padding: 8px 8px 30px;
 }
@@ -739,9 +762,9 @@
 .theme-default .mixer-left {
   gap: 0;
   padding-bottom: 0;
-  border: 0;
-  border-radius: 0;
-  background: transparent;
+  border: 1px solid var(--ui-border);
+  border-radius: var(--ui-radius-lg);
+  background: #0b1015;
   overflow-x: auto;
 }
 
@@ -769,7 +792,7 @@
 .theme-default .mixer-track.is-selected {
   border-color: rgba(163, 178, 190, 0.09);
   background: #142019;
-  box-shadow: inset 0 0 0 1px rgba(98, 200, 116, 0.22);
+  box-shadow: inset 0 0 0 1px rgba(88, 184, 103, 0.22);
 }
 
 .theme-default .piano-grid-wrap,
@@ -785,28 +808,71 @@
 
 .theme-default .piano-grid,
 .theme-default .piano-velocity-grid {
+  --grid-line-width: 1.5px;
   background:
     repeating-linear-gradient(
       to right,
       rgba(0, 0, 0, var(--snap-opacity, 0)) 0,
-      rgba(0, 0, 0, var(--snap-opacity, 0)) 1px,
-      transparent 1px,
+      rgba(0, 0, 0, var(--snap-opacity, 0)) var(--grid-line-width),
+      transparent var(--grid-line-width),
       transparent var(--snap-width, 24px)
     ),
     repeating-linear-gradient(
       to bottom,
-      rgba(0, 0, 0, 0.78) 0,
-      rgba(0, 0, 0, 0.78) 1px,
-      transparent 1px,
+      rgba(0, 0, 0, 0.82) 0,
+      rgba(0, 0, 0, 0.82) var(--grid-line-width),
+      transparent var(--grid-line-width),
       transparent var(--row-height, 20px)
     ),
     #0b0c0d;
 }
 
+.theme-default .piano-grid::before,
+.theme-default .piano-velocity-grid::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  z-index: 1;
+  background:
+    repeating-linear-gradient(
+      to right,
+      rgba(0, 0, 0, var(--snap-opacity, 0)) 0,
+      rgba(0, 0, 0, var(--snap-opacity, 0)) var(--grid-line-width, 1.5px),
+      transparent var(--grid-line-width, 1.5px),
+      transparent var(--snap-width, 24px)
+    ),
+    repeating-linear-gradient(
+      to bottom,
+      rgba(0, 0, 0, 0.82) 0,
+      rgba(0, 0, 0, 0.82) var(--grid-line-width, 1.5px),
+      transparent var(--grid-line-width, 1.5px),
+      transparent var(--row-height, 20px)
+    );
+}
+
+.theme-default .piano-key-row.sharp {
+  color: var(--ui-muted);
+  background: #0f151b;
+}
+
 .theme-default .piano-velocity-grid-shell,
 .theme-default .piano-velocity-label {
   border-color: rgba(0, 0, 0, 0.72);
-  background: #0b0c0d;
+  background: var(--ui-bg-elevated);
+}
+
+.theme-default .piano-velocity-grid {
+  background-color: #141617;
+  background:
+    repeating-linear-gradient(
+      to right,
+      rgba(0, 0, 0, var(--snap-opacity, 0)) 0,
+      rgba(0, 0, 0, var(--snap-opacity, 0)) var(--grid-line-width),
+      transparent var(--grid-line-width),
+      transparent var(--snap-width, 24px)
+    ),
+    #141617;
 }
 
 .theme-default .piano-velocity-resize {
@@ -887,7 +953,7 @@
 .theme-default .sample-settings-tab.is-active,
 .theme-default .sample-settings-panel input[type="checkbox"]:checked {
   color: #07120a;
-  border-color: rgba(98, 200, 116, 0.42);
+  border-color: rgba(88, 184, 103, 0.42);
   background: var(--ui-accent);
   text-shadow: none;
 }
@@ -928,8 +994,8 @@
 }
 
 .theme-default .sample-time-select-control.is-open {
-  border-color: rgba(98, 200, 116, 0.5);
-  box-shadow: 0 0 0 2px rgba(98, 200, 116, 0.11);
+  border-color: rgba(88, 184, 103, 0.5);
+  box-shadow: 0 0 0 2px rgba(88, 184, 103, 0.11);
 }
 
 .theme-default .sample-envelope-graph {
@@ -947,7 +1013,7 @@
 }
 
 .theme-default .sample-waveform-active-length {
-  background: rgba(98, 200, 116, 0.12);
+  background: rgba(88, 184, 103, 0.12);
 }
 
 .theme-default .sample-waveform-fade.fade-in,
@@ -972,15 +1038,16 @@
   box-shadow: none;
   display: block;
   justify-self: center;
+  align-self: center;
   appearance: none;
 }
 
 .theme-default .track-led.is-on,
 .theme-default .fx-power.is-on {
-  border-color: rgba(98, 200, 116, 0.42);
-  color: #8be7aa;
-  background: rgba(98, 200, 116, 0.12);
-  box-shadow: inset 0 0 0 1px rgba(98, 200, 116, 0.08);
+  border-color: rgba(88, 184, 103, 0.42);
+  color: #8ecf99;
+  background: rgba(88, 184, 103, 0.12);
+  box-shadow: inset 0 0 0 1px rgba(88, 184, 103, 0.08);
 }
 
 .theme-default .track-title {
@@ -1031,8 +1098,9 @@
     radial-gradient(circle at 50% 50%, #171b1f 0 48%, transparent 49%),
     conic-gradient(
       from -135deg,
-      var(--ui-accent) 0 var(--knob-fill, 135deg),
-      #232b33 var(--knob-fill, 135deg) 270deg,
+      #232b33 0 var(--knob-fill-start, 135deg),
+      var(--ui-accent) var(--knob-fill-start, 135deg) var(--knob-fill-end, 135deg),
+      #232b33 var(--knob-fill-end, 135deg) 270deg,
       transparent 270deg 360deg
     );
   box-shadow: inset 0 0 0 4px #0a0e13;
@@ -1053,7 +1121,7 @@
 }
 
 .theme-default .knob-wrap:focus-within .metal-knob-visual {
-  border-color: rgba(98, 200, 116, 0.5);
+  border-color: rgba(163, 178, 190, 0.22);
 }
 
 .theme-default .fader-block {
@@ -1128,8 +1196,8 @@
 .theme-default .pattern-list-row.is-selected,
 .theme-default .project-table-row.is-selected,
 .theme-default .project-sidebar-item.is-active {
-  border-color: rgba(98, 200, 116, 0.38);
-  background: rgba(98, 200, 116, 0.1);
+  border-color: rgba(88, 184, 103, 0.38);
+  background: rgba(88, 184, 103, 0.1);
   box-shadow: none;
 }
 
@@ -1222,7 +1290,7 @@
 }
 
 .theme-default .render-window-status {
-  color: #9ff0ba;
+  color: #8ecf99;
 }
 
 .theme-default .project-action-btn.danger,
@@ -1241,7 +1309,7 @@
 
 .theme-default .theme-dialog-tile:hover,
 .theme-default .theme-dialog-tile.is-active {
-  border-color: rgba(98, 200, 116, 0.42);
+  border-color: rgba(88, 184, 103, 0.42);
   box-shadow: none;
 }
 
