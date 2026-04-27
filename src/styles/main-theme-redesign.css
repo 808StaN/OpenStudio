@@ -756,6 +756,7 @@
   min-height: 52px;
 }
 
+/* MIGRATED to channel-rack.css:
 .theme-default .rack-row {
   border-radius: var(--ui-radius-lg);
   background: #10161c;
@@ -845,8 +846,8 @@
   outline: 1px solid rgba(233, 189, 97, 0.8);
   outline-offset: 2px;
 }
+*/
 
-.theme-default .mini-note,
 .theme-default .clip-mini-note,
 .theme-default .piano-note.from-step,
 .theme-default .piano-note.from-piano {
@@ -854,9 +855,20 @@
   box-shadow: none;
 }
 
-.theme-default .playlist-playhead-line,
-.theme-default .piano-playhead-line,
+/* MIGRATED to channel-rack.css:
+.theme-default .mini-note {
+  background: var(--ui-accent);
+  box-shadow: none;
+}
+
 .theme-default .piano-preview-playhead {
+  background: var(--ui-accent);
+  box-shadow: none;
+}
+*/
+
+.theme-default .playlist-playhead-line,
+.theme-default .piano-playhead-line {
   background: var(--ui-accent);
   box-shadow: none;
 }
@@ -1081,6 +1093,7 @@
   box-shadow: none;
 }
 
+/* MIGRATED to channel-rack.css:
 .theme-default .sample-waveform-view {
   border-color: var(--ui-border);
   background: #090e13;
@@ -1148,14 +1161,6 @@
   color: var(--ui-muted);
 }
 
-.theme-default .piano-velocity-label strong {
-  color: var(--ui-text);
-}
-
-.theme-default .piano-velocity-label em {
-  color: var(--ui-accent);
-}
-
 .theme-default .sample-setting-row,
 .theme-default .sample-time-select-row span {
   color: var(--ui-muted);
@@ -1202,6 +1207,15 @@
 .theme-default .sample-waveform-fade.fade-in,
 .theme-default .sample-waveform-fade.fade-out {
   background: rgba(192, 158, 88, 0.28);
+}
+*/
+
+.theme-default .piano-velocity-label strong {
+  color: var(--ui-text);
+}
+
+.theme-default .piano-velocity-label em {
+  color: var(--ui-accent);
 }
 
 /* MIGRATED to mixer.css:
