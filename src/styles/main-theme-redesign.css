@@ -808,9 +808,12 @@
 }
 
 .theme-default .piano-grid,
-.theme-default .piano-velocity-grid,
-.theme-default .piano-preview {
+.theme-default .piano-velocity-grid {
   background-color: #0b0c0d;
+}
+
+.theme-default .piano-preview {
+  background-color: #121920;
 }
 
 .theme-default .piano-grid,
@@ -901,7 +904,7 @@
       transparent 1px,
       transparent 14px
     ),
-    #0b0c0d;
+    #121920;
   box-shadow: none;
 }
 
