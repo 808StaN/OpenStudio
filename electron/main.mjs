@@ -72,10 +72,6 @@ async function walkPackFiles(dirPath, rootPath, output) {
     const fullPath = path.join(dirPath, entry.name);
 
     if (entry.isDirectory()) {
-      if (entry.name === "__safe__") {
-        continue;
-      }
-
       await walkPackFiles(fullPath, rootPath, output);
       continue;
     }

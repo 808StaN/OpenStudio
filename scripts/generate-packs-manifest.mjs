@@ -7,7 +7,6 @@ const __dirname = path.dirname(__filename);
 const projectRoot = path.resolve(__dirname, "..");
 const packsDir = path.join(projectRoot, "public", "packs");
 const manifestPath = path.join(packsDir, "manifest.json");
-const safeAliasRoot = "__safe__";
 
 const audioExtensions = new Set([
   ".wav",
@@ -36,14 +35,6 @@ function toWebPathFromRelative(relPath) {
   return "/packs/" + parts.join("/");
 }
 
-function toSafeAliasRelativePath(relPath) {
-  const safeRel = String(relPath || "")
-    .replace(/#/g, "_hash_")
-    .replace(/\+/g, "_plus_")
-    .replace(/@/g, "_at_");
-  return toPosixPath(path.posix.join(safeAliasRoot, safeRel));
-}
-
 async function walkPackFiles(dirPath, baseDir, output) {
   const entries = await fs.readdir(dirPath, { withFileTypes: true });
 
@@ -68,36 +59,16 @@ async function walkPackFiles(dirPath, baseDir, output) {
 async function generateManifest() {
   await fs.mkdir(packsDir, { recursive: true });
 
-  const safeAliasDir = path.join(packsDir, safeAliasRoot);
-  await fs.rm(safeAliasDir, { recursive: true, force: true });
-
   const files = [];
   await walkPackFiles(packsDir, packsDir, files);
 
   const folderMap = new Map();
 
   for (const relPath of files) {
-    if (relPath.startsWith(safeAliasRoot + "/")) {
-      continue;
-    }
-
     const folderPath = path.posix.dirname(relPath);
     const folder = folderPath === "." ? "Root" : folderPath;
     const name = path.posix.basename(relPath);
-    let targetRelativePath = relPath;
-
-    if (relPath.includes("#") || relPath.includes("+") || relPath.includes("@")) {
-      targetRelativePath = toSafeAliasRelativePath(relPath);
-      const sourceAbsolute = path.join(packsDir, ...relPath.split("/"));
-      const targetAbsolute = path.join(
-        packsDir,
-        ...targetRelativePath.split("/"),
-      );
-      await fs.mkdir(path.dirname(targetAbsolute), { recursive: true });
-      await fs.copyFile(sourceAbsolute, targetAbsolute);
-    }
-
-    const webPath = toWebPathFromRelative(targetRelativePath);
+    const webPath = toWebPathFromRelative(relPath);
 
     if (!folderMap.has(folder)) {
       folderMap.set(folder, []);
@@ -145,4 +116,3 @@ generateManifest().catch(function (error) {
   console.error(error);
   process.exitCode = 1;
 });
-
