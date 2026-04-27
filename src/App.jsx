@@ -29,6 +29,7 @@ import "./styles/pattern-list.css";
 import "./styles/render-window.css";
 import "./styles/auth.css";
 import "./styles/main-theme-redesign.css";
+
 import midnightThemeCss from "./styles/theme-midnight.css?raw";
 
 function shouldIgnoreSpaceShortcut(target) {

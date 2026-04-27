@@ -156,7 +156,7 @@
   position: relative;
   height: 98px;
   border-radius: var(--app-radius-sm);
-  border: 1px solid rgba(232, 242, 255, 0.35);
+  border: 1px solid rgba(232, 242, 255, .35);
   cursor: crosshair;
   background-image:
     linear-gradient(90deg, #fff, rgba(255, 255, 255, 0)),
