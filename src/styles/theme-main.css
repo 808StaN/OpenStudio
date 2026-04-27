@@ -145,9 +145,9 @@
   /* =============================================
      CHANNEL RACK
      ============================================= */
-  --rack-bg: var(--ui-bg-elevated);
+  --rack-bg: #0c1116;
   --rack-border: rgba(163, 178, 190, 0.06);
-  --rack-topbar-bg: var(--ui-surface);
+  --rack-topbar-bg: #11171d;
   --rack-topbar-border: rgba(163, 178, 190, 0.06);
   --rack-row-bg: #10161c;
   --rack-row-border: rgba(163, 178, 190, 0.06);
@@ -190,13 +190,14 @@
   /* =============================================
      MIXER
      ============================================= */
-  --mixer-bg: #0b1015;
-  --mixer-border: rgba(163, 178, 190, 0.06);
+  --mixer-bg: transparent;
+  --mixer-border: var(--app-border);
   --mixer-track-bg: #0f151b;
   --mixer-track-border: rgba(163, 178, 190, 0.09);
   --mixer-track-selected-bg: #142019;
   --mixer-track-selected-border: rgba(61, 217, 118, 0.22);
-  --mixer-track-title-text: #9aa5ad;
+  --mixer-track-title-text: var(--app-text-muted);
+  --mixer-track-title-font-weight: 700;
   --mixer-led-off-bg: #1b2229;
   --mixer-led-off-border: rgba(163, 178, 190, 0.16);
   --mixer-led-on-bg: rgba(61, 217, 118, 0.12);
@@ -212,15 +213,15 @@
   --mixer-meter-seg-on-bg: var(--app-accent);
   --mixer-meter-seg-warning-bg: #d7a94b;
   --mixer-meter-seg-danger-bg: var(--app-danger);
-  --mixer-right-bg: var(--ui-surface);
-  --mixer-right-border: rgba(163, 178, 190, 0.06);
+  --mixer-right-bg: #11171d;
+  --mixer-right-border: var(--app-border);
   --mixer-fx-row-bg: #0e141a;
-  --mixer-fx-row-border: rgba(163, 178, 190, 0.06);
+  --mixer-fx-row-border: var(--app-border);
   --mixer-fx-row-selected-bg: rgba(61, 217, 118, 0.1);
   --mixer-fx-row-selected-border: rgba(61, 217, 118, 0.38);
   --mixer-fx-power-off-bg: #161e26;
   --mixer-fx-power-off-border: rgba(163, 178, 190, 0.18);
-  --mixer-fx-power-off-text: #606b73;
+  --mixer-fx-power-off-text: var(--app-text-faint);
   --mixer-fx-power-on-bg: rgba(61, 217, 118, 0.12);
   --mixer-fx-power-on-border: rgba(61, 217, 118, 0.42);
   --mixer-fx-power-on-text: #8ecf99;
@@ -229,9 +230,9 @@
   --mixer-fx-clear-text: #ff8aa2;
   --mixer-fx-clear-hover-bg: rgba(160, 61, 93, 0.22);
   --mixer-fx-clear-armed-bg: rgba(199, 74, 107, 0.5);
-  --mixer-value-readout-bg: var(--ui-surface);
-  --mixer-value-readout-border: rgba(163, 178, 190, 0.06);
-  --mixer-value-readout-text: #edf2ee;
+  --mixer-value-readout-bg: #11171d;
+  --mixer-value-readout-border: var(--app-border);
+  --mixer-value-readout-text: var(--app-text);
 
   /* =============================================
      PIANO ROLL
@@ -416,7 +417,7 @@
   /* =============================================
      RENDER WINDOW
      ============================================= */
-  --render-bg: var(--ui-bg-elevated);
+  --render-bg: #0c1116;
   --render-border: rgba(163, 178, 190, 0.06);
   --render-label-text: #b9c7dc;
   --render-input-bg: linear-gradient(180deg, #1f2a39 0%, #131a24 100%);
