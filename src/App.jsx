@@ -368,7 +368,7 @@ function App() {
             id="mixer"
             title="Mixer"
             minWidth={530}
-            minHeight={640}
+            minHeight={485}
           >
             <MixerWindow />
           </FloatingWindow>

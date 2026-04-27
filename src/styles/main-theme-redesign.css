@@ -759,7 +759,8 @@
   background: transparent;
   box-shadow: none;
   padding: 8px;
-  min-height: 580px;
+  height: 100%;
+  align-items: start;
 }
 
 .theme-default .mixer-left {
@@ -769,6 +770,8 @@
   border-radius: var(--ui-radius-lg);
   background: #0b1015;
   overflow-x: auto;
+  align-items: flex-start;
+  align-self: start;
 }
 
 .theme-default .mixer-track {
@@ -782,7 +785,6 @@
   padding: 8px 5px;
   cursor: pointer;
   grid-template-rows: auto auto auto;
-  height: fit-content;
 }
 
 .theme-default .mixer-track:first-child {
@@ -1147,6 +1149,7 @@
 
 .theme-default .mixer-right {
   border-radius: var(--ui-radius-lg);
+  align-self: start;
 }
 
 .theme-default .fx-row {
