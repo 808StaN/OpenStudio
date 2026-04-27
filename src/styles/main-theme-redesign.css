@@ -788,12 +788,12 @@
 }
 
 .theme-default .mixer-track:first-child {
-  border-radius: 0;
+  border-radius: var(--ui-radius-lg) 0 0 var(--ui-radius-lg);
 }
 
 .theme-default .mixer-track:last-child {
   border-right: 0;
-  border-radius: 0;
+  border-radius: 0 var(--ui-radius-lg) var(--ui-radius-lg) 0;
 }
 
 .theme-default .mixer-track.is-selected {
