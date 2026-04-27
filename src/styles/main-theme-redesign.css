@@ -129,7 +129,7 @@
   opacity: 0.75;
 }
 
-.theme-default .browser-shell {
+/* MIGRATED to browser.css -- .theme-default .browser-shell {
   width: 268px;
   min-width: 240px;
   border: 1px solid var(--ui-border);
@@ -139,7 +139,7 @@
   box-shadow: none;
 }
 
-.theme-default .browser-tabs {
+ MIGRATED to browser.css -- .theme-default .browser-tabs {
   display: flex;
   flex-direction: row;
   gap: 0;
@@ -148,7 +148,7 @@
   background: #0d1218;
 }
 
-.theme-default .browser-tabs button {
+ MIGRATED to browser.css -- .theme-default .browser-tabs button {
   flex: 1 1 0;
   height: 38px;
   min-width: 0;
@@ -162,16 +162,16 @@
   font-weight: 700;
 }
 
-.theme-default .browser-tabs button:hover {
+ MIGRATED to browser.css -- .theme-default .browser-tabs button:hover {
   border-color: rgba(61, 217, 118, 0.28);
   background: rgba(255, 255, 255, 0.025);
 }
 
-.theme-default .browser-tree {
+ MIGRATED to browser.css -- .theme-default .browser-tree {
   padding: 8px 12px 14px;
 }
 
-.theme-default .tree-folder {
+ MIGRATED to browser.css -- .theme-default .tree-folder {
   height: 28px;
   gap: 5px;
   border-radius: var(--ui-radius-sm);
@@ -179,28 +179,28 @@
   font-weight: 600;
 }
 
-.theme-default .tree-folder-icon {
+ MIGRATED to browser.css -- .theme-default .tree-folder-icon {
   flex: 0 0 auto;
   color: var(--ui-muted);
 }
 
-.theme-default .plugin-folder .tree-folder-icon {
+ MIGRATED to browser.css -- .theme-default .plugin-folder .tree-folder-icon {
   color: var(--ui-accent);
 }
 
-.theme-default .tree-item {
+ MIGRATED to browser.css -- .theme-default .tree-item {
   border-radius: var(--ui-radius-sm);
   color: var(--ui-muted);
   padding: 4px 7px;
 }
 
-.theme-default .plugin-item {
+ MIGRATED to browser.css -- .theme-default .plugin-item {
   color: #bcebc9;
 }
 
-.theme-default .plugin-item.effect-item {
+ MIGRATED to browser.css -- .theme-default .plugin-item.effect-item {
   color: #d9c17b;
-}
+} */
 
 .theme-default :where(
   .transport-btn,
@@ -368,13 +368,13 @@
   box-shadow: none;
 }
 
-.theme-default .browser-tabs button.is-active {
+/* MIGRATED to browser.css -- .theme-default .browser-tabs button.is-active {
   color: var(--ui-accent);
   border-bottom-color: var(--ui-accent);
   background: rgba(61, 217, 118, 0.06);
   box-shadow: none;
   margin-bottom: -1px;
-}
+} */
 
 .theme-default .transport-bpm,
 .theme-default .rack-pattern-picker,
@@ -1361,10 +1361,10 @@
     min-width: 94px;
   }
 
-  .theme-default .browser-shell {
+  /* MIGRATED to browser.css -- .theme-default .browser-shell {
     width: 246px;
     min-width: 226px;
-  }
+  } */
 }
 
 @media (max-width: 920px) {
@@ -1388,8 +1388,8 @@
     flex-direction: column;
   }
 
-  .theme-default .browser-shell {
+  /* MIGRATED to browser.css -- .theme-default .browser-shell {
     width: 100%;
     min-height: 220px;
-  }
+  } */
 }
