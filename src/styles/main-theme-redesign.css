@@ -1260,9 +1260,9 @@
   color: #ff9aa5;
 }
 
-.theme-default .render-window-status {
+/* MIGRATED to render-window.css -- .theme-default .render-window-status {
   color: #8ecf99;
-}
+} */
 
 .theme-default .project-action-btn.danger,
 .theme-default .cloud-projects-btn.danger {
