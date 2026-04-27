@@ -1,9 +1,14 @@
+import { Music, SlidersHorizontal } from "lucide-react"
+
 // Renders plugin folders/items tree with drag payloads for instruments and effects.
 export function BrowserPluginTree(props) {
   const { pluginGroups, pluginExpandedByFolder, togglePluginFolder } = props;
 
   return pluginGroups.map(function (group) {
     const isOpen = Boolean(pluginExpandedByFolder[group.folder]);
+    const isInstrument = group.type === "instrument"
+    const FolderIcon = isInstrument ? Music : SlidersHorizontal
+
     return (
       <section className="tree-group" key={group.folder}>
         <button
@@ -12,7 +17,7 @@ export function BrowserPluginTree(props) {
             togglePluginFolder(group.folder);
           }}
         >
-          <span className="caret">{isOpen ? "v" : ">"}</span>
+          <FolderIcon className="tree-folder-icon" size={13} />
           {group.folder}
         </button>
 
@@ -20,7 +25,6 @@ export function BrowserPluginTree(props) {
           <div className="tree-collapse-inner">
             <ul className="tree-list">
               {group.items.map(function (item) {
-                const isInstrument = group.type === "instrument";
                 const key = isInstrument
                   ? group.folder + "-" + item.pluginRef
                   : group.folder + "-" + item.effectType;

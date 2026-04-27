@@ -1,4 +1,7 @@
 // Renders mixer insert strips (left panel) and forwards UI events to parent handlers.
+
+import Knob from "./Knob"
+
 export function MixerTrackList({
   inserts,
   selectedInsertId,
@@ -22,58 +25,48 @@ export function MixerTrackList({
             }
             key={insert.id}
             onClick={function () {
-              onSelectInsert(insert.id);
+              onSelectInsert(insert.id)
             }}
           >
             <div className="track-header">
               <button
                 className={"track-led" + (insert.active ? " is-on" : "")}
                 onClick={function (event) {
-                  event.stopPropagation();
-                  onToggleInsertActive(insert);
+                  event.stopPropagation()
+                  onToggleInsertActive(insert)
                 }}
               />
               <div className="track-title">{getInsertLabel(insert)}</div>
             </div>
 
             <div className="knob-group">
-              <label className="knob-wrap">
+              <div className="knob-wrap">
                 <span>Pan</span>
-                <input
-                  className="metal-knob"
-                  type="range"
-                  min="-1"
-                  max="1"
-                  step="0.01"
-                  value={insert.pan}
-                  onDoubleClick={function (event) {
-                    event.stopPropagation();
-                    onPanReset(insert);
+                <Knob
+                  value={insert.pan * 180}
+                  onChange={function (deg) {
+                    onPanChange(insert, deg / 180)
                   }}
-                  onChange={function (event) {
-                    onPanChange(insert, Number(event.target.value));
+                  onReset={function () {
+                    onPanReset(insert)
                   }}
+                  className="mixer-knob"
                 />
-              </label>
+              </div>
 
-              <label className="knob-wrap">
+              <div className="knob-wrap">
                 <span>Stereo</span>
-                <input
-                  className="metal-knob"
-                  type="range"
-                  min="-1"
-                  max="1"
-                  step="0.01"
-                  value={insert.stereoSeparation}
-                  onDoubleClick={function (event) {
-                    event.stopPropagation();
-                    onStereoReset(insert);
+                <Knob
+                  value={insert.stereoSeparation * 180}
+                  onChange={function (deg) {
+                    onStereoChange(insert, deg / 180)
                   }}
-                  onChange={function (event) {
-                    onStereoChange(insert, Number(event.target.value));
+                  onReset={function () {
+                    onStereoReset(insert)
                   }}
+                  className="mixer-knob"
                 />
-              </label>
+              </div>
             </div>
 
             <div className="fader-block">
@@ -86,31 +79,31 @@ export function MixerTrackList({
                   step="0.01"
                   value={insert.fader}
                   onDoubleClick={function (event) {
-                    event.stopPropagation();
-                    onFaderReset(insert);
+                    event.stopPropagation()
+                    onFaderReset(insert)
                   }}
                   onChange={function (event) {
-                    onFaderChange(insert, Number(event.target.value));
+                    onFaderChange(insert, Number(event.target.value))
                   }}
                 />
               </div>
 
               <div className="meter-column">
                 {Array.from({ length: 14 }).map(function (_, index) {
-                  const threshold = (index + 1) / 14;
-                  const isActive = insert.meter >= threshold;
+                  const threshold = (14 - index) / 14
+                  const isActive = insert.meter >= threshold
                   return (
                     <span
                       key={index}
                       className={"meter-seg" + (isActive ? " is-on" : "")}
                     />
-                  );
+                  )
                 })}
               </div>
             </div>
           </article>
-        );
+        )
       })}
     </section>
-  );
+  )
 }

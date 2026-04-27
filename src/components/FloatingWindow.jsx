@@ -44,14 +44,8 @@ export function FloatingWindow({
           workspace?.clientHeight || window.innerHeight,
         );
 
-        const effectiveMinWidth = Math.min(minWidth, viewportWidth);
-        const effectiveMinHeight = Math.min(minHeight, viewportHeight);
-        const nextWidth = clamp(win.width, effectiveMinWidth, viewportWidth);
-        const nextHeight = clamp(
-          win.height,
-          effectiveMinHeight,
-          viewportHeight,
-        );
+        const nextWidth = clamp(win.width, minWidth, viewportWidth);
+        const nextHeight = clamp(win.height, minHeight, viewportHeight);
         const maxX = Math.max(0, viewportWidth - nextWidth);
         const maxY = Math.max(0, viewportHeight - nextHeight);
         const nextX = clamp(win.x, 0, maxX);
@@ -195,7 +189,7 @@ export function FloatingWindow({
         minHeight={minHeight}
         dragHandleClassName="window-title"
         cancel=".window-controls, .window-control-btn"
-        className="window-frame"
+        className={"window-frame" + (win.isMaximized ? " is-maximized" : "")}
         style={{ zIndex: modal ? Math.max(1000, win.z) : win.z }}
         onMouseDown={function () {
           dispatch(bringWindowToFront(id));

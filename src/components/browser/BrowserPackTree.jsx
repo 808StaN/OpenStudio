@@ -1,3 +1,4 @@
+import { Folder, FolderOpen } from "lucide-react"
 import {
   buildMidiFileDragPayload,
   writeMidiFileToDataTransfer,
@@ -42,7 +43,11 @@ export function BrowserPackTree(props) {
             toggleFolder(node.path);
           }}
         >
-          <span className="caret">{isOpen ? "v" : ">"}</span>
+          {isOpen ? (
+            <FolderOpen className="tree-folder-icon" size={13} />
+          ) : (
+            <Folder className="tree-folder-icon" size={13} />
+          )}
           {node.name}
         </button>
 
