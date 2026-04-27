@@ -499,9 +499,11 @@
 }
 */
 
+/* MIGRATED to playlist.css:
 .theme-default .playlist-shell {
   grid-template-rows: 38px 34px 1fr;
 }
+*/
 
 .theme-default .rack-topbar,
 .theme-default .rack-row,
@@ -528,6 +530,70 @@
   min-height: 38px;
   gap: 6px;
 }
+
+/* MIGRATED to playlist.css:
+.theme-default .playlist-toolbar {
+  padding: 0 7px;
+}
+
+.theme-default .playlist-snap-trigger,
+.theme-default .playlist-add-track-btn,
+.theme-default .playlist-loop-btn {
+  height: 28px;
+  padding: 0 8px;
+  font-size: 11px;
+}
+
+.theme-default .playlist-length-control,
+.theme-default .playlist-loop-toggle {
+  gap: 5px;
+  margin-left: 0;
+  color: var(--ui-muted);
+}
+
+.theme-default .playlist-length-input {
+  width: 52px;
+  height: 28px;
+}
+
+.theme-default .playlist-header,
+.theme-default .playlist-header-shell,
+.theme-default .bar-label.empty,
+.theme-default .playlist-body {
+  background: #0b1015;
+}
+
+.theme-default .track-name {
+  border-color: var(--ui-border);
+  border-radius: 0;
+  color: var(--ui-text);
+  background: #11171d;
+  font-weight: 700;
+}
+
+.theme-default .track-grid {
+  border-color: var(--ui-border);
+  border-radius: 0;
+  background: #090e13;
+}
+
+.theme-default .playlist-tracks-shell {
+  gap: 0;
+}
+
+.theme-default .playlist-track + .playlist-track .track-name,
+.theme-default .playlist-track + .playlist-track .track-grid {
+  border-top-color: rgba(163, 178, 190, 0.08);
+}
+
+.theme-default .playlist-track {
+  min-height: 52px;
+}
+
+.theme-default .track-grid {
+  min-height: 52px;
+}
+*/
 
 .theme-default .playlist-toolbar {
   padding: 0 7px;

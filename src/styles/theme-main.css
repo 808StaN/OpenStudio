@@ -113,7 +113,7 @@
      ============================================= */
   --playlist-bg: #0c1116;
   --playlist-border: rgba(163, 178, 190, 0.06);
-  --playlist-toolbar-bg: var(--ui-surface);
+  --playlist-toolbar-bg: #11171d;
   --playlist-toolbar-border: rgba(163, 178, 190, 0.06);
   --playlist-btn-bg: #121820;
   --playlist-btn-border: rgba(163, 178, 190, 0.06);
@@ -266,7 +266,7 @@
   /* =============================================
      PATTERN LIST
      ============================================= */
-  --pattern-list-bg: var(--app-bg);
+  --pattern-list-bg: #0c1116;
   --pattern-list-border: var(--app-border);
   --pattern-list-header-bg: #11171d;
   --pattern-list-header-border: var(--app-border);
