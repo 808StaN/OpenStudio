@@ -266,26 +266,26 @@
   /* =============================================
      PATTERN LIST
      ============================================= */
-  --pattern-list-bg: linear-gradient(180deg, #1c2637 0%, #111827 100%);
-  --pattern-list-border: #465268;
-  --pattern-list-header-bg: var(--ui-surface);
-  --pattern-list-header-border: rgba(163, 178, 190, 0.06);
-  --pattern-list-header-text: #d9e5f8;
-  --pattern-list-row-bg: linear-gradient(180deg, #2a354a 0%, #1e2738 100%);
-  --pattern-list-row-border: #4d5972;
-  --pattern-list-row-active-border: #4bef9f;
-  --pattern-list-row-active-shadow: rgba(75, 239, 159, 0.4);
-  --pattern-list-name-bg: linear-gradient(180deg, #151f2f 0%, #101827 100%);
-  --pattern-list-name-border: #61708d;
-  --pattern-list-name-text: #ecf3ff;
-  --pattern-list-select-bg: linear-gradient(180deg, #3b4a63 0%, #273349 100%);
-  --pattern-list-select-border: #5d6985;
-  --pattern-list-select-text: #c9d5e8;
-  --pattern-list-meta-text: #9fb0ca;
-  --pattern-list-color-bg: linear-gradient(180deg, #151f2f 0%, #101827 100%);
-  --pattern-list-color-chip-border: rgba(236, 243, 255, 0.52);
-  --pattern-list-popover-bg: linear-gradient(180deg, #1a2537 0%, #111827 100%);
-  --pattern-list-popover-border: #5f6f8d;
+  --pattern-list-bg: var(--app-bg);
+  --pattern-list-border: var(--app-border);
+  --pattern-list-header-bg: #11171d;
+  --pattern-list-header-border: var(--app-border);
+  --pattern-list-header-text: var(--app-text);
+  --pattern-list-row-bg: #10161c;
+  --pattern-list-row-border: var(--app-border);
+  --pattern-list-row-active-border: rgba(61, 217, 118, 0.38);
+  --pattern-list-row-active-bg: rgba(61, 217, 118, 0.1);
+  --pattern-list-name-bg: #090d12;
+  --pattern-list-name-border: var(--app-border);
+  --pattern-list-name-text: var(--app-text);
+  --pattern-list-select-bg: #090d12;
+  --pattern-list-select-border: var(--app-border);
+  --pattern-list-select-text: var(--app-text);
+  --pattern-list-meta-text: var(--app-text-muted);
+  --pattern-list-color-bg: #090d12;
+  --pattern-list-color-chip-border: rgba(163, 178, 190, 0.11);
+  --pattern-list-popover-bg: #0d1319;
+  --pattern-list-popover-border: var(--app-border-strong);
 
   /* =============================================
      AUTH / CLOUD PROJECTS

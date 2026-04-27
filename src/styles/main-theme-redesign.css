@@ -472,16 +472,32 @@
 
 .theme-default .playlist-shell,
 .theme-default .piano-roll-shell,
-.theme-default .pattern-list-shell,
 .theme-default .sample-settings-panel,
 .theme-default .fx-plugin-panel,
-.theme-default .fx-window-panel,
+.theme-default .fx-window-panel {
+  border-color: var(--ui-border);
+  border-radius: var(--ui-radius-lg);
+  background: var(--ui-bg-elevated);
+  box-shadow: none;
+}
+
+/* MIGRATED to pattern-list.css:
+.theme-default .pattern-list-shell {
+  border-color: var(--ui-border);
+  border-radius: var(--ui-radius-lg);
+  background: var(--ui-bg-elevated);
+  box-shadow: none;
+}
+*/
+
+/* MIGRATED to render-window.css:
 .theme-default .render-window-shell {
   border-color: var(--ui-border);
   border-radius: var(--ui-radius-lg);
   background: var(--ui-bg-elevated);
   box-shadow: none;
 }
+*/
 
 .theme-default .playlist-shell {
   grid-template-rows: 38px 34px 1fr;
@@ -1163,14 +1179,21 @@
 }
 
 .theme-default .fx-row.is-selected,
-.theme-default .pattern-list-row.is-active,
-.theme-default .pattern-list-row.is-selected,
 .theme-default .project-table-row.is-selected,
 .theme-default .project-sidebar-item.is-active {
   border-color: rgba(61, 217, 118, 0.38);
   background: rgba(61, 217, 118, 0.1);
   box-shadow: none;
 }
+
+/* MIGRATED to pattern-list.css:
+.theme-default .pattern-list-row.is-active,
+.theme-default .pattern-list-row.is-selected {
+  border-color: rgba(61, 217, 118, 0.38);
+  background: rgba(61, 217, 118, 0.1);
+  box-shadow: none;
+}
+*/
 
 .theme-default .fx-power {
   border-color: rgba(163, 178, 190, 0.18);
