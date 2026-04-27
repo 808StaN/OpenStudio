@@ -35,6 +35,7 @@
   letter-spacing: 0.1px;
 }
 
+/* MIGRATED to app-shell.css:
 .theme-default .app-titlebar {
   height: 32px;
   border-bottom: 1px solid var(--ui-border);
@@ -42,6 +43,93 @@
   box-shadow: none;
 }
 
+.theme-default .app-titlebar-name {
+  color: var(--ui-text);
+  font-weight: 700;
+}
+
+.theme-default .app-titlebar-caption {
+  color: var(--ui-faint);
+}
+
+.theme-default .app-titlebar-control,
+.theme-default .app-titlebar-control.close,
+.theme-default .window-control-btn,
+.theme-default .window-control-btn.close,
+.theme-default .auth-dialog-close {
+  border: 1px solid var(--ui-border);
+  border-radius: var(--ui-radius-sm);
+  color: var(--ui-muted);
+  background: #11171d;
+  box-shadow: none;
+}
+
+.theme-default .app-titlebar-control:hover,
+.theme-default .window-control-btn:hover,
+.theme-default .auth-dialog-close:hover {
+  color: var(--ui-text);
+  border-color: var(--ui-border-strong);
+  background: #172029;
+  filter: none;
+}
+
+.theme-default .window-control-btn.close:hover,
+.theme-default .app-titlebar-control.close:hover,
+.theme-default .auth-dialog-close:hover {
+  color: #ffdfe2;
+  border-color: rgba(242, 109, 120, 0.45);
+  background: rgba(82, 28, 35, 0.82);
+}
+
+.theme-default .transport-shell {
+  height: 62px;
+  padding: 10px 14px;
+  border-bottom: 1px solid var(--ui-border);
+  background: #0b0f14;
+  box-shadow: 0 8px 18px rgba(0, 0, 0, 0.24);
+}
+
+.theme-default .transport-main,
+.theme-default .transport-left,
+.theme-default .transport-center,
+.theme-default .transport-right,
+.theme-default .transport-window-toggles {
+  gap: 8px;
+}
+
+.theme-default .transport-center {
+  padding: 0;
+  border: 0;
+  border-radius: 0;
+  background: transparent;
+}
+
+.theme-default .app-body {
+  gap: 8px;
+  padding: 8px;
+}
+
+.theme-default .workspace-surface {
+  border: 1px solid var(--ui-border);
+  border-radius: var(--ui-radius-lg);
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.025);
+}
+
+.theme-default .workspace-surface::before {
+  background:
+    radial-gradient(circle at 16% 0%, #1d2e3b 0%, #111925 32%, #0a0f15 100%),
+    repeating-linear-gradient(
+      to right,
+      rgba(255, 255, 255, 0.03) 0,
+      rgba(255, 255, 255, 0.03) 1px,
+      transparent 1px,
+      transparent 64px
+    );
+  opacity: 0.75;
+}
+*/
+
+/* MIGRATED to app-shell.css:
 .theme-default .app-titlebar-name {
   color: var(--ui-text);
   font-weight: 700;
@@ -128,6 +216,7 @@
   background-size: 42px 42px, 42px 42px;
   opacity: 0.75;
 }
+*/
 
 /* MIGRATED to browser.css -- .theme-default .browser-shell {
   width: 268px;
@@ -1360,6 +1449,7 @@
   background: rgba(82, 28, 35, 0.86);
 }
 
+/* MIGRATED to app-shell.css:
 .theme-default .theme-dialog-tile {
   border-color: var(--ui-border);
   border-radius: var(--ui-radius-lg);
@@ -1381,6 +1471,7 @@
 .theme-default .theme-dialog-tile-check {
   color: var(--ui-accent);
 }
+*/
 
 .theme-default .mixer-value-readout {
   border-color: var(--ui-border);
