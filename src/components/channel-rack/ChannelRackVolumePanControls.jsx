@@ -1,4 +1,5 @@
 import { memo } from "react";
+import { HorizontalSlider } from "../common/HorizontalSlider";
 
 /**
  * Volume/Pan slider pair for a channel strip.
@@ -15,36 +16,34 @@ export const ChannelRackVolumePanControls = memo(function ChannelRackVolumePanCo
     <>
       <label className="knob-label">
         Vol
-        <input
+        <HorizontalSlider
           className="rack-knob"
-          type="range"
-          min="0"
-          max="1"
-          step="0.01"
+          min={0}
+          max={1}
+          step={0.01}
           value={volume}
-          onDoubleClick={function () {
+          onReset={function () {
             onSetVolume(channelId, 1);
           }}
-          onChange={function (event) {
-            onSetVolume(channelId, Number(event.target.value));
+          onChange={function (nextValue) {
+            onSetVolume(channelId, nextValue);
           }}
         />
       </label>
 
       <label className="knob-label">
         Pan
-        <input
+        <HorizontalSlider
           className="rack-knob"
-          type="range"
-          min="-1"
-          max="1"
-          step="0.01"
+          min={-1}
+          max={1}
+          step={0.01}
           value={pan}
-          onDoubleClick={function () {
+          onReset={function () {
             onSetPan(channelId, 0);
           }}
-          onChange={function (event) {
-            onSetPan(channelId, Number(event.target.value));
+          onChange={function (nextValue) {
+            onSetPan(channelId, nextValue);
           }}
         />
       </label>

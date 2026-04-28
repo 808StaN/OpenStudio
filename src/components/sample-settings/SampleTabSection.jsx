@@ -1,4 +1,5 @@
 import { SettingValueEditor } from "./SettingValueEditor";
+import { HorizontalSlider } from "../common/HorizontalSlider";
 
 // "Sample" tab section for audio clips: trim, fades, normalize and pitch.
 export function SampleTabSection({ settings, onSettingChange }) {
@@ -30,15 +31,14 @@ export function SampleTabSection({ settings, onSettingChange }) {
 
       <label className="sample-setting-row">
         <span>Length</span>
-        <input
-          type="range"
-          min="5"
-          max="100"
-          step="1"
+        <HorizontalSlider
+          min={5}
+          max={100}
+          step={1}
           value={settings.lengthPct}
-          onChange={function (event) {
+          onChange={function (nextValue) {
             onSettingChange({
-              lengthPct: Number(event.target.value),
+              lengthPct: nextValue,
             });
           }}
         />
@@ -57,15 +57,14 @@ export function SampleTabSection({ settings, onSettingChange }) {
 
       <label className="sample-setting-row">
         <span>In</span>
-        <input
-          type="range"
-          min="0"
-          max="95"
-          step="1"
+        <HorizontalSlider
+          min={0}
+          max={95}
+          step={1}
           value={settings.fadeInPct}
-          onChange={function (event) {
+          onChange={function (nextValue) {
             onSettingChange({
-              fadeInPct: Number(event.target.value),
+              fadeInPct: nextValue,
             });
           }}
         />
@@ -84,15 +83,14 @@ export function SampleTabSection({ settings, onSettingChange }) {
 
       <label className="sample-setting-row">
         <span>Out</span>
-        <input
-          type="range"
-          min="0"
-          max="95"
-          step="1"
+        <HorizontalSlider
+          min={0}
+          max={95}
+          step={1}
           value={settings.fadeOutPct}
-          onChange={function (event) {
+          onChange={function (nextValue) {
             onSettingChange({
-              fadeOutPct: Number(event.target.value),
+              fadeOutPct: nextValue,
             });
           }}
         />
@@ -111,15 +109,14 @@ export function SampleTabSection({ settings, onSettingChange }) {
 
       <label className="sample-setting-row">
         <span>Pitch</span>
-        <input
-          type="range"
-          min="-100"
-          max="100"
-          step="1"
+        <HorizontalSlider
+          min={-100}
+          max={100}
+          step={1}
           value={settings.pitchCents}
-          onChange={function (event) {
+          onChange={function (nextValue) {
             onSettingChange({
-              pitchCents: Number(event.target.value),
+              pitchCents: nextValue,
             });
           }}
         />

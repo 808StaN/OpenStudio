@@ -1,3 +1,5 @@
+import { DropdownMenu } from "../common/DropdownMenu";
+
 // Top toolbar for Piano Roll: channel/snap/scale menus, import/export and edit mode.
 export function PianoRollToolbar(props) {
   const {
@@ -38,11 +40,19 @@ export function PianoRollToolbar(props) {
 
   return (
     <header className="piano-roll-toolbar">
-      <div className="snap-menu channel-menu" ref={channelMenuRef}>
-        <button
-          type="button"
-          className="snap-trigger"
-          onClick={function () {
+      <div className="channel-menu" ref={channelMenuRef}>
+        <DropdownMenu
+          triggerClassName="snap-trigger"
+          triggerLabel={"Channel: " + (activeChannel?.name || "-")}
+          isOpen={isChannelMenuOpen}
+          setIsOpen={setIsChannelMenuOpen}
+          options={channels.map(function (channel) {
+            return { key: channel.id, label: channel.name };
+          })}
+          activeKey={activeChannel?.id || ""}
+          onSelect={onSelectChannel}
+          radioName="piano-roll-channel"
+          onTriggerClick={function () {
             setIsChannelMenuOpen(function (value) {
               const next = !value;
               setIsSnapMenuOpen(false);
@@ -51,29 +61,7 @@ export function PianoRollToolbar(props) {
               return next;
             });
           }}
-        >
-          Channel: {activeChannel?.name || "-"}
-        </button>
-        {isChannelMenuOpen ? (
-          <div className="snap-dropdown">
-            {channels.map(function (channel) {
-              return (
-                <label key={channel.id} className="snap-option">
-                  <input
-                    type="radio"
-                    name="piano-roll-channel"
-                    checked={(activeChannel?.id || "") === channel.id}
-                    onChange={function () {
-                      onSelectChannel(channel.id);
-                      setIsChannelMenuOpen(false);
-                    }}
-                  />
-                  <span>{channel.name}</span>
-                </label>
-              );
-            })}
-          </div>
-        ) : null}
+        />
       </div>
 
       <button type="button" className="snap-trigger" onClick={onImportMidiClick}>
@@ -114,51 +102,42 @@ export function PianoRollToolbar(props) {
         </button>
       </div>
 
-      <div className="snap-menu" ref={snapMenuRef}>
-        <button
-          type="button"
-          className="snap-trigger"
-          onClick={function () {
-            setIsSnapMenuOpen(function (value) {
-              const next = !value;
-              setIsChannelMenuOpen(false);
-              setIsScaleRootMenuOpen(false);
-              setIsScaleTypeMenuOpen(false);
-              return next;
-            });
-          }}
-        >
-          Snap: {activeSnap.label}
-        </button>
-        {isSnapMenuOpen ? (
-          <div className="snap-dropdown">
-            {SNAP_OPTIONS.map(function (option) {
-              return (
-                <label key={option.key} className="snap-option">
-                  <input
-                    type="radio"
-                    name="piano-roll-snap"
-                    checked={snapKey === option.key}
-                    onChange={function () {
-                      setSnapKey(option.key);
-                      setIsSnapMenuOpen(false);
-                    }}
-                  />
-                  <span>{option.label}</span>
-                </label>
-              );
-            })}
-          </div>
-        ) : null}
-      </div>
+      <DropdownMenu
+        menuRef={snapMenuRef}
+        triggerClassName="snap-trigger"
+        triggerLabel={"Snap: " + activeSnap.label}
+        isOpen={isSnapMenuOpen}
+        setIsOpen={setIsSnapMenuOpen}
+        options={SNAP_OPTIONS}
+        activeKey={snapKey}
+        onSelect={setSnapKey}
+        radioName="piano-roll-snap"
+        onTriggerClick={function () {
+          setIsSnapMenuOpen(function (value) {
+            const next = !value;
+            setIsChannelMenuOpen(false);
+            setIsScaleRootMenuOpen(false);
+            setIsScaleTypeMenuOpen(false);
+            return next;
+          });
+        }}
+      />
 
       <div className="scale-controls">
         <span>Scale:</span>
-        <div className="snap-menu scale-menu" ref={scaleRootMenuRef}>
-          <button
-            type="button"
-            className="snap-trigger"
-            onClick={function () {
+        <div className="scale-menu" ref={scaleRootMenuRef}>
+          <DropdownMenu
+            triggerClassName="snap-trigger"
+            triggerLabel={scaleRoot}
+            isOpen={isScaleRootMenuOpen}
+            setIsOpen={setIsScaleRootMenuOpen}
+            options={SCALE_ROOTS.map(function (noteName) {
+              return { key: noteName, label: noteName };
+            })}
+            activeKey={scaleRoot}
+            onSelect={onSelectScaleRoot}
+            radioName="piano-roll-scale-root"
+            onTriggerClick={function () {
               setIsScaleRootMenuOpen(function (value) {
                 const next = !value;
                 setIsScaleTypeMenuOpen(false);
@@ -167,36 +146,20 @@ export function PianoRollToolbar(props) {
                 return next;
               });
             }}
-          >
-            {scaleRoot}
-          </button>
-          {isScaleRootMenuOpen ? (
-            <div className="snap-dropdown">
-              {SCALE_ROOTS.map(function (noteName) {
-                return (
-                  <label key={noteName} className="snap-option">
-                    <input
-                      type="radio"
-                      name="piano-roll-scale-root"
-                      checked={scaleRoot === noteName}
-                      onChange={function () {
-                        onSelectScaleRoot(noteName);
-                        setIsScaleRootMenuOpen(false);
-                      }}
-                    />
-                    <span>{noteName}</span>
-                  </label>
-                );
-              })}
-            </div>
-          ) : null}
+          />
         </div>
 
-        <div className="snap-menu scale-menu" ref={scaleTypeMenuRef}>
-          <button
-            type="button"
-            className="snap-trigger"
-            onClick={function () {
+        <div className="scale-menu" ref={scaleTypeMenuRef}>
+          <DropdownMenu
+            triggerClassName="snap-trigger"
+            triggerLabel={activeScale.label}
+            isOpen={isScaleTypeMenuOpen}
+            setIsOpen={setIsScaleTypeMenuOpen}
+            options={SCALE_TYPES}
+            activeKey={scaleType}
+            onSelect={onSelectScaleType}
+            radioName="piano-roll-scale-type"
+            onTriggerClick={function () {
               setIsScaleTypeMenuOpen(function (value) {
                 const next = !value;
                 setIsScaleRootMenuOpen(false);
@@ -205,40 +168,11 @@ export function PianoRollToolbar(props) {
                 return next;
               });
             }}
-          >
-            {activeScale.label}
-          </button>
-          {isScaleTypeMenuOpen ? (
-            <div className="snap-dropdown">
-              {SCALE_TYPES.map(function (item) {
-                return (
-                  <label key={item.key} className="snap-option">
-                    <input
-                      type="radio"
-                      name="piano-roll-scale-type"
-                      checked={scaleType === item.key}
-                      onChange={function () {
-                        onSelectScaleType(item.key);
-                        setIsScaleTypeMenuOpen(false);
-                      }}
-                    />
-                    <span>{item.label}</span>
-                  </label>
-                );
-              })}
-            </div>
-          ) : null}
+          />
         </div>
       </div>
 
-      <small>
-        {editMode === "add"
-          ? "LMB add. LMB drag note to move, right edge to resize. RMB delete."
-          : "Drag to select. Move selected with mouse. Ctrl+C/X/V, Delete, Arrow Up/Down (scale), Shift+Arrow +/-1, Ctrl+Arrow +/-12."}{" "}
-        Drop MID file on Piano Roll (from Drumkits Browser or your computer) to
-        paste melody. Import MIDI opens file picker. Export MIDI saves current
-        channel melody. Wheel: up/down, Ctrl+Wheel: zoom.
-      </small>
+
     </header>
   );
 }

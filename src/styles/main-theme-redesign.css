@@ -35,6 +35,7 @@
   letter-spacing: 0.1px;
 }
 
+/* MIGRATED to app-shell.css:
 .theme-default .app-titlebar {
   height: 32px;
   border-bottom: 1px solid var(--ui-border);
@@ -42,6 +43,93 @@
   box-shadow: none;
 }
 
+.theme-default .app-titlebar-name {
+  color: var(--ui-text);
+  font-weight: 700;
+}
+
+.theme-default .app-titlebar-caption {
+  color: var(--ui-faint);
+}
+
+.theme-default .app-titlebar-control,
+.theme-default .app-titlebar-control.close,
+.theme-default .window-control-btn,
+.theme-default .window-control-btn.close,
+.theme-default .auth-dialog-close {
+  border: 1px solid var(--ui-border);
+  border-radius: var(--ui-radius-sm);
+  color: var(--ui-muted);
+  background: #11171d;
+  box-shadow: none;
+}
+
+.theme-default .app-titlebar-control:hover,
+.theme-default .window-control-btn:hover,
+.theme-default .auth-dialog-close:hover {
+  color: var(--ui-text);
+  border-color: var(--ui-border-strong);
+  background: #172029;
+  filter: none;
+}
+
+.theme-default .window-control-btn.close:hover,
+.theme-default .app-titlebar-control.close:hover,
+.theme-default .auth-dialog-close:hover {
+  color: #ffdfe2;
+  border-color: rgba(242, 109, 120, 0.45);
+  background: rgba(82, 28, 35, 0.82);
+}
+
+.theme-default .transport-shell {
+  height: 62px;
+  padding: 10px 14px;
+  border-bottom: 1px solid var(--ui-border);
+  background: #0b0f14;
+  box-shadow: 0 8px 18px rgba(0, 0, 0, 0.24);
+}
+
+.theme-default .transport-main,
+.theme-default .transport-left,
+.theme-default .transport-center,
+.theme-default .transport-right,
+.theme-default .transport-window-toggles {
+  gap: 8px;
+}
+
+.theme-default .transport-center {
+  padding: 0;
+  border: 0;
+  border-radius: 0;
+  background: transparent;
+}
+
+.theme-default .app-body {
+  gap: 8px;
+  padding: 8px;
+}
+
+.theme-default .workspace-surface {
+  border: 1px solid var(--ui-border);
+  border-radius: var(--ui-radius-lg);
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.025);
+}
+
+.theme-default .workspace-surface::before {
+  background:
+    radial-gradient(circle at 16% 0%, #1d2e3b 0%, #111925 32%, #0a0f15 100%),
+    repeating-linear-gradient(
+      to right,
+      rgba(255, 255, 255, 0.03) 0,
+      rgba(255, 255, 255, 0.03) 1px,
+      transparent 1px,
+      transparent 64px
+    );
+  opacity: 0.75;
+}
+*/
+
+/* MIGRATED to app-shell.css:
 .theme-default .app-titlebar-name {
   color: var(--ui-text);
   font-weight: 700;
@@ -128,8 +216,9 @@
   background-size: 42px 42px, 42px 42px;
   opacity: 0.75;
 }
+*/
 
-.theme-default .browser-shell {
+/* MIGRATED to browser.css -- .theme-default .browser-shell {
   width: 268px;
   min-width: 240px;
   border: 1px solid var(--ui-border);
@@ -139,7 +228,7 @@
   box-shadow: none;
 }
 
-.theme-default .browser-tabs {
+ MIGRATED to browser.css -- .theme-default .browser-tabs {
   display: flex;
   flex-direction: row;
   gap: 0;
@@ -148,7 +237,7 @@
   background: #0d1218;
 }
 
-.theme-default .browser-tabs button {
+ MIGRATED to browser.css -- .theme-default .browser-tabs button {
   flex: 1 1 0;
   height: 38px;
   min-width: 0;
@@ -162,16 +251,16 @@
   font-weight: 700;
 }
 
-.theme-default .browser-tabs button:hover {
+ MIGRATED to browser.css -- .theme-default .browser-tabs button:hover {
   border-color: rgba(61, 217, 118, 0.28);
   background: rgba(255, 255, 255, 0.025);
 }
 
-.theme-default .browser-tree {
+ MIGRATED to browser.css -- .theme-default .browser-tree {
   padding: 8px 12px 14px;
 }
 
-.theme-default .tree-folder {
+ MIGRATED to browser.css -- .theme-default .tree-folder {
   height: 28px;
   gap: 5px;
   border-radius: var(--ui-radius-sm);
@@ -179,28 +268,28 @@
   font-weight: 600;
 }
 
-.theme-default .tree-folder-icon {
+ MIGRATED to browser.css -- .theme-default .tree-folder-icon {
   flex: 0 0 auto;
   color: var(--ui-muted);
 }
 
-.theme-default .plugin-folder .tree-folder-icon {
+ MIGRATED to browser.css -- .theme-default .plugin-folder .tree-folder-icon {
   color: var(--ui-accent);
 }
 
-.theme-default .tree-item {
+ MIGRATED to browser.css -- .theme-default .tree-item {
   border-radius: var(--ui-radius-sm);
   color: var(--ui-muted);
   padding: 4px 7px;
 }
 
-.theme-default .plugin-item {
+ MIGRATED to browser.css -- .theme-default .plugin-item {
   color: #bcebc9;
 }
 
-.theme-default .plugin-item.effect-item {
+ MIGRATED to browser.css -- .theme-default .plugin-item.effect-item {
   color: #d9c17b;
-}
+} */
 
 .theme-default :where(
   .transport-btn,
@@ -368,13 +457,13 @@
   box-shadow: none;
 }
 
-.theme-default .browser-tabs button.is-active {
+/* MIGRATED to browser.css -- .theme-default .browser-tabs button.is-active {
   color: var(--ui-accent);
   border-bottom-color: var(--ui-accent);
   background: rgba(61, 217, 118, 0.06);
   box-shadow: none;
   margin-bottom: -1px;
-}
+} */
 
 .theme-default .transport-bpm,
 .theme-default .rack-pattern-picker,
@@ -472,20 +561,38 @@
 
 .theme-default .playlist-shell,
 .theme-default .piano-roll-shell,
-.theme-default .pattern-list-shell,
 .theme-default .sample-settings-panel,
 .theme-default .fx-plugin-panel,
-.theme-default .fx-window-panel,
-.theme-default .render-window-shell {
+.theme-default .fx-window-panel {
   border-color: var(--ui-border);
   border-radius: var(--ui-radius-lg);
   background: var(--ui-bg-elevated);
   box-shadow: none;
 }
 
+/* MIGRATED to pattern-list.css:
+.theme-default .pattern-list-shell {
+  border-color: var(--ui-border);
+  border-radius: var(--ui-radius-lg);
+  background: var(--ui-bg-elevated);
+  box-shadow: none;
+}
+*/
+
+/* MIGRATED to render-window.css:
+.theme-default .render-window-shell {
+  border-color: var(--ui-border);
+  border-radius: var(--ui-radius-lg);
+  background: var(--ui-bg-elevated);
+  box-shadow: none;
+}
+*/
+
+/* MIGRATED to playlist.css:
 .theme-default .playlist-shell {
   grid-template-rows: 38px 34px 1fr;
 }
+*/
 
 .theme-default .rack-topbar,
 .theme-default .rack-row,
@@ -512,6 +619,70 @@
   min-height: 38px;
   gap: 6px;
 }
+
+/* MIGRATED to playlist.css:
+.theme-default .playlist-toolbar {
+  padding: 0 7px;
+}
+
+.theme-default .playlist-snap-trigger,
+.theme-default .playlist-add-track-btn,
+.theme-default .playlist-loop-btn {
+  height: 28px;
+  padding: 0 8px;
+  font-size: 11px;
+}
+
+.theme-default .playlist-length-control,
+.theme-default .playlist-loop-toggle {
+  gap: 5px;
+  margin-left: 0;
+  color: var(--ui-muted);
+}
+
+.theme-default .playlist-length-input {
+  width: 52px;
+  height: 28px;
+}
+
+.theme-default .playlist-header,
+.theme-default .playlist-header-shell,
+.theme-default .bar-label.empty,
+.theme-default .playlist-body {
+  background: #0b1015;
+}
+
+.theme-default .track-name {
+  border-color: var(--ui-border);
+  border-radius: 0;
+  color: var(--ui-text);
+  background: #11171d;
+  font-weight: 700;
+}
+
+.theme-default .track-grid {
+  border-color: var(--ui-border);
+  border-radius: 0;
+  background: #090e13;
+}
+
+.theme-default .playlist-tracks-shell {
+  gap: 0;
+}
+
+.theme-default .playlist-track + .playlist-track .track-name,
+.theme-default .playlist-track + .playlist-track .track-grid {
+  border-top-color: rgba(163, 178, 190, 0.08);
+}
+
+.theme-default .playlist-track {
+  min-height: 52px;
+}
+
+.theme-default .track-grid {
+  min-height: 52px;
+}
+*/
 
 .theme-default .playlist-toolbar {
   padding: 0 7px;
@@ -585,6 +756,7 @@
   min-height: 52px;
 }
 
+/* MIGRATED to channel-rack.css:
 .theme-default .rack-row {
   border-radius: var(--ui-radius-lg);
   background: #10161c;
@@ -674,8 +846,8 @@
   outline: 1px solid rgba(233, 189, 97, 0.8);
   outline-offset: 2px;
 }
+*/
 
-.theme-default .mini-note,
 .theme-default .clip-mini-note,
 .theme-default .piano-note.from-step,
 .theme-default .piano-note.from-piano {
@@ -683,9 +855,20 @@
   box-shadow: none;
 }
 
-.theme-default .playlist-playhead-line,
-.theme-default .piano-playhead-line,
+/* MIGRATED to channel-rack.css:
+.theme-default .mini-note {
+  background: var(--ui-accent);
+  box-shadow: none;
+}
+
 .theme-default .piano-preview-playhead {
+  background: var(--ui-accent);
+  box-shadow: none;
+}
+*/
+
+.theme-default .playlist-playhead-line,
+.theme-default .piano-playhead-line {
   background: var(--ui-accent);
   box-shadow: none;
 }
@@ -751,6 +934,7 @@
   background: var(--ui-danger);
 }
 
+/* MIGRATED to mixer.css:
 .theme-default .mixer-root {
   grid-template-columns: minmax(0, 1fr) 220px;
   gap: 8px;
@@ -801,6 +985,7 @@
   background: #142019;
   box-shadow: inset 0 0 0 1px rgba(61, 217, 118, 0.22);
 }
+*/
 
 .theme-default .piano-grid-wrap,
 .theme-default .piano-velocity-wrap {
@@ -908,6 +1093,7 @@
   box-shadow: none;
 }
 
+/* MIGRATED to channel-rack.css:
 .theme-default .sample-waveform-view {
   border-color: var(--ui-border);
   background: #090e13;
@@ -975,14 +1161,6 @@
   color: var(--ui-muted);
 }
 
-.theme-default .piano-velocity-label strong {
-  color: var(--ui-text);
-}
-
-.theme-default .piano-velocity-label em {
-  color: var(--ui-accent);
-}
-
 .theme-default .sample-setting-row,
 .theme-default .sample-time-select-row span {
   color: var(--ui-muted);
@@ -1030,7 +1208,17 @@
 .theme-default .sample-waveform-fade.fade-out {
   background: rgba(192, 158, 88, 0.28);
 }
+*/
 
+.theme-default .piano-velocity-label strong {
+  color: var(--ui-text);
+}
+
+.theme-default .piano-velocity-label em {
+  color: var(--ui-accent);
+}
+
+/* MIGRATED to mixer.css:
 .theme-default .track-header {
   grid-template-columns: 12px 1fr;
   gap: 4px;
@@ -1149,7 +1337,9 @@
 .theme-default .meter-seg.is-on:nth-last-child(-n + 1) {
   background: var(--ui-danger);
 }
+*/
 
+/* MIGRATED to mixer.css:
 .theme-default .mixer-right {
   border-radius: var(--ui-radius-lg);
   align-self: start;
@@ -1161,10 +1351,15 @@
   background: #0e141a;
   box-shadow: none;
 }
+*/
 
-.theme-default .fx-row.is-selected,
-.theme-default .pattern-list-row.is-active,
-.theme-default .pattern-list-row.is-selected,
+/* MIGRATED to mixer.css:
+.theme-default .fx-row.is-selected {
+  border-color: rgba(61, 217, 118, 0.38);
+  background: rgba(61, 217, 118, 0.1);
+  box-shadow: none;
+}
+*/
 .theme-default .project-table-row.is-selected,
 .theme-default .project-sidebar-item.is-active {
   border-color: rgba(61, 217, 118, 0.38);
@@ -1172,6 +1367,16 @@
   box-shadow: none;
 }
 
+/* MIGRATED to pattern-list.css:
+.theme-default .pattern-list-row.is-active,
+.theme-default .pattern-list-row.is-selected {
+  border-color: rgba(61, 217, 118, 0.38);
+  background: rgba(61, 217, 118, 0.1);
+  box-shadow: none;
+}
+*/
+
+/* MIGRATED to mixer.css:
 .theme-default .fx-power {
   border-color: rgba(163, 178, 190, 0.18);
   color: var(--ui-faint);
@@ -1186,6 +1391,7 @@
   background: #161e26;
   box-shadow: none;
 }
+*/
 
 .theme-default .project-dropdown,
 .theme-default .user-menu-dropdown,
@@ -1230,9 +1436,13 @@
   background: var(--ui-accent);
 }
 
-.theme-default .sample-settings-header h3,
+/* MIGRATED to mixer.css:
 .theme-default .fx-plugin-title,
-.theme-default .fx-header,
+.theme-default .fx-header {
+  color: var(--ui-accent);
+}
+*/
+.theme-default .sample-settings-header h3,
 .theme-default .project-table-header-cell.is-active,
 .theme-default .project-sync-btn:hover,
 .theme-default .auth-dialog-link:hover,
@@ -1247,22 +1457,30 @@
 }
 
 .theme-default .browser-hint,
-.theme-default .cloud-projects-local-btn,
-.theme-default .fx-empty-slot {
+.theme-default .cloud-projects-local-btn {
   border: 1px dashed var(--ui-border-strong);
   border-radius: var(--ui-radius-lg);
   color: var(--ui-muted);
   background: #0b1015;
 }
 
+/* MIGRATED to mixer.css:
+.theme-default .fx-empty-slot {
+  border: 1px dashed var(--ui-border-strong);
+  border-radius: var(--ui-radius-lg);
+  color: var(--ui-muted);
+  background: #0b1015;
+}
+*/
+
 .theme-default .auth-dialog-error,
 .theme-default .render-window-error {
   color: #ff9aa5;
 }
 
-.theme-default .render-window-status {
+/* MIGRATED to render-window.css -- .theme-default .render-window-status {
   color: #8ecf99;
-}
+} */
 
 .theme-default .project-action-btn.danger,
 .theme-default .cloud-projects-btn.danger {
@@ -1271,6 +1489,7 @@
   background: rgba(82, 28, 35, 0.86);
 }
 
+/* MIGRATED to app-shell.css:
 .theme-default .theme-dialog-tile {
   border-color: var(--ui-border);
   border-radius: var(--ui-radius-lg);
@@ -1292,7 +1511,9 @@
 .theme-default .theme-dialog-tile-check {
   color: var(--ui-accent);
 }
+*/
 
+/* MIGRATED to mixer.css:
 .theme-default .mixer-value-readout {
   border-color: var(--ui-border);
   border-radius: var(--ui-radius-sm);
@@ -1300,13 +1521,13 @@
   background: var(--ui-surface);
   box-shadow: none;
 }
+*/
 
 .theme-default .browser-tree,
 .theme-default .rack-scroll-area,
 .theme-default .playlist-body,
 .theme-default .piano-grid-wrap,
 .theme-default .pattern-list-body,
-.theme-default .mixer-left,
 .theme-default .sample-settings-panel,
 .theme-default .cloud-projects-body,
 .theme-default .project-table-body {
@@ -1318,7 +1539,6 @@
 .theme-default .playlist-body::-webkit-scrollbar,
 .theme-default .piano-grid-wrap::-webkit-scrollbar,
 .theme-default .pattern-list-body::-webkit-scrollbar,
-.theme-default .mixer-left::-webkit-scrollbar,
 .theme-default .sample-settings-panel::-webkit-scrollbar,
 .theme-default .cloud-projects-body::-webkit-scrollbar,
 .theme-default .project-table-body::-webkit-scrollbar {
@@ -1331,7 +1551,6 @@
 .theme-default .playlist-body::-webkit-scrollbar-track,
 .theme-default .piano-grid-wrap::-webkit-scrollbar-track,
 .theme-default .pattern-list-body::-webkit-scrollbar-track,
-.theme-default .mixer-left::-webkit-scrollbar-track,
 .theme-default .sample-settings-panel::-webkit-scrollbar-track,
 .theme-default .cloud-projects-body::-webkit-scrollbar-track,
 .theme-default .project-table-body::-webkit-scrollbar-track {
@@ -1346,7 +1565,6 @@
 .theme-default .playlist-body::-webkit-scrollbar-thumb,
 .theme-default .piano-grid-wrap::-webkit-scrollbar-thumb,
 .theme-default .pattern-list-body::-webkit-scrollbar-thumb,
-.theme-default .mixer-left::-webkit-scrollbar-thumb,
 .theme-default .sample-settings-panel::-webkit-scrollbar-thumb,
 .theme-default .cloud-projects-body::-webkit-scrollbar-thumb,
 .theme-default .project-table-body::-webkit-scrollbar-thumb {
@@ -1361,10 +1579,10 @@
     min-width: 94px;
   }
 
-  .theme-default .browser-shell {
+  /* MIGRATED to browser.css -- .theme-default .browser-shell {
     width: 246px;
     min-width: 226px;
-  }
+  } */
 }
 
 @media (max-width: 920px) {
@@ -1388,8 +1606,8 @@
     flex-direction: column;
   }
 
-  .theme-default .browser-shell {
+  /* MIGRATED to browser.css -- .theme-default .browser-shell {
     width: 100%;
     min-height: 220px;
-  }
+  } */
 }

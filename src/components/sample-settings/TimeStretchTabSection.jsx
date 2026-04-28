@@ -3,6 +3,7 @@ import {
   STRETCH_TIME_MODE_OPTIONS,
 } from "./sampleSettingsConstants";
 import { SettingValueEditor } from "./SettingValueEditor";
+import { HorizontalSlider } from "../common/HorizontalSlider";
 
 // "Time stretching" tab section with multiplier/pitch and custom dropdown controls.
 export function TimeStretchTabSection({
@@ -23,15 +24,14 @@ export function TimeStretchTabSection({
       <div className="sample-time-stretch-knobs">
         <label className="sample-time-knob-row">
           <span>PITCH</span>
-          <input
-            type="range"
-            min="-24"
-            max="24"
-            step="0.01"
+          <HorizontalSlider
+            min={-24}
+            max={24}
+            step={0.01}
             value={Number(settings.stretchPitchSemitones || 0)}
-            onChange={function (event) {
+            onChange={function (nextValue) {
               onSettingChange({
-                stretchPitchSemitones: Number(event.target.value),
+                stretchPitchSemitones: nextValue,
               });
             }}
           />
@@ -50,15 +50,14 @@ export function TimeStretchTabSection({
 
         <label className="sample-time-knob-row">
           <span>MUL</span>
-          <input
-            type="range"
-            min="0.25"
-            max="8"
-            step="0.01"
+          <HorizontalSlider
+            min={0.25}
+            max={8}
+            step={0.01}
             value={Number(settings.stretchMultiplier || 1)}
-            onChange={function (event) {
+            onChange={function (nextValue) {
               onSettingChange({
-                stretchMultiplier: Number(event.target.value),
+                stretchMultiplier: nextValue,
               });
             }}
           />
@@ -190,15 +189,14 @@ export function TimeStretchTabSection({
       {String(settings.stretchTimeMode || "none") === "set-bpm" ? (
         <label className="sample-setting-row">
           <span>Set BPM</span>
-          <input
-            type="range"
-            min="20"
-            max="300"
-            step="1"
+          <HorizontalSlider
+            min={20}
+            max={300}
+            step={1}
             value={Number(settings.stretchSourceBpm || 120)}
-            onChange={function (event) {
+            onChange={function (nextValue) {
               onSettingChange({
-                stretchSourceBpm: Number(event.target.value),
+                stretchSourceBpm: nextValue,
               });
             }}
           />

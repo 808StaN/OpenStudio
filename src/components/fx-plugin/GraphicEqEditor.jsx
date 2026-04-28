@@ -1,3 +1,6 @@
+import { useState, useRef, useEffect, useCallback } from "react";
+import { createPortal } from "react-dom";
+
 // Dedicated UI renderer for the Graphic EQ effect branch.
 export function GraphicEqEditor({
   graphRef,
@@ -26,6 +29,7 @@ export function GraphicEqEditor({
   onBandTypeChange,
   bandTypeOptions,
 }) {
+  const [openBandTypeIndex, setOpenBandTypeIndex] = useState(-1);
   const graphLeft = graphPadding.left;
   const graphRight = graphPadding.right;
   const graphTop = graphPadding.top;
@@ -239,27 +243,158 @@ export function GraphicEqEditor({
                   </small>
                 )}
 
-                <select
-                  className="fx-proq-band-type"
-                  value={point.bandType}
-                  onChange={function (event) {
-                    // Band type update is delegated to container/state layer.
-                    onBandTypeChange(index, event.target.value);
+                <BandTypeSelect
+                  point={point}
+                  bandTypeOptions={bandTypeOptions}
+                  isOpen={openBandTypeIndex === index}
+                  onToggle={function (nextOpen) {
+                    setOpenBandTypeIndex(nextOpen ? index : -1);
                   }}
-                >
-                  {bandTypeOptions.map(function (bandType) {
-                    return (
-                      <option key={bandType.value} value={bandType.value}>
-                        {bandType.label}
-                      </option>
-                    );
-                  })}
-                </select>
+                  onSelect={function (bandTypeValue) {
+                    onBandTypeChange(index, bandTypeValue);
+                    setOpenBandTypeIndex(-1);
+                  }}
+                />
               </div>
             );
           })}
         </div>
       </div>
     </section>
+  );
+}
+
+function BandTypeSelect({
+  point,
+  bandTypeOptions,
+  isOpen,
+  onToggle,
+  onSelect,
+}) {
+  const triggerRef = useRef(null);
+  const [dropdownPos, setDropdownPos] = useState(null);
+
+  const handleToggle = useCallback(
+    function (event) {
+      event.stopPropagation();
+      const rect = triggerRef.current?.getBoundingClientRect();
+      if (!rect) return;
+      const nextOpen = !isOpen;
+      if (nextOpen) {
+        setDropdownPos({
+          top: rect.bottom + 4,
+          left: rect.left,
+        });
+      }
+      onToggle(nextOpen);
+    },
+    [isOpen, onToggle],
+  );
+
+  const handleClose = useCallback(
+    function () {
+      onToggle(false);
+    },
+    [onToggle],
+  );
+
+  const label =
+    bandTypeOptions.find(function (o) {
+      return o.value === point.bandType;
+    })?.label || "";
+
+  return (
+    <div className="fx-proq-band-type-wrap rack-modern-select">
+      <button
+        ref={triggerRef}
+        type="button"
+        className="rack-modern-select-trigger"
+        onClick={handleToggle}
+      >
+        <span className="rack-modern-select-value">{label}</span>
+      </button>
+      {isOpen && dropdownPos
+        ? createPortal(
+            <BandTypeDropdown
+              className="fx-proq-band-type-dropdown"
+              bandTypeOptions={bandTypeOptions}
+              currentValue={point.bandType}
+              pos={dropdownPos}
+              onSelect={onSelect}
+              onClose={handleClose}
+            />,
+            document.body,
+          )
+        : null}
+    </div>
+  );
+}
+
+function BandTypeDropdown({
+  className,
+  bandTypeOptions,
+  currentValue,
+  pos,
+  onSelect,
+  onClose,
+}) {
+  const dropdownRef = useRef(null);
+
+  useEffect(
+    function () {
+      function handleClick(event) {
+        if (!dropdownRef.current?.contains(event.target)) {
+          onClose();
+        }
+      }
+      function handleEsc(event) {
+        if (event.key === "Escape") onClose();
+      }
+      document.addEventListener("click", handleClick, true);
+      document.addEventListener("keydown", handleEsc);
+      return function () {
+        document.removeEventListener("click", handleClick, true);
+        document.removeEventListener("keydown", handleEsc);
+      };
+    },
+    [onClose],
+  );
+
+  const style = {
+    position: "fixed",
+    top: pos.top,
+    left: pos.left,
+    width: "auto",
+    minWidth: 0,
+    zIndex: 9999,
+  };
+
+  return (
+    <div
+      ref={dropdownRef}
+      className={
+        "rack-modern-select-dropdown" + (className ? " " + className : "")
+      }
+      style={style}
+    >
+      {bandTypeOptions.map(function (bandType) {
+        const isActive = bandType.value === currentValue;
+        return (
+          <button
+            key={bandType.value}
+            type="button"
+            className={
+              "rack-modern-select-option" + (isActive ? " is-active" : "")
+            }
+            onClick={function (event) {
+              event.stopPropagation();
+              onSelect(bandType.value);
+            }}
+          >
+            {bandType.label}
+          </button>
+        );
+      })}
+    </div>
   );
 }

@@ -1,3 +1,5 @@
+import { DropdownMenu } from "../common/DropdownMenu";
+
 // Top controls and timeline header for Playlist window.
 export function PlaylistTopControls(props) {
   const {
@@ -24,40 +26,17 @@ export function PlaylistTopControls(props) {
   return (
     <>
       <div className="playlist-toolbar">
-        <div className="playlist-snap-menu" ref={snapMenuRef}>
-          <button
-            type="button"
-            className="playlist-snap-trigger"
-            onClick={function () {
-              setIsSnapMenuOpen(function (value) {
-                return !value;
-              });
-            }}
-          >
-            Snap: {activeSnap.label}
-          </button>
-
-          {isSnapMenuOpen ? (
-            <div className="playlist-snap-dropdown">
-              {SNAP_OPTIONS.map(function (option) {
-                return (
-                  <label key={option.key} className="playlist-snap-option">
-                    <input
-                      type="radio"
-                      name="playlist-snap"
-                      checked={snapKey === option.key}
-                      onChange={function () {
-                        setSnapKey(option.key);
-                        setIsSnapMenuOpen(false);
-                      }}
-                    />
-                    <span>{option.label}</span>
-                  </label>
-                );
-              })}
-            </div>
-          ) : null}
-        </div>
+        <DropdownMenu
+          menuRef={snapMenuRef}
+          triggerClassName="snap-trigger"
+          triggerLabel={"Snap: " + activeSnap.label}
+          isOpen={isSnapMenuOpen}
+          setIsOpen={setIsSnapMenuOpen}
+          options={SNAP_OPTIONS}
+          activeKey={snapKey}
+          onSelect={setSnapKey}
+          radioName="playlist-snap"
+        />
 
         <button type="button" className="playlist-add-track-btn" onClick={onAddTrack}>
           + Track
@@ -78,24 +57,26 @@ export function PlaylistTopControls(props) {
 
         <div className="playlist-loop-toggle" role="group" aria-label="Song loop">
           <span>Loop</span>
-          <button
-            type="button"
-            className={"playlist-loop-btn" + (songLoopEnabled ? " is-active" : "")}
-            onClick={function () {
-              onSongLoopEnabledChange(true);
-            }}
-          >
-            On
-          </button>
-          <button
-            type="button"
-            className={"playlist-loop-btn" + (!songLoopEnabled ? " is-active" : "")}
-            onClick={function () {
-              onSongLoopEnabledChange(false);
-            }}
-          >
-            Off
-          </button>
+          <div className="playlist-loop-toggle-inner">
+            <button
+              type="button"
+              className={songLoopEnabled ? "is-active" : ""}
+              onClick={function () {
+                onSongLoopEnabledChange(true);
+              }}
+            >
+              On
+            </button>
+            <button
+              type="button"
+              className={!songLoopEnabled ? "is-active" : ""}
+              onClick={function () {
+                onSongLoopEnabledChange(false);
+              }}
+            >
+              Off
+            </button>
+          </div>
         </div>
       </div>
 
