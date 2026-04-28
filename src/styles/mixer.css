@@ -714,11 +714,12 @@
 .fx-proq-band-type-wrap .rack-modern-select-trigger {
   height: 19px;
   width: 100%;
+  min-width: 72px;
   padding: 0 6px;
   font-size: 10px;
   font-weight: 600;
   border: 1px solid var(--app-border);
-  border-radius: var(--app-radius-sm);
+  border-radius: 5px;
   background: #090d12;
   color: var(--app-text);
   cursor: pointer;
@@ -748,6 +749,9 @@
 }
 
 .fx-proq-band-type-dropdown {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
   width: auto !important;
   min-width: 0 !important;
   max-width: none !important;
@@ -755,10 +759,11 @@
 }
 
 .fx-proq-band-type-dropdown .rack-modern-select-option {
-  width: auto;
+  width: 100%;
   min-width: 0;
   padding: 5px 10px;
   white-space: nowrap;
+  text-align: left;
 }
 
 .fx-proq-readout.is-active {
