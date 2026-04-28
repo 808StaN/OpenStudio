@@ -188,67 +188,56 @@
 }
 
 .fader-slider {
-  writing-mode: bt-lr;
-  appearance: slider-vertical;
-  -webkit-appearance: slider-vertical;
+  position: relative;
   width: 12px;
   height: 178px;
-  background: transparent;
+  cursor: ns-resize;
+  touch-action: none;
 }
 
-.fader-slider::-webkit-slider-runnable-track {
+.fader-track {
+  position: absolute;
+  left: 50%;
+  top: 0;
+  bottom: 0;
   width: 3px;
+  transform: translateX(-50%);
   border-radius: 2px;
   background: var(--slider-track-bg);
 }
 
-.fader-slider::-webkit-slider-thumb {
-  -webkit-appearance: none;
+.fader-fill {
+  position: absolute;
+  left: 50%;
+  bottom: 0;
+  width: 3px;
+  transform: translateX(-50%);
+  border-radius: 2px;
+  background: var(--slider-accent);
+  pointer-events: none;
+}
+
+.fader-thumb {
+  position: absolute;
+  left: 50%;
   width: 18px;
   height: 10px;
+  transform: translateX(-50%);
   border-radius: 999px;
   border: 1px solid var(--slider-thumb-border);
   background: var(--slider-thumb-bg);
   box-shadow: none;
+  pointer-events: none;
 }
 
-.fader-slider:hover::-webkit-slider-thumb {
+.fader-slider:hover .fader-thumb {
   background: var(--slider-thumb-hover-bg);
   border-color: var(--slider-thumb-hover-border);
 }
 
-.fader-slider:active::-webkit-slider-thumb {
+.fader-slider:active .fader-thumb {
   background: var(--slider-thumb-active-bg);
-  transform: scale(1.05);
-}
-
-.fader-slider::-moz-range-track {
-  width: 3px;
-  border-radius: 2px;
-  background: var(--slider-track-bg);
-  border: none;
-}
-
-.fader-slider::-moz-range-progress {
-  background: var(--slider-accent);
-}
-
-.fader-slider::-moz-range-thumb {
-  width: 18px;
-  height: 10px;
-  border-radius: 999px;
-  border: 1px solid var(--slider-thumb-border);
-  background: var(--slider-thumb-bg);
-}
-
-.fader-slider:hover::-moz-range-thumb {
-  background: var(--slider-thumb-hover-bg);
-  border-color: var(--slider-thumb-hover-border);
-}
-
-.fader-slider:active::-moz-range-thumb {
-  background: var(--slider-thumb-active-bg);
-  transform: scale(1.05);
+  transform: translateX(-50%) scale(1.05);
 }
 
 .meter-column {

@@ -1,6 +1,7 @@
 // Renders mixer insert strips (left panel) and forwards UI events to parent handlers.
 
 import Knob from "./Knob"
+import Fader from "./Fader"
 
 export function MixerTrackList({
   inserts,
@@ -71,19 +72,16 @@ export function MixerTrackList({
 
             <div className="fader-block">
               <div className="fader-groove">
-                <input
+                <Fader
                   className="fader-slider"
-                  type="range"
-                  min="0"
-                  max="1.25"
-                  step="0.01"
+                  min={0}
+                  max={1.25}
                   value={insert.fader}
-                  onDoubleClick={function (event) {
-                    event.stopPropagation()
-                    onFaderReset(insert)
+                  onChange={function (nextValue) {
+                    onFaderChange(insert, nextValue)
                   }}
-                  onChange={function (event) {
-                    onFaderChange(insert, Number(event.target.value))
+                  onReset={function () {
+                    onFaderReset(insert)
                   }}
                 />
               </div>
