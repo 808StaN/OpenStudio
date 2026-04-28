@@ -48,13 +48,11 @@
 }
 
 .channel-menu .snap-trigger {
-  min-width: 168px;
-  max-width: 220px;
+  min-width: fit-content;
 }
 
 .scale-menu .snap-trigger {
-  min-width: 74px;
-  max-width: 92px;
+  min-width: fit-content;
 }
 
 .edit-mode-toggle {
@@ -137,7 +135,6 @@
   padding: 0 9px;
   font-size: 11px;
   cursor: pointer;
-  max-width: 150px;
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
@@ -153,7 +150,8 @@
   position: absolute;
   top: calc(100% + 4px);
   left: 0;
-  min-width: 132px;
+  width: max-content;
+
   max-height: 260px;
   overflow: auto;
   border: 1px solid var(--app-border-strong);
@@ -161,7 +159,7 @@
   background: var(--piano-snap-dropdown-bg);
   color: var(--app-text);
   box-shadow: var(--app-shadow-soft);
-  padding: 6px 0;
+  padding: 6px;
   z-index: 10;
 }
 
@@ -173,6 +171,8 @@
   padding: 2px 8px;
   cursor: pointer;
   color: var(--app-text-muted);
+  white-space: nowrap;
+  border-radius: var(--app-radius-sm);
 }
 
 .snap-option:hover {

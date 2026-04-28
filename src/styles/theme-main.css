@@ -17,9 +17,9 @@
   --app-danger-bg: rgba(82, 28, 35, 0.86);
   --app-warning: #d7a94b;
   --app-info: #5ac8ff;
-  --app-radius-lg: 12px;
-  --app-radius-md: 10px;
-  --app-radius-sm: 8px;
+  --app-radius-lg: 10px;
+  --app-radius-md: 8px;
+  --app-radius-sm: 6px;
   --app-shadow: 0 10px 28px rgba(0, 0, 0, 0.32);
   --app-shadow-soft: 0 4px 14px rgba(0, 0, 0, 0.22);
 
