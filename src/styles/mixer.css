@@ -724,12 +724,17 @@
   cursor: pointer;
   display: inline-flex;
   align-items: center;
-  justify-content: space-between;
-  gap: 4px;
+  justify-content: center;
   transition:
     border-color 120ms ease,
     background-color 120ms ease;
   outline: none;
+}
+
+.fx-proq-band-type-wrap .rack-modern-select-value {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
 }
 
 .fx-proq-band-type-wrap .rack-modern-select-trigger:hover {
@@ -740,6 +745,20 @@
 .fx-proq-band-type-wrap .rack-modern-select-trigger:focus-visible {
   outline: none;
   box-shadow: 0 0 0 2px var(--app-accent-soft);
+}
+
+.fx-proq-band-type-dropdown {
+  width: auto !important;
+  min-width: 0 !important;
+  max-width: none !important;
+  padding: 4px;
+}
+
+.fx-proq-band-type-dropdown .rack-modern-select-option {
+  width: auto;
+  min-width: 0;
+  padding: 5px 10px;
+  white-space: nowrap;
 }
 
 .fx-proq-readout.is-active {

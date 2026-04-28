@@ -284,7 +284,6 @@ function BandTypeSelect({
         setDropdownPos({
           top: rect.bottom + 4,
           left: rect.left,
-          minWidth: rect.width,
         });
       }
       onToggle(nextOpen);
@@ -313,11 +312,11 @@ function BandTypeSelect({
         onClick={handleToggle}
       >
         <span className="rack-modern-select-value">{label}</span>
-        <span className="rack-modern-select-caret">v</span>
       </button>
       {isOpen && dropdownPos
         ? createPortal(
             <BandTypeDropdown
+              className="fx-proq-band-type-dropdown"
               bandTypeOptions={bandTypeOptions}
               currentValue={point.bandType}
               pos={dropdownPos}
@@ -332,6 +331,7 @@ function BandTypeSelect({
 }
 
 function BandTypeDropdown({
+  className,
   bandTypeOptions,
   currentValue,
   pos,
@@ -364,14 +364,17 @@ function BandTypeDropdown({
     position: "fixed",
     top: pos.top,
     left: pos.left,
-    minWidth: pos.minWidth,
+    width: "auto",
+    minWidth: 0,
     zIndex: 9999,
   };
 
   return (
     <div
       ref={dropdownRef}
-      className="rack-modern-select-dropdown"
+      className={
+        "rack-modern-select-dropdown" + (className ? " " + className : "")
+      }
       style={style}
     >
       {bandTypeOptions.map(function (bandType) {
