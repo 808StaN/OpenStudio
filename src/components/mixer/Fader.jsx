@@ -86,7 +86,7 @@ export default function Fader({ value, min, max, onChange, onReset, className })
       />
       <div
         className="fader-thumb"
-        style={{ bottom: "calc(" + percent + "% - 7px)" }}
+        style={{ bottom: "calc(" + percent + "% - 4.5px)" }}
       />
     </div>
   )
