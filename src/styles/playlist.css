@@ -20,11 +20,6 @@
   background: var(--playlist-toolbar-bg);
 }
 
-.playlist-snap-menu {
-  position: relative;
-}
-
-.playlist-snap-trigger,
 .playlist-add-track-btn,
 .playlist-loop-btn {
   height: 28px;
@@ -39,7 +34,6 @@
   text-shadow: none;
 }
 
-.playlist-snap-trigger:hover,
 .playlist-add-track-btn:hover,
 .playlist-loop-btn:hover {
   transform: none;
@@ -48,39 +42,9 @@
   filter: none;
 }
 
-.playlist-snap-dropdown {
-  position: absolute;
-  top: calc(100% + 4px);
-  left: 0;
-  min-width: 132px;
-  max-height: 260px;
-  overflow: auto;
-  border: 1px solid var(--app-border-strong);
-  border-radius: var(--app-radius-lg);
-  background: var(--app-bg);
-  color: var(--app-text);
-  box-shadow: var(--app-shadow-soft);
-  padding: 6px 0;
-  z-index: 20;
-}
-
-.playlist-snap-option {
-  display: flex;
-  align-items: center;
-  gap: 6px;
-  font-size: 12px;
-  padding: 2px 8px;
-  cursor: pointer;
-  color: var(--app-text-muted);
-}
-
-.playlist-snap-option:hover {
-  color: var(--app-text);
-  background: rgba(255, 255, 255, 0.04);
-}
-
-.playlist-snap-option input {
-  margin: 0;
+.playlist-toolbar .snap-trigger {
+  height: 28px;
+  border-radius: var(--app-radius-sm);
 }
 
 .playlist-length-control,

@@ -218,6 +218,10 @@
   border-left: 1px solid var(--toggle-border);
 }
 
+.rack-mode-toggle button:hover {
+  background: var(--toggle-btn-hover-bg);
+}
+
 .rack-mode-toggle button.is-active {
   color: var(--toggle-btn-active-text);
   background: var(--toggle-btn-active-bg);

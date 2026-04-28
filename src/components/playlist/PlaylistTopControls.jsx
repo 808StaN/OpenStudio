@@ -1,3 +1,5 @@
+import { DropdownMenu } from "../common/DropdownMenu";
+
 // Top controls and timeline header for Playlist window.
 export function PlaylistTopControls(props) {
   const {
@@ -24,40 +26,17 @@ export function PlaylistTopControls(props) {
   return (
     <>
       <div className="playlist-toolbar">
-        <div className="playlist-snap-menu" ref={snapMenuRef}>
-          <button
-            type="button"
-            className="playlist-snap-trigger"
-            onClick={function () {
-              setIsSnapMenuOpen(function (value) {
-                return !value;
-              });
-            }}
-          >
-            Snap: {activeSnap.label}
-          </button>
-
-          {isSnapMenuOpen ? (
-            <div className="playlist-snap-dropdown">
-              {SNAP_OPTIONS.map(function (option) {
-                return (
-                  <label key={option.key} className="playlist-snap-option">
-                    <input
-                      type="radio"
-                      name="playlist-snap"
-                      checked={snapKey === option.key}
-                      onChange={function () {
-                        setSnapKey(option.key);
-                        setIsSnapMenuOpen(false);
-                      }}
-                    />
-                    <span>{option.label}</span>
-                  </label>
-                );
-              })}
-            </div>
-          ) : null}
-        </div>
+        <DropdownMenu
+          menuRef={snapMenuRef}
+          triggerClassName="snap-trigger"
+          triggerLabel={"Snap: " + activeSnap.label}
+          isOpen={isSnapMenuOpen}
+          setIsOpen={setIsSnapMenuOpen}
+          options={SNAP_OPTIONS}
+          activeKey={snapKey}
+          onSelect={setSnapKey}
+          radioName="playlist-snap"
+        />
 
         <button type="button" className="playlist-add-track-btn" onClick={onAddTrack}>
           + Track
