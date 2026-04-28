@@ -200,9 +200,9 @@
 }
 
 .app-titlebar-control.close:hover {
-  border-color: rgba(242, 109, 120, 0.45);
-  color: #ffdfe2;
-  background: rgba(82, 28, 35, 0.82);
+  border-color: var(--titlebar-close-hover-border);
+  color: var(--titlebar-close-hover-text);
+  background: var(--titlebar-close-hover-bg);
 }
 
 /* Transport -------------------------------------------------------------- */
@@ -528,9 +528,9 @@
 }
 
 .window-control-btn.close:hover {
-  border-color: var(--app-border-strong);
-  color: var(--app-text);
-  background: var(--app-surface-2);
+  border-color: var(--titlebar-close-hover-border);
+  color: var(--titlebar-close-hover-text);
+  background: var(--titlebar-close-hover-bg);
 }
 
 .window-content {

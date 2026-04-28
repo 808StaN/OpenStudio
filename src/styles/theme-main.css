@@ -44,8 +44,8 @@
   --titlebar-btn-hover-bg: #172029;
   --titlebar-btn-hover-border: rgba(163, 178, 190, 0.11);
   --titlebar-close-hover-text: #ffdfe2;
-  --titlebar-close-hover-border: rgba(242, 109, 120, 0.45);
-  --titlebar-close-hover-bg: rgba(82, 28, 35, 0.82);
+  --titlebar-close-hover-border: rgba(163, 178, 190, 0.11);
+  --titlebar-close-hover-bg: #172029;
 
   /* =============================================
      TRANSPORT
