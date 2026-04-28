@@ -20,8 +20,7 @@
   background: var(--playlist-toolbar-bg);
 }
 
-.playlist-add-track-btn,
-.playlist-loop-btn {
+.playlist-add-track-btn {
   height: 28px;
   border-radius: var(--app-radius-sm);
   border: 1px solid var(--playlist-btn-border);
@@ -34,8 +33,7 @@
   text-shadow: none;
 }
 
-.playlist-add-track-btn:hover,
-.playlist-loop-btn:hover {
+.playlist-add-track-btn:hover {
   transform: none;
   border-color: var(--app-border-strong);
   background: var(--playlist-btn-hover-bg);
@@ -55,6 +53,40 @@
   margin-left: 0;
   color: var(--app-text-muted);
   font-size: 11px;
+}
+
+.playlist-loop-toggle-inner {
+  display: inline-flex;
+  overflow: hidden;
+  border-radius: var(--app-radius-sm);
+  border: 1px solid var(--toggle-border);
+  background: var(--toggle-bg);
+}
+
+.playlist-loop-toggle-inner button {
+  border: 0;
+  height: 24px;
+  min-width: 40px;
+  padding: 0 10px;
+  border-radius: 0;
+  color: var(--toggle-btn-text);
+  background: var(--toggle-btn-bg);
+  cursor: pointer;
+  font-size: 11px;
+}
+
+.playlist-loop-toggle-inner button + button {
+  border-left: 1px solid var(--toggle-border);
+}
+
+.playlist-loop-toggle-inner button:hover {
+  background: var(--toggle-btn-hover-bg);
+}
+
+.playlist-loop-toggle-inner button.is-active {
+  color: var(--toggle-btn-active-text);
+  background: var(--toggle-btn-active-bg);
+  box-shadow: none;
 }
 
 .playlist-length-input {
@@ -82,13 +114,6 @@
   outline: none;
   border-color: var(--app-accent);
   box-shadow: 0 0 0 2px var(--app-accent-soft);
-}
-
-.playlist-loop-btn.is-active {
-  color: var(--playlist-btn-active-text);
-  border-color: rgba(61, 217, 118, 0.42);
-  background: var(--playlist-btn-active-bg);
-  box-shadow: none;
 }
 
 .playlist-header {

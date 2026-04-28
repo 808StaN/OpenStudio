@@ -57,24 +57,26 @@ export function PlaylistTopControls(props) {
 
         <div className="playlist-loop-toggle" role="group" aria-label="Song loop">
           <span>Loop</span>
-          <button
-            type="button"
-            className={"playlist-loop-btn" + (songLoopEnabled ? " is-active" : "")}
-            onClick={function () {
-              onSongLoopEnabledChange(true);
-            }}
-          >
-            On
-          </button>
-          <button
-            type="button"
-            className={"playlist-loop-btn" + (!songLoopEnabled ? " is-active" : "")}
-            onClick={function () {
-              onSongLoopEnabledChange(false);
-            }}
-          >
-            Off
-          </button>
+          <div className="playlist-loop-toggle-inner">
+            <button
+              type="button"
+              className={songLoopEnabled ? "is-active" : ""}
+              onClick={function () {
+                onSongLoopEnabledChange(true);
+              }}
+            >
+              On
+            </button>
+            <button
+              type="button"
+              className={!songLoopEnabled ? "is-active" : ""}
+              onClick={function () {
+                onSongLoopEnabledChange(false);
+              }}
+            >
+              Off
+            </button>
+          </div>
         </div>
       </div>
 
