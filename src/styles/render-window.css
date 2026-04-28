@@ -2,8 +2,8 @@
   height: 100%;
   display: flex;
   flex-direction: column;
-  gap: 12px;
-  padding: 4px;
+  gap: 10px;
+  padding: 8px;
   border: 1px solid var(--render-border);
   border-radius: var(--app-radius-lg);
   background: var(--render-bg);
@@ -18,13 +18,13 @@
 
 .render-window-label {
   color: var(--render-label-text);
-  font-size: 12px;
-  letter-spacing: 0.2px;
+  font-size: 11px;
+  letter-spacing: 0.25px;
+  text-transform: uppercase;
 }
 
-.render-window-input,
-.render-window-select {
-  height: 32px;
+.render-window-input {
+  height: 34px;
   border-radius: var(--app-radius-md);
   border: 1px solid var(--render-input-border);
   background: var(--render-input-bg);
@@ -33,61 +33,107 @@
   box-shadow: none;
 }
 
-.render-window-select {
-  padding-right: 36px;
-  appearance: none;
-  -webkit-appearance: none;
-  -moz-appearance: none;
-  color-scheme: dark;
-  background-image:
-    linear-gradient(180deg, #090d12 0%, #090d12 100%),
-    linear-gradient(45deg, transparent 50%, #9fb1cb 50%),
-    linear-gradient(135deg, #9fb1cb 50%, transparent 50%);
-  background-position:
-    0 0,
-    calc(100% - 16px) 13px,
-    calc(100% - 11px) 13px;
-  background-size:
-    100% 100%,
-    5px 5px,
-    5px 5px;
-  background-repeat: no-repeat;
-}
-
-.render-window-select:hover,
 .render-window-input:hover {
   border-color: var(--render-input-hover-border);
 }
 
-.render-window-select:focus,
 .render-window-input:focus {
   outline: none;
   border-color: var(--render-input-focus-border);
-  box-shadow:
-    0 0 0 1px rgba(139, 168, 212, 0.35),
-    inset 0 1px 0 rgba(255, 255, 255, 0.05);
+  box-shadow: 0 0 0 1px rgba(61, 217, 118, 0.35);
 }
 
-.render-window-select option {
+.render-select-menu {
+  position: relative;
+}
+
+.render-select-trigger {
+  width: 100%;
+  height: 34px;
+  border-radius: var(--app-radius-md);
+  border: 1px solid var(--render-input-border);
+  background: var(--render-input-bg);
+  color: var(--render-input-text);
+  padding: 0 10px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  cursor: pointer;
+}
+
+.render-select-trigger:hover {
+  border-color: var(--render-input-hover-border);
+}
+
+.render-select-trigger.is-open {
+  border-color: var(--render-input-focus-border);
+  box-shadow: 0 0 0 1px rgba(61, 217, 118, 0.35);
+}
+
+.render-select-value {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.render-select-caret {
+  width: 10px;
+  height: 10px;
+  flex: 0 0 auto;
+  border-right: 2px solid var(--app-accent);
+  border-bottom: 2px solid var(--app-accent);
+  transform: rotate(45deg) translateY(-1px);
+}
+
+.render-select-dropdown {
+  position: absolute;
+  top: calc(100% + 4px);
+  left: 0;
+  right: 0;
+  z-index: 40;
+  border: 1px solid var(--app-border-strong);
+  border-radius: var(--app-radius-md);
+  background: #0d1319;
+  padding: 4px;
+  display: grid;
+  gap: 2px;
+  box-shadow: var(--app-shadow-soft);
+  max-height: 200px;
+  overflow-y: auto;
+}
+
+.render-select-dropdown.is-upward {
+  top: auto;
+  bottom: calc(100% + 4px);
+}
+
+.render-select-option {
+  height: 28px;
+  border: 1px solid transparent;
+  border-radius: var(--app-radius-sm);
+  background: transparent;
   color: var(--render-select-option-text);
-  background-color: var(--render-select-option-bg);
+  text-align: left;
+  padding: 0 8px;
+  cursor: pointer;
 }
 
-.render-window-select option:checked {
+.render-select-option:hover {
+  background: var(--render-select-option-hover-bg);
+  color: var(--app-text);
+}
+
+.render-select-option.is-active {
+  background: var(--render-select-option-checked-bg);
   color: var(--render-select-option-checked-text);
-  background-color: var(--render-select-option-checked-bg);
-}
-
-.render-window-select option:hover {
-  background-color: var(--render-select-option-hover-bg);
 }
 
 .render-window-actions {
-  margin-top: 4px;
+  margin-top: 6px;
 }
 
 .render-window-button {
-  height: 34px;
+  height: 36px;
   width: 100%;
   border: 1px solid var(--render-btn-border);
   border-radius: var(--app-radius-md);
@@ -101,8 +147,8 @@
 
 .render-window-button:hover {
   transform: none;
-  border-color: var(--app-border-strong);
-  background: #172029;
+  border-color: rgba(61, 217, 118, 0.62);
+  background: #7cffad;
   filter: none;
 }
 

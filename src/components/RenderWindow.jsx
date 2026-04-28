@@ -1,4 +1,4 @@
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { useSelector } from "react-redux";
 
 const FORMAT_OPTIONS = [
@@ -28,6 +28,107 @@ function getDefaultFileName() {
   const timePart = pad(now.getHours()) + "-" + pad(now.getMinutes());
 
   return "OpenStudio-Render-" + datePart + "-" + timePart;
+}
+
+function RenderSelect(props) {
+  const { value, options, onChange, ariaLabel } = props;
+  const [isOpen, setIsOpen] = useState(false);
+  const [openUpward, setOpenUpward] = useState(false);
+  const rootRef = useRef(null);
+
+  useEffect(
+    function () {
+      if (isOpen && rootRef.current) {
+        const triggerRect = rootRef.current.getBoundingClientRect();
+        const windowContent = rootRef.current.closest(".window-content");
+        const contentRect = windowContent
+          ? windowContent.getBoundingClientRect()
+          : { top: 0, bottom: window.innerHeight };
+        const estimatedMenuHeight = Math.min(options.length * 30 + 12, 180);
+        const spaceBelow = contentRect.bottom - triggerRect.bottom;
+        const spaceAbove = triggerRect.top - contentRect.top;
+        setOpenUpward(spaceBelow < estimatedMenuHeight && spaceAbove > spaceBelow);
+      }
+
+      if (!isOpen) {
+        return;
+      }
+
+      const handlePointerDown = function (event) {
+        if (!rootRef.current) {
+          return;
+        }
+        if (!rootRef.current.contains(event.target)) {
+          setIsOpen(false);
+        }
+      };
+
+      const handleEscape = function (event) {
+        if (event.key === "Escape") {
+          setIsOpen(false);
+        }
+      };
+
+      document.addEventListener("mousedown", handlePointerDown);
+      document.addEventListener("keydown", handleEscape);
+      return function () {
+        document.removeEventListener("mousedown", handlePointerDown);
+        document.removeEventListener("keydown", handleEscape);
+      };
+    },
+    [isOpen],
+  );
+
+  const activeOption =
+    options.find(function (option) {
+      return option.value === value;
+    }) || options[0];
+
+  return (
+    <div className="render-select-menu" ref={rootRef}>
+      <button
+        type="button"
+        className={"render-select-trigger" + (isOpen ? " is-open" : "")}
+        aria-label={ariaLabel}
+        aria-haspopup="listbox"
+        aria-expanded={isOpen}
+        onClick={function () {
+          setIsOpen(function (current) {
+            return !current;
+          });
+        }}
+      >
+        <span className="render-select-value">{activeOption ? activeOption.label : ""}</span>
+        <span className="render-select-caret" aria-hidden="true" />
+      </button>
+      {isOpen ? (
+        <div
+          className={"render-select-dropdown" + (openUpward ? " is-upward" : "")}
+          role="listbox"
+          aria-label={ariaLabel}
+        >
+          {options.map(function (option) {
+            const isActive = option.value === value;
+            return (
+              <button
+                key={option.value}
+                type="button"
+                className={"render-select-option" + (isActive ? " is-active" : "")}
+                role="option"
+                aria-selected={isActive}
+                onClick={function () {
+                  onChange(option.value);
+                  setIsOpen(false);
+                }}
+              >
+                {option.label}
+              </button>
+            );
+          })}
+        </div>
+      ) : null}
+    </div>
+  );
 }
 
 export function RenderWindow() {
@@ -118,72 +219,56 @@ export function RenderWindow() {
       </div>
 
       <div className="render-window-row">
-        <label className="render-window-label" htmlFor="render-file-format">
+        <label className="render-window-label">
           Format
         </label>
-        <select
-          id="render-file-format"
-          className="render-window-select"
+        <RenderSelect
           value={format}
-          onChange={function (event) {
-            setFormat(event.target.value);
-          }}
-        >
-          {FORMAT_OPTIONS.map(function (option) {
-            return (
-              <option key={option.value} value={option.value}>
-                {option.label}
-              </option>
-            );
-          })}
-        </select>
+          options={FORMAT_OPTIONS}
+          ariaLabel="Format"
+          onChange={setFormat}
+        />
       </div>
 
       {format === "mp3" ? (
         <div className="render-window-row">
-          <label className="render-window-label" htmlFor="render-mp3-bitrate">
+          <label className="render-window-label">
             Quality (kbps)
           </label>
-          <select
-            id="render-mp3-bitrate"
-            className="render-window-select"
+          <RenderSelect
             value={String(mp3BitrateKbps)}
-            onChange={function (event) {
-              setMp3BitrateKbps(Number(event.target.value));
-            }}
-          >
-            {MP3_BITRATE_OPTIONS.map(function (option) {
-              return (
-                <option key={option} value={String(option)}>
-                  {option} kbps
-                </option>
-              );
+            ariaLabel="Quality"
+            options={MP3_BITRATE_OPTIONS.map(function (option) {
+              return {
+                value: String(option),
+                label: option + " kbps",
+              };
             })}
-          </select>
+            onChange={function (nextValue) {
+              setMp3BitrateKbps(Number(nextValue));
+            }}
+          />
         </div>
       ) : null}
 
       {format === "wav" ? (
         <div className="render-window-row">
-          <label className="render-window-label" htmlFor="render-wav-bit-depth">
+          <label className="render-window-label">
             Bit Depth
           </label>
-          <select
-            id="render-wav-bit-depth"
-            className="render-window-select"
+          <RenderSelect
             value={String(wavBitDepth)}
-            onChange={function (event) {
-              setWavBitDepth(Number(event.target.value));
-            }}
-          >
-            {WAV_BIT_DEPTH_OPTIONS.map(function (option) {
-              return (
-                <option key={option.value} value={String(option.value)}>
-                  {option.label}
-                </option>
-              );
+            ariaLabel="Bit Depth"
+            options={WAV_BIT_DEPTH_OPTIONS.map(function (option) {
+              return {
+                value: String(option.value),
+                label: option.label,
+              };
             })}
-          </select>
+            onChange={function (nextValue) {
+              setWavBitDepth(Number(nextValue));
+            }}
+          />
         </div>
       ) : null}
 

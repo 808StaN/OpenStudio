@@ -6,8 +6,8 @@
   --app-text: #edf2ee;
   --app-text-muted: #9aa5ad;
   --app-text-faint: #606b73;
-  --app-border: rgba(163, 178, 190, 0.025);
-  --app-border-strong: rgba(163, 178, 190, 0.05);
+  --app-border: rgba(163, 178, 190, 0.05);
+  --app-border-strong: rgba(163, 178, 190, 0.10);
   --app-accent: rgba(48, 255, 124, 0.75);
   --app-accent-strong: rgba(48, 255, 124, 0.75);
   --app-accent-soft: rgba(61, 217, 118, 0.12);
@@ -445,21 +445,21 @@
      ============================================= */
   --render-bg: #0c1116;
   --render-border: var(--app-border);
-  --render-label-text: #b9c7dc;
-  --render-input-bg: linear-gradient(180deg, #1f2a39 0%, #131a24 100%);
-  --render-input-border: #3a4558;
-  --render-input-text: #edf3ff;
-  --render-input-hover-border: #4a5a71;
-  --render-input-focus-border: #6d87b0;
-  --render-select-option-text: #e5eefc;
-  --render-select-option-bg: #1b2432;
-  --render-select-option-checked-text: #ffffff;
-  --render-select-option-checked-bg: #365da2;
-  --render-select-option-hover-bg: #2f4f85;
-  --render-btn-bg: linear-gradient(180deg, #4f6ea0 0%, #29446f 100%);
-  --render-btn-border: #506180;
-  --render-btn-text: #f7fbff;
-  --render-status-text: #9ed8b4;
+  --render-label-text: var(--app-text-muted);
+  --render-input-bg: #090d12;
+  --render-input-border: var(--app-border);
+  --render-input-text: var(--app-text);
+  --render-input-hover-border: var(--app-border-strong);
+  --render-input-focus-border: var(--app-accent);
+  --render-select-option-text: var(--app-text);
+  --render-select-option-bg: #11171d;
+  --render-select-option-checked-text: #061208;
+  --render-select-option-checked-bg: var(--app-accent);
+  --render-select-option-hover-bg: #172029;
+  --render-btn-bg: var(--app-accent);
+  --render-btn-border: rgba(61, 217, 118, 0.42);
+  --render-btn-text: #061208;
+  --render-status-text: #a7e7b8;
   --render-error-text: #ff9aa5;
 
   /* =============================================
