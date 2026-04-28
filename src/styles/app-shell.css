@@ -171,7 +171,7 @@
   width: 24px;
   height: 24px;
   border: 1px solid var(--titlebar-btn-border);
-  border-radius: var(--app-radius-sm);
+  border-radius: 5px;
   background: var(--titlebar-btn-bg);
   color: var(--titlebar-btn-text);
   display: inline-flex;
@@ -186,9 +186,9 @@
 }
 
 .app-titlebar-control.close {
-  border-color: var(--auth-close-border);
-  color: var(--auth-close-text);
-  background: var(--auth-close-bg);
+  border-color: var(--app-border);
+  color: var(--app-text-muted);
+  background: var(--app-surface);
 }
 
 .app-titlebar-control:hover {
@@ -200,9 +200,9 @@
 }
 
 .app-titlebar-control.close:hover {
-  border-color: var(--titlebar-close-hover-border);
-  color: var(--titlebar-close-hover-text);
-  background: var(--titlebar-close-hover-bg);
+  border-color: rgba(242, 109, 120, 0.45);
+  color: #ffdfe2;
+  background: rgba(82, 28, 35, 0.82);
 }
 
 /* Transport -------------------------------------------------------------- */
@@ -388,10 +388,10 @@
 .mode-toggle {
   display: inline-flex;
   overflow: hidden;
-  border-radius: var(--app-radius-md);
+  border-radius: 8px;
   border: 1px solid var(--app-border);
-  padding: 3px;
-  gap: 2px;
+  padding: 0;
+  gap: 0;
   background: #090d12;
 }
 
@@ -399,16 +399,25 @@
   border: 0;
   height: 32px;
   min-width: 72px;
-  border-radius: 7px;
+  border-radius: 0;
   color: var(--transport-toggle-btn-text);
-  background: var(--transport-toggle-btn-bg);
+  background: #0f151b;
   cursor: pointer;
+}
+
+.mode-toggle button + button {
+  border-left: 1px solid var(--app-border);
+}
+
+.mode-toggle button:hover {
+  background: rgba(255, 255, 255, 0.035);
 }
 
 .mode-toggle button.is-active {
   color: var(--transport-toggle-btn-active-text);
   background: var(--transport-toggle-btn-active-bg);
-  text-shadow: 0 1px 0 rgba(255, 255, 255, 0.32);
+  box-shadow: none;
+  text-shadow: none;
 }
 
 .transport-window-toggles {
@@ -495,7 +504,7 @@
 .window-control-btn {
   width: 22px;
   height: 22px;
-  border-radius: var(--app-radius-sm);
+  border-radius: 5px;
   border: 1px solid var(--titlebar-btn-border);
   color: var(--titlebar-btn-text);
   background: var(--titlebar-btn-bg);
@@ -513,9 +522,15 @@
 }
 
 .window-control-btn.close {
-  border-color: var(--auth-close-border);
-  color: var(--auth-close-text);
-  background: var(--auth-close-bg);
+  border-color: var(--app-border);
+  color: var(--app-text-muted);
+  background: var(--app-surface);
+}
+
+.window-control-btn.close:hover {
+  border-color: var(--app-border-strong);
+  color: var(--app-text);
+  background: var(--app-surface-2);
 }
 
 .window-content {

@@ -60,9 +60,9 @@
 .edit-mode-toggle {
   display: inline-flex;
   border: 1px solid var(--app-border);
-  border-radius: var(--app-radius-md);
-  padding: 3px;
-  gap: 2px;
+  border-radius: 8px;
+  padding: 0;
+  gap: 0;
   background: #090d12;
   overflow: hidden;
 }
@@ -72,7 +72,7 @@
   border: 0;
   min-width: 74px;
   padding: 0 8px;
-  border-radius: 7px;
+  border-radius: 0;
   background: #0f151b;
   color: var(--app-text-muted);
   font-size: 11px;
@@ -81,6 +81,10 @@
 
 .edit-mode-toggle button + button {
   border-left: 1px solid var(--app-border);
+}
+
+.edit-mode-toggle button:hover {
+  background: rgba(255, 255, 255, 0.035);
 }
 
 .edit-mode-toggle button.is-active {
@@ -517,7 +521,7 @@
 
 .piano-note {
   position: absolute;
-  border-radius: var(--app-radius-sm);
+  border-radius: 3px;
   border: 1px solid var(--piano-note-border);
   cursor: grab;
   box-sizing: border-box;

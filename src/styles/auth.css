@@ -597,6 +597,7 @@
 }
 
 .cloud-projects-btn.danger {
+  color: var(--project-action-btn-danger-text);
   background: var(--cloud-btn-danger-bg);
   border-color: var(--cloud-btn-danger-border);
 }
@@ -1263,6 +1264,7 @@
 }
 
 .project-action-btn.danger {
+  color: var(--project-action-btn-danger-text);
   background: var(--project-action-btn-danger-bg);
   border-color: var(--project-action-btn-danger-border);
 }

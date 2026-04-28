@@ -143,8 +143,8 @@
 .metal-knob {
   -webkit-appearance: none;
   appearance: none;
-  width: 31px;
-  height: 31px;
+  width: 26px;
+  height: 26px;
   border-radius: 50%;
   border: 1px solid #8b919b;
   background: radial-gradient(
@@ -720,12 +720,17 @@
   width: 100%;
   height: 19px;
   border: 1px solid var(--app-border);
-  border-radius: 5px;
-  background: #090d12;
+  border-radius: var(--app-radius-sm);
+  background: #0c111c;
   color: var(--app-text);
   font-size: 10px;
   font-weight: 600;
+  text-align: center;
+  cursor: pointer;
   outline: none;
+  -webkit-appearance: none;
+  appearance: none;
+  padding: 0 6px;
 }
 
 .fx-proq-band-type option {
@@ -839,11 +844,11 @@
 }
 
 .fx-reverb-control.is-active {
-  border-color: var(--app-accent);
+  border-color: #f9b739;
   box-shadow:
     inset 0 1px 0 rgba(255, 255, 255, 0.08),
-    0 0 0 1px rgba(61, 217, 118, 0.36),
-    0 0 10px rgba(61, 217, 118, 0.24);
+    0 0 0 1px rgba(249, 183, 57, 0.36),
+    0 0 10px rgba(249, 183, 57, 0.24);
 }
 
 .fx-reverb-control strong {
@@ -1131,7 +1136,7 @@
   width: 28px;
   height: 154px;
   margin: 0 auto;
-  accent-color: var(--app-accent);
+  accent-color: #56cdff;
 }
 
 .fx-max-limiter-readouts {
@@ -1147,7 +1152,7 @@
   width: 30px;
   height: 176px;
   margin: 0 auto;
-  accent-color: var(--app-accent);
+  accent-color: #56cdff;
 }
 
 .fx-max-character-scale {
