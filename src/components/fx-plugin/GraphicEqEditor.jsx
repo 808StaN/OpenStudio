@@ -1,4 +1,5 @@
-import { useState } from "react";
+import { useState, useRef, useEffect, useCallback } from "react";
+import { createPortal } from "react-dom";
 
 // Dedicated UI renderer for the Graphic EQ effect branch.
 export function GraphicEqEditor({
@@ -242,61 +243,155 @@ export function GraphicEqEditor({
                   </small>
                 )}
 
-                <div
-                  className={
-                    "fx-proq-band-type-wrap rack-modern-select" +
-                    (openBandTypeIndex === index ? " is-open" : "")
-                  }
-                >
-                  <button
-                    type="button"
-                    className="rack-modern-select-trigger"
-                    onClick={function (event) {
-                      event.stopPropagation();
-                      setOpenBandTypeIndex(
-                        openBandTypeIndex === index ? -1 : index,
-                      );
-                    }}
-                  >
-                    <span className="rack-modern-select-value">
-                      {
-                        bandTypeOptions.find(function (o) {
-                          return o.value === point.bandType;
-                        })?.label
-                      }
-                    </span>
-                    <span className="rack-modern-select-caret">v</span>
-                  </button>
-                  {openBandTypeIndex === index ? (
-                    <div className="rack-modern-select-dropdown">
-                      {bandTypeOptions.map(function (bandType) {
-                        const isActive = bandType.value === point.bandType;
-                        return (
-                          <button
-                            key={bandType.value}
-                            type="button"
-                            className={
-                              "rack-modern-select-option" +
-                              (isActive ? " is-active" : "")
-                            }
-                            onClick={function (event) {
-                              event.stopPropagation();
-                              onBandTypeChange(index, bandType.value);
-                              setOpenBandTypeIndex(-1);
-                            }}
-                          >
-                            {bandType.label}
-                          </button>
-                        );
-                      })}
-                    </div>
-                  ) : null}
-                </div>
+                <BandTypeSelect
+                  point={point}
+                  bandTypeOptions={bandTypeOptions}
+                  isOpen={openBandTypeIndex === index}
+                  onToggle={function (nextOpen) {
+                    setOpenBandTypeIndex(nextOpen ? index : -1);
+                  }}
+                  onSelect={function (bandTypeValue) {
+                    onBandTypeChange(index, bandTypeValue);
+                    setOpenBandTypeIndex(-1);
+                  }}
+                />
               </div>
             );
           })}
         </div>
       </div>
     </section>
+  );
+}
+
+function BandTypeSelect({
+  point,
+  bandTypeOptions,
+  isOpen,
+  onToggle,
+  onSelect,
+}) {
+  const triggerRef = useRef(null);
+  const [dropdownPos, setDropdownPos] = useState(null);
+
+  const handleToggle = useCallback(
+    function (event) {
+      event.stopPropagation();
+      const rect = triggerRef.current?.getBoundingClientRect();
+      if (!rect) return;
+      const nextOpen = !isOpen;
+      if (nextOpen) {
+        setDropdownPos({
+          top: rect.bottom + 4,
+          left: rect.left,
+          minWidth: rect.width,
+        });
+      }
+      onToggle(nextOpen);
+    },
+    [isOpen, onToggle],
+  );
+
+  const handleClose = useCallback(
+    function () {
+      onToggle(false);
+    },
+    [onToggle],
+  );
+
+  const label =
+    bandTypeOptions.find(function (o) {
+      return o.value === point.bandType;
+    })?.label || "";
+
+  return (
+    <div className="fx-proq-band-type-wrap rack-modern-select">
+      <button
+        ref={triggerRef}
+        type="button"
+        className="rack-modern-select-trigger"
+        onClick={handleToggle}
+      >
+        <span className="rack-modern-select-value">{label}</span>
+        <span className="rack-modern-select-caret">v</span>
+      </button>
+      {isOpen && dropdownPos
+        ? createPortal(
+            <BandTypeDropdown
+              bandTypeOptions={bandTypeOptions}
+              currentValue={point.bandType}
+              pos={dropdownPos}
+              onSelect={onSelect}
+              onClose={handleClose}
+            />,
+            document.body,
+          )
+        : null}
+    </div>
+  );
+}
+
+function BandTypeDropdown({
+  bandTypeOptions,
+  currentValue,
+  pos,
+  onSelect,
+  onClose,
+}) {
+  const dropdownRef = useRef(null);
+
+  useEffect(
+    function () {
+      function handleClick(event) {
+        if (!dropdownRef.current?.contains(event.target)) {
+          onClose();
+        }
+      }
+      function handleEsc(event) {
+        if (event.key === "Escape") onClose();
+      }
+      document.addEventListener("click", handleClick, true);
+      document.addEventListener("keydown", handleEsc);
+      return function () {
+        document.removeEventListener("click", handleClick, true);
+        document.removeEventListener("keydown", handleEsc);
+      };
+    },
+    [onClose],
+  );
+
+  const style = {
+    position: "fixed",
+    top: pos.top,
+    left: pos.left,
+    minWidth: pos.minWidth,
+    zIndex: 9999,
+  };
+
+  return (
+    <div
+      ref={dropdownRef}
+      className="rack-modern-select-dropdown"
+      style={style}
+    >
+      {bandTypeOptions.map(function (bandType) {
+        const isActive = bandType.value === currentValue;
+        return (
+          <button
+            key={bandType.value}
+            type="button"
+            className={
+              "rack-modern-select-option" + (isActive ? " is-active" : "")
+            }
+            onClick={function (event) {
+              event.stopPropagation();
+              onSelect(bandType.value);
+            }}
+          >
+            {bandType.label}
+          </button>
+        );
+      })}
+    </div>
   );
 }
