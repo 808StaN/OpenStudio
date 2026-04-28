@@ -389,10 +389,10 @@
   display: inline-flex;
   overflow: hidden;
   border-radius: 8px;
-  border: 1px solid var(--app-border);
+  border: 1px solid var(--toggle-border);
   padding: 0;
   gap: 0;
-  background: #090d12;
+  background: var(--toggle-bg);
 }
 
 .mode-toggle button {
@@ -400,22 +400,22 @@
   height: 32px;
   min-width: 72px;
   border-radius: 0;
-  color: var(--transport-toggle-btn-text);
-  background: #0f151b;
+  color: var(--toggle-btn-text);
+  background: var(--toggle-btn-bg);
   cursor: pointer;
 }
 
 .mode-toggle button + button {
-  border-left: 1px solid var(--app-border);
+  border-left: 1px solid var(--toggle-border);
 }
 
 .mode-toggle button:hover {
-  background: rgba(255, 255, 255, 0.035);
+  background: var(--toggle-btn-hover-bg);
 }
 
 .mode-toggle button.is-active {
-  color: var(--transport-toggle-btn-active-text);
-  background: var(--transport-toggle-btn-active-bg);
+  color: var(--toggle-btn-active-text);
+  background: var(--toggle-btn-active-bg);
   box-shadow: none;
   text-shadow: none;
 }

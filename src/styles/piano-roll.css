@@ -57,11 +57,11 @@
 
 .edit-mode-toggle {
   display: inline-flex;
-  border: 1px solid var(--app-border);
+  border: 1px solid var(--toggle-border);
   border-radius: 8px;
   padding: 0;
   gap: 0;
-  background: #090d12;
+  background: var(--toggle-bg);
   overflow: hidden;
 }
 
@@ -71,23 +71,23 @@
   min-width: 74px;
   padding: 0 8px;
   border-radius: 0;
-  background: #0f151b;
-  color: var(--app-text-muted);
+  background: var(--toggle-btn-bg);
+  color: var(--toggle-btn-text);
   font-size: 11px;
   cursor: pointer;
 }
 
 .edit-mode-toggle button + button {
-  border-left: 1px solid var(--app-border);
+  border-left: 1px solid var(--toggle-border);
 }
 
 .edit-mode-toggle button:hover {
-  background: rgba(255, 255, 255, 0.035);
+  background: var(--toggle-btn-hover-bg);
 }
 
 .edit-mode-toggle button.is-active {
-  color: var(--app-accent-text);
-  background: var(--app-accent);
+  color: var(--toggle-btn-active-text);
+  background: var(--toggle-btn-active-bg);
   box-shadow: none;
 }
 
@@ -152,7 +152,7 @@
   left: 0;
   width: max-content;
 
-  max-height: 260px;
+  max-height: 300px;
   overflow: auto;
   border: 1px solid var(--app-border-strong);
   border-radius: var(--app-radius-lg);
@@ -168,7 +168,7 @@
   align-items: center;
   gap: 6px;
   font-size: 12px;
-  padding: 2px 8px;
+  padding: 4px 8px;
   cursor: pointer;
   color: var(--app-text-muted);
   white-space: nowrap;
@@ -183,8 +183,8 @@
 .snap-option input[type="radio"] {
   appearance: none;
   -webkit-appearance: none;
-  width: 14px;
-  height: 14px;
+  width: 12px;
+  height: 12px;
   border-radius: 50%;
   border: 1px solid var(--piano-radio-border);
   background: var(--piano-radio-bg);
@@ -208,8 +208,8 @@
 
 .snap-option input[type="radio"]:checked::after {
   content: "";
-  width: 8px;
-  height: 8px;
+  width: 6px;
+  height: 6px;
   display: block;
   background: var(--app-accent);
   border-radius: 50%;

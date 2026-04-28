@@ -198,7 +198,7 @@
 
 .rack-mode-toggle {
   display: inline-flex;
-  border: 1px solid var(--rack-mode-toggle-border);
+  border: 1px solid var(--toggle-border);
   border-radius: 7px;
   overflow: hidden;
 }
@@ -207,20 +207,20 @@
   height: 28px;
   min-width: 104px;
   border: 0;
-  color: var(--rack-mode-btn-text);
-  background: var(--rack-mode-btn-bg);
+  color: var(--toggle-btn-text);
+  background: var(--toggle-btn-bg);
   cursor: pointer;
   font-size: 12px;
   letter-spacing: 0.3px;
 }
 
 .rack-mode-toggle button + button {
-  border-left: 1px solid var(--rack-mode-toggle-border);
+  border-left: 1px solid var(--toggle-border);
 }
 
 .rack-mode-toggle button.is-active {
-  color: var(--rack-mode-btn-active-text);
-  background: var(--rack-mode-btn-active-bg);
+  color: var(--toggle-btn-active-text);
+  background: var(--toggle-btn-active-bg);
   text-shadow: none;
 }
 
@@ -378,7 +378,7 @@
   border: 1px solid var(--rack-context-menu-border);
   border-radius: 6px;
   color: var(--app-text-muted);
-  background: var(--rack-mode-btn-bg);
+  background: #0f151b;
   cursor: pointer;
 }
 
@@ -390,16 +390,16 @@
   width: 30px;
   height: 30px;
   border-radius: 5px;
-  border: 1px solid var(--rack-mode-toggle-border);
-  color: var(--rack-mode-btn-text);
-  background: var(--rack-mode-btn-bg);
+  border: 1px solid var(--toggle-border);
+  color: var(--toggle-btn-text);
+  background: var(--toggle-btn-bg);
   box-shadow: none;
   cursor: pointer;
 }
 
 .small-toggle.is-on {
-  color: var(--rack-mode-btn-active-text);
-  background: var(--rack-mode-btn-active-bg);
+  color: var(--toggle-btn-active-text);
+  background: var(--toggle-btn-active-bg);
   box-shadow: none;
 }
 
