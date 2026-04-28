@@ -176,10 +176,10 @@
 .rack-pattern-add {
   width: 30px;
   height: 30px;
-  border: 1px solid var(--app-accent-strong);
+  border: 1px solid var(--app-border-strong);
   border-radius: 6px;
-  color: var(--app-accent-text);
-  background: var(--app-accent);
+  color: var(--app-text-muted);
+  background: #11171d;
   font-size: 19px;
   line-height: 1;
   cursor: pointer;
@@ -187,7 +187,8 @@
 }
 
 .rack-pattern-add:hover {
-  filter: brightness(1.06);
+  color: var(--app-text);
+  background: #172029;
 }
 
 .rack-topbar-controls {
@@ -273,10 +274,10 @@
 
 .rack-channel-add {
   height: 28px;
-  border: 1px solid var(--app-accent-strong);
+  border: 1px solid var(--app-border-strong);
   border-radius: 6px;
-  color: var(--app-accent-text);
-  background: var(--app-accent);
+  color: var(--app-text-muted);
+  background: #11171d;
   padding: 0 10px;
   font-size: 12px;
   font-weight: 600;
@@ -285,7 +286,8 @@
 }
 
 .rack-channel-add:hover {
-  filter: brightness(1.06);
+  color: var(--app-text);
+  background: #172029;
 }
 
 .rack-row {

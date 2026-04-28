@@ -610,7 +610,7 @@
   gap: 6px;
   cursor: pointer;
   font-size: 13px;
-  font-weight: 700;
+  font-weight: 500;
   transition:
     transform 120ms ease,
     filter 120ms ease,
