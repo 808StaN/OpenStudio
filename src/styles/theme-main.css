@@ -91,8 +91,9 @@
   --browser-tabs-bg: #0d1218;
   --browser-tabs-border: rgba(163, 178, 190, 0.06);
   --browser-tab-text: #9aa5ad;
-  --browser-tab-hover-bg: rgba(255, 255, 255, 0.025);
-  --browser-tab-hover-border: rgba(61, 217, 118, 0.28);
+   /*--browser-tab-hover-bg: rgba(255, 255, 255, 0.025);*/
+  --browser-tab-hover-border: rgba(48, 255, 124, 0.28);
+  --browser-tab-hover-text: var(--app-text);
   --browser-tab-active-text: var(--app-accent);
   --browser-tab-active-border: var(--app-accent);
   /*--browser-tab-active-bg: rgba(61, 217, 118, 0.06);*/

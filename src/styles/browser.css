@@ -42,6 +42,7 @@
   transform: none;
   border-color: var(--browser-tab-hover-border);
   background: var(--browser-tab-hover-bg);
+  color: var(--browser-tab-hover-text);
   filter: none;
 }
 
