@@ -8,8 +8,8 @@
   --app-text-faint: #606b73;
   --app-border: rgba(163, 178, 190, 0.06);
   --app-border-strong: rgba(163, 178, 190, 0.11);
-  --app-accent: #3dd976;
-  --app-accent-strong: #35c468;
+  --app-accent: rgba(48, 255, 124, 0.75);
+  --app-accent-strong: rgba(48, 255, 124, 0.75);
   --app-accent-soft: rgba(61, 217, 118, 0.12);
   --app-accent-text: #061208;
   --app-danger: #f26d78;
@@ -92,8 +92,8 @@
   --browser-tabs-border: rgba(163, 178, 190, 0.06);
   --browser-tab-text: #9aa5ad;
    /*--browser-tab-hover-bg: rgba(255, 255, 255, 0.025);*/
-  --browser-tab-hover-border: rgba(48, 255, 124, 0.28);
-  --browser-tab-hover-text: var(--app-text);
+  --browser-tab-hover-border: rgba(48, 255, 124, 0.50);
+  --browser-tab-hover-text: rgba(48, 255, 124, 0.50);
   --browser-tab-active-text: var(--app-accent);
   --browser-tab-active-border: var(--app-accent);
   /*--browser-tab-active-bg: rgba(61, 217, 118, 0.06);*/
@@ -206,6 +206,7 @@
   --mixer-fader-groove-border: rgba(163, 178, 190, 0.1);
   --mixer-fader-thumb-bg: #9fa8ae;
   --mixer-fader-thumb-border: rgba(237, 242, 238, 0.32);
+  --slider-accent: var(--app-accent);
   --mixer-meter-bg: #080c11;
   --mixer-meter-border: rgba(163, 178, 190, 0.1);
   --mixer-meter-seg-bg: rgba(163, 178, 190, 0.12);

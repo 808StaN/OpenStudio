@@ -421,7 +421,7 @@
 
 .rack-knob {
   width: 58px;
-  accent-color: var(--app-accent);
+  accent-color: var(--slider-accent);
 }
 
 .channel-name {
@@ -873,7 +873,7 @@
 
 .sample-time-knob-row input[type="range"] {
   width: 100%;
-  accent-color: var(--app-accent);
+  accent-color: var(--slider-accent);
 }
 
 .sample-time-stretch-selects {
@@ -1098,7 +1098,7 @@
 
 .sample-setting-row input[type="range"] {
   width: 100%;
-  accent-color: var(--app-accent);
+  accent-color: var(--slider-accent);
 }
 
 .sample-setting-row.cut-toggle {

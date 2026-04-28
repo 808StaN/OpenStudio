@@ -194,7 +194,11 @@
   width: 12px;
   height: 178px;
   background: transparent;
-  accent-color: var(--app-accent);
+  accent-color: var(--slider-accent);
+}
+
+.fader-slider::-moz-range-progress {
+  background: var(--slider-accent);
 }
 
 .fader-slider::-webkit-slider-thumb {
