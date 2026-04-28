@@ -290,7 +290,7 @@
   overflow-x: auto;
   overflow-y: hidden;
   scrollbar-width: none;
-  background: #0b0c0d;
+  background: var(--piano-velocity-grid-bg);
 }
 
 .piano-velocity-wrap::-webkit-scrollbar {
@@ -314,7 +314,7 @@
       transparent var(--grid-line-width),
       transparent var(--snap-width)
     ),
-    #141617;
+    var(--piano-velocity-grid-bg);
 }
 
 .piano-velocity-grid::before {
@@ -414,7 +414,7 @@
 
 .piano-grid-wrap {
   overflow: auto;
-  background: #0b0c0d;
+  background: var(--piano-grid-bg);
   user-select: none;
   scrollbar-color: var(--scrollbar-thumb-bg) var(--scrollbar-track-bg);
 }
@@ -479,12 +479,12 @@
     ),
     repeating-linear-gradient(
       to bottom,
-      rgba(0, 0, 0, 0.82) 0,
-      rgba(0, 0, 0, 0.82) var(--grid-line-width),
+      var(--piano-grid-line) 0,
+      var(--piano-grid-line) var(--grid-line-width),
       transparent var(--grid-line-width),
       transparent var(--row-height)
     ),
-    #0b0c0d;
+    var(--piano-grid-bg);
 }
 
 .piano-grid::before {
@@ -503,8 +503,8 @@
     ),
     repeating-linear-gradient(
       to bottom,
-      rgba(0, 0, 0, 0.82) 0,
-      rgba(0, 0, 0, 0.82) var(--grid-line-width),
+      var(--piano-grid-line) 0,
+      var(--piano-grid-line) var(--grid-line-width),
       transparent var(--grid-line-width),
       transparent var(--row-height)
     );
@@ -515,7 +515,7 @@
   top: 0;
   bottom: 0;
   width: 1.5px;
-  background: rgba(0, 0, 0, 0.9);
+  background: var(--piano-grid-line);
   pointer-events: none;
   z-index: 1;
 }
