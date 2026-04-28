@@ -8,11 +8,17 @@
   --app-text-faint: #606b73;
   --app-border: rgba(163, 178, 190, 0.06);
   --app-border-strong: rgba(163, 178, 190, 0.11);
-  --app-accent: rgba(48, 255, 124, 0.75);
+  --app-accent: rgba(48, 255, 124, 1);
   --app-accent-strong: rgba(48, 255, 124, 0.75);
   --app-accent-soft: rgba(61, 217, 118, 0.12);
   --app-accent-text: #061208;
   --slider-accent: var(--app-accent);
+  --slider-track-bg: #11171d;
+  --slider-thumb-bg: var(--slider-accent);
+  --slider-thumb-border: var(--app-border);
+  --slider-thumb-hover-bg: var(--app-accent-strong);
+  --slider-thumb-active-bg: var(--app-accent-strong);
+  --slider-thumb-hover-border: var(--app-border-strong);
   --app-danger: #f26d78;
   --app-danger-text: #ffe1e5;
   --app-danger-bg: rgba(82, 28, 35, 0.86);
