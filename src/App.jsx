@@ -387,7 +387,7 @@ function App() {
             id="fxPlugin"
             title={fxWindowTitle}
             minWidth={480}
-            minHeight={520}
+            minHeight={480}
           >
             <FxPluginWindow />
           </FloatingWindow>
