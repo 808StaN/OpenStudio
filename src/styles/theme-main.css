@@ -6,9 +6,9 @@
   --app-text: #edf2ee;
   --app-text-muted: #9aa5ad;
   --app-text-faint: #606b73;
-  --app-border: rgba(163, 178, 190, 0.06);
-  --app-border-strong: rgba(163, 178, 190, 0.11);
-  --app-accent: rgba(48, 255, 124, 1);
+  --app-border: rgba(163, 178, 190, 0.025);
+  --app-border-strong: rgba(163, 178, 190, 0.05);
+  --app-accent: rgba(48, 255, 124, 0.75);
   --app-accent-strong: rgba(48, 255, 124, 0.75);
   --app-accent-soft: rgba(61, 217, 118, 0.12);
   --app-accent-text: #061208;
@@ -44,33 +44,33 @@
      TITLEBAR
      ============================================= */
   --titlebar-bg: #080b0f;
-  --titlebar-border: rgba(163, 178, 190, 0.06);
+  --titlebar-border: var(--app-border);
   --titlebar-text: #edf2ee;
   --titlebar-text-faint: #606b73;
   --titlebar-btn-bg: #11171d;
-  --titlebar-btn-border: rgba(163, 178, 190, 0.06);
+  --titlebar-btn-border: var(--app-border);
   --titlebar-btn-text: #9aa5ad;
   --titlebar-btn-hover-bg: #172029;
-  --titlebar-btn-hover-border: rgba(163, 178, 190, 0.11);
+  --titlebar-btn-hover-border: var(--app-border-strong);
   --titlebar-close-hover-text: #ffdfe2;
-  --titlebar-close-hover-border: rgba(163, 178, 190, 0.11);
+  --titlebar-close-hover-border: var(--app-border-strong);
   --titlebar-close-hover-bg: #172029;
 
   /* =============================================
      TRANSPORT
      ============================================= */
   --transport-bg: #0b0f14;
-  --transport-border: rgba(163, 178, 190, 0.06);
+  --transport-border: var(--app-border);
   --transport-btn-bg: #121820;
-  --transport-btn-border: rgba(163, 178, 190, 0.06);
+  --transport-btn-border: var(--app-border);
   --transport-btn-text: #edf2ee;
   --transport-btn-hover-bg: #172029;
-  --transport-btn-hover-border: rgba(163, 178, 190, 0.11);
+  --transport-btn-hover-border: var(--app-border-strong);
   --transport-btn-active-bg: var(--app-accent);
   --transport-btn-active-border: rgba(61, 217, 118, 0.42);
   --transport-btn-active-text: #061208;
   --transport-bpm-bg: #090d12;
-  --transport-bpm-border: rgba(163, 178, 190, 0.06);
+  --transport-bpm-border: var(--app-border);
   --transport-bpm-text: #edf2ee;
   --transport-rec-text: #ff9aa3;
   --transport-rec-border: rgba(242, 109, 120, 0.42);
@@ -79,16 +79,16 @@
      WORKSPACE
      ============================================= */
   --workspace-bg: #0a0f14;
-  --workspace-border: rgba(163, 178, 190, 0.06);
+  --workspace-border: var(--app-border);
   --workspace-grid: rgba(150, 166, 178, 0.026);
 
   /* =============================================
      WINDOW / FLOATING
      ============================================= */
   --window-bg: #0c1116;
-  --window-border: rgba(163, 178, 190, 0.11);
+  --window-border: var(--app-border-strong);
   --window-title-bg: #10161c;
-  --window-title-border: rgba(163, 178, 190, 0.06);
+  --window-title-border: var(--app-border);
   --window-title-text: #edf2ee;
   --window-backdrop: rgba(0, 0, 0, 0.58);
 
@@ -96,9 +96,9 @@
      BROWSER
      ============================================= */
   --browser-bg: #0c1116;
-  --browser-border: rgba(163, 178, 190, 0.06);
+  --browser-border: var(--app-border);
   --browser-tabs-bg: #0d1218;
-  --browser-tabs-border: rgba(163, 178, 190, 0.06);
+  --browser-tabs-border: var(--app-border);
   --browser-tab-text: #9aa5ad;
    /*--browser-tab-hover-bg: rgba(255, 255, 255, 0.025);*/
   --browser-tab-hover-border: rgba(48, 255, 124, 0.50);
@@ -116,7 +116,7 @@
   --browser-plugin-icon: var(--app-accent);
   --browser-effect-text: #d9c17b;
   --browser-rescan-bg: #121820;
-  --browser-rescan-border: rgba(163, 178, 190, 0.06);
+  --browser-rescan-border: var(--app-border);
   --browser-rescan-text: #edf2ee;
   --browser-hint-border: var(--app-border-strong);
   --browser-hint-text: #9aa5ad;
@@ -126,9 +126,9 @@
      PLAYLIST
      ============================================= */
   --playlist-bg: #0c1116;
-  --playlist-border: rgba(163, 178, 190, 0.06);
+  --playlist-border: var(--app-border);
   --playlist-toolbar-bg: #11171d;
-  --playlist-toolbar-border: rgba(163, 178, 190, 0.06);
+  --playlist-toolbar-border: var(--app-border);
   --playlist-btn-bg: #121820;
   --playlist-btn-border: rgba(71, 157, 228, 0.06);
   --playlist-btn-text: #edf2ee;
@@ -138,12 +138,12 @@
   --playlist-header-bg: #0b1015;
   --playlist-bar-text: #b5c4dd;
   --playlist-bar-bg: #10161c;
-  --playlist-bar-border: rgba(163, 178, 190, 0.06);
+  --playlist-bar-border: var(--app-border);
   --playlist-track-name-bg: #11171d;
-  --playlist-track-name-border: rgba(163, 178, 190, 0.06);
+  --playlist-track-name-border: var(--app-border);
   --playlist-track-name-text: #edf2ee;
   --playlist-track-grid-bg: #090e13;
-  --playlist-track-grid-border: rgba(163, 178, 190, 0.06);
+  --playlist-track-grid-border: var(--app-border);
   --playlist-clip-border: rgba(61, 217, 118, 0.38);
   --playlist-clip-bg: rgba(61, 217, 118, 0.12);
   --playlist-clip-text: #edf2ee;
@@ -160,25 +160,25 @@
      CHANNEL RACK
      ============================================= */
   --rack-bg: #0c1116;
-  --rack-border: rgba(163, 178, 190, 0.06);
+  --rack-border: var(--app-border);
   --rack-topbar-bg: #11171d;
-  --rack-topbar-border: rgba(163, 178, 190, 0.06);
+  --rack-topbar-border: var(--app-border);
   --rack-row-bg: #10161c;
-  --rack-row-border: rgba(163, 178, 190, 0.06);
+  --rack-row-border: var(--app-border);
   --rack-row-radius: var(--app-radius-lg);
   --rack-pattern-picker-bg: #090d12;
-  --rack-pattern-picker-border: rgba(163, 178, 190, 0.06);
+  --rack-pattern-picker-border: var(--app-border);
   --rack-pattern-picker-text: var(--app-accent);
   --rack-channel-name-bg: #090d12;
-  --rack-channel-name-border: rgba(163, 178, 190, 0.06);
+  --rack-channel-name-border: var(--app-border);
   --rack-channel-name-text: #edf2ee;
   --rack-insert-bg: #090d12;
-  --rack-insert-border: rgba(163, 178, 190, 0.06);
+  --rack-insert-border: var(--app-border);
   --rack-insert-text: #edf2ee;
   --rack-step-bg: #171d24;
   --rack-step-border: rgba(163, 178, 190, 0.08);
   --rack-step-group-a-bg: #192028;
-  --rack-step-group-a-border: rgba(163, 178, 190, 0.11);
+  --rack-step-group-a-border: var(--app-border-strong);
   --rack-step-group-b-bg: #121920;
   --rack-step-group-b-border: rgba(163, 178, 190, 0.07);
   --rack-step-on-bg: var(--app-accent);
@@ -186,7 +186,7 @@
   --rack-step-playhead-outline: rgba(233, 189, 97, 0.8);
   --rack-mini-note-bg: var(--app-accent);
   --rack-preview-bg: #121920;
-  --rack-preview-border: rgba(163, 178, 190, 0.06);
+  --rack-preview-border: var(--app-border);
   --rack-pattern-length-text: #9aa5ad;
   --rack-pattern-length-btn-bg: #111820;
   --rack-pattern-length-btn-border: rgba(163, 178, 190, 0.16);
@@ -202,20 +202,20 @@
   --mixer-border: var(--app-border);
   --mixer-track-bg: #0f151b;
   --mixer-track-border: rgba(163, 178, 190, 0.09);
-  --mixer-track-selected-bg: #142019;
-  --mixer-track-selected-border: rgba(61, 217, 118, 0.22);
+  --mixer-track-selected-bg: #111820;
+  --mixer-track-selected-border: rgba(163, 178, 190, 0.09);
   --mixer-track-title-text: var(--app-text-muted);
   --mixer-track-title-font-weight: 700;
   --mixer-led-off-bg: #1b2229;
   --mixer-led-off-border: rgba(163, 178, 190, 0.16);
-  --mixer-led-on-bg: rgba(61, 217, 118, 0.12);
+  --mixer-led-on-bg: var(--app-accent);
   --mixer-led-on-border: rgba(61, 217, 118, 0.42);
   --fader-groove-bg: #0c1218;
   --fader-groove-border: rgba(163, 178, 190, 0.08);
   --fader-groove-shadow: inset 0 0 0 1px rgba(0, 0, 0, 0.22), inset 0 10px 18px rgba(255, 255, 255, 0.015);
   --fader-track-bg: #111920;
   --fader-track-shadow: inset 0 0 0 1px rgba(163, 178, 190, 0.07);
-  --fader-fill-bg: rgba(48, 255, 124, 0.52);
+  --fader-fill-bg: var(--app-accent); 
   --fader-thumb-bg: #151e26;
   --fader-thumb-border: rgba(163, 178, 190, 0.18);
   --fader-thumb-hover-bg: #18232c;
@@ -313,7 +313,7 @@
   --pattern-list-select-text: var(--app-text);
   --pattern-list-meta-text: var(--app-text-muted);
   --pattern-list-color-bg: #090d12;
-  --pattern-list-color-chip-border: rgba(163, 178, 190, 0.11);
+  --pattern-list-color-chip-border: var(--app-border-strong);
   --pattern-list-popover-bg: #0d1319;
   --pattern-list-popover-border: var(--app-border-strong);
 
@@ -444,7 +444,7 @@
      RENDER WINDOW
      ============================================= */
   --render-bg: #0c1116;
-  --render-border: rgba(163, 178, 190, 0.06);
+  --render-border: var(--app-border);
   --render-label-text: #b9c7dc;
   --render-input-bg: linear-gradient(180deg, #1f2a39 0%, #131a24 100%);
   --render-input-border: #3a4558;
@@ -466,7 +466,7 @@
      SCROLLBARS
      ============================================= */
   --scrollbar-track-bg: #0a0e13;
-  --scrollbar-track-border: rgba(163, 178, 190, 0.06);
+  --scrollbar-track-border: var(--app-border);
   --scrollbar-thumb-bg: #56616b;
   --scrollbar-thumb-border: #0a0e13;
 
