@@ -141,26 +141,13 @@
 }
 
 .mixer-knob {
-  width: 30px;
-  height: 30px;
+  width: 35px;
+  height: 35px;
   cursor: ns-resize;
   user-select: none;
   outline: none;
   -webkit-appearance: none;
   appearance: none;
-  border-radius: 50%;
-  border: 1px solid #8b919b;
-  background: radial-gradient(
-    circle at 31% 24%,
-    #f9fafb 0%,
-    #c8ced8 25%,
-    #76808f 56%,
-    #424956 100%
-  );
-  box-shadow:
-    inset 0 2px 3px rgba(255, 255, 255, 0.52),
-    inset 0 -3px 4px rgba(0, 0, 0, 0.45),
-    0 1px 2px rgba(0, 0, 0, 0.7);
 }
 
 .mixer-knob::-webkit-slider-thumb {
@@ -728,17 +715,15 @@
   color: var(--app-text);
   font-size: 10px;
   font-weight: 600;
-  text-align: center;
   cursor: pointer;
   outline: none;
-  -webkit-appearance: none;
-  appearance: none;
   padding: 0 6px;
 }
 
 .fx-proq-band-type option {
   color: var(--app-text);
-  background: var(--app-bg);
+  background: #0c111c;
+  font-size: 10px;
 }
 
 .fx-proq-readout.is-active {
