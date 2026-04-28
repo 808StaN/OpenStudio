@@ -116,7 +116,7 @@
   --playlist-toolbar-bg: #11171d;
   --playlist-toolbar-border: rgba(163, 178, 190, 0.06);
   --playlist-btn-bg: #121820;
-  --playlist-btn-border: rgba(163, 178, 190, 0.06);
+  --playlist-btn-border: rgba(71, 157, 228, 0.06);
   --playlist-btn-text: #edf2ee;
   --playlist-btn-hover-bg: #172029;
   --playlist-btn-active-bg: var(--app-accent);
@@ -242,6 +242,9 @@
   --piano-toolbar-bg: #11171d;
   --piano-toolbar-border: var(--app-border);
   --piano-toolbar-text: var(--app-text);
+  --piano-snap-trigger-bg: #111820;
+  --piano-snap-trigger-hover-bg: #172029;
+  --piano-snap-dropdown-bg: #0d1319;
   --piano-key-white-bg: #c9ced8;
   --piano-key-white-text: #3d4452;
   --piano-key-black-bg: #0f151b;
@@ -270,6 +273,9 @@
   --piano-scale-row-bg: rgba(255, 255, 255, 0.045);
   --piano-selection-border: rgba(61, 217, 118, 0.45);
   --piano-selection-bg: rgba(61, 217, 118, 0.1);
+  --piano-radio-bg: #090d12;
+  --piano-radio-border: var(--app-border);
+
 
   /* =============================================
      PATTERN LIST

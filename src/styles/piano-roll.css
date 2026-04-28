@@ -132,7 +132,7 @@
   height: 24px;
   border-radius: var(--app-radius-md);
   border: 1px solid var(--app-border);
-  background: #090d12;
+  background: var(--piano-snap-trigger-bg);
   color: var(--app-text);
   padding: 0 9px;
   font-size: 11px;
@@ -146,7 +146,7 @@
 
 .snap-trigger:hover {
   border-color: var(--app-border-strong);
-  background: #172029;
+  background: var(--piano-snap-trigger-hover-bg);
 }
 
 .snap-dropdown {
@@ -158,7 +158,7 @@
   overflow: auto;
   border: 1px solid var(--app-border-strong);
   border-radius: var(--app-radius-lg);
-  background: var(--app-bg);
+  background: var(--piano-snap-dropdown-bg);
   color: var(--app-text);
   box-shadow: var(--app-shadow-soft);
   padding: 6px 0;
@@ -180,8 +180,39 @@
   background: rgba(255, 255, 255, 0.04);
 }
 
-.snap-option input {
+.snap-option input[type="radio"] {
+  appearance: none;
+  -webkit-appearance: none;
+  width: 14px;
+  height: 14px;
+  border-radius: 50%;
+  border: 1px solid var(--piano-radio-border);
+  background: var(--piano-radio-bg);
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
   margin: 0;
+  transition: border-color 120ms ease, background 120ms ease;
+}
+
+.snap-option input[type="radio"]:hover {
+  border-color: var(--app-border-strong);
+}
+
+.snap-option input[type="radio"]:checked {
+  border-color: var(--app-accent-strong);
+  background: var(--piano-radio-bg);
+}
+
+.snap-option input[type="radio"]:checked::after {
+  content: "";
+  width: 8px;
+  height: 8px;
+  display: block;
+  background: var(--app-accent);
+  border-radius: 50%;
 }
 
 .piano-roll-toolbar small {
