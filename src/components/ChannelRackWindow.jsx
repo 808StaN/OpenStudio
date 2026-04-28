@@ -1,4 +1,4 @@
-import { useCallback, useRef, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import { useDispatch } from "react-redux";
 import {
   addChannel,
@@ -35,6 +35,18 @@ import { useChannelRackDerivedState } from "./channel-rack/useChannelRackDerived
 import { useChannelRackPlayheadAnimation } from "./channel-rack/useChannelRackPlayheadAnimation";
 import { useChannelRackActions } from "./channel-rack/useChannelRackActions";
 
+function formatPercentValue(value) {
+  return Math.round(value * 100) + "%";
+}
+
+function formatSignedPercentValue(value) {
+  const intValue = Math.round(value * 100);
+  if (intValue > 0) {
+    return "+" + intValue + "%";
+  }
+  return intValue + "%";
+}
+
 export function ChannelRackWindow() {
   const dispatch = useDispatch();
   const rackShellRef = useRef(null);
@@ -42,6 +54,8 @@ export function ChannelRackWindow() {
   const [openInsertMenuChannelId, setOpenInsertMenuChannelId] = useState(null);
   const [channelContextMenu, setChannelContextMenu] = useState(null);
   const [channelRenamePanel, setChannelRenamePanel] = useState(null);
+  const [valueReadout, setValueReadout] = useState("");
+  const clearReadoutTimeoutRef = useRef(null);
 
   const {
     activePatternId,
@@ -80,6 +94,33 @@ export function ChannelRackWindow() {
     setChannelContextMenu,
     setChannelRenamePanel,
   });
+
+  useEffect(function () {
+    return function () {
+      if (clearReadoutTimeoutRef.current) {
+        clearTimeout(clearReadoutTimeoutRef.current);
+      }
+    };
+  }, []);
+
+  const showValueReadout = useCallback(function (text) {
+    setValueReadout(text);
+
+    if (clearReadoutTimeoutRef.current) {
+      clearTimeout(clearReadoutTimeoutRef.current);
+    }
+
+    clearReadoutTimeoutRef.current = setTimeout(function () {
+      setValueReadout("");
+    }, 1700);
+  }, []);
+
+  const getChannelLabel = useCallback(function (channelId) {
+    const channel = channels.find(function (item) {
+      return item.id === channelId;
+    });
+    return String(channel?.name || "Channel").trim() || "Channel";
+  }, [channels]);
 
   const { onMidiPatternDragOver, onMidiPatternDrop } = useChannelRackMidiDrop({
     activePatternId,
@@ -182,11 +223,17 @@ export function ChannelRackWindow() {
 
   const handleSetVolume = useCallback(function (channelId, value) {
     dispatch(setChannelVolume({ channelId, value }));
-  }, [dispatch]);
+    showValueReadout(
+      getChannelLabel(channelId) + " Volume: " + formatPercentValue(value),
+    );
+  }, [dispatch, getChannelLabel, showValueReadout]);
 
   const handleSetPan = useCallback(function (channelId, value) {
     dispatch(setChannelPan({ channelId, value }));
-  }, [dispatch]);
+    showValueReadout(
+      getChannelLabel(channelId) + " Pan: " + formatSignedPercentValue(value),
+    );
+  }, [dispatch, getChannelLabel, showValueReadout]);
 
   const handleCancelRename = useCallback(function () {
     setChannelRenamePanel(null);
@@ -261,6 +308,9 @@ export function ChannelRackWindow() {
         onSave={onSaveRenamePanel}
         onCancel={handleCancelRename}
       />
+      <div className={"rack-value-readout" + (valueReadout ? " is-visible" : "")}>
+        {valueReadout}
+      </div>
     </section>
   );
 }

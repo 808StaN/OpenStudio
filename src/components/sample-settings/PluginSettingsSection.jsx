@@ -1,4 +1,5 @@
 import { SettingValueEditor } from "./SettingValueEditor";
+import { HorizontalSlider } from "../common/HorizontalSlider";
 
 // Plugin-channel section: basic voice controls that still apply to soundfont channels.
 export function PluginSettingsSection({ settings, onSettingChange }) {
@@ -6,14 +7,13 @@ export function PluginSettingsSection({ settings, onSettingChange }) {
     <>
       <label className="sample-setting-row">
         <span>Attack</span>
-        <input
-          type="range"
-          min="0"
-          max="400"
-          step="1"
+        <HorizontalSlider
+          min={0}
+          max={400}
+          step={1}
           value={settings.attackMs}
-          onChange={function (event) {
-            onSettingChange({ attackMs: Number(event.target.value) });
+          onChange={function (nextValue) {
+            onSettingChange({ attackMs: nextValue });
           }}
         />
         <SettingValueEditor
@@ -31,14 +31,13 @@ export function PluginSettingsSection({ settings, onSettingChange }) {
 
       <label className="sample-setting-row">
         <span>Release</span>
-        <input
-          type="range"
-          min="0"
-          max="1000"
-          step="1"
+        <HorizontalSlider
+          min={0}
+          max={1000}
+          step={1}
           value={settings.releaseMs}
-          onChange={function (event) {
-            onSettingChange({ releaseMs: Number(event.target.value) });
+          onChange={function (nextValue) {
+            onSettingChange({ releaseMs: nextValue });
           }}
         />
         <SettingValueEditor
@@ -56,15 +55,14 @@ export function PluginSettingsSection({ settings, onSettingChange }) {
 
       <label className="sample-setting-row">
         <span>Pitch</span>
-        <input
-          type="range"
-          min="-100"
-          max="100"
-          step="1"
+        <HorizontalSlider
+          min={-100}
+          max={100}
+          step={1}
           value={settings.pitchCents}
-          onChange={function (event) {
+          onChange={function (nextValue) {
             onSettingChange({
-              pitchCents: Number(event.target.value),
+              pitchCents: nextValue,
             });
           }}
         />

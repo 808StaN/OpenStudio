@@ -1,5 +1,6 @@
 import { SettingValueEditor } from "./SettingValueEditor";
 import { buildEnvelopePath } from "./sampleSettingsUtils";
+import { HorizontalSlider } from "../common/HorizontalSlider";
 
 // "Envelope" tab section for ADSHR envelope editing and visual preview.
 export function EnvelopeTabSection({ settings, onSettingChange }) {
@@ -27,15 +28,14 @@ export function EnvelopeTabSection({ settings, onSettingChange }) {
 
       <label className="sample-setting-row">
         <span>Delay</span>
-        <input
-          type="range"
-          min="0"
-          max="3000"
-          step="1"
+        <HorizontalSlider
+          min={0}
+          max={3000}
+          step={1}
           value={settings.envDelayMs}
-          onChange={function (event) {
+          onChange={function (nextValue) {
             onSettingChange({
-              envDelayMs: Number(event.target.value),
+              envDelayMs: nextValue,
             });
           }}
         />
@@ -54,15 +54,14 @@ export function EnvelopeTabSection({ settings, onSettingChange }) {
 
       <label className="sample-setting-row">
         <span>Attack</span>
-        <input
-          type="range"
-          min="0"
-          max="3000"
-          step="1"
+        <HorizontalSlider
+          min={0}
+          max={3000}
+          step={1}
           value={settings.envAttackMs}
-          onChange={function (event) {
+          onChange={function (nextValue) {
             onSettingChange({
-              envAttackMs: Number(event.target.value),
+              envAttackMs: nextValue,
             });
           }}
         />
@@ -81,15 +80,14 @@ export function EnvelopeTabSection({ settings, onSettingChange }) {
 
       <label className="sample-setting-row">
         <span>Hold</span>
-        <input
-          type="range"
-          min="0"
-          max="3000"
-          step="1"
+        <HorizontalSlider
+          min={0}
+          max={3000}
+          step={1}
           value={settings.envHoldMs}
-          onChange={function (event) {
+          onChange={function (nextValue) {
             onSettingChange({
-              envHoldMs: Number(event.target.value),
+              envHoldMs: nextValue,
             });
           }}
         />
@@ -108,15 +106,14 @@ export function EnvelopeTabSection({ settings, onSettingChange }) {
 
       <label className="sample-setting-row">
         <span>Decay</span>
-        <input
-          type="range"
-          min="0"
-          max="3000"
-          step="1"
+        <HorizontalSlider
+          min={0}
+          max={3000}
+          step={1}
           value={settings.envDecayMs}
-          onChange={function (event) {
+          onChange={function (nextValue) {
             onSettingChange({
-              envDecayMs: Number(event.target.value),
+              envDecayMs: nextValue,
             });
           }}
         />
@@ -135,15 +132,14 @@ export function EnvelopeTabSection({ settings, onSettingChange }) {
 
       <label className="sample-setting-row">
         <span>Sustain</span>
-        <input
-          type="range"
-          min="0"
-          max="100"
-          step="1"
+        <HorizontalSlider
+          min={0}
+          max={100}
+          step={1}
           value={settings.envSustainPct}
-          onChange={function (event) {
+          onChange={function (nextValue) {
             onSettingChange({
-              envSustainPct: Number(event.target.value),
+              envSustainPct: nextValue,
             });
           }}
         />
@@ -162,15 +158,14 @@ export function EnvelopeTabSection({ settings, onSettingChange }) {
 
       <label className="sample-setting-row">
         <span>Release</span>
-        <input
-          type="range"
-          min="0"
-          max="3000"
-          step="1"
+        <HorizontalSlider
+          min={0}
+          max={3000}
+          step={1}
           value={settings.envReleaseMs}
-          onChange={function (event) {
+          onChange={function (nextValue) {
             onSettingChange({
-              envReleaseMs: Number(event.target.value),
+              envReleaseMs: nextValue,
             });
           }}
         />
