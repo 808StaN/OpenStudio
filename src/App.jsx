@@ -18,7 +18,7 @@ import { setUser, clearUser } from "./store/userSlice";
 import { supabase } from "./lib/supabase";
 import { MIDI_FILE_DND_MIME } from "./utils/midiImport";
 import { MIDI_PATTERN_DND_MIME } from "./utils/midiPattern";
-import "./styles/theme-main.css";
+
 import "./styles/app-shell.css";
 import "./styles/browser.css";
 import "./styles/channel-rack.css";
@@ -28,7 +28,7 @@ import "./styles/mixer.css";
 import "./styles/pattern-list.css";
 import "./styles/render-window.css";
 import "./styles/auth.css";
-
+import "./styles/theme-main.css";
 import midnightThemeCss from "./styles/theme-midnight.css?raw";
 
 function shouldIgnoreSpaceShortcut(target) {
@@ -387,7 +387,7 @@ function App() {
             id="fxPlugin"
             title={fxWindowTitle}
             minWidth={480}
-            minHeight={340}
+            minHeight={520}
           >
             <FxPluginWindow />
           </FloatingWindow>

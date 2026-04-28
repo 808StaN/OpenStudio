@@ -256,9 +256,9 @@
   --piano-note-selected-bg: var(--app-danger);
   --piano-note-selected-border: var(--app-danger);
   --piano-note-selected-text: #fff0f0;
-  --piano-velocity-shell-bg: var(--app-bg);
+  --piano-velocity-shell-bg: #0c1116;
   --piano-velocity-shell-border: rgba(0, 0, 0, 0.72);
-  --piano-velocity-label-bg: var(--app-bg);
+  --piano-velocity-label-bg: #0c1116;
   --piano-velocity-label-text: var(--app-text-muted);
   --piano-velocity-label-strong: var(--app-text);
   --piano-velocity-label-em: var(--app-accent);

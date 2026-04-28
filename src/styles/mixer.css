@@ -140,11 +140,14 @@
   color: var(--app-text-faint);
 }
 
-.metal-knob {
+.mixer-knob {
+  width: 30px;
+  height: 30px;
+  cursor: ns-resize;
+  user-select: none;
+  outline: none;
   -webkit-appearance: none;
   appearance: none;
-  width: 26px;
-  height: 26px;
   border-radius: 50%;
   border: 1px solid #8b919b;
   background: radial-gradient(
@@ -160,18 +163,18 @@
     0 1px 2px rgba(0, 0, 0, 0.7);
 }
 
-.metal-knob::-webkit-slider-thumb {
+.mixer-knob::-webkit-slider-thumb {
   -webkit-appearance: none;
   width: 6px;
-  height: 16px;
+  height: 14px;
   border-radius: 2px;
   border: 1px solid #dbe0e9;
   background: #141b27;
 }
 
-.metal-knob::-moz-range-thumb {
+.mixer-knob::-moz-range-thumb {
   width: 6px;
-  height: 16px;
+  height: 14px;
   border-radius: 2px;
   border: 1px solid #dbe0e9;
   background: #141b27;
