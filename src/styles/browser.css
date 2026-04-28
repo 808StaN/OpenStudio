@@ -40,8 +40,8 @@
 
 .browser-tabs button:hover {
   transform: none;
-  border-color: rgba(61, 217, 118, 0.28);
-  background: rgba(255, 255, 255, 0.025);
+  border-color: var(--browser-tab-hover-border);
+  background: var(--browser-tab-hover-bg);
   filter: none;
 }
 
