@@ -1,3 +1,5 @@
+import { useState } from "react";
+
 // Dedicated UI renderer for the Graphic EQ effect branch.
 export function GraphicEqEditor({
   graphRef,
@@ -26,6 +28,7 @@ export function GraphicEqEditor({
   onBandTypeChange,
   bandTypeOptions,
 }) {
+  const [openBandTypeIndex, setOpenBandTypeIndex] = useState(-1);
   const graphLeft = graphPadding.left;
   const graphRight = graphPadding.right;
   const graphTop = graphPadding.top;
@@ -239,22 +242,56 @@ export function GraphicEqEditor({
                   </small>
                 )}
 
-                <select
-                  className="fx-proq-band-type"
-                  value={point.bandType}
-                  onChange={function (event) {
-                    // Band type update is delegated to container/state layer.
-                    onBandTypeChange(index, event.target.value);
-                  }}
+                <div
+                  className={
+                    "fx-proq-band-type-wrap rack-modern-select" +
+                    (openBandTypeIndex === index ? " is-open" : "")
+                  }
                 >
-                  {bandTypeOptions.map(function (bandType) {
-                    return (
-                      <option key={bandType.value} value={bandType.value}>
-                        {bandType.label}
-                      </option>
-                    );
-                  })}
-                </select>
+                  <button
+                    type="button"
+                    className="rack-modern-select-trigger"
+                    onClick={function (event) {
+                      event.stopPropagation();
+                      setOpenBandTypeIndex(
+                        openBandTypeIndex === index ? -1 : index,
+                      );
+                    }}
+                  >
+                    <span className="rack-modern-select-value">
+                      {
+                        bandTypeOptions.find(function (o) {
+                          return o.value === point.bandType;
+                        })?.label
+                      }
+                    </span>
+                    <span className="rack-modern-select-caret">v</span>
+                  </button>
+                  {openBandTypeIndex === index ? (
+                    <div className="rack-modern-select-dropdown">
+                      {bandTypeOptions.map(function (bandType) {
+                        const isActive = bandType.value === point.bandType;
+                        return (
+                          <button
+                            key={bandType.value}
+                            type="button"
+                            className={
+                              "rack-modern-select-option" +
+                              (isActive ? " is-active" : "")
+                            }
+                            onClick={function (event) {
+                              event.stopPropagation();
+                              onBandTypeChange(index, bandType.value);
+                              setOpenBandTypeIndex(-1);
+                            }}
+                          >
+                            {bandType.label}
+                          </button>
+                        );
+                      })}
+                    </div>
+                  ) : null}
+                </div>
               </div>
             );
           })}
