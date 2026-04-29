@@ -7,6 +7,8 @@
   display: grid;
   grid-template-rows: 38px 34px 1fr;
   overflow: hidden;
+  --playlist-side-inset: 8px;
+  --playlist-bar-width: 84px;
 }
 
 .playlist-toolbar {
@@ -261,10 +263,11 @@
   border-radius: inherit;
   pointer-events: none;
   z-index: 0;
+  opacity: var(--playlist-snap-visible, 0);
   background: repeating-linear-gradient(
     to right,
-    rgba(var(--playlist-snap-line-rgb), var(--playlist-snap-opacity)) 0,
-    rgba(var(--playlist-snap-line-rgb), var(--playlist-snap-opacity)) 1px,
+    var(--playlist-snap-line) 0,
+    var(--playlist-snap-line) 1px,
     transparent 1px,
     transparent var(--playlist-snap-width)
   );

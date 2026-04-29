@@ -131,13 +131,13 @@
 }
 
 .knob-wrap span {
-  color: var(--mixer-fx-name-text);
+  color: var(--mixer-knob-label-text);
   font-size: 8px;
   letter-spacing: 0.5px;
 }
 
 .knob-wrap > span:first-child {
-  color: var(--app-text-faint);
+  color: var(--mixer-knob-label-muted-text);
 }
 
 .mixer-knob {
@@ -155,16 +155,16 @@
   width: 6px;
   height: 14px;
   border-radius: 2px;
-  border: 1px solid #dbe0e9;
-  background: #141b27;
+  border: 1px solid var(--mixer-knob-pointer);
+  background: var(--mixer-knob-face-bg);
 }
 
 .mixer-knob::-moz-range-thumb {
   width: 6px;
   height: 14px;
   border-radius: 2px;
-  border: 1px solid #dbe0e9;
-  background: #141b27;
+  border: 1px solid var(--mixer-knob-pointer);
+  background: var(--mixer-knob-face-bg);
 }
 
 .fader-block {

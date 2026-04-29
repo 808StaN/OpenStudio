@@ -84,7 +84,10 @@ export default function Knob({ value, onChange, onReset, className, style }) {
     angle > 0.5 ? describeArc(0, angle, R) :
     angle < -0.5 ? describeArc(angle, 0, R) : ""
 
-  const arcColor = angle < -0.5 ? "#D85A30" : "#1D9E75"
+  const arcColor =
+    angle < -0.5
+      ? "var(--mixer-knob-arc-negative)"
+      : "var(--mixer-knob-arc-positive)"
 
   return (
     <div
@@ -108,7 +111,7 @@ export default function Knob({ value, onChange, onReset, className, style }) {
           cy="0"
           r={R}
           fill="none"
-          stroke="#232b33"
+          stroke="var(--mixer-knob-track)"
           strokeWidth="10"
           strokeLinecap="round"
         />
@@ -125,8 +128,8 @@ export default function Knob({ value, onChange, onReset, className, style }) {
           cx="0"
           cy="0"
           r="54"
-          fill="#11171d"
-          stroke="#232b33"
+          fill="var(--mixer-knob-face-bg)"
+          stroke="var(--mixer-knob-track)"
           strokeWidth="0.5"
         />
         <line
@@ -134,21 +137,21 @@ export default function Knob({ value, onChange, onReset, className, style }) {
           y1="0"
           x2={ix}
           y2={iy}
-          stroke="#d3d8d7"
+          stroke="var(--mixer-knob-pointer)"
           strokeWidth="2.5"
           strokeLinecap="round"
         />
-        <circle cx={ix} cy={iy} r="4" fill="#d3d8d7" />
+        <circle cx={ix} cy={iy} r="4" fill="var(--mixer-knob-pointer)" />
         <circle
           cx="0"
           cy="0"
           r="8"
-          fill="#07090c"
-          stroke="#232b33"
+          fill="var(--mixer-knob-center-bg)"
+          stroke="var(--mixer-knob-track)"
           strokeWidth="0.5"
         />
-        <circle cx="0" cy={-R} r="4" fill="#232b33" />
-        <circle cx="0" cy={R} r="3" fill="#2a3038" />
+        <circle cx="0" cy={-R} r="4" fill="var(--mixer-knob-track)" />
+        <circle cx="0" cy={R} r="3" fill="var(--mixer-knob-marker-muted)" />
       </svg>
     </div>
   )

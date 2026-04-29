@@ -345,7 +345,7 @@ export function PlaylistWindow() {
       style={{
         "--playlist-bar-width": barWidth + "px",
         "--playlist-snap-width": snapLineWidth + "px",
-        "--playlist-snap-opacity": String(snapLineOpacity),
+        "--playlist-snap-visible": snapLineOpacity > 0 ? "1" : "0",
       }}
     >
       <PlaylistTopControls
