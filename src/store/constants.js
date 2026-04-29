@@ -43,8 +43,7 @@ export const DEFAULT_MIDI_PITCH = 72;
 export const DEFAULT_NOTE_VELOCITY = 95;
 
 export const UI_THEME_DEFAULT = "default";
-export const UI_THEME_MIDNIGHT = "midnight";
-export const UI_THEMES = new Set([UI_THEME_DEFAULT, UI_THEME_MIDNIGHT]);
+export const UI_THEMES = new Set([UI_THEME_DEFAULT]);
 
 export const MAXIMIZER_MODES = ["irc-ll", "irc-i", "irc-ii", "irc-iii", "irc-iv"];
 

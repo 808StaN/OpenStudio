@@ -5,7 +5,6 @@ import { setTheme } from "../../store";
 
 const THEME_OPTIONS = [
   { value: "default", label: "Default" },
-  { value: "midnight", label: "Midnight" },
 ];
 
 export function ThemePicker() {

@@ -13,15 +13,6 @@ const THEME_OPTIONS = [
       { color: "#0d1a2a", pos: 100 },
     ],
   },
-  {
-    value: "midnight",
-    label: "Midnight",
-    preview: [
-      { color: "#18273c", pos: 0 },
-      { color: "#101b2d", pos: 50 },
-      { color: "#0b1728", pos: 100 },
-    ],
-  },
 ];
 
 /**

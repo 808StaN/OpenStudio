@@ -243,7 +243,15 @@
   background: var(--playlist-track-name-bg);
   padding-left: 8px;
   font-size: 13px;
-  font-weight: 700;
+  font-weight: 500;
+}
+
+.playlist-track:first-of-type .track-name {
+  border-top-left-radius: var(--app-radius-md);
+}
+
+.playlist-track:last-of-type .track-name {
+  border-bottom-left-radius: var(--app-radius-md);
 }
 
 .track-grid {
