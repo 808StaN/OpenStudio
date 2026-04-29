@@ -127,7 +127,7 @@
   border: 0;
   border-radius: var(--app-radius-sm);
   text-align: left;
-  color: var(--browser-tree-folder-text);
+  color: var(--browser-tree-text);
   background: transparent;
   cursor: pointer;
   font-weight: 600;
@@ -136,7 +136,7 @@
 
 .tree-folder:hover {
   color: var(--app-text);
-  background: var(--browser-tree-folder-hover-bg);
+  background: var(--browser-tree-hover-bg);
 }
 
 .plugin-folder {
@@ -145,13 +145,13 @@
 
 .plugin-folder:hover {
   color: var(--app-text);
-  background: var(--browser-tree-folder-hover-bg);
+  background: var(--browser-tree-hover-bg);
 }
 
 .caret {
   display: inline-block;
   width: 16px;
-  color: var(--browser-tree-folder-icon);
+  color: var(--browser-tree-icon);
 }
 
 .tree-children {
@@ -193,7 +193,7 @@
   margin-left: 16px;
   padding: 4px 7px;
   border-radius: var(--app-radius-sm);
-  color: var(--browser-tree-item-text);
+  color: var(--browser-tree-text);
   cursor: pointer;
   font-family: var(--font-mono);
   font-size: 12px;
@@ -205,11 +205,6 @@
 
 .plugin-item {
   cursor: grab;
-  color: var(--browser-plugin-text);
-}
-
-.plugin-item.effect-item {
-  color: var(--browser-effect-text);
 }
 
 .plugin-item:active {
@@ -217,13 +212,13 @@
 }
 
 .tree-item:hover {
-  color: var(--browser-tree-item-hover-text);
-  background: var(--browser-tree-item-hover-bg);
+  color: var(--browser-tree-hover-text);
+  background: var(--browser-tree-hover-bg);
 }
 
 .tree-folder-icon {
   flex: 0 0 auto;
-  color: var(--browser-tree-folder-icon);
+  color: var(--browser-tree-icon);
 }
 
 .plugin-folder .tree-folder-icon {

@@ -10,6 +10,7 @@
   --app-border-strong: rgba(163, 178, 190, 0.075);
   --app-accent: rgba(48, 255, 124, 0.75);
   --app-accent-strong: rgba(48, 255, 124, 0.75);
+  --app-accent-mid: rgba(48, 255, 124, 0.5);
   --app-accent-soft: rgba(61, 217, 118, 0.12);
   --app-accent-text: #061208;
   --slider-accent: var(--app-accent);
@@ -101,20 +102,16 @@
   --browser-tabs-border: var(--app-border);
   --browser-tab-text: #9aa5ad;
    /*--browser-tab-hover-bg: rgba(255, 255, 255, 0.025);*/
-  --browser-tab-hover-border: rgba(48, 255, 124, 0.50);
-  --browser-tab-hover-text: rgba(48, 255, 124, 0.50);
+  --browser-tab-hover-border: var(--app-accent-mid);
+  --browser-tab-hover-text:  var(--app-accent-mid);
   --browser-tab-active-text: var(--app-accent);
   --browser-tab-active-border: var(--app-accent);
   /*--browser-tab-active-bg: rgba(61, 217, 118, 0.06);*/
-  --browser-tree-folder-text: #dfe5df;
-  --browser-tree-folder-icon: #9aa5ad;
-  --browser-tree-folder-hover-bg: rgba(255, 255, 255, 0.04);
-  --browser-tree-item-text: #9aa5ad;
-  --browser-tree-item-hover-bg: rgba(255, 255, 255, 0.04);
-  --browser-tree-item-hover-text: #edf2ee;
-  --browser-plugin-text: #bcebc9;
+  --browser-tree-text: var(--app-text);
+  --browser-tree-icon: var(--app-accent);
+  --browser-tree-hover-bg: rgba(255, 255, 255, 0.04);
+  --browser-tree-hover-text: white;
   --browser-plugin-icon: var(--app-accent);
-  --browser-effect-text: #d9c17b;
   --browser-rescan-bg: #121820;
   --browser-rescan-border: var(--app-border);
   --browser-rescan-text: #edf2ee;
