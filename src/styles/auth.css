@@ -45,7 +45,7 @@
 .auth-dialog-close {
   width: 22px;
   height: 22px;
-  border-radius: var(--app-radius-sm);
+  border-radius: var(--auth-close-radius);
   border: 1px solid var(--auth-close-border);
   color: var(--auth-close-text);
   background: var(--auth-close-bg);

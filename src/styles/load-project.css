@@ -72,7 +72,7 @@
   gap: 8px;
   padding: 8px 10px;
   border: 1px solid transparent;
-  border-radius: 7px;
+  border-radius: var(--load-project-window-sidebar-item-radius);
   color: var(--load-project-window-sidebar-item-text);
   background: transparent;
   font-size: 12px;
@@ -87,6 +87,7 @@
 }
 
 .load-project-window-sidebar-item:hover {
+  border-radius: var(--load-project-window-sidebar-item-radius);
   background: var(--load-project-window-sidebar-item-hover-bg);
   color: var(--load-project-window-sidebar-item-hover-text);
 }
@@ -113,7 +114,7 @@
   padding: 0 10px;
   height: 32px;
   border: 1px solid var(--load-project-window-search-border);
-  border-radius: 7px;
+  border-radius: var(--load-project-window-search-radius);
   background: var(--load-project-window-search-bg);
   box-shadow: none;
   color: var(--load-project-window-search-text);

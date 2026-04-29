@@ -165,7 +165,7 @@
   width: 24px;
   height: 24px;
   border: 1px solid var(--titlebar-btn-border);
-  border-radius: 5px;
+  border-radius: var(--titlebar-btn-radius);
   background: var(--titlebar-btn-bg);
   color: var(--titlebar-btn-text);
   display: inline-flex;
@@ -180,9 +180,9 @@
 }
 
 .app-titlebar-control.close {
-  border-color: var(--app-border);
-  color: var(--app-text-muted);
-  background: var(--app-surface);
+  border-color: var(--titlebar-close-border);
+  color: var(--titlebar-close-text);
+  background: var(--titlebar-close-bg);
 }
 
 .app-titlebar-control:hover {
@@ -190,7 +190,7 @@
   filter: none;
   border-color: var(--titlebar-btn-hover-border);
   background: var(--titlebar-btn-hover-bg);
-  color: var(--app-text);
+  color: var(--titlebar-btn-hover-text);
 }
 
 .app-titlebar-control.close:hover {
@@ -487,7 +487,7 @@
 .window-control-btn {
   width: 22px;
   height: 22px;
-  border-radius: 5px;
+  border-radius: var(--window-control-btn-radius);
   border: 1px solid var(--titlebar-btn-border);
   color: var(--titlebar-btn-text);
   background: var(--titlebar-btn-bg);
@@ -501,13 +501,13 @@
 .window-control-btn:hover {
   border-color: var(--titlebar-btn-hover-border);
   background: var(--titlebar-btn-hover-bg);
-  color: var(--app-text);
+  color: var(--titlebar-btn-hover-text);
 }
 
 .window-control-btn.close {
-  border-color: var(--app-border);
-  color: var(--app-text-muted);
-  background: var(--app-surface);
+  border-color: var(--titlebar-close-border);
+  color: var(--titlebar-close-text);
+  background: var(--titlebar-close-bg);
 }
 
 .window-control-btn.close:hover {

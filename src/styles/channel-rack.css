@@ -47,7 +47,7 @@
   height: 30px;
   width: 138px;
   border: 1px solid var(--rack-pattern-picker-border);
-  border-radius: 6px;
+  border-radius: var(--rack-control-radius);
   background: var(--rack-pattern-picker-bg);
   display: inline-flex;
   align-items: center;
@@ -111,7 +111,7 @@
   max-height: 260px;
   overflow: auto;
   border: 1px solid var(--rack-context-menu-border);
-  border-radius: 8px;
+  border-radius: var(--rack-menu-radius);
   background: var(--rack-context-menu-bg);
   color: var(--rack-context-menu-text);
   box-shadow: var(--app-shadow-soft);
@@ -124,7 +124,7 @@
   min-width: 116px;
   box-sizing: border-box;
   border: 0;
-  border-radius: 6px;
+  border-radius: var(--rack-menu-item-radius);
   color: var(--app-text-muted);
   background: transparent;
   text-align: left;
@@ -134,8 +134,8 @@
 }
 
 .rack-modern-select-option:hover {
-  background: rgba(255, 255, 255, 0.04);
-  color: var(--app-text);
+  background: var(--rack-context-menu-item-hover-bg);
+  color: var(--rack-context-menu-item-hover-text);
 }
 
 .rack-modern-select-option.is-active {
@@ -177,7 +177,7 @@
   width: 30px;
   height: 30px;
   border: 1px solid var(--rack-add-btn-border);
-  border-radius: 6px;
+  border-radius: var(--rack-control-radius);
   color: var(--rack-add-btn-text);
   background: var(--rack-add-btn-bg);
   font-size: 19px;
@@ -240,7 +240,7 @@
 .pattern-length-control button {
   width: 26px;
   height: 26px;
-  border-radius: 5px;
+  border-radius: var(--rack-control-radius-sm);
   border: 1px solid var(--rack-pattern-length-btn-border);
   color: var(--rack-pattern-length-btn-text);
   background: var(--rack-pattern-length-btn-bg);
@@ -260,7 +260,7 @@
 .pattern-length-control input {
   width: 68px;
   height: 26px;
-  border-radius: 5px;
+  border-radius: var(--rack-control-radius-sm);
   border: 1px solid var(--rack-pattern-length-input-border);
   color: var(--rack-pattern-length-input-text);
   background: var(--rack-pattern-length-input-bg);
@@ -284,7 +284,7 @@
 .rack-channel-add {
   height: 28px;
   border: 1px solid var(--rack-add-btn-border);
-  border-radius: 6px;
+  border-radius: var(--rack-control-radius);
   color: var(--rack-add-btn-text);
   background: var(--rack-add-btn-bg);
   padding: 0 10px;
@@ -333,7 +333,7 @@
   gap: 4px;
   padding: 6px;
   border: 1px solid var(--rack-context-menu-border);
-  border-radius: 8px;
+  border-radius: var(--rack-menu-radius);
   background: var(--rack-context-menu-bg);
   box-shadow: var(--app-shadow-soft);
 }
@@ -341,7 +341,7 @@
 .rack-channel-context-menu button {
   width: 100%;
   border: 0;
-  border-radius: 6px;
+  border-radius: var(--rack-menu-item-radius);
   color: var(--rack-context-menu-text);
   background: transparent;
   text-align: left;
@@ -351,8 +351,8 @@
 }
 
 .rack-channel-context-menu button:hover:not(:disabled) {
-  background: rgba(255, 255, 255, 0.04);
-  color: var(--app-text);
+  background: var(--rack-context-menu-item-hover-bg);
+  color: var(--rack-context-menu-item-hover-text);
 }
 
 .rack-channel-context-menu button:disabled {
@@ -368,7 +368,7 @@
   gap: 6px;
   padding: 8px;
   border: 1px solid var(--rack-context-menu-border);
-  border-radius: 8px;
+  border-radius: var(--rack-menu-radius);
   background: var(--rack-context-menu-bg);
   box-shadow: var(--app-shadow-soft);
 }
@@ -376,7 +376,7 @@
 .rack-channel-rename-panel input {
   height: 30px;
   border: 1px solid var(--rack-context-menu-border);
-  border-radius: 6px;
+  border-radius: var(--rack-control-radius);
   color: var(--app-text);
   background: var(--rack-pattern-picker-bg);
   padding: 0 8px;
@@ -391,9 +391,9 @@
   flex: 1;
   height: 26px;
   border: 1px solid var(--rack-context-menu-border);
-  border-radius: 6px;
-  color: var(--app-text-muted);
-  background: #0f151b;
+  border-radius: var(--rack-control-radius);
+  color: var(--rack-rename-action-text);
+  background: var(--rack-rename-action-bg);
   cursor: pointer;
 }
 
@@ -404,7 +404,7 @@
 .small-toggle {
   width: 30px;
   height: 30px;
-  border-radius: 5px;
+  border-radius: var(--rack-control-radius-sm);
   border: 1px solid var(--toggle-border);
   color: var(--toggle-btn-text);
   background: var(--toggle-btn-bg);

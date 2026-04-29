@@ -56,8 +56,13 @@
   --titlebar-btn-bg: #11171d;
   --titlebar-btn-border: var(--app-border);
   --titlebar-btn-text: #9aa5ad;
+  --titlebar-btn-radius: 5px;
   --titlebar-btn-hover-bg: #172029;
   --titlebar-btn-hover-border: var(--app-border-strong);
+  --titlebar-btn-hover-text: var(--app-text);
+  --titlebar-close-bg: var(--app-surface);
+  --titlebar-close-border: var(--app-border);
+  --titlebar-close-text: var(--app-text-muted);
   --titlebar-close-hover-text: #ffdfe2;
   --titlebar-close-hover-border: var(--app-border-strong);
   --titlebar-close-hover-bg: #172029;
@@ -103,6 +108,7 @@
   --window-title-text: #edf2ee;
   --window-backdrop: rgba(0, 0, 0, 0.58);
   --window-shadow: 0 18px 35px rgba(0, 0, 0, 0.52), inset 0 1px 0 rgba(255, 255, 255, 0.08);
+  --window-control-btn-radius: var(--titlebar-btn-radius);
 
   /* =============================================
      BROWSER
@@ -188,6 +194,10 @@
   --rack-row-bg: #10161c;
   --rack-row-border: var(--app-border);
   --rack-row-radius: var(--app-radius-lg);
+  --rack-control-radius: var(--app-radius-md);
+  --rack-control-radius-sm: 5px;
+  --rack-menu-radius: var(--app-radius-lg);
+  --rack-menu-item-radius: var(--app-radius-md);
   --rack-pattern-picker-bg: #090d12;
   --rack-pattern-picker-border: var(--app-border);
   --rack-pattern-picker-text: var(--app-accent);
@@ -228,6 +238,10 @@
   --rack-context-menu-bg: #0d1319;
   --rack-context-menu-border: var(--app-border-strong);
   --rack-context-menu-text: #edf2ee;
+  --rack-context-menu-item-hover-bg: rgba(255, 255, 255, 0.04);
+  --rack-context-menu-item-hover-text: var(--app-text);
+  --rack-rename-action-bg: #0f151b;
+  --rack-rename-action-text: var(--app-text-muted);
 
   /* =============================================
      MIXER
@@ -309,20 +323,30 @@
   --piano-snap-trigger-bg: #111820;
   --piano-snap-trigger-hover-bg: #172029;
   --piano-snap-dropdown-bg: #0d1319;
+  --piano-velocity-resize-bg: rgb(15, 16, 17);
+  --piano-velocity-resize-border: rgba(0, 0, 0, 0.82);
+  --piano-velocity-resize-hover-filter: brightness(1.08);
+  --piano-keys-bg: linear-gradient(180deg, #1b2533 0%, #121a25 100%);
+  --piano-keys-header-bg: linear-gradient(180deg, #314052 0%, #273548 100%);
+  --piano-key-row-border: rgba(24, 34, 48, 0.65);
   --piano-key-white-bg: #c9ced8;
   --piano-key-white-text: #3d4452;
   --piano-key-black-bg: #0f151b;
   --piano-key-black-text: var(--app-text-muted);
   --piano-grid-bg: rgba(25, 26, 27, 1);
-  --piano-out-of-scale-row-bg: rgb(15, 16, 17, 1);
+  --piano-out-of-scale-row-bg: rgb(15, 16, 17);
   --piano-out-of-scale-row-opacity: 1;
   --piano-grid-header-bg: #10161c;
   --piano-grid-header-border: var(--app-border);
+  --piano-grid-header-text: var(--app-text-muted);
   --piano-grid-line: rgba(0, 0, 0, 0.50);
   --piano-grid-row-line: rgba(0, 0, 0, 0.12);
   --piano-note-bg: var(--app-accent);
   --piano-note-border: rgba(61, 217, 118, 0.38);
   --piano-note-text: #07140b;
+  --piano-note-radius: 3px;
+  --piano-note-resize-handle-bg: rgba(255, 255, 255, 0.35);
+  --piano-note-resize-handle-radius: 2px;
   --piano-note-selected-bg: var(--app-danger);
   --piano-note-selected-border: var(--app-danger);
   --piano-note-selected-text: #fff0f0;
@@ -385,6 +409,7 @@
   --auth-close-bg: #11171d;
   --auth-close-border: var(--app-border);
   --auth-close-text: var(--app-text-muted);
+  --auth-close-radius: var(--app-radius-sm);
   --auth-close-hover-bg: #172029;
   --auth-close-hover-border: var(--app-border-strong);
   --auth-close-hover-text: var(--app-text);
@@ -419,6 +444,7 @@
   --load-project-window-sidebar-bg: #0c1116;
   --load-project-window-sidebar-border: var(--app-border);
   --load-project-window-sidebar-item-text: var(--app-text-muted);
+  --load-project-window-sidebar-item-radius: var(--app-radius-md);
   --load-project-window-sidebar-item-hover-bg: rgba(255, 255, 255, 0.05);
   --load-project-window-sidebar-item-hover-text: var(--app-text);
   --load-project-window-sidebar-item-active-bg: var(--app-accent);
@@ -426,6 +452,7 @@
   --load-project-window-sidebar-item-active-text: var(--app-accent-text);
   --load-project-window-search-bg: #090d12;
   --load-project-window-search-border: var(--app-border);
+  --load-project-window-search-radius: var(--app-radius-md);
   --load-project-window-search-text: var(--app-text-muted);
   --load-project-window-search-input-text: var(--app-text);
   --load-project-window-search-placeholder: var(--app-text-faint);
