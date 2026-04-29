@@ -26,9 +26,9 @@
   height: 26px;
   min-width: 68px;
   border-radius: var(--app-radius-md);
-  border: 1px solid var(--app-border);
-  color: var(--app-text);
-  background: #121820;
+  border: 1px solid var(--pattern-list-add-btn-border);
+  color: var(--pattern-list-add-btn-text);
+  background: var(--pattern-list-add-btn-bg);
   box-shadow: none;
   text-shadow: none;
   cursor: pointer;
@@ -38,8 +38,8 @@
 
 .pattern-list-header button:hover {
   transform: none;
-  border-color: var(--app-border-strong);
-  background: #172029;
+  border-color: var(--pattern-list-add-btn-hover-border);
+  background: var(--pattern-list-add-btn-hover-bg);
   filter: none;
 }
 

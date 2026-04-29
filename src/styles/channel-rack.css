@@ -176,10 +176,10 @@
 .rack-pattern-add {
   width: 30px;
   height: 30px;
-  border: 1px solid var(--app-border-strong);
+  border: 1px solid var(--rack-add-btn-border);
   border-radius: 6px;
-  color: var(--app-text-muted);
-  background: #11171d;
+  color: var(--rack-add-btn-text);
+  background: var(--rack-add-btn-bg);
   font-size: 19px;
   line-height: 1;
   cursor: pointer;
@@ -187,8 +187,8 @@
 }
 
 .rack-pattern-add:hover {
-  color: var(--app-text);
-  background: #172029;
+  color: var(--rack-add-btn-hover-text);
+  background: var(--rack-add-btn-hover-bg);
 }
 
 .rack-topbar-controls {
@@ -200,7 +200,7 @@
 .rack-mode-toggle {
   display: inline-flex;
   border: 1px solid var(--toggle-border);
-  border-radius: 7px;
+  border-radius: var(--toggle-border-radius);
   overflow: hidden;
 }
 
@@ -252,18 +252,18 @@
 }
 
 .pattern-length-control button:hover {
-  color: var(--app-text);
-  border-color: rgba(61, 217, 118, 0.36);
-  background: #151d25;
+  color: var(--rack-pattern-length-btn-hover-text);
+  border-color: var(--rack-pattern-length-btn-hover-border);
+  background: var(--rack-pattern-length-btn-hover-bg);
 }
 
 .pattern-length-control input {
   width: 68px;
   height: 26px;
   border-radius: 5px;
-  border: 1px solid var(--rack-pattern-picker-border);
-  color: var(--app-text);
-  background: var(--rack-pattern-picker-bg);
+  border: 1px solid var(--rack-pattern-length-input-border);
+  color: var(--rack-pattern-length-input-text);
+  background: var(--rack-pattern-length-input-bg);
   text-align: center;
   font-family: var(--font-mono);
   appearance: textfield;
@@ -278,15 +278,15 @@
 }
 
 .pattern-length-control small {
-  color: var(--app-text-faint);
+  color: var(--rack-pattern-length-unit-text);
 }
 
 .rack-channel-add {
   height: 28px;
-  border: 1px solid var(--app-border-strong);
+  border: 1px solid var(--rack-add-btn-border);
   border-radius: 6px;
-  color: var(--app-text-muted);
-  background: #11171d;
+  color: var(--rack-add-btn-text);
+  background: var(--rack-add-btn-bg);
   padding: 0 10px;
   font-size: 12px;
   font-weight: 600;
@@ -295,8 +295,8 @@
 }
 
 .rack-channel-add:hover {
-  color: var(--app-text);
-  background: #172029;
+  color: var(--rack-add-btn-hover-text);
+  background: var(--rack-add-btn-hover-bg);
 }
 
 .rack-row {

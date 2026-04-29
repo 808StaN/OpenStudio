@@ -546,8 +546,8 @@
   left: 0;
   right: 0;
   pointer-events: none;
-  background: var(--piano-scale-row-bg);
-  opacity: var(--piano-scale-row-opacity, 1);
+  background: var(--piano-out-of-scale-row-bg);
+  opacity: var(--piano-out-of-scale-row-opacity, 1);
   z-index: 0;
 }
 

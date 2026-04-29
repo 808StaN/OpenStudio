@@ -375,7 +375,7 @@
 .mode-toggle {
   display: inline-flex;
   overflow: hidden;
-  border-radius: 8px;
+  border-radius: var(--toggle-border-radius);
   border: 1px solid var(--toggle-border);
   padding: 0;
   gap: 0;

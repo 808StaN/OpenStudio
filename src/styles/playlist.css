@@ -59,7 +59,7 @@
 .playlist-loop-toggle-inner {
   display: inline-flex;
   overflow: hidden;
-  border-radius: var(--app-radius-sm);
+  border-radius: var(--toggle-border-radius);
   border: 1px solid var(--toggle-border);
   background: var(--toggle-bg);
 }

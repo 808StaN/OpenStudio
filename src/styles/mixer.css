@@ -339,11 +339,11 @@
 
 .mixer-track-add {
   height: 24px;
-  border: 1px solid var(--app-border);
+  border: 1px solid var(--mixer-add-insert-btn-border);
   border-radius: var(--app-radius-sm);
   padding: 0 8px;
-  color: var(--app-text);
-  background: #121820;
+  color: var(--mixer-add-insert-btn-text);
+  background: var(--mixer-add-insert-btn-bg);
   font-size: 11px;
   font-weight: 600;
   cursor: pointer;
@@ -354,8 +354,8 @@
 .mixer-track-add:hover {
   transform: none;
   filter: none;
-  border-color: var(--app-border-strong);
-  background: #172029;
+  border-color: var(--mixer-add-insert-btn-hover-border);
+  background: var(--mixer-add-insert-btn-hover-bg);
 }
 
 .fx-list {
