@@ -91,12 +91,19 @@ export function usePlaylistClipVisualModel({
     "clip" + (isActivePattern ? " is-active" : "") + (isAudioClip ? " is-audio" : "");
   const clipStyle = {
     borderColor: withAlpha(clipColor, 0.9),
+    background: isAudioClip
+      ? undefined
+      : "linear-gradient(180deg, " +
+        withAlpha(clipColor, isActivePattern ? 0.24 : 0.21) +
+        " 0%, " +
+        withAlpha(clipColor, isActivePattern ? 0.15 : 0.13) +
+        " 100%)",
     boxShadow: isActivePattern
       ? "inset 0 0 0 1px " +
         withAlpha(clipColor, 0.8) +
-        ", inset 0 1px 0 rgba(255, 255, 255, 0.32), 0 0 10px " +
+        ", inset 0 1px 0 rgba(255, 255, 255, 0.22), inset 0 0 0 999px rgba(0, 0, 0, 0.06), 0 0 10px " +
         withAlpha(clipColor, 0.34)
-      : "inset 0 1px 0 rgba(255, 255, 255, 0.2), 0 0 8px " +
+      : "inset 0 1px 0 rgba(255, 255, 255, 0.14), inset 0 0 0 999px rgba(0, 0, 0, 0.08), 0 0 8px " +
         withAlpha(clipColor, 0.24),
     left: "calc(" + ((clip.barStart - 1) / playlistBarCount) * 100 + "% + 0.5px)",
     width: "calc(" + (clip.barLength / playlistBarCount) * 100 + "% - 1px)",

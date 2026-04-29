@@ -304,8 +304,8 @@
 
 .clip {
   position: absolute;
-  top: 4px;
-  bottom: 4px;
+  top: 1px;
+  bottom: 1px;
   border-radius: var(--app-radius-sm);
   border: 1px solid var(--playlist-clip-border);
   color: var(--playlist-clip-text);
@@ -386,11 +386,7 @@
   width: 10px;
   border: 0;
   border-radius: 2px;
-  background: linear-gradient(
-    90deg,
-    rgba(255, 255, 255, 0) 0%,
-    rgba(255, 255, 255, 0.08) 100%
-  );
+  background: transparent;
   cursor: ew-resize;
 }
 
@@ -402,11 +398,7 @@
   width: 10px;
   border: 0;
   border-radius: 2px;
-  background: linear-gradient(
-    270deg,
-    rgba(255, 255, 255, 0) 0%,
-    rgba(255, 255, 255, 0.08) 100%
-  );
+  background: transparent;
   cursor: ew-resize;
 }
 
