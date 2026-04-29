@@ -373,15 +373,6 @@
   --cloud-btn-danger-border: var(--app-danger);
 
   /* =============================================
-     USER MENU
-     ============================================= */
-  --user-menu-bg: #0d1319;
-  --user-menu-border: var(--app-border);
-  --user-menu-item-text: var(--app-text-muted);
-  --user-menu-item-hover-bg: rgba(90, 200, 255, 0.1);
-  --user-menu-item-hover-text: var(--app-info);
-
-  /* =============================================
      PROJECT LOAD / SAVE
      ============================================= */
   --project-sidebar-bg: #0c1116;
