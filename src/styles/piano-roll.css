@@ -468,7 +468,7 @@
   --row-height: 20px;
   --snap-width: 24px;
   --snap-opacity: 0;
-  --grid-line-width: 1.5px;
+  --grid-line-width: 1px;
   background:
     repeating-linear-gradient(
       to right,
@@ -479,8 +479,8 @@
     ),
     repeating-linear-gradient(
       to bottom,
-      var(--piano-grid-line) 0,
-      var(--piano-grid-line) var(--grid-line-width),
+      var(--piano-grid-row-line) 0,
+      var(--piano-grid-row-line) var(--grid-line-width),
       transparent var(--grid-line-width),
       transparent var(--row-height)
     ),
@@ -503,8 +503,8 @@
     ),
     repeating-linear-gradient(
       to bottom,
-      var(--piano-grid-line) 0,
-      var(--piano-grid-line) var(--grid-line-width),
+      var(--piano-grid-row-line) 0,
+      var(--piano-grid-row-line) var(--grid-line-width),
       transparent var(--grid-line-width),
       transparent var(--row-height)
     );
@@ -514,7 +514,7 @@
   position: absolute;
   top: 0;
   bottom: 0;
-  width: 1.5px;
+  width: 2px;
   background: var(--piano-grid-line);
   pointer-events: none;
   z-index: 1;

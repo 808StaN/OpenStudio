@@ -288,7 +288,8 @@
   --piano-scale-row-opacity: 1;
   --piano-grid-header-bg: #10161c;
   --piano-grid-header-border: var(--app-border);
-  --piano-grid-line: rgba(0, 0, 0, 0.82);
+  --piano-grid-line: rgba(0, 0, 0, 0.50);
+  --piano-grid-row-line: rgba(0, 0, 0, 0.12);
   --piano-note-bg: var(--app-accent);
   --piano-note-border: rgba(61, 217, 118, 0.38);
   --piano-note-text: #07140b;
