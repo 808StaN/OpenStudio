@@ -11,14 +11,26 @@ import { clamp } from "../../store/utils";
 import { setInsertMeter } from "../../store";
 import { getActiveFxState } from "./getActiveFxState";
 
-const MIXER_METER_RMS_GAIN = 4.2;
-const MIXER_METER_PEAK_GAIN = 1.9;
 const MIXER_METER_NOISE_GATE = 0.0016;
-const MIXER_METER_RESPONSE_CURVE = 0.5;
 const MIXER_METER_DECAY = 0.9;
+const MIXER_METER_MIN_DB = -48;
+const MIXER_METER_MAX_DB = 0;
+const MIXER_METER_RMS_HEADROOM_DB = 6;
 const EQ_SPECTRUM_BINS = 112;
 const EQ_SPECTRUM_MIN_FREQ = 20;
 const EQ_SPECTRUM_MAX_FREQ = 20000;
+
+function amplitudeToDb(value) {
+  return 20 * Math.log10(Math.max(Number(value || 0), 0.0001));
+}
+
+function normalizeMeterDb(db) {
+  return clamp(
+    (db - MIXER_METER_MIN_DB) / (MIXER_METER_MAX_DB - MIXER_METER_MIN_DB),
+    0,
+    1,
+  );
+}
 
 /**
  * Converts raw ByteFrequencyData into a log-spaced, smoothed spectrum
@@ -153,29 +165,26 @@ export function useMixerMeters(
     }
 
     graph.inserts.forEach(function (node, insertId) {
-      node.analyser.getByteTimeDomainData(node.meterData);
+      node.analyser.getFloatTimeDomainData(node.meterData);
 
       let squareSum = 0;
       let peak = 0;
       for (let i = 0; i < node.meterData.length; i += 1) {
-        const centered = (node.meterData[i] - 128) / 128;
-        squareSum += centered * centered;
+        const sample = Number(node.meterData[i] || 0);
+        squareSum += sample * sample;
 
-        const absolute = Math.abs(centered);
+        const absolute = Math.abs(sample);
         if (absolute > peak) {
           peak = absolute;
         }
       }
 
       const rms = Math.sqrt(squareSum / node.meterData.length);
-      const blended = Math.max(
-        rms * MIXER_METER_RMS_GAIN,
-        peak * MIXER_METER_PEAK_GAIN,
-      );
-      const gated = blended < MIXER_METER_NOISE_GATE ? 0 : blended;
-      const instantMeter = Math.min(
-        1,
-        Math.pow(gated, MIXER_METER_RESPONSE_CURVE),
+      const gatedPeak = peak < MIXER_METER_NOISE_GATE ? 0 : peak;
+      const gatedRms = rms < MIXER_METER_NOISE_GATE ? 0 : rms;
+      const instantMeter = Math.max(
+        normalizeMeterDb(amplitudeToDb(gatedPeak)),
+        normalizeMeterDb(amplitudeToDb(gatedRms) + MIXER_METER_RMS_HEADROOM_DB),
       );
       node.meterLevel = Math.max(
         instantMeter,

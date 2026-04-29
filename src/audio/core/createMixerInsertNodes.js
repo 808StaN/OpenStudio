@@ -329,7 +329,7 @@ export function createMixerInsertNodes(audioCtx, mixerInserts, options = {}) {
         maximizerOutLeftAnalyser,
         maximizerOutRightAnalyser,
         maximizerAnalyser,
-        meterData: new Uint8Array(analyser.fftSize),
+        meterData: new Float32Array(analyser.fftSize),
         spectrumData: new Uint8Array(analyser.frequencyBinCount),
         maximizerMeterWaveform: new Uint8Array(maximizerAnalyser.fftSize),
         maximizerPreWaveform: new Uint8Array(maximizerPreAnalyser.fftSize),

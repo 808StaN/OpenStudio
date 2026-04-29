@@ -276,11 +276,11 @@
   box-shadow: none;
 }
 
-.meter-seg.is-on:nth-last-child(-n + 3) {
+.meter-seg.is-on:nth-child(-n + 3) {
   background: var(--mixer-meter-seg-warning-bg);
 }
 
-.meter-seg.is-on:nth-last-child(-n + 1) {
+.meter-seg.is-on:nth-child(-n + 1) {
   background: var(--mixer-meter-seg-danger-bg);
 }
 
