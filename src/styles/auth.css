@@ -210,7 +210,7 @@
   height: 5px;
   border-left: 2px solid var(--auth-submit-text);
   border-bottom: 2px solid var(--auth-submit-text);
-  transform: rotate(-45deg) translateY(-1px);
+  transform: rotate(-55deg) translateY(-1px);
   display: block;
 }
 
