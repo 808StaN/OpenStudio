@@ -32,7 +32,6 @@ export const ChannelRackInsertSelect = memo(function ChannelRackInsertSelect({
           <span className="rack-modern-select-value">
             {insertLabelById[channelMixerInsertId] || "Insert 1"}
           </span>
-          <span className="rack-modern-select-caret">v</span>
         </button>
         {isOpen ? (
           <div className="rack-modern-select-dropdown">

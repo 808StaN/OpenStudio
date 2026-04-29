@@ -299,8 +299,8 @@
   box-shadow: none;
   padding: 8px;
   display: grid;
-  grid-template-columns: 470px auto;
-  gap: 0;
+  grid-template-columns: max-content auto;
+  gap: 10px;
   width: max-content;
   min-width: 100%;
 }
@@ -509,8 +509,9 @@
   height: 34px;
   border: 1px solid var(--rack-channel-name-border);
   border-radius: 6px;
-  min-width: 108px;
-  max-width: 108px;
+  width: 100px;
+  min-width: 100px;
+  max-width: 100px;
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
@@ -518,7 +519,7 @@
   background: var(--rack-channel-name-bg);
   box-shadow: none;
   cursor: pointer;
-  font-weight: 700;
+  font-weight: 400;
 }
 
 .channel-insert {
@@ -528,7 +529,9 @@
 
 .channel-insert-select {
   height: 34px;
-  min-width: 120px;
+  width: 100px;
+  min-width: 100px;
+  max-width: 100px;
   border-radius: 6px;
   border: 1px solid var(--rack-insert-border);
   color: var(--rack-insert-text);
@@ -539,6 +542,11 @@
     border-color 120ms ease,
     box-shadow 120ms ease,
     filter 120ms ease;
+}
+
+.channel-insert-select .rack-modern-select-trigger {
+  justify-content: center;
+  padding: 0 8px;
 }
 
 .channel-insert-select .rack-modern-select-dropdown {
@@ -587,7 +595,7 @@
   display: flex;
   align-items: center;
   min-width: 0;
-  margin-left: -6px;
+  margin-left: 0;
 }
 
 .rack-input-steps {
