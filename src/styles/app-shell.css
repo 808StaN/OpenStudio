@@ -454,16 +454,18 @@
   inset: 0;
   pointer-events: none;
   background:
-    radial-gradient(circle at 16% 0%, #1d2e3b 0%, #111925 32%, #0a0f15 100%),
-    repeating-linear-gradient(
-      to right,
-      rgba(255, 255, 255, 0.03) 0,
-      rgba(255, 255, 255, 0.03) 1px,
-      transparent 1px,
-      transparent 64px
-    );
-  opacity: 0.75;
+    repeating-linear-gradient(to right, rgba(255,255,255,0.022) 0, rgba(255,255,255,0.022) 1px, transparent 1px, transparent 48px),
+    repeating-linear-gradient(to bottom, rgba(255,255,255,0.022) 0, rgba(255,255,255,0.022) 1px, transparent 1px, transparent 48px),
+    radial-gradient(ellipse 80% 50% at 50% 100%, rgba(0,230,118,0.10) 0%, transparent 70%),
+    
+    #0B0F14;
 }
+
+
+
+
+
+
 
 /* Window frame ----------------------------------------------------------- */
 
