@@ -4,7 +4,7 @@
   flex-direction: column;
   gap: 10px;
   padding: 8px;
-  border: 1px solid var(--render-border);
+  border: 0;
   border-radius: var(--app-radius-lg);
   background: var(--render-bg);
   box-shadow: none;
