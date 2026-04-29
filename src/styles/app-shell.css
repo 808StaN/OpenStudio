@@ -47,7 +47,8 @@
 .mixer-left,
 .sample-settings-panel,
 .cloud-projects-body,
-.project-table-body {
+.project-table-body,
+.load-project-window-table-body {
   scrollbar-width: thin;
   scrollbar-color: var(--scrollbar-thumb-bg) var(--scrollbar-track-bg);
 }
@@ -60,7 +61,8 @@
 .mixer-left::-webkit-scrollbar,
 .sample-settings-panel::-webkit-scrollbar,
 .cloud-projects-body::-webkit-scrollbar,
-.project-table-body::-webkit-scrollbar {
+.project-table-body::-webkit-scrollbar,
+.load-project-window-table-body::-webkit-scrollbar {
   width: 10px;
   height: 10px;
 }
@@ -73,7 +75,8 @@
 .mixer-left::-webkit-scrollbar-track,
 .sample-settings-panel::-webkit-scrollbar-track,
 .cloud-projects-body::-webkit-scrollbar-track,
-.project-table-body::-webkit-scrollbar-track {
+.project-table-body::-webkit-scrollbar-track,
+.load-project-window-table-body::-webkit-scrollbar-track {
   background: var(--scrollbar-track-bg);
   border: 1px solid var(--scrollbar-track-border);
   border-radius: 999px;
@@ -88,7 +91,8 @@
 .mixer-left::-webkit-scrollbar-thumb,
 .sample-settings-panel::-webkit-scrollbar-thumb,
 .cloud-projects-body::-webkit-scrollbar-thumb,
-.project-table-body::-webkit-scrollbar-thumb {
+.project-table-body::-webkit-scrollbar-thumb,
+.load-project-window-table-body::-webkit-scrollbar-thumb {
   border-radius: 999px;
   border: 2px solid var(--scrollbar-thumb-border);
   background: var(--scrollbar-thumb-bg);
@@ -103,13 +107,15 @@
 .mixer-left::-webkit-scrollbar-thumb:hover,
 .sample-settings-panel::-webkit-scrollbar-thumb:hover,
 .cloud-projects-body::-webkit-scrollbar-thumb:hover,
-.project-table-body::-webkit-scrollbar-thumb:hover {
+.project-table-body::-webkit-scrollbar-thumb:hover,
+.load-project-window-table-body::-webkit-scrollbar-thumb:hover {
   filter: brightness(1.08);
 }
 
 .sample-settings-panel::-webkit-scrollbar-corner,
 .cloud-projects-body::-webkit-scrollbar-corner,
-.project-table-body::-webkit-scrollbar-corner {
+.project-table-body::-webkit-scrollbar-corner,
+.load-project-window-table-body::-webkit-scrollbar-corner {
   background: var(--scrollbar-track-bg);
 }
 

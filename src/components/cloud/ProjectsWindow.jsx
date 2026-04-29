@@ -219,7 +219,8 @@ export function ProjectsWindow({ onClose, onLoadLocal }) {
     return (
       <button
         className={
-          "project-table-header-cell" + (isActive ? " is-active" : "")
+          "load-project-window-table-header-cell" +
+          (isActive ? " is-active" : "")
         }
         onClick={function () {
           handleSort(column);
@@ -228,9 +229,9 @@ export function ProjectsWindow({ onClose, onLoadLocal }) {
         <span>{label}</span>
         <ArrowUpDown
           size={12}
-          className={
-            "project-sort-icon" + (isActive ? " is-active" : "")
-          }
+            className={
+              "load-project-window-sort-icon" + (isActive ? " is-active" : "")
+            }
           style={{
             transform:
               isActive && sortDirection === "desc"
@@ -243,10 +244,10 @@ export function ProjectsWindow({ onClose, onLoadLocal }) {
   }
 
   return (
-    <div className="cloud-projects-overlay">
-      <div className="cloud-projects-window">
+    <div className="load-project-window-overlay">
+      <div className="load-project-window-shell">
         {/* Header */}
-        <header className="cloud-projects-header">
+        <header className="load-project-window-header">
           <h3>Load Project</h3>
           <button className="auth-dialog-close" onClick={onClose} aria-label="Close">
             ×
@@ -254,11 +255,11 @@ export function ProjectsWindow({ onClose, onLoadLocal }) {
         </header>
 
         {/* Main 3-column body */}
-        <div className="project-window-body">
+        <div className="load-project-window-body">
           {/* Left sidebar */}
-          <aside className="project-sidebar">
+          <aside className="load-project-window-sidebar">
             <button
-              className="project-sidebar-item is-active"
+              className="load-project-window-sidebar-item is-active"
               onClick={function () {
                 // Already on cloud view; could refresh if needed
               }}
@@ -267,7 +268,7 @@ export function ProjectsWindow({ onClose, onLoadLocal }) {
               My Projects
             </button>
             <button
-              className="project-sidebar-item"
+              className="load-project-window-sidebar-item"
               onClick={handleLocalFileClick}
             >
               <FolderOpen size={16} />
@@ -276,9 +277,9 @@ export function ProjectsWindow({ onClose, onLoadLocal }) {
           </aside>
 
           {/* Center panel */}
-          <div className="project-center">
+          <div className="load-project-window-center">
             {/* Search bar */}
-            <div className="project-search-bar">
+            <div className="load-project-window-search-bar">
               <Search size={14} />
               <input
                 type="text"
@@ -298,18 +299,18 @@ export function ProjectsWindow({ onClose, onLoadLocal }) {
             ) : null}
 
             {/* Project table */}
-            <div className="project-table-wrapper">
-              <div className="project-table-header">
+            <div className="load-project-window-table-wrapper">
+              <div className="load-project-window-table-header">
                 <SortHeader label="Name" column="name" />
                 <SortHeader label="BPM" column="bpm" />
                 <SortHeader label="Last edited" column="date" />
               </div>
 
-              <div className="project-table-body">
+              <div className="load-project-window-table-body">
                 {isLoading && projects.length === 0 ? (
-                  <p className="cloud-projects-empty">Loading cloud projects...</p>
+                  <p className="load-project-window-empty">Loading cloud projects...</p>
                 ) : filteredProjects.length === 0 ? (
-                  <p className="cloud-projects-empty">
+                  <p className="load-project-window-empty">
                     {searchQuery.trim()
                       ? "No projects match your search."
                       : "No cloud projects yet."}
@@ -320,7 +321,7 @@ export function ProjectsWindow({ onClose, onLoadLocal }) {
                       <div
                         key={project.id}
                         className={
-                          "project-table-row" +
+                          "load-project-window-table-row" +
                           (selectedId === project.id ? " is-selected" : "")
                         }
                         onClick={function () {
@@ -328,13 +329,13 @@ export function ProjectsWindow({ onClose, onLoadLocal }) {
                         }}
                         onDoubleClick={handleLoad}
                       >
-                        <span className="project-table-cell name">
+                        <span className="load-project-window-table-cell name">
                           {project.name}
                         </span>
-                        <span className="project-table-cell bpm">
+                        <span className="load-project-window-table-cell bpm">
                           {project.bpm} BPM
                         </span>
-                        <span className="project-table-cell date">
+                        <span className="load-project-window-table-cell date">
                           {new Date(project.updated_at).toLocaleString()}
                         </span>
                       </div>
@@ -345,8 +346,8 @@ export function ProjectsWindow({ onClose, onLoadLocal }) {
             </div>
 
             {/* Table footer */}
-            <div className="project-table-footer">
-              <span className="project-count">
+            <div className="load-project-window-table-footer">
+              <span className="load-project-window-count">
                 {filteredProjects.length} projects
               </span>
             </div>
@@ -354,9 +355,9 @@ export function ProjectsWindow({ onClose, onLoadLocal }) {
         </div>
 
         {/* Bottom action bar */}
-        <footer className="project-actions-bar">
+        <footer className="load-project-window-actions-bar">
           <button
-            className="project-action-btn primary"
+            className="load-project-window-action-btn primary"
             onClick={handleLoad}
             disabled={!selectedId || isLoading}
           >
@@ -364,7 +365,7 @@ export function ProjectsWindow({ onClose, onLoadLocal }) {
             Open Selected
           </button>
           <button
-            className="project-action-btn danger"
+            className="load-project-window-action-btn danger"
             onClick={handleDelete}
             disabled={!selectedId || isLoading}
           >
