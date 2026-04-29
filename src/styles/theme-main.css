@@ -3,6 +3,7 @@
      GLOBAL / APP SHELL
      ============================================= */
   --app-bg: #07090c;
+  --app-surface: #11171d;
   --app-text: #edf2ee;
   --app-text-muted: #9aa5ad;
   --app-text-faint: #606b73;
@@ -27,6 +28,9 @@
   --app-danger-bg: rgba(82, 28, 35, 0.86);
   --app-warning: #d7a94b;
   --app-info: #5ac8ff;
+  --font-main: "Rajdhani", "Segoe UI", sans-serif;
+  --font-mono: "Share Tech Mono", Consolas, monospace;
+  --digits: 3;
   --app-radius-lg: 8px;
   --app-radius-md: 6px;
   --app-radius-sm: 4px;
@@ -139,16 +143,33 @@
   --playlist-track-name-bg: #11171d;
   --playlist-track-name-border: var(--app-border);
   --playlist-track-name-text: #edf2ee;
+  --playlist-track-divider-border: rgba(163, 178, 190, 0.08);
   --playlist-track-grid-bg: #090e13;
   --playlist-track-grid-border: var(--app-border);
+  --playlist-length-input-bg: #090d12;
+  --playlist-side-inset: 8px;
+  --playlist-bar-width: 84px;
+  --playlist-snap-line-rgb: 154, 207, 255;
+  --playlist-snap-opacity: 0;
+  --playlist-snap-width: 1px;
+  --playlist-grid-major-line: rgba(126, 148, 179, 0.45);
   --playlist-clip-border: rgba(61, 217, 118, 0.38);
   --playlist-clip-bg: rgba(61, 217, 118, 0.12);
   --playlist-clip-text: #edf2ee;
   --playlist-clip-active-border: rgba(61, 217, 118, 0.7);
   --playlist-clip-active-bg: rgba(61, 217, 118, 0.18);
   --playlist-clip-label-bg: rgba(7, 9, 12, 0.5);
+  --playlist-audio-preview-top: rgba(74, 126, 182, 0.34);
+  --playlist-audio-preview-bottom: rgba(34, 71, 116, 0.18);
+  --playlist-audio-clip-top: rgba(169, 205, 242, 0.22);
+  --playlist-audio-clip-bottom: rgba(98, 146, 201, 0.16);
+  --playlist-mini-note-top: #7effbf;
+  --playlist-mini-note-bottom: #2ad877;
+  --playlist-mini-note-glow: rgba(65, 235, 145, 0.36);
+  --playlist-mini-note-highlight: rgba(229, 255, 243, 0.45);
   --playlist-wave-fill: rgba(61, 217, 118, 0.34);
   --playlist-wave-stroke: rgba(164, 220, 172, 0.66);
+  --playlist-wave-shadow: rgba(125, 194, 255, 0.26);
   --playlist-playhead: var(--app-accent);
   --playlist-drop-border: rgba(101, 164, 215, 0.48);
   --playlist-preview-border: rgba(134, 226, 255, 0.86);

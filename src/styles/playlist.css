@@ -1,5 +1,4 @@
 .playlist-shell {
-  --playlist-side-inset: 8px;
   width: 100%;
   height: 100%;
   border: 1px solid var(--playlist-border);
@@ -94,7 +93,7 @@
   height: 28px;
   border-radius: var(--app-radius-sm);
   border: 1px solid var(--app-border);
-  background: #090d12;
+  background: var(--playlist-length-input-bg);
   color: var(--app-text);
   font-size: 11px;
   text-align: center;
@@ -229,7 +228,7 @@
 
 .playlist-track + .playlist-track .track-name,
 .playlist-track + .playlist-track .track-grid {
-  border-top: 1px solid rgba(163, 178, 190, 0.08);
+  border-top: 1px solid var(--playlist-track-divider-border);
 }
 
 .track-name {
@@ -264,10 +263,10 @@
   z-index: 0;
   background: repeating-linear-gradient(
     to right,
-    rgba(154, 207, 255, var(--playlist-snap-opacity, 0)) 0,
-    rgba(154, 207, 255, var(--playlist-snap-opacity, 0)) 1px,
+    rgba(var(--playlist-snap-line-rgb), var(--playlist-snap-opacity)) 0,
+    rgba(var(--playlist-snap-line-rgb), var(--playlist-snap-opacity)) 1px,
     transparent 1px,
-    transparent var(--playlist-snap-width, 1px)
+    transparent var(--playlist-snap-width)
   );
 }
 
@@ -280,10 +279,10 @@
   z-index: 0;
   background: repeating-linear-gradient(
     to right,
-    rgba(126, 148, 179, 0.45) 0,
-    rgba(126, 148, 179, 0.45) 2px,
+    var(--playlist-grid-major-line) 0,
+    var(--playlist-grid-major-line) 2px,
     transparent 2px,
-    transparent var(--playlist-bar-width, 84px)
+    transparent var(--playlist-bar-width)
   );
 }
 
@@ -338,8 +337,8 @@
   overflow: hidden;
   background: linear-gradient(
     180deg,
-    rgba(74, 126, 182, 0.34) 0%,
-    rgba(34, 71, 116, 0.18) 100%
+    var(--playlist-audio-preview-top) 0%,
+    var(--playlist-audio-preview-bottom) 100%
   );
 }
 
@@ -354,7 +353,7 @@
   stroke: var(--playlist-wave-stroke);
   stroke-width: 0.35;
   vector-effect: non-scaling-stroke;
-  filter: drop-shadow(0 0 4px rgba(125, 194, 255, 0.26));
+  filter: drop-shadow(0 0 4px var(--playlist-wave-shadow));
 }
 
 .clip-mini-note {
@@ -362,10 +361,14 @@
   height: 4px;
   transform: translateY(-50%);
   border-radius: 2px;
-  background: linear-gradient(180deg, #7effbf 0%, #2ad877 100%);
+  background: linear-gradient(
+    180deg,
+    var(--playlist-mini-note-top) 0%,
+    var(--playlist-mini-note-bottom) 100%
+  );
   box-shadow:
-    0 0 5px rgba(65, 235, 145, 0.36),
-    inset 0 1px 0 rgba(229, 255, 243, 0.45);
+    0 0 5px var(--playlist-mini-note-glow),
+    inset 0 1px 0 var(--playlist-mini-note-highlight);
   opacity: 0.82;
   pointer-events: none;
 }
@@ -417,7 +420,7 @@
 .clip.is-audio {
   background: linear-gradient(
     180deg,
-    rgba(169, 205, 242, 0.22) 0%,
-    rgba(98, 146, 201, 0.16) 100%
+    var(--playlist-audio-clip-top) 0%,
+    var(--playlist-audio-clip-bottom) 100%
   );
 }
