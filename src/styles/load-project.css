@@ -13,15 +13,15 @@
 }
 
 .load-project-window-shell {
-  border: 1px solid var(--cloud-border);
+  border: 1px solid var(--project-window-border);
   border-radius: var(--app-radius-lg);
   width: 520px;
   max-width: 90vw;
   height: 560px;
   max-height: 90vh;
   padding: 0;
-  color: var(--cloud-header-text);
-  background: var(--cloud-bg);
+  color: var(--project-window-header-text);
+  background: var(--project-window-bg);
   box-shadow: var(--app-shadow);
   overflow: hidden;
   font-family: "Rajdhani", "Segoe UI", sans-serif;
@@ -35,8 +35,8 @@
   align-items: center;
   height: 40px;
   padding: 0 16px;
-  border-bottom: 1px solid var(--cloud-header-border);
-  background: var(--cloud-header-bg);
+  border-bottom: 1px solid var(--project-window-header-border);
+  background: var(--project-window-header-bg);
   flex-shrink: 0;
 }
 
@@ -44,7 +44,7 @@
   margin: 0;
   font-size: 15px;
   font-weight: 700;
-  color: var(--cloud-header-text);
+  color: var(--project-window-header-text);
   letter-spacing: 0.4px;
 }
 
@@ -214,7 +214,7 @@
 
 .load-project-window-empty {
   text-align: center;
-  color: var(--cloud-empty-text);
+  color: var(--project-window-empty-text);
   font-size: 13px;
   padding: 24px;
 }

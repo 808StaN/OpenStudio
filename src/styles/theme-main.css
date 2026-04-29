@@ -315,7 +315,7 @@
   --pattern-list-popover-border: var(--app-border-strong);
 
   /* =============================================
-     AUTH / CLOUD PROJECTS
+     AUTH
      ============================================= */
   --auth-overlay-bg: rgba(7, 10, 16, 0.38);
   --auth-dialog-bg: #0c1116;
@@ -350,31 +350,14 @@
   --auth-footer-text: var(--app-text-muted);
 
   /* =============================================
-     CLOUD PROJECTS (inside auth)
+     LOAD PROJECT WINDOW
      ============================================= */
-  --cloud-bg: #0c1116;
-  --cloud-border: var(--app-border-strong);
-  --cloud-header-bg: #10161c;
-  --cloud-header-border: var(--app-border);
-  --cloud-header-text: var(--app-text);
-  --cloud-empty-text: var(--app-text-muted);
-  --cloud-row-hover-bg: rgba(255, 255, 255, 0.04);
-  --cloud-row-selected-bg: rgba(90, 200, 255, 0.1);
-  --cloud-row-selected-border: rgba(90, 200, 255, 0.3);
-  --cloud-name-text: var(--app-text);
-  --cloud-bpm-text: var(--app-text-muted);
-  --cloud-date-text: var(--app-text-faint);
-  --cloud-footer-bg: #10161c;
-  --cloud-footer-border: var(--app-border);
-  --cloud-btn-bg: var(--app-accent);
-  --cloud-btn-border: var(--app-accent-strong);
-  --cloud-btn-text: var(--app-accent-text);
-  --cloud-btn-danger-bg: var(--app-danger-bg);
-  --cloud-btn-danger-border: var(--app-danger);
-
-  /* =============================================
-     PROJECT LOAD / SAVE
-     ============================================= */
+  --project-window-bg: #0c1116;
+  --project-window-border: var(--app-border-strong);
+  --project-window-header-bg: #10161c;
+  --project-window-header-border: var(--app-border);
+  --project-window-header-text: var(--app-text);
+  --project-window-empty-text: var(--app-text-muted);
   --project-sidebar-bg: #0c1116;
   --project-sidebar-border: var(--app-border);
   --project-sidebar-item-text: var(--app-text-muted);
@@ -401,13 +384,6 @@
   --project-table-footer-bg: #0c1116;
   --project-table-footer-border: var(--app-border);
   --project-count-text: var(--app-text-faint);
-  --project-sync-text: var(--app-text-faint);
-  --project-sync-hover-text: var(--app-info);
-  --project-info-bg: #0c1116;
-  --project-info-border: var(--app-border);
-  --project-info-icon-text: var(--app-info);
-  --project-info-title-text: var(--app-text);
-  --project-info-desc-text: var(--app-text-muted);
   --project-action-bar-bg: #0c1116;
   --project-action-bar-border: var(--app-border);
   --project-action-btn-bg: var(--app-accent);
