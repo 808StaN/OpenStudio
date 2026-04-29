@@ -283,8 +283,9 @@
   --piano-key-white-text: #3d4452;
   --piano-key-black-bg: #0f151b;
   --piano-key-black-text: var(--app-text-muted);
-  --piano-grid-bg: rgba(255, 255, 255, 0.0025);
-  --piano-scale-row-bg: rgba(255, 255, 255, 0.05);
+  --piano-grid-bg: rgba(25, 26, 27, 1);
+  --piano-scale-row-bg: rgb(15, 16, 17, 1);
+  --piano-scale-row-opacity: 1;
   --piano-grid-header-bg: #10161c;
   --piano-grid-header-border: var(--app-border);
   --piano-grid-line: rgba(0, 0, 0, 0.82);
@@ -294,13 +295,13 @@
   --piano-note-selected-bg: var(--app-danger);
   --piano-note-selected-border: var(--app-danger);
   --piano-note-selected-text: #fff0f0;
-  --piano-velocity-shell-bg: #0c1116;
+  --piano-velocity-shell-bg: rgba(25, 26, 27, 1);
   --piano-velocity-shell-border: rgba(0, 0, 0, 0.72);
   --piano-velocity-label-bg: #0c1116;
   --piano-velocity-label-text: var(--app-text-muted);
   --piano-velocity-label-strong: var(--app-text);
   --piano-velocity-label-em: var(--app-accent);
-  --piano-velocity-grid-bg: #191A1B;
+  --piano-velocity-grid-bg: rgba(25, 26, 27, 1);
   --piano-velocity-bar-bg: var(--app-accent);
   --piano-velocity-bar-cap: #9bd1a2;
   --piano-velocity-bar-selected-bg: var(--app-danger);
