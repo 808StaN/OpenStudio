@@ -266,6 +266,15 @@
   background: var(--rack-pattern-picker-bg);
   text-align: center;
   font-family: var(--font-mono);
+  appearance: textfield;
+  -webkit-appearance: none;
+  -moz-appearance: textfield;
+}
+
+.pattern-length-control input::-webkit-outer-spin-button,
+.pattern-length-control input::-webkit-inner-spin-button {
+  -webkit-appearance: none;
+  margin: 0;
 }
 
 .pattern-length-control small {
