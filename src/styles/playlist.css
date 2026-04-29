@@ -276,7 +276,7 @@
     to right,
     var(--playlist-snap-line) 0,
     var(--playlist-snap-line) 1px,
-    transparent 1px,
+    transparent 0px,
     transparent var(--playlist-snap-width)
   );
 }
@@ -291,8 +291,8 @@
   background: repeating-linear-gradient(
     to right,
     var(--playlist-grid-major-line) 0,
-    var(--playlist-grid-major-line) 2px,
-    transparent 2px,
+    var(--playlist-grid-major-line) 1px,
+    transparent 1px,
     transparent var(--playlist-bar-width)
   );
 }
