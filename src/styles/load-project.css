@@ -140,7 +140,7 @@
   flex-direction: column;
   margin: 0 12px;
   border: 1px solid var(--load-project-window-table-wrapper-border);
-  border-radius: 8px;
+  border-radius: var(--load-project-window-table-wrapper-radius);
   overflow: hidden;
   min-height: 0;
 }

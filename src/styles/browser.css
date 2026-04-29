@@ -135,7 +135,7 @@
 }
 
 .tree-folder:hover {
-  color: var(--app-text);
+  color: var(--browser-tree-folder-hover-text);
   background: var(--browser-tree-hover-bg);
 }
 
@@ -144,8 +144,15 @@
 }
 
 .plugin-folder:hover {
-  color: var(--app-text);
+  color: var(--browser-tree-folder-hover-text);
   background: var(--browser-tree-hover-bg);
+}
+
+.tree-folder:hover .tree-folder-icon,
+.plugin-folder:hover .tree-folder-icon,
+.tree-folder:hover .caret,
+.plugin-folder:hover .caret {
+  color: var(--browser-tree-folder-hover-icon);
 }
 
 .caret {

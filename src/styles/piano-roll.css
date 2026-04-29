@@ -58,7 +58,7 @@
 .edit-mode-toggle {
   display: inline-flex;
   border: 1px solid var(--toggle-border);
-  border-radius: 8px;
+  border-radius: var(--toggle-border-radius);
   padding: 0;
   gap: 0;
   background: var(--toggle-bg);

@@ -1,0 +1,646 @@
+:root {
+  /* =============================================
+     WINDOWS 95 THEME
+     Classic grey desktop OS aesthetic
+     ============================================= */
+
+  /* =============================================
+     GLOBAL / APP SHELL
+     ============================================= */
+  --app-bg: #008080;                          /* Classic teal desktop */
+  --app-surface: #c0c0c0;                     /* Classic silver/grey */
+  --app-text: #000000;
+  --app-text-muted: #444444;
+  --app-text-faint: #808080;
+  --app-border: rgba(0, 0, 0, 0.4);
+  --app-border-strong: rgba(0, 0, 0, 0.75);
+  --app-accent: #000080;                      /* Classic Windows navy blue */
+  --app-accent-strong: #000080;
+  --app-accent-mid: rgba(0, 0, 128, 0.5);
+  --app-accent-soft: rgba(0, 0, 128, 0.1);
+  --app-accent-text: #ffffff;
+  --slider-accent: var(--app-accent);
+  --slider-track-bg: #808080;
+  --slider-track-border: rgba(0, 0, 0, 0.4);
+  --slider-thumb-bg: #c0c0c0;
+  --slider-thumb-border: rgba(0, 0, 0, 0.55);
+  --slider-thumb-hover-bg: #d4d0c8;
+  --slider-thumb-active-bg: #b0b0b0;
+  --slider-thumb-hover-border: rgba(0, 0, 128, 0.55);
+  --slider-thumb-indicator: var(--slider-accent);
+  --app-danger: #cc0000;
+  --app-danger-text: #ffffff;
+  --app-danger-bg: rgba(128, 0, 0, 0.9);
+  --app-warning: #808000;
+  --app-info: #000080;
+  --font-main: "MS Sans Serif", "Microsoft Sans Serif", "Segoe UI", Arial, sans-serif;
+  --font-mono: "Courier New", Courier, monospace;
+  --digits: 3;
+  --app-radius-lg: 0px;                       /* Win98 — no border radius */
+  --app-radius-md: 0px;
+  --app-radius-sm: 0px;
+
+  /* Classic Win98 raised bevel */
+  --app-shadow:
+    inset -1px -1px 0px #000000,
+    inset  1px  1px 0px #ffffff,
+    inset -2px -2px 0px #808080,
+    inset  2px  2px 0px #dfdfdf;
+  --app-shadow-soft:
+    inset -1px -1px 0px #000000,
+    inset  1px  1px 0px #ffffff,
+    inset -2px -2px 0px #808080,
+    inset  2px  2px 0px #dfdfdf;
+
+  /* Reusable bevel helpers */
+  --win98-raised:
+    inset -1px -1px 0px #000000,
+    inset  1px  1px 0px #ffffff,
+    inset -2px -2px 0px #808080,
+    inset  2px  2px 0px #dfdfdf;
+  --win98-sunken:
+    inset  1px  1px 0px #000000,
+    inset -1px -1px 0px #ffffff,
+    inset  2px  2px 0px #808080,
+    inset -2px -2px 0px #dfdfdf;
+
+  --toggle-bg: #c0c0c0;
+  --toggle-border: rgba(0, 0, 0, 0.4);
+  --toggle-border-radius: 0px;
+  --piano-snap-trigger-bg: #c0c0c0;
+  --toggle-btn-bg: #c0c0c0;
+  --toggle-btn-text: #000000;
+  --toggle-btn-hover-bg: #d4d0c8;
+  --toggle-btn-active-bg: #000080;
+  --toggle-btn-active-text: #ffffff;
+
+  /* =============================================
+     TITLEBAR
+     ============================================= */
+  --titlebar-bg: #000080;                     /* Classic active title bar */
+  --titlebar-border: rgba(0, 0, 0, 0.8);
+  --titlebar-text: #ffffff;
+  --titlebar-text-faint: #c0c0c0;
+  --titlebar-btn-bg: #c0c0c0;
+  --titlebar-btn-border: rgba(0, 0, 0, 0.5);
+  --titlebar-btn-text: #000000;
+  --titlebar-btn-radius: 0px;                 /* Win98 — square buttons */
+  --titlebar-btn-hover-bg: #d4d0c8;
+  --titlebar-btn-hover-border: rgba(0, 0, 0, 0.8);
+  --titlebar-btn-hover-text: #000000;
+  --titlebar-close-bg: #c0c0c0;
+  --titlebar-close-border: rgba(0, 0, 0, 0.5);
+  --titlebar-close-text: #000000;
+  --titlebar-close-hover-text: #ffffff;
+  --titlebar-close-hover-border: rgba(0, 0, 0, 0.8);
+  --titlebar-close-hover-bg: #cc0000;         /* Red on hover — Win98 style */
+
+  /* =============================================
+     TRANSPORT
+     ============================================= */
+  --transport-bg: #c0c0c0;
+  --transport-border: rgba(0, 0, 0, 0.5);
+  --transport-btn-bg: #c0c0c0;
+  --transport-btn-border: rgba(0, 0, 0, 0.5);
+  --transport-btn-text: #000000;
+  --transport-btn-hover-bg: #d4d0c8;
+  --transport-btn-hover-border: rgba(0, 0, 0, 0.8);
+  --transport-btn-active-bg: #000080;
+  --transport-btn-active-border: rgba(0, 0, 128, 0.8);
+  --transport-btn-active-text: #ffffff;
+  --transport-bpm-bg: #000000;                /* Black LCD panel */
+  --transport-bpm-border: rgba(0, 0, 0, 0.9);
+  --transport-bpm-text: #00ff00;              /* Green LED digits */
+  --transport-rec-text: #ff0000;
+  --transport-rec-border: rgba(200, 0, 0, 0.7);
+  --transport-shadow: var(--win98-raised);
+  --transport-input-shadow: var(--win98-sunken);
+  --transport-rec-shadow:
+    inset  1px  1px 0px #000000,
+    inset -1px -1px 0px #ffffff,
+    0 0 8px rgba(255, 0, 0, 0.5);
+
+  /* =============================================
+     WORKSPACE
+     ============================================= */
+  --workspace-bg: #c0c0c0;
+  --workspace-border: rgba(0, 0, 0, 0.4);
+  --workspace-grid: rgba(0, 0, 0, 0.06);
+  --workspace-highlight: rgba(255, 255, 255, 0.4);
+  --workspace-overlay-bg:
+    repeating-linear-gradient(
+      to right,
+      rgba(0, 0, 0, 0.04) 0,
+      rgba(0, 0, 0, 0.04) 1px,
+      transparent 1px,
+      transparent 48px
+    ),
+    repeating-linear-gradient(
+      to bottom,
+      rgba(0, 0, 0, 0.04) 0,
+      rgba(0, 0, 0, 0.04) 1px,
+      transparent 1px,
+      transparent 48px
+    ),
+    #c0c0c0;
+
+  /* =============================================
+     WINDOW / FLOATING
+     ============================================= */
+  --window-bg: #c0c0c0;
+  --window-border: rgba(0, 0, 0, 0.8);
+  --window-title-bg: #000080;
+  --window-title-border: rgba(0, 0, 0, 0.8);
+  --window-title-text: #ffffff;
+  --window-backdrop: rgba(0, 0, 0, 0.45);
+  --window-shadow:
+    inset -1px -1px 0px #000000,
+    inset  1px  1px 0px #ffffff,
+    inset -2px -2px 0px #808080,
+    inset  2px  2px 0px #dfdfdf;
+  --window-control-btn-radius: 0px;
+
+  /* =============================================
+     BROWSER
+     ============================================= */
+  --browser-bg: #c0c0c0;
+  --browser-border: rgba(0, 0, 0, 0.5);
+  --browser-tabs-bg: #c0c0c0;
+  --browser-tabs-border: rgba(0, 0, 0, 0.5);
+  --browser-tab-text: #000000;
+  --browser-tab-hover-border: rgba(0, 0, 128, 0.5);
+  --browser-tab-hover-text: #000080;
+  --browser-tab-active-text: #ffffff;
+  --browser-tab-active-border: #000080;
+  --browser-tree-text: #000000;
+  --browser-tree-icon: #000080;
+  --browser-tree-hover-bg: #000080;
+  --browser-tree-folder-hover-text: #ffffff;
+  --browser-tree-folder-hover-icon: #ffffff;
+  --browser-tree-hover-text: #ffffff;
+  --browser-plugin-icon: #000080;
+  --browser-rescan-bg: #c0c0c0;
+  --browser-rescan-border: rgba(0, 0, 0, 0.5);
+  --browser-rescan-text: #000000;
+  --browser-hint-border: rgba(0, 0, 0, 0.6);
+  --browser-hint-text: #444444;
+  --browser-hint-bg: #d4d0c8;
+
+  /* =============================================
+     PLAYLIST
+     ============================================= */
+  --playlist-bg: #c0c0c0;
+  --playlist-border: rgba(0, 0, 0, 0.5);
+  --playlist-toolbar-bg: #c0c0c0;
+  --playlist-toolbar-border: rgba(0, 0, 0, 0.5);
+  --playlist-btn-bg: #c0c0c0;
+  --playlist-btn-border: rgba(0, 0, 0, 0.35);
+  --playlist-btn-text: #000000;
+  --playlist-btn-hover-bg: #d4d0c8;
+  --playlist-btn-active-bg: #000080;
+  --playlist-btn-active-text: #ffffff;
+  --playlist-header-bg: #000080;
+  --playlist-bar-text: #ffffff;
+  --playlist-bar-bg: #000080;
+  --playlist-bar-border: rgba(0, 0, 0, 0.6);
+  --playlist-track-name-bg: #c0c0c0;
+  --playlist-track-name-border: rgba(0, 0, 0, 0.5);
+  --playlist-track-name-text: #000000;
+  --playlist-track-divider-border: rgba(0, 0, 0, 0.2);
+  --playlist-track-grid-bg: #d4d0c8;
+  --playlist-track-grid-border: rgba(0, 0, 0, 0.35);
+  --playlist-length-input-bg: #ffffff;
+  --playlist-snap-line: rgba(0, 0, 0, 0.12);
+  --playlist-snap-width: 1px;
+  --playlist-grid-major-line: rgba(0, 0, 0, 0.22);
+  --playlist-clip-border: rgba(0, 0, 128, 0.8);
+  --playlist-clip-bg: rgba(0, 0, 128, 0.18);
+  --playlist-clip-text: #000000;
+  --playlist-clip-active-border: rgba(0, 0, 128, 1);
+  --playlist-clip-active-bg: rgba(0, 0, 128, 0.32);
+  --playlist-clip-label-bg: rgba(0, 0, 0, 0.5);
+  --playlist-audio-preview-top: rgba(0, 128, 128, 0.5);
+  --playlist-audio-preview-bottom: rgba(0, 64, 64, 0.3);
+  --playlist-audio-clip-top: rgba(128, 200, 200, 0.4);
+  --playlist-audio-clip-bottom: rgba(0, 128, 128, 0.25);
+  --playlist-mini-note-top: #000080;
+  --playlist-mini-note-bottom: #0000aa;
+  --playlist-mini-note-glow: rgba(0, 0, 128, 0.4);
+  --playlist-mini-note-highlight: rgba(255, 255, 255, 0.5);
+  --playlist-wave-fill: rgba(0, 0, 128, 0.38);
+  --playlist-wave-stroke: rgba(0, 0, 200, 0.8);
+  --playlist-wave-shadow: rgba(0, 0, 0, 0.3);
+  --playlist-playhead: #ff0000;               /* Bright red playhead */
+  --playlist-drop-border: rgba(0, 128, 0, 0.6);
+  --playlist-preview-border: rgba(0, 200, 200, 0.9);
+
+  /* =============================================
+     CHANNEL RACK
+     ============================================= */
+  --rack-bg: #c0c0c0;
+  --rack-border: rgba(0, 0, 0, 0.5);
+  --rack-topbar-bg: #c0c0c0;
+  --rack-topbar-border: rgba(0, 0, 0, 0.5);
+  --rack-row-bg: #d4d0c8;
+  --rack-row-border: rgba(0, 0, 0, 0.4);
+  --rack-row-radius: 0px;
+  --rack-control-radius: 0px;
+  --rack-control-radius-sm: 0px;
+  --rack-menu-radius: 0px;
+  --rack-menu-item-radius: 0px;
+  --rack-pattern-picker-bg: #ffffff;
+  --rack-pattern-picker-border: rgba(0, 0, 0, 0.5);
+  --rack-pattern-picker-text: #000080;
+  --rack-channel-name-bg: #ffffff;
+  --rack-channel-name-border: rgba(0, 0, 0, 0.5);
+  --rack-channel-name-radius: 0px;
+  --rack-channel-name-text: #000000;
+  --rack-insert-bg: #ffffff;
+  --rack-insert-border: rgba(0, 0, 0, 0.5);
+  --rack-insert-radius: 0px;
+  --rack-insert-text: #000000;
+  --rack-step-bg: #c0c0c0;
+  --rack-step-border: rgba(0, 0, 0, 0.28);
+  --rack-step-radius: 0px;
+  --rack-step-group-a-bg: #d4d0c8;
+  --rack-step-group-a-border: rgba(0, 0, 0, 0.4);
+  --rack-step-group-b-bg: #b8b4ac;
+  --rack-step-group-b-border: rgba(0, 0, 0, 0.28);
+  --rack-step-on-bg: #000080;
+  --rack-step-on-border: #000080;
+  --rack-step-playhead-outline: rgba(255, 200, 0, 0.9);
+  --rack-mini-note-bg: #000080;
+  --rack-mini-note-radius: 0px;
+  --rack-preview-bg: #d4d0c8;
+  --rack-preview-border: rgba(0, 0, 0, 0.4);
+  --rack-preview-radius: 0px;
+  --rack-add-btn-bg: #c0c0c0;
+  --rack-add-btn-border: rgba(0, 0, 0, 0.5);
+  --rack-add-btn-text: #444444;
+  --rack-add-btn-hover-bg: #d4d0c8;
+  --rack-add-btn-hover-text: #000000;
+  --rack-pattern-length-text: #444444;
+  --rack-pattern-length-btn-bg: #c0c0c0;
+  --rack-pattern-length-btn-border: rgba(0, 0, 0, 0.38);
+  --rack-pattern-length-btn-text: #444444;
+  --rack-pattern-length-btn-hover-bg: #d4d0c8;
+  --rack-pattern-length-btn-hover-border: rgba(0, 0, 128, 0.5);
+  --rack-pattern-length-btn-hover-text: #000000;
+  --rack-pattern-length-input-bg: #ffffff;
+  --rack-pattern-length-input-border: rgba(0, 0, 0, 0.5);
+  --rack-pattern-length-input-text: #000000;
+  --rack-pattern-length-unit-text: #808080;
+  --rack-context-menu-bg: #c0c0c0;
+  --rack-context-menu-border: rgba(0, 0, 0, 0.85);
+  --rack-context-menu-text: #000000;
+  --rack-context-menu-item-hover-bg: #000080;
+  --rack-context-menu-item-hover-text: #ffffff;
+  --rack-rename-action-bg: #d4d0c8;
+  --rack-rename-action-text: #444444;
+
+  /* =============================================
+     MIXER
+     ============================================= */
+  --mixer-bg: transparent;
+  --mixer-border: rgba(0, 0, 0, 0.5);
+  --mixer-track-bg: #c0c0c0;
+  --mixer-track-border: rgba(0, 0, 0, 0.38);
+  --mixer-track-selected-bg: #d4d0c8;
+  --mixer-track-selected-border: rgba(0, 0, 128, 0.6);
+  --mixer-track-title-text: #000000;
+  --mixer-track-title-font-weight: 700;
+  --mixer-add-insert-btn-bg: #c0c0c0;
+  --mixer-add-insert-btn-border: rgba(0, 0, 0, 0.5);
+  --mixer-add-insert-btn-text: #000000;
+  --mixer-add-insert-btn-hover-bg: #d4d0c8;
+  --mixer-add-insert-btn-hover-border: rgba(0, 0, 0, 0.8);
+  --mixer-led-off-bg: #404040;
+  --mixer-led-off-border: rgba(0, 0, 0, 0.5);
+  --mixer-led-on-bg: #00cc00;                 /* Green hardware LED */
+  --mixer-led-on-border: rgba(0, 180, 0, 0.6);
+  --mixer-knob-label-text: #000000;
+  --mixer-knob-label-muted-text: #808080;
+  --mixer-knob-track: #808080;
+  --mixer-knob-arc-positive: #000080;
+  --mixer-knob-arc-negative: #800000;
+  --mixer-knob-face-bg: #c0c0c0;
+  --mixer-knob-pointer: #000000;
+  --mixer-knob-center-bg: #808080;
+  --mixer-knob-marker-muted: #a0a0a0;
+  --fader-groove-bg: #808080;
+  --fader-groove-border: rgba(0, 0, 0, 0.5);
+  --fader-groove-shadow: var(--win98-sunken);
+  --fader-track-bg: #a0a0a0;
+  --fader-track-shadow: inset 1px 1px 0px #000000;
+  --fader-fill-bg: #000080;
+  --fader-thumb-bg: #c0c0c0;
+  --fader-thumb-border: rgba(0, 0, 0, 0.5);
+  --fader-thumb-hover-bg: #d4d0c8;
+  --fader-thumb-active-bg: #b0b0b0;
+  --fader-thumb-hover-border: rgba(0, 0, 128, 0.5);
+  --fader-thumb-active-border: rgba(0, 0, 128, 0.8);
+  --mixer-meter-bg: #000000;
+  --mixer-meter-border: rgba(0, 0, 0, 0.7);
+  --mixer-meter-seg-bg: rgba(0, 80, 0, 0.6);
+  --mixer-meter-seg-on-bg: #00cc00;           /* Classic VU green */
+  --mixer-meter-seg-warning-bg: #cccc00;      /* Yellow */
+  --mixer-meter-seg-danger-bg: #cc0000;       /* Red clip */
+  --mixer-right-bg: #c0c0c0;
+  --mixer-right-border: rgba(0, 0, 0, 0.5);
+  --mixer-fx-row-bg: #d4d0c8;
+  --mixer-fx-row-border: rgba(0, 0, 0, 0.38);
+  --mixer-fx-row-selected-bg: rgba(0, 0, 128, 0.15);
+  --mixer-fx-row-selected-border: rgba(0, 0, 128, 0.6);
+  --mixer-fx-power-off-bg: #c0c0c0;
+  --mixer-fx-power-off-border: rgba(0, 0, 0, 0.38);
+  --mixer-fx-power-off-text: #808080;
+  --mixer-fx-power-on-bg: rgba(0, 180, 0, 0.15);
+  --mixer-fx-power-on-border: rgba(0, 160, 0, 0.6);
+  --mixer-fx-power-on-text: #005500;
+  --mixer-fx-name-text: #000000;
+  --mixer-fx-arrow-text: #444444;
+  --mixer-fx-clear-text: #cc0000;
+  --mixer-fx-clear-hover-bg: rgba(180, 0, 0, 0.15);
+  --mixer-fx-clear-armed-bg: rgba(200, 0, 0, 0.4);
+  --mixer-value-readout-bg: #000000;          /* LCD black panel */
+  --mixer-value-readout-border: rgba(0, 0, 0, 0.9);
+  --mixer-value-readout-text: #00ff00;        /* Green LCD digits */
+
+  /* =============================================
+     PIANO ROLL
+     ============================================= */
+  --piano-bg: #c0c0c0;
+  --piano-border: rgba(0, 0, 0, 0.5);
+  --piano-toolbar-bg: #c0c0c0;
+  --piano-toolbar-border: rgba(0, 0, 0, 0.5);
+  --piano-toolbar-text: #000000;
+  --piano-snap-trigger-bg: #c0c0c0;
+  --piano-snap-trigger-hover-bg: #d4d0c8;
+  --piano-snap-dropdown-bg: #c0c0c0;
+  --piano-velocity-resize-bg: #b0b0b0;
+  --piano-velocity-resize-border: rgba(0, 0, 0, 0.7);
+  --piano-velocity-resize-hover-filter: brightness(1.08);
+  --piano-keys-bg: linear-gradient(180deg, #d4d0c8 0%, #c0c0c0 100%);
+  --piano-keys-header-bg: linear-gradient(180deg, #000080 0%, #000060 100%);
+  --piano-key-row-border: rgba(0, 0, 0, 0.2);
+  --piano-key-white-bg: #ffffff;
+  --piano-key-white-text: #000000;
+  --piano-key-black-bg: #000000;
+  --piano-key-black-text: #ffffff;
+  --piano-grid-bg: rgba(212, 208, 200, 1);
+  --piano-out-of-scale-row-bg: rgba(192, 192, 192, 1);
+  --piano-out-of-scale-row-opacity: 1;
+  --piano-grid-header-bg: #000080;
+  --piano-grid-header-border: rgba(0, 0, 0, 0.6);
+  --piano-grid-header-text: #ffffff;
+  --piano-grid-line: rgba(0, 0, 0, 0.3);
+  --piano-grid-row-line: rgba(0, 0, 0, 0.1);
+  --piano-note-bg: #000080;
+  --piano-note-border: rgba(0, 0, 128, 0.8);
+  --piano-note-text: #ffffff;
+  --piano-note-radius: 0px;                   /* Square notes — Win98 feel */
+  --piano-note-resize-handle-bg: rgba(255, 255, 255, 0.4);
+  --piano-note-resize-handle-radius: 0px;
+  --piano-note-selected-bg: #800000;
+  --piano-note-selected-border: #800000;
+  --piano-note-selected-text: #ffffff;
+  --piano-velocity-shell-bg: rgba(212, 208, 200, 1);
+  --piano-velocity-shell-border: rgba(0, 0, 0, 0.6);
+  --piano-velocity-label-bg: #c0c0c0;
+  --piano-velocity-label-text: #444444;
+  --piano-velocity-label-strong: #000000;
+  --piano-velocity-label-em: #000080;
+  --piano-velocity-grid-bg: rgba(212, 208, 200, 1);
+  --piano-velocity-bar-bg: #000080;
+  --piano-velocity-bar-cap: #4444cc;
+  --piano-velocity-bar-selected-bg: #800000;
+  --piano-playhead-bg: #ff0000;
+  --piano-selection-border: rgba(0, 0, 128, 0.6);
+  --piano-selection-bg: rgba(0, 0, 128, 0.1);
+  --piano-radio-bg: #ffffff;
+  --piano-radio-border: rgba(0, 0, 0, 0.5);
+
+  /* =============================================
+     PATTERN LIST
+     ============================================= */
+  --pattern-list-bg: #c0c0c0;
+  --pattern-list-border: rgba(0, 0, 0, 0.5);
+  --pattern-list-header-bg: #000080;
+  --pattern-list-header-border: rgba(0, 0, 0, 0.6);
+  --pattern-list-header-text: #ffffff;
+  --pattern-list-add-btn-bg: #c0c0c0;
+  --pattern-list-add-btn-border: rgba(0, 0, 0, 0.5);
+  --pattern-list-add-btn-text: #000000;
+  --pattern-list-add-btn-hover-bg: #d4d0c8;
+  --pattern-list-add-btn-hover-border: rgba(0, 0, 0, 0.8);
+  --pattern-list-row-bg: #d4d0c8;
+  --pattern-list-row-border: rgba(0, 0, 0, 0.38);
+  --pattern-list-row-active-border: rgba(0, 0, 128, 0.8);
+  --pattern-list-row-active-bg: rgba(0, 0, 128, 0.15);
+  --pattern-list-name-bg: #ffffff;
+  --pattern-list-name-border: rgba(0, 0, 0, 0.5);
+  --pattern-list-name-text: #000000;
+  --pattern-list-select-bg: #ffffff;
+  --pattern-list-select-border: rgba(0, 0, 0, 0.5);
+  --pattern-list-select-text: #000000;
+  --pattern-list-meta-text: #444444;
+  --pattern-list-color-bg: #ffffff;
+  --pattern-list-color-chip-border: rgba(0, 0, 0, 0.6);
+  --pattern-list-popover-bg: #c0c0c0;
+  --pattern-list-popover-border: rgba(0, 0, 0, 0.85);
+
+  /* =============================================
+     AUTH
+     ============================================= */
+  --auth-overlay-bg: rgba(0, 0, 0, 0.5);
+  --auth-dialog-bg: #c0c0c0;
+  --auth-dialog-border: rgba(0, 0, 0, 0.85);
+  --auth-dialog-text: #000000;
+  --auth-header-bg: #000080;
+  --auth-header-border: rgba(0, 0, 0, 0.85);
+  --auth-header-text: #ffffff;
+  --auth-close-bg: #c0c0c0;
+  --auth-close-border: rgba(0, 0, 0, 0.5);
+  --auth-close-text: #000000;
+  --auth-close-radius: 0px;
+  --auth-close-hover-bg: #cc0000;
+  --auth-close-hover-border: rgba(0, 0, 0, 0.85);
+  --auth-close-hover-text: #ffffff;
+  --auth-input-bg: #ffffff;
+  --auth-input-border: rgba(0, 0, 0, 0.5);
+  --auth-input-text: #000000;
+  --auth-input-placeholder: #808080;
+  --auth-input-hover-border: rgba(0, 0, 0, 0.8);
+  --auth-input-focus-border: #000080;
+  --auth-submit-bg: #000080;
+  --auth-submit-border: rgba(0, 0, 128, 0.9);
+  --auth-submit-text: #ffffff;
+  --auth-error-text: #cc0000;
+  --auth-error-bg: rgba(200, 0, 0, 0.08);
+  --auth-error-border: rgba(200, 0, 0, 0.3);
+  --auth-link-text: #000080;
+  --auth-link-hover-text: #0000cc;
+  --auth-checkbox-bg: #ffffff;
+  --auth-checkbox-border: rgba(0, 0, 0, 0.5);
+  --auth-checkbox-checked-bg: #000080;
+  --auth-footer-text: #444444;
+
+  /* =============================================
+     LOAD PROJECT WINDOW
+     ============================================= */
+  --load-project-window-bg: #c0c0c0;
+  --load-project-window-border: rgba(0, 0, 0, 0.85);
+  --load-project-window-header-bg: #000080;
+  --load-project-window-header-border: rgba(0, 0, 0, 0.85);
+  --load-project-window-header-text: #ffffff;
+  --load-project-window-empty-text: #808080;
+  --load-project-window-sidebar-bg: #c0c0c0;
+  --load-project-window-sidebar-border: rgba(0, 0, 0, 0.5);
+  --load-project-window-sidebar-item-text: #000000;
+  --load-project-window-sidebar-item-radius: 0px;
+  --load-project-window-sidebar-item-hover-bg: #000080;
+  --load-project-window-sidebar-item-hover-text: #ffffff;
+  --load-project-window-sidebar-item-active-bg: #000080;
+  --load-project-window-sidebar-item-active-border: rgba(0, 0, 128, 0.9);
+  --load-project-window-sidebar-item-active-text: #ffffff;
+  --load-project-window-search-bg: #ffffff;
+  --load-project-window-search-border: rgba(0, 0, 0, 0.5);
+  --load-project-window-search-radius: 0px;
+  --load-project-window-search-text: #808080;
+  --load-project-window-search-input-text: #000000;
+  --load-project-window-search-placeholder: #808080;
+  --load-project-window-table-wrapper-border: rgba(0, 0, 0, 0.5);
+  --load-project-window-table-header-bg: #c0c0c0;
+  --load-project-window-table-header-border: rgba(0, 0, 0, 0.5);
+  --load-project-window-table-header-text: #000000;
+  --load-project-window-table-header-active-text: #000080;
+  --load-project-window-table-row-hover-bg: rgba(0, 0, 0, 0.06);
+  --load-project-window-table-row-selected-bg: #000080;
+  --load-project-window-table-cell-name-text: #000000;
+  --load-project-window-table-cell-bpm-text: #444444;
+  --load-project-window-table-cell-date-text: #808080;
+  --load-project-window-table-footer-bg: #c0c0c0;
+  --load-project-window-table-footer-border: rgba(0, 0, 0, 0.5);
+  --load-project-window-count-text: #808080;
+  --load-project-window-action-bar-bg: #c0c0c0;
+  --load-project-window-action-bar-border: rgba(0, 0, 0, 0.5);
+  --load-project-window-action-btn-bg: #000080;
+  --load-project-window-action-btn-border: rgba(0, 0, 128, 0.9);
+  --load-project-window-action-btn-text: #ffffff;
+  --load-project-window-action-btn-danger-bg: rgba(140, 0, 0, 0.9);
+  --load-project-window-action-btn-danger-border: rgba(200, 0, 0, 0.7);
+  --load-project-window-action-btn-danger-text: #ffffff;
+
+  /* =============================================
+     THEME DIALOG
+     ============================================= */
+  --theme-dialog-panel-bg: #d4d0c8;
+  --theme-dialog-panel-border: rgba(0, 0, 0, 0.5);
+  --theme-dialog-panel-label-text: #444444;
+  --theme-dialog-preview-text: #000000;
+  --theme-dialog-preview-description-text: #444444;
+  --theme-dialog-stage-window-bg: #c0c0c0;
+  --theme-dialog-stage-window-border: rgba(0, 0, 0, 0.65);
+  --theme-dialog-stage-titlebar-bg: #000080;
+  --theme-dialog-stage-line-bg: rgba(0, 0, 128, 0.45);
+  --theme-dialog-option-bg: #c0c0c0;
+  --theme-dialog-option-border: #808080;
+  --theme-dialog-option-hover-bg: #d4d0c8;
+  --theme-dialog-option-hover-border: #000080;
+  --theme-dialog-option-active-bg: #d4d0c8;
+  --theme-dialog-option-active-border: #000080;
+  --theme-dialog-option-label-text: #000000;
+  --theme-dialog-option-description-text: #444444;
+  --theme-dialog-option-check: #000080;
+  --theme-dialog-shadow: var(--win98-raised);
+
+  /* =============================================
+     PROJECT MENU
+     ============================================= */
+  --project-dropdown-bg: #c0c0c0;
+  --project-dropdown-shadow: var(--win98-raised);
+  --project-dropdown-item-hover-bg: #000080;
+  --project-dropdown-item-hover-text: #ffffff;
+  --project-dropdown-item-active-bg: #000080;
+
+  /* =============================================
+     RENDER WINDOW
+     ============================================= */
+  --render-bg: #c0c0c0;
+  --render-border: rgba(0, 0, 0, 0.5);
+  --render-label-text: #000000;
+  --render-input-bg: #ffffff;
+  --render-input-border: rgba(0, 0, 0, 0.5);
+  --render-input-text: #000000;
+  --render-input-hover-border: rgba(0, 0, 0, 0.8);
+  --render-input-focus-border: #000080;
+  --render-select-option-text: #000000;
+  --render-select-option-bg: #c0c0c0;
+  --render-select-option-checked-text: #ffffff;
+  --render-select-option-checked-bg: #000080;
+  --render-select-option-hover-bg: #d4d0c8;
+  --render-btn-bg: #000080;
+  --render-btn-border: rgba(0, 0, 128, 0.9);
+  --render-btn-text: #ffffff;
+  --render-status-text: #005500;
+  --render-error-text: #cc0000;
+
+  /* =============================================
+     SCROLLBARS
+     ============================================= */
+  --scrollbar-track-bg: #c0c0c0;
+  --scrollbar-track-border: rgba(0, 0, 0, 0.4);
+  --scrollbar-thumb-bg: #808080;
+  --scrollbar-thumb-border: #c0c0c0;
+
+  /* =============================================
+     SAMPLE SETTINGS
+     ============================================= */
+  --sample-settings-bg: #c0c0c0;
+  --sample-settings-border: rgba(0, 0, 0, 0.5);
+  --sample-settings-header-text: #000000;
+  --sample-settings-tab-bg: transparent;
+  --sample-settings-tab-border: transparent;
+  --sample-settings-tab-text: #444444;
+  --sample-settings-tab-active-bg: #000080;
+  --sample-settings-tab-active-border: rgba(0, 0, 128, 0.9);
+  --sample-settings-tab-active-text: #ffffff;
+  --sample-waveform-bg: #d4d0c8;
+  --sample-waveform-border: rgba(0, 0, 0, 0.5);
+  --sample-waveform-title-text: #444444;
+  --sample-preview-btn-bg: #c0c0c0;
+  --sample-preview-btn-border: rgba(0, 0, 0, 0.5);
+  --sample-preview-btn-text: #000000;
+  --sample-preview-btn-playing-bg: #000080;
+  --sample-preview-btn-playing-border: rgba(0, 0, 128, 0.9);
+  --sample-preview-btn-playing-text: #ffffff;
+  --sample-waveform-view-bg: #000000;         /* Black CRT screen */
+  --sample-waveform-view-border: rgba(0, 0, 0, 0.9);
+  --sample-waveform-line: rgba(0, 200, 0, 0.9); /* Green CRT waveform */
+  --sample-waveform-active-length: rgba(0, 0, 128, 0.15);
+  --sample-waveform-trimmed-bg: rgba(0, 0, 0, 0.6);
+  --sample-waveform-fade: rgba(160, 140, 0, 0.35);
+  --sample-envelope-bg: #000000;
+  --sample-envelope-border: rgba(0, 0, 0, 0.9);
+  --sample-envelope-path: #00cc00;
+  --sample-time-knob-bg: #c0c0c0;
+  --sample-time-knob-border: rgba(0, 0, 0, 0.5);
+  --sample-time-knob-label: #444444;
+  --sample-time-select-bg: #ffffff;
+  --sample-time-select-border: rgba(0, 0, 0, 0.5);
+  --sample-time-select-text: #000000;
+  --sample-time-select-caret: #000080;
+  --sample-time-select-open-border: rgba(0, 0, 128, 0.7);
+  --sample-setting-row-text: #444444;
+  --sample-setting-row-value: #000000;
+  --sample-setting-input-bg: #ffffff;
+  --sample-setting-input-border: rgba(0, 0, 0, 0.5);
+  --sample-setting-input-text: #000000;
+  --sample-setting-input-focus-border: #000080;
+  --sample-checkbox-bg: #ffffff;
+  --sample-checkbox-border: rgba(0, 0, 0, 0.5);
+  --sample-checkbox-checked-bg: #000080;
+  --sample-checkbox-check: #ffffff;
+  --sample-empty-border: rgba(0, 0, 0, 0.6);
+  --sample-empty-text: #808080;
+}

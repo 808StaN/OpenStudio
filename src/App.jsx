@@ -32,6 +32,7 @@ import "./styles/auth.css";
 import "./styles/load-project.css";
 import "./styles/theme-main.css";
 import "./styles/theme-plugins.css";
+import studio95ThemeCss from "./styles/theme-studio95.css?raw";
 
 function shouldIgnoreSpaceShortcut(target) {
   if (!(target instanceof HTMLElement)) {
@@ -142,6 +143,9 @@ function App() {
   });
   const fxEditorTarget = useSelector(function (state) {
     return state.daw.ui.fxEditorTarget;
+  });
+  const activeTheme = useSelector(function (state) {
+    return state.daw.ui.theme || "default";
   });
   const activeChannel = channels.find(function (channel) {
     return channel.id === activeChannelId;
@@ -321,9 +325,13 @@ function App() {
 
   return (
     <div
-      className="app-shell theme-default"
+      className={
+        "app-shell " +
+        (activeTheme === "studio95" ? "theme-studio95" : "theme-default")
+      }
       onContextMenu={onAppContextMenu}
     >
+      {activeTheme === "studio95" ? <style>{studio95ThemeCss}</style> : null}
       <AppTitleBar />
       <TopToolbar />
 

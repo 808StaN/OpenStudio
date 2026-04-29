@@ -517,7 +517,7 @@
 .channel-name {
   height: 34px;
   border: 1px solid var(--rack-channel-name-border);
-  border-radius: 6px;
+  border-radius: var(--rack-channel-name-radius);
   width: 100px;
   min-width: 100px;
   max-width: 100px;
@@ -541,7 +541,7 @@
   width: 100px;
   min-width: 100px;
   max-width: 100px;
-  border-radius: 6px;
+  border-radius: var(--rack-insert-radius);
   border: 1px solid var(--rack-insert-border);
   color: var(--rack-insert-text);
   background: var(--rack-insert-bg);
@@ -625,7 +625,7 @@
 
 .step {
   height: 27px;
-  border-radius: 4px;
+  border-radius: var(--rack-step-radius);
   border: 1px solid var(--rack-step-border);
   background: var(--rack-step-bg);
   box-shadow: none;
@@ -663,7 +663,7 @@
   width: 100%;
   height: 58px;
   border: 1px solid var(--rack-preview-border);
-  border-radius: 6px;
+  border-radius: var(--rack-preview-radius);
   background:
     repeating-linear-gradient(
       to right,
@@ -695,7 +695,7 @@
 .mini-note {
   position: absolute;
   height: 4px;
-  border-radius: 2px;
+  border-radius: var(--rack-mini-note-radius);
   transform: translateY(-50%);
   background: var(--rack-mini-note-bg);
   box-shadow: none;

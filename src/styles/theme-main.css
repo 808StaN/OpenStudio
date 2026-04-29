@@ -127,6 +127,8 @@
   --browser-tree-text: var(--app-text);
   --browser-tree-icon: var(--app-accent);
   --browser-tree-hover-bg: rgba(255, 255, 255, 0.04);
+  --browser-tree-folder-hover-text: var(--app-text);
+  --browser-tree-folder-hover-icon: var(--browser-tree-icon);
   --browser-tree-hover-text: white;
   --browser-plugin-icon: var(--app-accent);
   --browser-rescan-bg: #121820;
@@ -203,12 +205,15 @@
   --rack-pattern-picker-text: var(--app-accent);
   --rack-channel-name-bg: #090d12;
   --rack-channel-name-border: var(--app-border);
+  --rack-channel-name-radius: var(--app-radius-md);
   --rack-channel-name-text: #edf2ee;
   --rack-insert-bg: #090d12;
   --rack-insert-border: var(--app-border);
+  --rack-insert-radius: var(--app-radius-md);
   --rack-insert-text: #edf2ee;
   --rack-step-bg: #171d24;
   --rack-step-border: rgba(163, 178, 190, 0.08);
+  --rack-step-radius: 4px;
   --rack-step-group-a-bg: #192028;
   --rack-step-group-a-border: var(--app-border-strong);
   --rack-step-group-b-bg: #121920;
@@ -217,8 +222,10 @@
   --rack-step-on-border: var(--app-accent);
   --rack-step-playhead-outline: rgba(233, 189, 97, 0.8);
   --rack-mini-note-bg: var(--app-accent);
+  --rack-mini-note-radius: 2px;
   --rack-preview-bg: #121920;
   --rack-preview-border: var(--app-border);
+  --rack-preview-radius: var(--app-radius-md);
   --rack-add-btn-bg: #11171d;
   --rack-add-btn-border: var(--app-border-strong);
   --rack-add-btn-text: var(--app-text-muted);
@@ -457,6 +464,7 @@
   --load-project-window-search-input-text: var(--app-text);
   --load-project-window-search-placeholder: var(--app-text-faint);
   --load-project-window-table-wrapper-border: var(--app-border);
+  --load-project-window-table-wrapper-radius: var(--app-radius-md);
   --load-project-window-table-header-bg: #0c1116;
   --load-project-window-table-header-border: var(--app-border);
   --load-project-window-table-header-text: var(--app-text-muted);
@@ -481,15 +489,25 @@
   /* =============================================
      THEME DIALOG
      ============================================= */
-  --theme-dialog-tile-bg: linear-gradient(180deg, #232933 0%, #151922 100%);
-  --theme-dialog-tile-border: #4b4f58;
-  --theme-dialog-tile-hover-border: #48f598;
-  --theme-dialog-tile-active-border: #48f598;
-  --theme-dialog-tile-footer-border: #353b46;
-  --theme-dialog-tile-footer-text: #dbe3ef;
-  --theme-dialog-tile-check: #48f598;
-  --theme-dialog-tile-hover-shadow: 0 8px 20px rgba(0, 0, 0, 0.5), 0 0 12px rgba(72, 245, 152, 0.18), inset 0 1px 0 rgba(255, 255, 255, 0.1);
-  --theme-dialog-tile-active-shadow: 0 0 14px rgba(72, 245, 152, 0.25), inset 0 1px 0 rgba(255, 255, 255, 0.1);
+  --theme-dialog-panel-bg: #0c1116;
+  --theme-dialog-panel-border: var(--app-border);
+  --theme-dialog-panel-label-text: var(--app-text-faint);
+  --theme-dialog-preview-text: var(--app-text);
+  --theme-dialog-preview-description-text: var(--app-text-muted);
+  --theme-dialog-stage-window-bg: rgba(12, 17, 22, 0.88);
+  --theme-dialog-stage-window-border: rgba(255, 255, 255, 0.14);
+  --theme-dialog-stage-titlebar-bg: rgba(255, 255, 255, 0.08);
+  --theme-dialog-stage-line-bg: rgba(72, 245, 152, 0.34);
+  --theme-dialog-option-bg: #111820;
+  --theme-dialog-option-border: #353b46;
+  --theme-dialog-option-hover-bg: #151d25;
+  --theme-dialog-option-hover-border: #48f598;
+  --theme-dialog-option-active-bg: rgba(72, 245, 152, 0.1);
+  --theme-dialog-option-active-border: #48f598;
+  --theme-dialog-option-label-text: #dbe3ef;
+  --theme-dialog-option-description-text: var(--app-text-muted);
+  --theme-dialog-option-check: #48f598;
+  --theme-dialog-shadow: 0 14px 28px rgba(0, 0, 0, 0.35);
 
   /* =============================================
      PROJECT MENU
@@ -497,6 +515,7 @@
   --project-dropdown-bg: var(--app-bg);
   --project-dropdown-shadow: var(--app-shadow-soft);
   --project-dropdown-item-hover-bg: rgba(255, 255, 255, 0.04);
+  --project-dropdown-item-hover-text: var(--app-text);
   --project-dropdown-item-active-bg: rgba(255, 255, 255, 0.08);
 
   /* =============================================

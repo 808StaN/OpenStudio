@@ -7,18 +7,28 @@ const THEME_OPTIONS = [
   {
     value: "default",
     label: "Default",
+    description: "Dark studio workspace",
     preview: [
       { color: "#232933", pos: 0 },
       { color: "#151922", pos: 50 },
       { color: "#0d1a2a", pos: 100 },
     ],
   },
+  {
+    value: "studio95",
+    label: "Studio 95",
+    description: "Classic desktop controls",
+    preview: [
+      { color: "#d6d2c8", pos: 0 },
+      { color: "#9f9b91", pos: 50 },
+      { color: "#5d5a53", pos: 100 },
+    ],
+  },
 ];
 
 /**
- * ThemeDialog is a centered modal that lets the user pick between the
- * available app themes. Each theme is shown as a visual tile with a
- * mini colour preview so the choice is immediately obvious.
+ * ThemeDialog is a centered modal that lets the user switch the global UI
+ * theme with a larger active preview and a compact option list.
  */
 export function ThemeDialog({ onClose }) {
   const dispatch = useDispatch();
@@ -26,6 +36,16 @@ export function ThemeDialog({ onClose }) {
   const activeTheme = useSelector(function (state) {
     return state.daw.ui.theme || "default";
   });
+  const activeOption =
+    THEME_OPTIONS.find(function (option) {
+      return option.value === activeTheme;
+    }) || THEME_OPTIONS[0];
+
+  const activeGradient = activeOption.preview
+    .map(function (stop) {
+      return stop.color + " " + stop.pos + "%";
+    })
+    .join(", ");
 
   /**
    * Close on Escape so keyboard users can dismiss the modal quickly.
@@ -67,43 +87,74 @@ export function ThemeDialog({ onClose }) {
         </header>
 
         <div className="theme-dialog-body">
-          {THEME_OPTIONS.map(function (option) {
-            const isActive = option.value === activeTheme;
-            const gradient = option.preview
-              .map(function (stop) {
-                return stop.color + " " + stop.pos + "%";
-              })
-              .join(", ");
-
-            return (
-              <button
-                key={option.value}
-                type="button"
-                className={
-                  "theme-dialog-tile" + (isActive ? " is-active" : "")
-                }
-                onClick={function () {
-                  dispatch(setTheme(option.value));
-                  onClose();
-                }}
-              >
-                <div
-                  className="theme-dialog-tile-preview"
-                  style={{
-                    background: "linear-gradient(135deg, " + gradient + ")",
-                  }}
-                />
-                <div className="theme-dialog-tile-footer">
-                  <span className="theme-dialog-tile-label">
-                    {option.label}
-                  </span>
-                  {isActive ? (
-                    <Check size={14} className="theme-dialog-tile-check" />
-                  ) : null}
+          <section className="theme-dialog-preview-panel">
+            <div className="theme-dialog-preview-label">Current Theme</div>
+            <div
+              className="theme-dialog-stage"
+              style={{
+                background: "linear-gradient(135deg, " + activeGradient + ")",
+              }}
+            >
+              <div className="theme-dialog-stage-window">
+                <div className="theme-dialog-stage-titlebar">
+                  <span />
+                  <span />
+                  <span />
                 </div>
-              </button>
-            );
-          })}
+                <div className="theme-dialog-stage-content">
+                  <span />
+                  <span />
+                  <span />
+                </div>
+              </div>
+            </div>
+            <div className="theme-dialog-preview-copy">
+              <strong>{activeOption.label}</strong>
+              <span>{activeOption.description}</span>
+            </div>
+          </section>
+
+          <section className="theme-dialog-options" aria-label="Theme options">
+            {THEME_OPTIONS.map(function (option) {
+              const isActive = option.value === activeTheme;
+              const gradient = option.preview
+                .map(function (stop) {
+                  return stop.color + " " + stop.pos + "%";
+                })
+                .join(", ");
+
+              return (
+                <button
+                  key={option.value}
+                  type="button"
+                  className={
+                    "theme-dialog-option" + (isActive ? " is-active" : "")
+                  }
+                  aria-pressed={isActive}
+                  onClick={function () {
+                    dispatch(setTheme(option.value));
+                    onClose();
+                  }}
+                >
+                  <span
+                    className="theme-dialog-option-swatch"
+                    style={{
+                      background: "linear-gradient(135deg, " + gradient + ")",
+                    }}
+                  />
+                  <span className="theme-dialog-option-copy">
+                    <span className="theme-dialog-option-label">{option.label}</span>
+                    <span className="theme-dialog-option-description">
+                      {option.description}
+                    </span>
+                  </span>
+                  <span className="theme-dialog-option-status">
+                    {isActive ? <Check size={14} /> : null}
+                  </span>
+                </button>
+              );
+            })}
+          </section>
         </div>
       </div>
     </div>
