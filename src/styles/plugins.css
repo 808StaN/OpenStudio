@@ -19,6 +19,11 @@
   padding: 0;
 }
 
+.fx-plugin-fit-host {
+  width: 100%;
+  height: 100%;
+}
+
 .fx-plugin-header-row {
   display: flex;
   align-items: center;
@@ -87,7 +92,7 @@
   text-align: center;
 }
 
-.fx-proq-shell { box-sizing: border-box; height: 100%; padding: var(--fx-window-padding); display: grid; gap: 0; background: var(--fx-window-bg); }
+.fx-proq-shell { box-sizing: border-box; height: 100%; padding: var(--fx-window-padding); display: grid; gap: var(--fx-proq-readouts-gap); background: var(--fx-window-bg); }
 .fx-proq-graph-wrap {
   height: 206px;
   border: 1px solid var(--app-border);

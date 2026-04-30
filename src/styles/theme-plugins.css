@@ -28,6 +28,7 @@
   --fx-proq-point-active-stroke: #f9b739;
   --fx-proq-readout-bg: #0c111c;
   --fx-proq-readout-border: var(--app-border);
+  --fx-proq-readouts-gap: 10px;
   --fx-proq-readout-label: #9aa5ad;
   --fx-proq-readout-value: #b8d6ff;
   --fx-proq-readout-accent: #ffd99a;

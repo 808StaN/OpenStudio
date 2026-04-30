@@ -391,9 +391,10 @@ function App() {
           <FloatingWindow
             id="fxPlugin"
             title={fxWindowTitle}
-            minWidth={480}
-            minHeight={480}
+            minWidth={320}
+            minHeight={240}
             frameClassName="window-fx-plugin"
+            disableResize
           >
             <FxPluginWindow />
           </FloatingWindow>

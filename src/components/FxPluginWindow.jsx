@@ -1,5 +1,5 @@
-import { useCallback, useMemo } from "react";
-import { useDispatch } from "react-redux";
+import { useCallback, useLayoutEffect, useMemo, useRef } from "react";
+import { useDispatch, useSelector } from "react-redux";
 import {
   FX_EFFECT_GRAPHIC_EQ,
   FX_EFFECT_MAXIMIZER,
@@ -49,11 +49,52 @@ import {
   setFxSlotGraphicEqPoint,
   setFxSlotMaximizerParam,
   setFxSlotReverbParam,
+  setWindowRect,
   toggleFxSlot,
 } from "../store";
 
+const FX_WINDOW_ID = "fxPlugin";
+const FX_WINDOW_TITLEBAR_HEIGHT = 40;
+const FX_WINDOW_FRAME_CHROME = 2;
+const FX_WINDOW_MIN_WIDTH = 320;
+const FX_WINDOW_MIN_HEIGHT = 240;
+const FX_WINDOW_FIT_SELECTOR =
+  ".fx-proq-shell, .fx-reverb-shell, .fx-maximizer-shell";
+
+function measureNaturalEditorSize(host) {
+  const source = host?.querySelector(FX_WINDOW_FIT_SELECTOR);
+  if (!source) {
+    return null;
+  }
+
+  const clone = source.cloneNode(true);
+  clone.style.position = "fixed";
+  clone.style.left = "-10000px";
+  clone.style.top = "-10000px";
+  clone.style.width = "max-content";
+  clone.style.height = "auto";
+  clone.style.minHeight = "0";
+  clone.style.maxHeight = "none";
+  clone.style.visibility = "hidden";
+  clone.style.pointerEvents = "none";
+
+  document.body.appendChild(clone);
+  const rect = clone.getBoundingClientRect();
+  const measured = {
+    width: Math.ceil(Math.max(rect.width, clone.scrollWidth)),
+    height: Math.ceil(Math.max(rect.height, clone.scrollHeight)),
+  };
+  clone.remove();
+
+  return measured;
+}
+
 export function FxPluginWindow() {
   const dispatch = useDispatch();
+  const fitRef = useRef(null);
+  const fxWindow = useSelector(function (state) {
+    return state.daw.ui.windows[FX_WINDOW_ID];
+  });
   const {
     activeInsert,
     activeSlot,
@@ -226,6 +267,64 @@ export function FxPluginWindow() {
     wheelShapeStepPercent: WHEEL_SHAPE_STEP_PERCENT,
   });
 
+  useLayoutEffect(
+    function () {
+      if (!activeSlot?.effectType || !fxWindow?.open || fxWindow.isMaximized) {
+        return;
+      }
+
+      const frameId = window.requestAnimationFrame(function () {
+        const measured = measureNaturalEditorSize(fitRef.current);
+        if (!measured) {
+          return;
+        }
+
+        const workspace = document.querySelector(".workspace-surface");
+        const viewportWidth = Math.max(
+          FX_WINDOW_MIN_WIDTH,
+          workspace?.clientWidth || window.innerWidth,
+        );
+        const viewportHeight = Math.max(
+          FX_WINDOW_MIN_HEIGHT,
+          workspace?.clientHeight || window.innerHeight,
+        );
+        const requiredWidth = measured.width + FX_WINDOW_FRAME_CHROME;
+        const requiredHeight =
+          measured.height + FX_WINDOW_TITLEBAR_HEIGHT + FX_WINDOW_FRAME_CHROME;
+        const nextWidth = Math.min(
+          viewportWidth,
+          Math.max(FX_WINDOW_MIN_WIDTH, requiredWidth),
+        );
+        const nextHeight = Math.min(
+          viewportHeight,
+          Math.max(FX_WINDOW_MIN_HEIGHT, requiredHeight),
+        );
+
+        if (
+          Math.abs(nextWidth - fxWindow.width) < 2 &&
+          Math.abs(nextHeight - fxWindow.height) < 2
+        ) {
+          return;
+        }
+
+        dispatch(
+          setWindowRect({
+            id: FX_WINDOW_ID,
+            x: Math.min(fxWindow.x, Math.max(0, viewportWidth - nextWidth)),
+            y: Math.min(fxWindow.y, Math.max(0, viewportHeight - nextHeight)),
+            width: nextWidth,
+            height: nextHeight,
+          }),
+        );
+      });
+
+      return function () {
+        window.cancelAnimationFrame(frameId);
+      };
+    },
+    [activeSlot?.effectType, activeSlotId, activeInsertId, dispatch, fxWindow],
+  );
+
   if (!activeInsert || !activeSlot) {
     return (
       <section className="fx-plugin-panel fx-window-panel">
@@ -240,35 +339,39 @@ export function FxPluginWindow() {
   if (activeSlot.effectType === FX_EFFECT_MAXIMIZER) {
     // Maximizer UI branch: limiter/ceiling/character controls + meter overlays.
     return (
-      <MaximizerEditor
-        activeInsert={activeInsert}
-        maximizerParams={maximizerParams}
-        maximizerWaveformPath={maximizerWaveformPath}
-        maximizerTransferPath={maximizerTransferPath}
-        maximizerThresholdWavePath={maximizerThresholdWavePath}
-        maximizerOutDb={maximizerOutDb}
-        setMaximizerValue={setMaximizerValue}
-      />
+      <div className="fx-plugin-fit-host" ref={fitRef}>
+        <MaximizerEditor
+          activeInsert={activeInsert}
+          maximizerParams={maximizerParams}
+          maximizerWaveformPath={maximizerWaveformPath}
+          maximizerTransferPath={maximizerTransferPath}
+          maximizerThresholdWavePath={maximizerThresholdWavePath}
+          maximizerOutDb={maximizerOutDb}
+          setMaximizerValue={setMaximizerValue}
+        />
+      </div>
     );
   }
 
   if (activeSlot.effectType === FX_EFFECT_REVERB) {
     // Reverb UI branch: knob grid + typed value editing.
     return (
-      <ReverbEditor
-        reverbControls={REVERB_CONTROLS}
-        reverbParams={reverbParams}
-        draggingReverbParam={draggingReverbParam}
-        beginReverbDrag={beginReverbDrag}
-        onReverbWheel={onReverbWheel}
-        resetReverbControl={resetReverbControl}
-        editingReverbParam={editingReverbParam}
-        editingReverbText={editingReverbText}
-        setEditingReverbText={setEditingReverbText}
-        commitReverbEdit={commitReverbEdit}
-        beginReverbEdit={beginReverbEdit}
-        setEditingReverbParam={setEditingReverbParam}
-      />
+      <div className="fx-plugin-fit-host" ref={fitRef}>
+        <ReverbEditor
+          reverbControls={REVERB_CONTROLS}
+          reverbParams={reverbParams}
+          draggingReverbParam={draggingReverbParam}
+          beginReverbDrag={beginReverbDrag}
+          onReverbWheel={onReverbWheel}
+          resetReverbControl={resetReverbControl}
+          editingReverbParam={editingReverbParam}
+          editingReverbText={editingReverbText}
+          setEditingReverbText={setEditingReverbText}
+          commitReverbEdit={commitReverbEdit}
+          beginReverbEdit={beginReverbEdit}
+          setEditingReverbParam={setEditingReverbParam}
+        />
+      </div>
     );
   }
 
@@ -286,33 +389,35 @@ export function FxPluginWindow() {
 
   return (
     // Graphic EQ UI branch: curve editor, draggable points, and per-band readouts.
-    <GraphicEqEditor
-      graphRef={graphRef}
-      graphWidth={GRAPH_WIDTH}
-      graphHeight={GRAPH_HEIGHT}
-      graphPadding={GRAPH_PADDING}
-      graphMaxDb={GRAPH_MAX_DB}
-      graphGridRowsPerSide={GRAPH_GRID_ROWS_PER_SIDE}
-      graphFrequencyGuides={GRAPH_FREQUENCY_GUIDES}
-      spectrumPaths={spectrumPaths}
-      eqCurvePath={eqCurvePath}
-      pointCoordinates={pointCoordinates}
-      draggingPointIndex={draggingPointIndex}
-      adjustPointShapeByWheel={adjustPointShapeByWheel}
-      setDraggingPointIndex={setDraggingPointIndex}
-      eqParams={eqParams}
-      editingField={editingField}
-      editingValue={editingValue}
-      setEditingValue={setEditingValue}
-      onInlineEditKeyDown={onInlineEditKeyDown}
-      onInlineEditBlur={onInlineEditBlur}
-      beginInlineEdit={beginInlineEdit}
-      toFrequencyLabel={toFrequencyLabel}
-      toDbLabel={toDbLabel}
-      toShapeLabel={toShapeLabel}
-      onBandTypeChange={onBandTypeChange}
-      bandTypeOptions={GRAPHIC_EQ_BAND_TYPES}
-    />
+    <div className="fx-plugin-fit-host" ref={fitRef}>
+      <GraphicEqEditor
+        graphRef={graphRef}
+        graphWidth={GRAPH_WIDTH}
+        graphHeight={GRAPH_HEIGHT}
+        graphPadding={GRAPH_PADDING}
+        graphMaxDb={GRAPH_MAX_DB}
+        graphGridRowsPerSide={GRAPH_GRID_ROWS_PER_SIDE}
+        graphFrequencyGuides={GRAPH_FREQUENCY_GUIDES}
+        spectrumPaths={spectrumPaths}
+        eqCurvePath={eqCurvePath}
+        pointCoordinates={pointCoordinates}
+        draggingPointIndex={draggingPointIndex}
+        adjustPointShapeByWheel={adjustPointShapeByWheel}
+        setDraggingPointIndex={setDraggingPointIndex}
+        eqParams={eqParams}
+        editingField={editingField}
+        editingValue={editingValue}
+        setEditingValue={setEditingValue}
+        onInlineEditKeyDown={onInlineEditKeyDown}
+        onInlineEditBlur={onInlineEditBlur}
+        beginInlineEdit={beginInlineEdit}
+        toFrequencyLabel={toFrequencyLabel}
+        toDbLabel={toDbLabel}
+        toShapeLabel={toShapeLabel}
+        onBandTypeChange={onBandTypeChange}
+        bandTypeOptions={GRAPHIC_EQ_BAND_TYPES}
+      />
+    </div>
   );
 }
 
