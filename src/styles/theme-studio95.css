@@ -303,6 +303,7 @@
      ============================================= */
   --mixer-bg: transparent;
   --mixer-border: rgba(0, 0, 0, 0.5);
+  --mixer-track-area-bg: #c0c0c0;
   --mixer-track-bg: #c0c0c0;
   --mixer-track-border: rgba(0, 0, 0, 0.38);
   --mixer-track-selected-bg: #d4d0c8;

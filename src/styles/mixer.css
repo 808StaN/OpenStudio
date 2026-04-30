@@ -21,7 +21,7 @@
   padding-bottom: 0;
   border: 1px solid var(--mixer-border);
   border-radius: var(--app-radius-lg);
-  background: #0b1015;
+  background: var(--mixer-track-area-bg);
   align-items: flex-start;
   align-self: start;
   scrollbar-color: var(--scrollbar-thumb-bg) var(--scrollbar-track-bg);

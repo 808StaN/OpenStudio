@@ -255,6 +255,7 @@
      ============================================= */
   --mixer-bg: transparent;
   --mixer-border: var(--app-border);
+  --mixer-track-area-bg: #0b1015;
   --mixer-track-bg: #0f151b;
   --mixer-track-border: rgba(163, 178, 190, 0.09);
   --mixer-track-selected-bg: #111820;
