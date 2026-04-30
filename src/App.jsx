@@ -32,9 +32,9 @@ import "./styles/auth.css";
 import "./styles/load-project.css";
 import "./styles/theme-main.css";
 import "./styles/theme-plugins.css";
-import tealSlateThemeCss from "./styles/theme-tealslate.css?raw";
-import studio95ThemeCss from "./styles/theme-studio95.css?raw";
-import aeroThemeCss from "./styles/theme-aero.css?raw";
+import tealSlateThemeCss from "./styles/themes/theme-tealslate.css?raw";
+import studio95ThemeCss from "./styles/themes/theme-studio95.css?raw";
+import aeroThemeCss from "./styles/themes/theme-aero.css?raw";
 
 function shouldIgnoreSpaceShortcut(target) {
   if (!(target instanceof HTMLElement)) {
