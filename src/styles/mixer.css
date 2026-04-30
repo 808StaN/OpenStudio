@@ -471,16 +471,16 @@
 }
 
 .fx-clear:hover {
-  color: #ffc0cc;
+  color: var(--mixer-fx-clear-hover-text);
   background: var(--mixer-fx-clear-hover-bg);
 }
 
 .fx-clear.is-armed {
-  color: #ffd8de;
+  color: var(--mixer-fx-clear-armed-text);
   background: var(--mixer-fx-clear-armed-bg);
   box-shadow:
-    0 0 0 1px rgba(255, 118, 151, 0.62),
-    0 0 10px rgba(255, 100, 136, 0.45);
+    0 0 0 1px var(--mixer-fx-clear-armed-outline),
+    0 0 10px var(--mixer-fx-clear-armed-glow);
 }
 
 @media (max-width: 1100px) {

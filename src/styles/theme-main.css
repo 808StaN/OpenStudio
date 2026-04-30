@@ -314,8 +314,12 @@
   --mixer-fx-name-text: #a6b2c5;
   --mixer-fx-arrow-text: #74839a;
   --mixer-fx-clear-text: #ff8aa2;
+  --mixer-fx-clear-hover-text: #ffc0cc;
   --mixer-fx-clear-hover-bg: rgba(160, 61, 93, 0.22);
+  --mixer-fx-clear-armed-text: #ffd8de;
   --mixer-fx-clear-armed-bg: rgba(199, 74, 107, 0.5);
+  --mixer-fx-clear-armed-outline: rgba(255, 118, 151, 0.62);
+  --mixer-fx-clear-armed-glow: rgba(255, 100, 136, 0.45);
   --mixer-value-readout-bg: #11171d;
   --mixer-value-readout-border: var(--app-border);
   --mixer-value-readout-text: var(--app-text);

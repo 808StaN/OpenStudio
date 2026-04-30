@@ -169,8 +169,8 @@
   --browser-tabs-border: rgba(0, 0, 0, 0.5);
   --browser-tab-text: #000000;
   --browser-tab-hover-border: rgba(0, 0, 128, 0.5);
-  --browser-tab-hover-text: #000080;
-  --browser-tab-active-text: #ffffff;
+  --browser-tab-hover-text: rgba(0, 0, 128, 0.5);
+  --browser-tab-active-text: #000080;
   --browser-tab-active-border: #000080;
   --browser-tree-text: #000000;
   --browser-tree-icon: #000080;
@@ -361,8 +361,12 @@
   --mixer-fx-name-text: #000000;
   --mixer-fx-arrow-text: #444444;
   --mixer-fx-clear-text: #cc0000;
+  --mixer-fx-clear-hover-text: #aa0000;
   --mixer-fx-clear-hover-bg: rgba(180, 0, 0, 0.15);
+  --mixer-fx-clear-armed-text: #880000;
   --mixer-fx-clear-armed-bg: rgba(200, 0, 0, 0.4);
+  --mixer-fx-clear-armed-outline: rgba(180, 0, 0, 0.7);
+  --mixer-fx-clear-armed-glow: rgba(160, 0, 0, 0.35);
   --mixer-value-readout-bg: #000000;          /* LCD black panel */
   --mixer-value-readout-border: rgba(0, 0, 0, 0.9);
   --mixer-value-readout-text: #00ff00;        /* Green LCD digits */
