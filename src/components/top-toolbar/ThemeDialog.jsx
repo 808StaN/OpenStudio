@@ -15,6 +15,16 @@ const THEME_OPTIONS = [
     ],
   },
   {
+    value: "tealslate",
+    label: "Teal Slate",
+    description: "Balanced dark teal",
+    preview: [
+      { color: "#2c333b", pos: 0 },
+      { color: "#222831", pos: 50 },
+      { color: "#1c2128", pos: 100 },
+    ],
+  },
+  {
     value: "studio95",
     label: "Studio 95",
     description: "Classic desktop controls",
@@ -22,6 +32,16 @@ const THEME_OPTIONS = [
       { color: "#d6d2c8", pos: 0 },
       { color: "#9f9b91", pos: 50 },
       { color: "#5d5a53", pos: 100 },
+    ],
+  },
+  {
+    value: "aero",
+    label: "Aero",
+    description: "Bright glassy studio",
+    preview: [
+      { color: "#f0f4f8", pos: 0 },
+      { color: "#dbe8f6", pos: 50 },
+      { color: "#b9d3ec", pos: 100 },
     ],
   },
 ];

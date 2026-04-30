@@ -32,7 +32,9 @@ import "./styles/auth.css";
 import "./styles/load-project.css";
 import "./styles/theme-main.css";
 import "./styles/theme-plugins.css";
+import tealSlateThemeCss from "./styles/theme-tealslate.css?raw";
 import studio95ThemeCss from "./styles/theme-studio95.css?raw";
+import aeroThemeCss from "./styles/theme-aero.css?raw";
 
 function shouldIgnoreSpaceShortcut(target) {
   if (!(target instanceof HTMLElement)) {
@@ -330,11 +332,19 @@ function App() {
     <div
       className={
         "app-shell " +
-        (activeTheme === "studio95" ? "theme-studio95" : "theme-default")
+        (activeTheme === "tealslate"
+          ? "theme-tealslate"
+          : activeTheme === "studio95"
+          ? "theme-studio95"
+          : activeTheme === "aero"
+            ? "theme-aero"
+            : "theme-default")
       }
       onContextMenu={onAppContextMenu}
     >
+      {activeTheme === "tealslate" ? <style>{tealSlateThemeCss}</style> : null}
       {activeTheme === "studio95" ? <style>{studio95ThemeCss}</style> : null}
+      {activeTheme === "aero" ? <style>{aeroThemeCss}</style> : null}
       <AppTitleBar />
       <TopToolbar />
 

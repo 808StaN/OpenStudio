@@ -1,0 +1,616 @@
+:root {
+/* =============================================
+GLOBAL / APP SHELL
+============================================= */
+--app-bg: #1C2128; /* Lekko przyciemnione #222831 dla głębi */
+--app-surface: #222831;
+--app-text: #EEEEEE;
+--app-text-muted: #B0BEC5; /* Miękka szarość bliska #EEEEEE */
+--app-text-faint: #718093;
+--app-border: rgba(238, 238, 238, 0.06);
+--app-border-strong: rgba(238, 238, 238, 0.1);
+--app-accent: rgba(0, 173, 181, 0.8);
+--app-accent-strong: #00ADB5;
+--app-accent-mid: rgba(0, 173, 181, 0.6);
+--app-accent-soft: rgba(0, 173, 181, 0.1);
+--app-accent-text: #111111;
+--slider-accent: var(--app-accent-strong);
+--slider-track-bg: #1C2128;
+--slider-track-border: rgba(238, 238, 238, 0.05);
+--slider-thumb-bg: #393E46;
+--slider-thumb-border: rgba(238, 238, 238, 0.1);
+--slider-thumb-hover-bg: #4A505A;
+--slider-thumb-active-bg: #00ADB5;
+--slider-thumb-hover-border: rgba(0, 173, 181, 0.5);
+--slider-thumb-indicator: var(--app-accent-strong);
+--app-danger: #E05555;
+--app-danger-text: #FDEAEC;
+--app-danger-bg: rgba(224, 85, 85, 0.15);
+--app-warning: #D4A04A;
+--app-info: #4DD0E1;
+--font-main: "Inter", "Segoe UI", sans-serif;
+--font-mono: "JetBrains Mono", Consolas, monospace;
+--digits: 3;
+--app-radius-lg: 6px;
+--app-radius-md: 4px;
+--app-radius-sm: 2px;
+--app-shadow: 0 8px 24px rgba(0, 0, 0, 0.25);
+--app-shadow-soft: 0 4px 12px rgba(0, 0, 0, 0.15);
+--toggle-bg: rgba(238, 238, 238, 0.05);
+--toggle-border: transparent;
+--toggle-border-radius: 4px;
+--piano-snap-trigger-bg: #393E46;
+--toggle-btn-bg: #393E46;
+--toggle-btn-text: #EEEEEE;
+--toggle-btn-hover-bg: #4A505A;
+--toggle-btn-active-bg: #00ADB5;
+--toggle-btn-active-text: #111111;
+
+/* =============================================
+TITLEBAR
+============================================= */
+--titlebar-bg: #1C2128;
+--titlebar-border: rgba(238, 238, 238, 0.05);
+--titlebar-text: #EEEEEE;
+--titlebar-text-faint: #718093;
+--titlebar-btn-bg: #222831;
+--titlebar-btn-border: transparent;
+--titlebar-btn-text: #B0BEC5;
+--titlebar-btn-radius: 4px;
+--titlebar-btn-hover-bg: #393E46;
+--titlebar-btn-hover-border: transparent;
+--titlebar-btn-hover-text: #EEEEEE;
+--titlebar-close-bg: #222831;
+--titlebar-close-border: transparent;
+--titlebar-close-text: #B0BEC5;
+--titlebar-close-hover-text: #E05555;
+--titlebar-close-hover-border: transparent;
+--titlebar-close-hover-bg: rgba(224, 85, 85, 0.15);
+
+/* =============================================
+TRANSPORT
+============================================= */
+--transport-bg: #1C2128;
+--transport-border: rgba(238, 238, 238, 0.05);
+--transport-btn-bg: #393E46;
+--transport-btn-border: transparent;
+--transport-btn-text: #EEEEEE;
+--transport-btn-hover-bg: #4A505A;
+--transport-btn-hover-border: transparent;
+--transport-btn-active-bg: #00ADB5;
+--transport-btn-active-border: transparent;
+--transport-btn-active-text: #111111;
+--transport-bpm-bg: #222831;
+--transport-bpm-border: rgba(238, 238, 238, 0.05);
+--transport-bpm-text: #00ADB5;
+--transport-rec-text: #E05555;
+--transport-rec-border: rgba(224, 85, 85, 0.4);
+--transport-shadow: 0 4px 12px rgba(0, 0, 0, 0.2);
+--transport-input-shadow: inset 0 0 0 1px rgba(238, 238, 238, 0.05);
+--transport-rec-shadow: 0 0 12px rgba(224, 85, 85, 0.2);
+
+/* =============================================
+WORKSPACE
+============================================= */
+--workspace-bg: #1C2128;
+--workspace-border: rgba(238, 238, 238, 0.05);
+--workspace-grid: rgba(238, 238, 238, 0.03);
+--workspace-highlight: rgba(0, 173, 181, 0.05);
+--workspace-overlay-bg: #1C2128;
+
+/* =============================================
+WINDOW / FLOATING
+============================================= */
+--window-bg: #222831;
+--window-border: rgba(238, 238, 238, 0.1);
+--window-title-bg: #2C333B;
+--window-title-border: rgba(238, 238, 238, 0.05);
+--window-title-text: #EEEEEE;
+--window-backdrop: rgba(0, 0, 0, 0.5);
+--window-shadow: 0 16px 32px rgba(0, 0, 0, 0.35);
+--window-control-btn-radius: 4px;
+
+/* =============================================
+BROWSER
+============================================= */
+--browser-bg: #222831;
+--browser-border: rgba(238, 238, 238, 0.05);
+--browser-tabs-bg: #1C2128;
+--browser-tabs-border: rgba(238, 238, 238, 0.05);
+--browser-tab-text: #B0BEC5;
+--browser-tab-hover-border: rgba(0, 173, 181, 0.3);
+--browser-tab-hover-text: #00ADB5;
+--browser-tab-active-text: #00ADB5;
+--browser-tab-active-border: #00ADB5;
+--browser-tree-text: #EEEEEE;
+--browser-tree-icon: #00ADB5;
+--browser-tree-hover-bg: rgba(238, 238, 238, 0.04);
+--browser-tree-folder-hover-text: #EEEEEE;
+--browser-tree-folder-hover-icon: #00ADB5;
+--browser-tree-hover-text: #EEEEEE;
+--browser-plugin-icon: #00ADB5;
+--browser-rescan-bg: #393E46;
+--browser-rescan-border: transparent;
+--browser-rescan-text: #EEEEEE;
+--browser-hint-border: rgba(238, 238, 238, 0.08);
+--browser-hint-text: #B0BEC5;
+--browser-hint-bg: #1C2128;
+
+/* =============================================
+PLAYLIST
+============================================= */
+--playlist-bg: #222831;
+--playlist-border: rgba(238, 238, 238, 0.05);
+--playlist-toolbar-bg: #2C333B;
+--playlist-toolbar-border: rgba(238, 238, 238, 0.05);
+--playlist-btn-bg: #393E46;
+--playlist-btn-border: transparent;
+--playlist-btn-text: #EEEEEE;
+--playlist-btn-hover-bg: #4A505A;
+--playlist-btn-active-bg: #00ADB5;
+--playlist-btn-active-text: #111111;
+--playlist-header-bg: #1C2128;
+--playlist-bar-text: #B0BEC5;
+--playlist-bar-bg: #2C333B;
+--playlist-bar-border: rgba(238, 238, 238, 0.05);
+--playlist-track-name-bg: #2C333B;
+--playlist-track-name-border: rgba(238, 238, 238, 0.05);
+--playlist-track-name-text: #EEEEEE;
+--playlist-track-divider-border: rgba(238, 238, 238, 0.08);
+--playlist-track-grid-bg: #1C2128;
+--playlist-track-grid-border: rgba(238, 238, 238, 0.03);
+--playlist-length-input-bg: #1C2128;
+--playlist-snap-line: rgba(0, 173, 181, 0.15);
+--playlist-snap-width: 1px;
+--playlist-grid-major-line: rgba(238, 238, 238, 0.08);
+--playlist-clip-border: rgba(0, 173, 181, 0.4);
+--playlist-clip-bg: rgba(0, 173, 181, 0.1);
+--playlist-clip-text: #EEEEEE;
+--playlist-clip-active-border: rgba(0, 173, 181, 0.8);
+--playlist-clip-active-bg: rgba(0, 173, 181, 0.2);
+--playlist-clip-label-bg: rgba(28, 33, 40, 0.7);
+--playlist-audio-preview-top: rgba(0, 173, 181, 0.3);
+--playlist-audio-preview-bottom: rgba(0, 173, 181, 0.15);
+--playlist-audio-clip-top: rgba(0, 173, 181, 0.25);
+--playlist-audio-clip-bottom: rgba(0, 173, 181, 0.1);
+--playlist-mini-note-top: #00ADB5;
+--playlist-mini-note-bottom: #008A90;
+--playlist-mini-note-glow: rgba(0, 173, 181, 0.3);
+--playlist-mini-note-highlight: rgba(238, 238, 238, 0.3);
+--playlist-wave-fill: rgba(0, 173, 181, 0.4);
+--playlist-wave-stroke: rgba(0, 173, 181, 0.7);
+--playlist-wave-shadow: rgba(0, 173, 181, 0.2);
+--playlist-playhead: #00ADB5;
+--playlist-drop-border: rgba(0, 173, 181, 0.5);
+--playlist-preview-border: rgba(0, 173, 181, 0.8);
+
+/* =============================================
+CHANNEL RACK
+============================================= */
+--rack-bg: #222831;
+--rack-border: rgba(238, 238, 238, 0.05);
+--rack-topbar-bg: #2C333B;
+--rack-topbar-border: rgba(238, 238, 238, 0.05);
+--rack-row-bg: #2C333B;
+--rack-row-border: rgba(238, 238, 238, 0.05);
+--rack-row-radius: 6px;
+--rack-control-radius: 4px;
+--rack-control-radius-sm: 3px;
+--rack-menu-radius: 6px;
+--rack-menu-item-radius: 4px;
+--rack-pattern-picker-bg: #1C2128;
+--rack-pattern-picker-border: rgba(238, 238, 238, 0.05);
+--rack-pattern-picker-text: #00ADB5;
+--rack-channel-name-bg: #1C2128;
+--rack-channel-name-border: rgba(238, 238, 238, 0.05);
+--rack-channel-name-radius: 4px;
+--rack-channel-name-text: #EEEEEE;
+--rack-insert-bg: #1C2128;
+--rack-insert-border: rgba(238, 238, 238, 0.05);
+--rack-insert-radius: 4px;
+--rack-insert-text: #EEEEEE;
+--rack-step-bg: #393E46;
+--rack-step-border: rgba(238, 238, 238, 0.04);
+--rack-step-radius: 3px;
+--rack-step-group-a-bg: #3E4450;
+--rack-step-group-a-border: rgba(238, 238, 238, 0.06);
+--rack-step-group-b-bg: #363C46;
+--rack-step-group-b-border: rgba(238, 238, 238, 0.04);
+--rack-step-on-bg: #00ADB5;
+--rack-step-on-border: #00ADB5;
+--rack-step-playhead-outline: rgba(212, 160, 74, 0.8);
+--rack-mini-note-bg: #00ADB5;
+--rack-mini-note-radius: 2px;
+--rack-preview-bg: #1C2128;
+--rack-preview-border: rgba(238, 238, 238, 0.05);
+--rack-preview-radius: 4px;
+--rack-add-btn-bg: #393E46;
+--rack-add-btn-border: transparent;
+--rack-add-btn-text: #B0BEC5;
+--rack-add-btn-hover-bg: #4A505A;
+--rack-add-btn-hover-text: #EEEEEE;
+--rack-pattern-length-text: #B0BEC5;
+--rack-pattern-length-btn-bg: #393E46;
+--rack-pattern-length-btn-border: transparent;
+--rack-pattern-length-btn-text: #B0BEC5;
+--rack-pattern-length-btn-hover-bg: #4A505A;
+--rack-pattern-length-btn-hover-border: rgba(0, 173, 181, 0.3);
+--rack-pattern-length-btn-hover-text: #EEEEEE;
+--rack-pattern-length-input-bg: #1C2128;
+--rack-pattern-length-input-border: rgba(238, 238, 238, 0.05);
+--rack-pattern-length-input-text: #EEEEEE;
+--rack-pattern-length-unit-text: #718093;
+--rack-context-menu-bg: #2C333B;
+--rack-context-menu-border: rgba(238, 238, 238, 0.1);
+--rack-context-menu-text: #EEEEEE;
+--rack-context-menu-item-hover-bg: rgba(0, 173, 181, 0.15);
+--rack-context-menu-item-hover-text: #EEEEEE;
+--rack-rename-action-bg: #393E46;
+--rack-rename-action-text: #B0BEC5;
+
+/* =============================================
+MIXER
+============================================= */
+--mixer-bg: transparent;
+--mixer-border: rgba(238, 238, 238, 0.05);
+--mixer-track-area-bg: #1C2128;
+--mixer-track-bg: #222831;
+--mixer-track-border: rgba(238, 238, 238, 0.05);
+--mixer-track-selected-bg: #2C333B;
+--mixer-track-selected-border: rgba(0, 173, 181, 0.2);
+--mixer-track-title-text: #B0BEC5;
+--mixer-track-title-font-weight: 600;
+--mixer-add-insert-btn-bg: #393E46;
+--mixer-add-insert-btn-border: transparent;
+--mixer-add-insert-btn-text: #EEEEEE;
+--mixer-add-insert-btn-hover-bg: #4A505A;
+--mixer-add-insert-btn-hover-border: transparent;
+--mixer-led-off-bg: #393E46;
+--mixer-led-off-border: transparent;
+--mixer-led-on-bg: #00ADB5;
+--mixer-led-on-border: #00ADB5;
+--mixer-knob-label-text: #B0BEC5;
+--mixer-knob-label-muted-text: #718093;
+--mixer-knob-track: #1C2128;
+--mixer-knob-arc-positive: #00ADB5;
+--mixer-knob-arc-negative: #E05555;
+--mixer-knob-face-bg: #2C333B;
+--mixer-knob-pointer: #EEEEEE;
+--mixer-knob-center-bg: #1C2128;
+--mixer-knob-marker-muted: #393E46;
+--fader-groove-bg: #1C2128;
+--fader-groove-border: rgba(238, 238, 238, 0.05);
+--fader-groove-shadow: inset 0 0 0 1px rgba(0, 0, 0, 0.2);
+--fader-track-bg: #2C333B;
+--fader-track-shadow: inset 0 0 0 1px rgba(0, 0, 0, 0.1);
+--fader-fill-bg: #00ADB5;
+--fader-thumb-bg: #393E46;
+--fader-thumb-border: rgba(238, 238, 238, 0.1);
+--fader-thumb-hover-bg: #4A505A;
+--fader-thumb-active-bg: #00ADB5;
+--fader-thumb-hover-border: rgba(0, 173, 181, 0.4);
+--fader-thumb-active-border: #00ADB5;
+
+--mixer-meter-bg: #1C2128;
+--mixer-meter-border: rgba(238, 238, 238, 0.05);
+--mixer-meter-seg-bg: #2C333B;
+--mixer-meter-seg-on-bg: #00ADB5;
+--mixer-meter-seg-warning-bg: #D4A04A;
+--mixer-meter-seg-danger-bg: #E05555;
+--mixer-right-bg: #2C333B;
+--mixer-right-border: rgba(238, 238, 238, 0.05);
+--mixer-fx-row-bg: #222831;
+--mixer-fx-row-border: rgba(238, 238, 238, 0.05);
+--mixer-fx-row-selected-bg: rgba(0, 173, 181, 0.1);
+--mixer-fx-row-selected-border: rgba(0, 173, 181, 0.3);
+--mixer-fx-power-off-bg: #393E46;
+--mixer-fx-power-off-border: transparent;
+--mixer-fx-power-off-text: #718093;
+--mixer-fx-power-on-bg: rgba(0, 173, 181, 0.15);
+--mixer-fx-power-on-border: rgba(0, 173, 181, 0.4);
+--mixer-fx-power-on-text: #00ADB5;
+--mixer-fx-name-text: #B0BEC5;
+--mixer-fx-arrow-text: #718093;
+--mixer-fx-clear-text: #E05555;
+--mixer-fx-clear-hover-text: #F87171;
+--mixer-fx-clear-hover-bg: rgba(224, 85, 85, 0.15);
+--mixer-fx-clear-armed-text: #FDEAEC;
+--mixer-fx-clear-armed-bg: rgba(224, 85, 85, 0.6);
+--mixer-fx-clear-armed-outline: rgba(224, 85, 85, 0.8);
+--mixer-fx-clear-armed-glow: rgba(224, 85, 85, 0.4);
+--mixer-value-readout-bg: #1C2128;
+--mixer-value-readout-border: rgba(238, 238, 238, 0.05);
+--mixer-value-readout-text: #EEEEEE;
+
+/* =============================================
+PIANO ROLL
+============================================= */
+--piano-bg: #1C2128;
+--piano-border: rgba(238, 238, 238, 0.05);
+--piano-toolbar-bg: #2C333B;
+--piano-toolbar-border: rgba(238, 238, 238, 0.05);
+--piano-toolbar-text: #EEEEEE;
+--piano-snap-trigger-bg: #393E46;
+--piano-snap-trigger-hover-bg: #4A505A;
+--piano-snap-dropdown-bg: #2C333B;
+--piano-velocity-resize-bg: #1C2128;
+--piano-velocity-resize-border: rgba(0, 0, 0, 0.8);
+--piano-velocity-resize-hover-filter: brightness(1.1);
+--piano-keys-bg: #2C333B;
+--piano-keys-header-bg: #393E46;
+--piano-key-row-border: rgba(28, 33, 40, 0.6);
+--piano-key-white-bg: #EEEEEE;
+--piano-key-white-text: #222831;
+--piano-key-black-bg: #1C2128;
+--piano-key-black-text: #B0BEC5;
+--piano-grid-bg: #1C2128;
+--piano-out-of-scale-row-bg: #191E25;
+--piano-out-of-scale-row-opacity: 1;
+--piano-grid-header-bg: #2C333B;
+--piano-grid-header-border: rgba(238, 238, 238, 0.05);
+--piano-grid-header-text: #B0BEC5;
+--piano-grid-line: rgba(0, 0, 0, 0.3);
+--piano-grid-row-line: rgba(0, 0, 0, 0.15);
+--piano-note-bg: #00ADB5;
+--piano-note-border: rgba(0, 173, 181, 0.6);
+--piano-note-text: #111111;
+--piano-note-radius: 3px;
+--piano-note-resize-handle-bg: rgba(238, 238, 238, 0.4);
+--piano-note-resize-handle-radius: 2px;
+--piano-note-selected-bg: #E05555;
+--piano-note-selected-border: #E05555;
+--piano-note-selected-text: #FDEAEC;
+--piano-velocity-shell-bg: #1C2128;
+--piano-velocity-shell-border: rgba(0, 0, 0, 0.5);
+--piano-velocity-label-bg: #2C333B;
+--piano-velocity-label-text: #B0BEC5;
+--piano-velocity-label-strong: #EEEEEE;
+--piano-velocity-label-em: #00ADB5;
+--piano-velocity-grid-bg: #1C2128;
+--piano-velocity-bar-bg: #00ADB5;
+--piano-velocity-bar-cap: #4DD0E1;
+--piano-velocity-bar-selected-bg: #E05555;
+--piano-playhead-bg: #00ADB5;
+--piano-selection-border: rgba(0, 173, 181, 0.4);
+--piano-selection-bg: rgba(0, 173, 181, 0.08);
+--piano-radio-bg: #1C2128;
+--piano-radio-border: rgba(238, 238, 238, 0.05);
+
+/* =============================================
+PATTERN LIST
+============================================= */
+--pattern-list-bg: #222831;
+--pattern-list-border: rgba(238, 238, 238, 0.05);
+--pattern-list-header-bg: #2C333B;
+--pattern-list-header-border: rgba(238, 238, 238, 0.05);
+--pattern-list-header-text: #EEEEEE;
+--pattern-list-add-btn-bg: #393E46;
+--pattern-list-add-btn-border: transparent;
+--pattern-list-add-btn-text: #EEEEEE;
+--pattern-list-add-btn-hover-bg: #4A505A;
+--pattern-list-add-btn-hover-border: transparent;
+--pattern-list-row-bg: #2C333B;
+--pattern-list-row-border: rgba(238, 238, 238, 0.05);
+--pattern-list-row-active-border: rgba(0, 173, 181, 0.4);
+--pattern-list-row-active-bg: rgba(0, 173, 181, 0.1);
+--pattern-list-name-bg: #1C2128;
+--pattern-list-name-border: rgba(238, 238, 238, 0.05);
+--pattern-list-name-text: #EEEEEE;
+--pattern-list-select-bg: #1C2128;
+--pattern-list-select-border: rgba(238, 238, 238, 0.05);
+--pattern-list-select-text: #EEEEEE;
+--pattern-list-meta-text: #B0BEC5;
+--pattern-list-color-bg: #1C2128;
+--pattern-list-color-chip-border: rgba(238, 238, 238, 0.1);
+--pattern-list-popover-bg: #2C333B;
+--pattern-list-popover-border: rgba(238, 238, 238, 0.1);
+
+/* =============================================
+AUTH
+============================================= */
+--auth-overlay-bg: rgba(28, 33, 40, 0.6);
+--auth-dialog-bg: #222831;
+--auth-dialog-border: rgba(238, 238, 238, 0.1);
+--auth-dialog-text: #EEEEEE;
+--auth-header-bg: #2C333B;
+--auth-header-border: rgba(238, 238, 238, 0.05);
+--auth-header-text: #EEEEEE;
+--auth-close-bg: #393E46;
+--auth-close-border: transparent;
+--auth-close-text: #B0BEC5;
+--auth-close-radius: 4px;
+--auth-close-hover-bg: #4A505A;
+--auth-close-hover-border: transparent;
+--auth-close-hover-text: #EEEEEE;
+--auth-input-bg: #1C2128;
+--auth-input-border: rgba(238, 238, 238, 0.05);
+--auth-input-text: #EEEEEE;
+--auth-input-placeholder: #718093;
+--auth-input-hover-border: rgba(238, 238, 238, 0.1);
+--auth-input-focus-border: #00ADB5;
+--auth-submit-bg: #00ADB5;
+--auth-submit-border: #00ADB5;
+--auth-submit-text: #111111;
+--auth-error-text: #E05555;
+--auth-error-bg: rgba(224, 85, 85, 0.1);
+--auth-error-border: rgba(224, 85, 85, 0.2);
+--auth-link-text: #4DD0E1;
+--auth-link-hover-text: #80DEEA;
+--auth-checkbox-bg: #1C2128;
+--auth-checkbox-border: rgba(238, 238, 238, 0.05);
+--auth-checkbox-checked-bg: #00ADB5;
+--auth-footer-text: #B0BEC5;
+
+/* =============================================
+LOAD PROJECT WINDOW
+============================================= */
+--load-project-window-bg: #222831;
+--load-project-window-border: rgba(238, 238, 238, 0.1);
+--load-project-window-header-bg: #2C333B;
+--load-project-window-header-border: rgba(238, 238, 238, 0.05);
+--load-project-window-header-text: #EEEEEE;
+--load-project-window-empty-text: #B0BEC5;
+--load-project-window-sidebar-bg: #1C2128;
+--load-project-window-sidebar-border: rgba(238, 238, 238, 0.05);
+--load-project-window-sidebar-item-text: #B0BEC5;
+--load-project-window-sidebar-item-radius: 4px;
+--load-project-window-sidebar-item-hover-bg: rgba(238, 238, 238, 0.04);
+--load-project-window-sidebar-item-hover-text: #EEEEEE;
+--load-project-window-sidebar-item-active-bg: #00ADB5;
+--load-project-window-sidebar-item-active-border: #00ADB5;
+--load-project-window-sidebar-item-active-text: #111111;
+--load-project-window-search-bg: #1C2128;
+--load-project-window-search-border: rgba(238, 238, 238, 0.05);
+--load-project-window-search-radius: 4px;
+--load-project-window-search-text: #718093;
+--load-project-window-search-input-text: #EEEEEE;
+--load-project-window-search-placeholder: #718093;
+--load-project-window-table-wrapper-border: rgba(238, 238, 238, 0.05);
+--load-project-window-table-wrapper-radius: 4px;
+--load-project-window-table-header-bg: #222831;
+--load-project-window-table-header-border: rgba(238, 238, 238, 0.05);
+--load-project-window-table-header-text: #B0BEC5;
+--load-project-window-table-header-active-text: #4DD0E1;
+--load-project-window-table-row-hover-bg: rgba(238, 238, 238, 0.03);
+--load-project-window-table-row-selected-bg: rgba(0, 173, 181, 0.1);
+--load-project-window-table-cell-name-text: #EEEEEE;
+--load-project-window-table-cell-bpm-text: #B0BEC5;
+--load-project-window-table-cell-date-text: #718093;
+--load-project-window-table-footer-bg: #222831;
+--load-project-window-table-footer-border: rgba(238, 238, 238, 0.05);
+--load-project-window-count-text: #718093;
+--load-project-window-action-bar-bg: #222831;
+--load-project-window-action-bar-border: rgba(238, 238, 238, 0.05);
+--load-project-window-action-btn-bg: #00ADB5;
+--load-project-window-action-btn-border: #00ADB5;
+--load-project-window-action-btn-text: #111111;
+--load-project-window-action-btn-danger-bg: rgba(224, 85, 85, 0.15);
+--load-project-window-action-btn-danger-border: rgba(224, 85, 85, 0.3);
+--load-project-window-action-btn-danger-text: #E05555;
+
+/* =============================================
+THEME DIALOG
+============================================= */
+--theme-dialog-panel-bg: #222831;
+--theme-dialog-panel-border: rgba(238, 238, 238, 0.05);
+--theme-dialog-panel-label-text: #718093;
+--theme-dialog-preview-text: #EEEEEE;
+--theme-dialog-preview-description-text: #B0BEC5;
+--theme-dialog-stage-window-bg: rgba(34, 40, 49, 0.9);
+--theme-dialog-stage-window-border: rgba(238, 238, 238, 0.15);
+--theme-dialog-stage-titlebar-bg: rgba(57, 62, 70, 0.5);
+--theme-dialog-stage-line-bg: rgba(0, 173, 181, 0.5);
+--theme-dialog-option-bg: #393E46;
+--theme-dialog-option-border: transparent;
+--theme-dialog-option-hover-bg: #4A505A;
+--theme-dialog-option-hover-border: #00ADB5;
+--theme-dialog-option-active-bg: rgba(0, 173, 181, 0.15);
+--theme-dialog-option-active-border: #00ADB5;
+--theme-dialog-option-label-text: #EEEEEE;
+--theme-dialog-option-description-text: #B0BEC5;
+--theme-dialog-option-check: #00ADB5;
+--theme-dialog-shadow: 0 12px 24px rgba(0, 0, 0, 0.3);
+
+/* =============================================
+PROJECT MENU
+============================================= */
+--project-dropdown-bg: #2C333B;
+--project-dropdown-shadow: 0 4px 12px rgba(0, 0, 0, 0.2);
+--project-dropdown-item-hover-bg: rgba(0, 173, 181, 0.15);
+--project-dropdown-item-hover-text: #EEEEEE;
+--project-dropdown-item-active-bg: rgba(0, 173, 181, 0.25);
+
+/* =============================================
+FX EMPTY SLOT
+============================================= */
+--fx-empty-slot-bg: #1C2128;
+--fx-empty-slot-border: transparent;
+--fx-empty-slot-border-style: solid;
+--fx-empty-slot-border-width: 0px;
+--fx-empty-slot-radius: 4px;
+--fx-empty-slot-text: #718093;
+--fx-empty-slot-drop-target-bg: #222831;
+--fx-empty-slot-drop-target-border: rgba(0, 173, 181, 0.5);
+--fx-empty-slot-drop-target-shadow: inset 0 0 0 2px rgba(0, 173, 181, 0.2), 0 0 15px rgba(0, 173, 181, 0.1);
+
+/* =============================================
+RENDER WINDOW
+============================================= */
+--render-bg: #222831;
+--render-border: rgba(238, 238, 238, 0.05);
+--render-label-text: #B0BEC5;
+--render-input-bg: #1C2128;
+--render-input-border: rgba(238, 238, 238, 0.05);
+--render-input-text: #EEEEEE;
+--render-input-hover-border: rgba(238, 238, 238, 0.1);
+--render-input-focus-border: #00ADB5;
+--render-select-option-text: #EEEEEE;
+--render-select-option-bg: #393E46;
+--render-select-option-checked-text: #111111;
+--render-select-option-checked-bg: #00ADB5;
+--render-select-option-hover-bg: #4A505A;
+--render-btn-bg: #00ADB5;
+--render-btn-border: #00ADB5;
+--render-btn-text: #111111;
+--render-status-text: #4DD0E1;
+--render-error-text: #E05555;
+
+/* =============================================
+SCROLLBARS
+============================================= */
+--scrollbar-track-bg: #1C2128;
+--scrollbar-track-border: transparent;
+--scrollbar-thumb-bg: #393E46;
+--scrollbar-thumb-border: #1C2128;
+
+/* =============================================
+SAMPLE SETTINGS
+============================================= */
+--sample-settings-bg: #222831;
+--sample-settings-border: rgba(238, 238, 238, 0.05);
+--sample-settings-header-text: #EEEEEE;
+--sample-settings-tab-bg: transparent;
+--sample-settings-tab-border: transparent;
+--sample-settings-tab-text: #B0BEC5;
+--sample-settings-tab-active-bg: #00ADB5;
+--sample-settings-tab-active-border: #00ADB5;
+--sample-settings-tab-active-text: #111111;
+--sample-waveform-bg: #2C333B;
+--sample-waveform-border: rgba(238, 238, 238, 0.05);
+--sample-waveform-title-text: #B0BEC5;
+--sample-preview-btn-bg: #393E46;
+--sample-preview-btn-border: transparent;
+--sample-preview-btn-text: #B0BEC5;
+--sample-preview-btn-playing-bg: #00ADB5;
+--sample-preview-btn-playing-border: #00ADB5;
+--sample-preview-btn-playing-text: #111111;
+--sample-waveform-view-bg: #1C2128;
+--sample-waveform-view-border: rgba(238, 238, 238, 0.05);
+--sample-waveform-line: rgba(0, 173, 181, 0.8);
+--sample-waveform-active-length: rgba(0, 173, 181, 0.15);
+--sample-waveform-trimmed-bg: rgba(28, 33, 40, 0.7);
+--sample-waveform-fade: rgba(212, 160, 74, 0.3);
+--sample-envelope-bg: #1C2128;
+--sample-envelope-border: rgba(238, 238, 238, 0.05);
+--sample-envelope-path: #00ADB5;
+--sample-time-knob-bg: #2C333B;
+--sample-time-knob-border: transparent;
+--sample-time-knob-label: #B0BEC5;
+--sample-time-select-bg: #1C2128;
+--sample-time-select-border: rgba(238, 238, 238, 0.05);
+--sample-time-select-text: #EEEEEE;
+--sample-time-select-caret: #00ADB5;
+--sample-time-select-open-border: rgba(0, 173, 181, 0.5);
+--sample-setting-row-text: #B0BEC5;
+--sample-setting-row-value: #EEEEEE;
+--sample-setting-input-bg: #1C2128;
+--sample-setting-input-border: rgba(238, 238, 238, 0.05);
+--sample-setting-input-text: #EEEEEE;
+--sample-setting-input-focus-border: #00ADB5;
+--sample-checkbox-bg: #1C2128;
+--sample-checkbox-border: rgba(238, 238, 238, 0.05);
+--sample-checkbox-checked-bg: #00ADB5;
+--sample-checkbox-check: #111111;
+--sample-empty-border: rgba(238, 238, 238, 0.08);
+--sample-empty-text: #B0BEC5;
+}

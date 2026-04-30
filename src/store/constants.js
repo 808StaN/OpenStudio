@@ -43,8 +43,15 @@ export const DEFAULT_MIDI_PITCH = 72;
 export const DEFAULT_NOTE_VELOCITY = 95;
 
 export const UI_THEME_DEFAULT = "default";
+export const UI_THEME_TEALSLATE = "tealslate";
 export const UI_THEME_STUDIO95 = "studio95";
-export const UI_THEMES = new Set([UI_THEME_DEFAULT, UI_THEME_STUDIO95]);
+export const UI_THEME_AERO = "aero";
+export const UI_THEMES = new Set([
+  UI_THEME_DEFAULT,
+  UI_THEME_TEALSLATE,
+  UI_THEME_STUDIO95,
+  UI_THEME_AERO,
+]);
 
 export const MAXIMIZER_MODES = ["irc-ll", "irc-i", "irc-ii", "irc-iii", "irc-iv"];
 

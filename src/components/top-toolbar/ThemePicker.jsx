@@ -5,7 +5,9 @@ import { setTheme } from "../../store";
 
 const THEME_OPTIONS = [
   { value: "default", label: "Default" },
+  { value: "tealslate", label: "Teal Slate" },
   { value: "studio95", label: "Studio 95" },
+  { value: "aero", label: "Aero" },
 ];
 
 export function ThemePicker() {
