@@ -20,6 +20,7 @@ export function FloatingWindow({
   disableDrag = false,
   disableResize = false,
   hideMaximize = false,
+  frameClassName = "",
   children,
 }) {
   const dispatch = useDispatch();
@@ -189,7 +190,11 @@ export function FloatingWindow({
         minHeight={minHeight}
         dragHandleClassName="window-title"
         cancel=".window-controls, .window-control-btn"
-        className={"window-frame" + (win.isMaximized ? " is-maximized" : "")}
+        className={
+          "window-frame" +
+          (frameClassName ? " " + frameClassName : "") +
+          (win.isMaximized ? " is-maximized" : "")
+        }
         style={{ zIndex: modal ? Math.max(1000, win.z) : win.z }}
         onMouseDown={function () {
           dispatch(bringWindowToFront(id));

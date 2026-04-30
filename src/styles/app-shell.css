@@ -521,6 +521,11 @@
   padding: 10px;
 }
 
+.window-fx-plugin .window-content {
+  padding: 0;
+  background: var(--fx-empty-slot-bg);
+}
+
 .window-modal-backdrop {
   position: fixed;
   inset: 0;

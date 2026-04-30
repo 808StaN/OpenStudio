@@ -2,6 +2,12 @@
   /* =============================================
      FX PLUGINS (Equalizer, Maximizer/Limiter, Reverb)
      ============================================= */
+  --fx-window-bg: #101725;
+  --fx-window-padding: 10px;
+  --fx-radius-lg: 10px;
+  --fx-radius-md: 7px;
+  --fx-radius-sm: 4px;
+  --fx-radius-xs: 2px;
   --fx-panel-bg: linear-gradient(180deg, #111826 0%, #0b1019 100%);
   --fx-panel-border: var(--app-border);
   --fx-title-text: #ffd16c;

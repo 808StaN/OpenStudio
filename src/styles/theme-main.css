@@ -521,11 +521,11 @@
   /* =============================================
      FX EMPTY SLOT
      ============================================= */
-  --fx-empty-slot-bg: #0b1015;
-  --fx-empty-slot-border: var(--app-border-strong);
-  --fx-empty-slot-border-style: dashed;
-  --fx-empty-slot-border-width: 1px;
-  --fx-empty-slot-radius: var(--app-radius-lg);
+  --fx-empty-slot-bg: #101725;
+  --fx-empty-slot-border: transparent;
+  --fx-empty-slot-border-style: solid;
+  --fx-empty-slot-border-width: 0px;
+  --fx-empty-slot-radius: 0px;
   --fx-empty-slot-text: #ad9e9a;
   --fx-empty-slot-drop-target-bg: rgba(90, 200, 255, 0.08);
   --fx-empty-slot-drop-target-border: var(--app-info);
