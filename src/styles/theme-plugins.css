@@ -39,6 +39,17 @@
   --fx-proq-band-bg: linear-gradient(180deg, #26344d 0%, #1a2438 100%);
   --fx-proq-band-border: var(--app-border);
   --fx-proq-band-text: #d7e5ff;
+  --fx-proq-band-hover-bg: #172029;
+  --fx-proq-band-hover-border: rgba(163, 178, 190, 0.2);
+  --fx-proq-band-focus-shadow: 0 0 0 2px rgba(61, 217, 118, 0.16);
+  --fx-proq-band-dropdown-bg: #0d1319;
+  --fx-proq-band-dropdown-border: rgba(163, 178, 190, 0.2);
+  --fx-proq-band-dropdown-shadow: 0 12px 24px rgba(0, 0, 0, 0.38);
+  --fx-proq-band-option-text: #9aa5ad;
+  --fx-proq-band-option-hover-bg: rgba(255, 255, 255, 0.04);
+  --fx-proq-band-option-hover-text: #edf2ee;
+  --fx-proq-band-option-active-bg: rgba(255, 151, 48, 0.22);
+  --fx-proq-band-option-active-text: #ffd99a;
   --fx-maximizer-graph-bg: radial-gradient(circle at 18% 0%, rgba(76, 176, 255, 0.16), transparent 52%), linear-gradient(180deg, #0f1422 0%, #080d16 100%);
   --fx-maximizer-header-text: #9eb2d2;
   --fx-maximizer-center-line: rgba(154, 173, 205, 0.22);
