@@ -76,7 +76,7 @@
 
 .fx-empty-slot.is-drop-target {
   border-width: 1px;
-  border-style: dashed;
+  border-style: solid;
   border-color: var(--fx-empty-slot-drop-target-border);
   background: var(--fx-empty-slot-drop-target-bg);
   box-shadow: var(--fx-empty-slot-drop-target-shadow);

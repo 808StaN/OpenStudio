@@ -522,18 +522,18 @@
   /* =============================================
      FX EMPTY SLOT
      ============================================= */
-  --fx-empty-slot-bg: #101725;
+  --fx-empty-slot-bg: #0d141d;
   --fx-empty-slot-border: transparent;
   --fx-empty-slot-border-style: solid;
   --fx-empty-slot-border-width: 0px;
   --fx-empty-slot-radius: 0px;
   --fx-empty-slot-text: #ad9e9a;
-  --fx-empty-slot-drop-target-bg: rgba(90, 200, 255, 0.08);
-  --fx-empty-slot-drop-target-border: var(--app-info);
+  --fx-empty-slot-drop-target-bg: #101923;
+  --fx-empty-slot-drop-target-border: rgba(61, 217, 118, 0.48);
   --fx-empty-slot-drop-target-shadow:
-    inset 0 1px 0 rgba(255, 255, 255, 0.08),
-    0 0 0 1px rgba(90, 200, 255, 0.35),
-    0 0 14px rgba(90, 200, 255, 0.24);
+    inset 0 0 0 2px rgba(61, 217, 118, 0.2),
+    inset 0 0 36px rgba(61, 217, 118, 0.055),
+    0 0 22px rgba(61, 217, 118, 0.12);
 
   /* =============================================
      RENDER WINDOW
