@@ -59,8 +59,8 @@
 
 .fx-empty-slot {
   min-height: 128px;
-  border: 1px dashed var(--fx-empty-slot-border);
-  border-radius: var(--app-radius-lg);
+  border: var(--fx-empty-slot-border-width) var(--fx-empty-slot-border-style) var(--fx-empty-slot-border);
+  border-radius: var(--fx-empty-slot-radius);
   background: var(--fx-empty-slot-bg);
   display: grid;
   place-content: center;
@@ -71,12 +71,9 @@
 }
 
 .fx-empty-slot.is-drop-target {
-  border-color: var(--app-info);
-  background: rgba(90, 200, 255, 0.08);
-  box-shadow:
-    inset 0 1px 0 rgba(255, 255, 255, 0.08),
-    0 0 0 1px rgba(90, 200, 255, 0.35),
-    0 0 14px rgba(90, 200, 255, 0.24);
+  border-color: var(--fx-empty-slot-drop-target-border);
+  background: var(--fx-empty-slot-drop-target-bg);
+  box-shadow: var(--fx-empty-slot-drop-target-shadow);
 }
 
 .fx-empty-slot p {
@@ -143,7 +140,11 @@
 .fx-reverb-control.is-active { border-color: var(--fx-reverb-control-active-border); box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.08), 0 0 0 1px rgba(249, 183, 57, 0.36), 0 0 10px rgba(249, 183, 57, 0.24); }
 .fx-reverb-control strong { color: var(--fx-reverb-control-value); font-size: 10px; font-weight: 700; }
 .fx-reverb-knob { position: relative; width: 58px; height: 58px; border: 0; border-radius: 50%; padding: 0; background: transparent; cursor: ns-resize; }
-.fx-reverb-knob-face { position: absolute; inset: 0; border-radius: 50%; border: 2px solid var(--fx-reverb-knob-border); box-shadow: inset 0 2px 8px rgba(0, 0, 0, 0.65), 0 1px 0 rgba(255, 255, 255, 0.08); }
+.fx-reverb-knob-meter { position: absolute; inset: 0; width: 58px; height: 58px; transform: rotate(135deg); overflow: visible; }
+.fx-reverb-knob-track, .fx-reverb-knob-fill { fill: none; stroke-width: 6; }
+.fx-reverb-knob-track { stroke: var(--fx-reverb-knob-track); }
+.fx-reverb-knob-fill { stroke: var(--fx-reverb-knob-fill); stroke-linecap: butt; }
+.fx-reverb-knob-face { position: absolute; inset: 0; border-radius: 50%; border: 2px solid var(--fx-reverb-knob-border); box-shadow: inset 0 2px 8px rgba(0, 0, 0, 0.65), 0 1px 0 rgba(255, 255, 255, 0.08); pointer-events: none; }
 .fx-reverb-knob-face::after { content: ""; position: absolute; inset: 9px; border-radius: 50%; background: var(--fx-reverb-knob-face); }
 .fx-reverb-value { min-height: 20px; width: 100%; border: 1px solid transparent; border-radius: 4px; display: flex; align-items: center; justify-content: center; user-select: none; cursor: text; }
 .fx-reverb-inline-input { width: 100%; height: 20px; box-sizing: border-box; border: 1px solid var(--app-border); border-radius: 4px; background: #090d12; color: var(--app-text); font-size: 10px; font-weight: 600; text-align: center; padding: 0 4px; outline: none; }

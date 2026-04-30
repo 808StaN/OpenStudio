@@ -564,6 +564,19 @@
   --project-dropdown-item-active-bg: #000080;
 
   /* =============================================
+     FX EMPTY SLOT
+     ============================================= */
+  --fx-empty-slot-bg: #d4d0c8;
+  --fx-empty-slot-border: rgba(0, 0, 0, 0.55);
+  --fx-empty-slot-border-style: dashed;
+  --fx-empty-slot-border-width: 1px;
+  --fx-empty-slot-radius: 0px;
+  --fx-empty-slot-text: #000000;
+  --fx-empty-slot-drop-target-bg: #c0c0c0;
+  --fx-empty-slot-drop-target-border: #000080;
+  --fx-empty-slot-drop-target-shadow: var(--win98-sunken);
+
+  /* =============================================
      RENDER WINDOW
      ============================================= */
   --render-bg: #c0c0c0;

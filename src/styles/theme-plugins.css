@@ -4,9 +4,6 @@
      ============================================= */
   --fx-panel-bg: linear-gradient(180deg, #111826 0%, #0b1019 100%);
   --fx-panel-border: var(--app-border);
-  --fx-empty-slot-border: var(--app-border-strong);
-  --fx-empty-slot-text: #ad9e9a;
-  --fx-empty-slot-bg: #0b1015;
   --fx-title-text: #ffd16c;
   --fx-action-bg: #121820;
   --fx-action-border: var(--app-border);
@@ -67,6 +64,8 @@
   --fx-reverb-control-value: #d7e5ff;
   --fx-reverb-control-active-border: #f9b739;
   --fx-reverb-knob-border: var(--app-border);
+  --fx-reverb-knob-fill: #ff9730;
+  --fx-reverb-knob-track: #2a3344;
   --fx-reverb-knob-face: radial-gradient(circle at 35% 30%, #3d4c66 0%, #222f46 58%, #151d2b 100%);
   --fx-eq-screen-bg: linear-gradient(180deg, #0a111d 0%, #060b14 100%);
   --fx-eq-screen-border: var(--app-border);

@@ -519,6 +519,22 @@
   --project-dropdown-item-active-bg: rgba(255, 255, 255, 0.08);
 
   /* =============================================
+     FX EMPTY SLOT
+     ============================================= */
+  --fx-empty-slot-bg: #0b1015;
+  --fx-empty-slot-border: var(--app-border-strong);
+  --fx-empty-slot-border-style: dashed;
+  --fx-empty-slot-border-width: 1px;
+  --fx-empty-slot-radius: var(--app-radius-lg);
+  --fx-empty-slot-text: #ad9e9a;
+  --fx-empty-slot-drop-target-bg: rgba(90, 200, 255, 0.08);
+  --fx-empty-slot-drop-target-border: var(--app-info);
+  --fx-empty-slot-drop-target-shadow:
+    inset 0 1px 0 rgba(255, 255, 255, 0.08),
+    0 0 0 1px rgba(90, 200, 255, 0.35),
+    0 0 14px rgba(90, 200, 255, 0.24);
+
+  /* =============================================
      RENDER WINDOW
      ============================================= */
   --render-bg: #0c1116;

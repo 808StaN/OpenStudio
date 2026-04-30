@@ -25,6 +25,12 @@ export function ReverbEditor({
                 ? (value - control.min) / (control.max - control.min)
                 : 0;
             const clampedRatio = Math.max(0, Math.min(1, ratio));
+            const knobFillStyle =
+              clampedRatio <= 0
+                ? { opacity: 0 }
+                : clampedRatio >= 1
+                  ? { strokeDasharray: "none", strokeDashoffset: 0 }
+                  : { strokeDasharray: 1, strokeDashoffset: 1 - clampedRatio };
 
             return (
               <div
@@ -52,18 +58,28 @@ export function ReverbEditor({
                   aria-label={control.label}
                   title="Drag to change, Shift for precision, double click to reset"
                 >
-                  {/* Knob face uses a conic gradient as a compact value meter. */}
-                  <span
-                    className="fx-reverb-knob-face"
-                    style={{
-                      background:
-                        "conic-gradient(from -135deg, #ff9730 " +
-                        Math.round(clampedRatio * 100) +
-                        "%, #2a3344 " +
-                        Math.round(clampedRatio * 100) +
-                        "%)",
-                    }}
-                  />
+                  <svg
+                    className="fx-reverb-knob-meter"
+                    viewBox="0 0 58 58"
+                    aria-hidden="true"
+                  >
+                    <circle
+                      className="fx-reverb-knob-track"
+                      cx="29"
+                      cy="29"
+                      r="25"
+                      pathLength="1"
+                    />
+                    <circle
+                      className="fx-reverb-knob-fill"
+                      cx="29"
+                      cy="29"
+                      r="25"
+                      pathLength="1"
+                      style={knobFillStyle}
+                    />
+                  </svg>
+                  <span className="fx-reverb-knob-face" />
                 </button>
 
                 {editingReverbParam === control.param ? (
