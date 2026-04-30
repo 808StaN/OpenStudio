@@ -82,6 +82,10 @@
   cursor: grab;
 }
 
+.pattern-list-row:active {
+  cursor: grabbing;
+}
+
 .pattern-list-row.is-active {
   border-color: var(--pattern-list-row-active-border);
   background: var(--pattern-list-row-active-bg);

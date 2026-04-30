@@ -119,8 +119,10 @@ function shouldBlockNativeFileDrop(dataTransfer) {
   return (
     types.includes(MIDI_FILE_DND_MIME) ||
     types.includes(MIDI_PATTERN_DND_MIME) ||
+    types.includes("application/x-daw-pattern") ||
     types.includes("application/x-daw-sample") ||
-    types.includes("application/x-daw-plugin")
+    types.includes("application/x-daw-plugin") ||
+    types.includes("application/x-daw-effect")
   );
 }
 
@@ -263,6 +265,7 @@ function App() {
       }
 
       event.preventDefault();
+      event.dataTransfer.dropEffect = "copy";
     };
 
     const onWindowDrop = function (event) {

@@ -214,7 +214,12 @@
   cursor: grab;
 }
 
-.plugin-item:active {
+.pack-item {
+  cursor: grab;
+}
+
+.plugin-item:active,
+.pack-item:active {
   cursor: grabbing;
 }
 

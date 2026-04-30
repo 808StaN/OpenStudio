@@ -64,7 +64,7 @@ export function BrowserPackTree(props) {
                     return (
                       <li
                         key={node.path + "-" + sampleItem.name}
-                        className="tree-item"
+                        className="tree-item pack-item"
                         style={{ marginLeft: 16 + depth * 14 + "px" }}
                         draggable
                         onClick={function () {

@@ -56,6 +56,7 @@ export function BrowserPluginTree(props) {
                     draggable
                     onDragStart={function (event) {
                       const payloadText = JSON.stringify(payload);
+                      event.dataTransfer.effectAllowed = "copy";
                       event.dataTransfer.setData(mimeType, payloadText);
                       event.dataTransfer.setData("text/plain", payloadText);
                     }}
