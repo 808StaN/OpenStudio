@@ -20,7 +20,9 @@
     "desktop:start": "npm run desktop:pack && start \"\" \".\\release\\win-unpacked\\OpenStudio.exe\"",
     "desktop:installer": "npm run desktop:pack && npm run installer:assets && electron-builder --win nsis --prepackaged release/win-unpacked --config.win.signAndEditExecutable=false",
     "lint": "eslint .",
-    "preview": "vite preview"
+    "preview": "vite preview",
+    "test": "vitest",
+    "test:run": "vitest run"
   },
   "dependencies": {
     "@breezystack/lamejs": "^1.2.7",
@@ -35,6 +37,8 @@
   },
   "devDependencies": {
     "@eslint/js": "^9.39.4",
+    "@testing-library/jest-dom": "^6.9.1",
+    "@testing-library/react": "^16.3.2",
     "@types/react": "^19.2.14",
     "@types/react-dom": "^19.2.3",
     "@vitejs/plugin-react": "^6.0.1",
@@ -44,8 +48,10 @@
     "eslint-plugin-react-hooks": "^7.0.1",
     "eslint-plugin-react-refresh": "^0.5.2",
     "globals": "^17.4.0",
+    "jsdom": "^29.1.1",
     "rcedit": "^4.0.1",
-    "vite": "^8.0.1"
+    "vite": "^8.0.1",
+    "vitest": "^4.1.5"
   },
   "build": {
     "appId": "com.openstudio.app",
