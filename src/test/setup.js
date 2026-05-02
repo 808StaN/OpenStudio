@@ -1,4 +1,5 @@
 import { vi } from "vitest";
+import "@testing-library/jest-dom";
 
 // Stub AudioContext for jsdom
 global.AudioContext = class AudioContext {
