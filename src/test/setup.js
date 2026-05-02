@@ -55,6 +55,22 @@ global.OfflineAudioContext = class OfflineAudioContext {
   destination = { connect: vi.fn() };
 };
 
+// Stub DataTransfer for jsdom
+global.DataTransfer = class DataTransfer {
+  constructor() {
+    this._data = new Map();
+  }
+  setData(type, value) {
+    this._data.set(type, value);
+  }
+  getData(type) {
+    return this._data.get(type) || "";
+  }
+  get types() {
+    return Array.from(this._data.keys());
+  }
+};
+
 // Stub crypto.randomUUID if missing (jsdom)
 if (!global.crypto || !global.crypto.randomUUID) {
   Object.defineProperty(global, "crypto", {
