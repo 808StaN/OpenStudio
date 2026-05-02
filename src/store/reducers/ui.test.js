@@ -12,6 +12,7 @@ function createUiState() {
       browserTab: "packs",
       theme: "default",
       fxEditorTarget: null,
+      patternClipboard: [],
     },
     project: {
       patterns: [{ id: "pat-1" }],
@@ -114,13 +115,13 @@ describe("uiReducers", () => {
     it("stores valid pattern ids", () => {
       const state = createUiState();
       uiReducers.setPatternClipboard(state, { payload: { patternIds: ["pat-1"] } });
-      expect(state.ui.patternClipboard).toEqual(["pat-1"]);
+      expect(state.ui.patternClipboardIds).toEqual(["pat-1"]);
     });
 
     it("ignores unknown pattern ids", () => {
       const state = createUiState();
       uiReducers.setPatternClipboard(state, { payload: { patternIds: ["unknown"] } });
-      expect(state.ui.patternClipboard).toEqual([]);
+      expect(state.ui.patternClipboardIds).toEqual([]);
     });
   });
 });
