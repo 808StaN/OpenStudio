@@ -95,7 +95,6 @@ export const usePianoRollClipboardActions = function ({
         return;
       }
 
-      const channelNotes = activePattern.pianoPreview?.[activeChannel.id] || [];
       const { notesToAdd, nextSelection } = buildClipboardPastePayload({
         activePatternId,
         activeChannelId: activeChannel.id,
@@ -103,7 +102,6 @@ export const usePianoRollClipboardActions = function ({
         minFreeLength,
         pitchMin,
         pitchMax,
-        channelNotes,
         defaultVelocity,
         clampFn,
         makeIdFn,
@@ -115,6 +113,7 @@ export const usePianoRollClipboardActions = function ({
             patternId: activePatternId,
             channelId: activeChannel.id,
             notes: notesToAdd,
+            allowOverlaps: true,
           }),
         );
       }

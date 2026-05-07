@@ -49,7 +49,6 @@ export const buildClipboardPastePayload = function ({
   minFreeLength,
   pitchMin,
   pitchMax,
-  channelNotes,
   defaultVelocity,
   clampFn,
   makeIdFn,
@@ -74,12 +73,6 @@ export const buildClipboardPastePayload = function ({
     ? sharedPianoClipboard.pasteCountInSource
     : 0;
 
-  const occupied = new Set(
-    (channelNotes || []).map(function (note) {
-      return Math.round((note.start || 0) * 1000) + ":" + note.pitch;
-    }),
-  );
-
   const notesToAdd = [];
   const nextSelection = [];
 
@@ -88,13 +81,6 @@ export const buildClipboardPastePayload = function ({
     const maxLen = Math.max(minFreeLength, patternLength - start);
     const length = clampFn(entry.length, minFreeLength, maxLen);
     const pitch = clampFn(entry.pitch, pitchMin, pitchMax);
-    const key = Math.round(start * 1000) + ":" + pitch;
-
-    if (occupied.has(key)) {
-      return;
-    }
-
-    occupied.add(key);
     const newId = makeIdFn("paste");
     notesToAdd.push({
       id: newId,

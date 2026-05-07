@@ -1319,11 +1319,14 @@ export const projectReducers = {
 
     const patternLength = Math.max(1, pattern.lengthSteps || 16);
     const notes = pattern.pianoPreview[channelId];
-    const occupied = new Set(
-      notes.map(function (note) {
-        return Math.round((note.start || 0) * 1000) + ":" + note.pitch;
-      }),
-    );
+    const allowOverlaps = Boolean(action.payload.allowOverlaps);
+    const occupied = allowOverlaps
+      ? null
+      : new Set(
+          notes.map(function (note) {
+            return Math.round((note.start || 0) * 1000) + ":" + note.pitch;
+          }),
+        );
 
     incomingNotes.forEach(function (inputNote) {
       const start = Math.max(
@@ -1343,11 +1346,11 @@ export const projectReducers = {
         ),
       );
       const key = Math.round(start * 1000) + ":" + pitch;
-      if (occupied.has(key)) {
+      if (occupied?.has(key)) {
         return;
       }
 
-      occupied.add(key);
+      occupied?.add(key);
       notes.push({
         id:
           inputNote?.id ||

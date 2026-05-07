@@ -147,4 +147,47 @@ describe("projectReducers", () => {
       expect(state.project.activePatternId).toBe("pat-1");
     });
   });
+
+  describe("addPianoNotesBatch", () => {
+    it("skips duplicate start/pitch by default", () => {
+      const state = createMinimalState();
+      state.project.patterns[0].pianoPreview["ch-1"] = [
+        { id: "existing", start: 1, length: 4, pitch: 60, velocity: 100 },
+      ];
+
+      projectReducers.addPianoNotesBatch(state, {
+        payload: {
+          patternId: "pat-1",
+          channelId: "ch-1",
+          notes: [{ id: "new", start: 1, length: 1, pitch: 60, velocity: 80 }],
+        },
+      });
+
+      expect(state.project.patterns[0].pianoPreview["ch-1"]).toHaveLength(1);
+    });
+
+    it("allows overlapping notes when requested by paste", () => {
+      const state = createMinimalState();
+      state.project.patterns[0].pianoPreview["ch-1"] = [
+        { id: "existing", start: 1, length: 4, pitch: 60, velocity: 100 },
+      ];
+
+      projectReducers.addPianoNotesBatch(state, {
+        payload: {
+          patternId: "pat-1",
+          channelId: "ch-1",
+          allowOverlaps: true,
+          notes: [{ id: "new", start: 1, length: 1, pitch: 60, velocity: 80 }],
+        },
+      });
+
+      expect(state.project.patterns[0].pianoPreview["ch-1"]).toHaveLength(2);
+      expect(state.project.patterns[0].pianoPreview["ch-1"][1]).toMatchObject({
+        id: "new",
+        start: 1,
+        length: 1,
+        pitch: 60,
+      });
+    });
+  });
 });
