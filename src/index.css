@@ -50,3 +50,76 @@ button:focus-visible {
 button::-moz-focus-inner {
   border: 0;
 }
+
+.app-error-boundary {
+  min-height: 100vh;
+  display: grid;
+  place-items: center;
+  padding: 32px;
+  background:
+    radial-gradient(circle at 20% 12%, rgba(43, 200, 255, 0.2), transparent 32%),
+    linear-gradient(135deg, #080c13 0%, #101722 100%);
+  color: var(--text-main);
+}
+
+.app-error-boundary-card {
+  width: min(560px, 100%);
+  padding: 28px;
+  border: 1px solid rgba(43, 200, 255, 0.35);
+  border-radius: 16px;
+  background: rgba(13, 19, 32, 0.92);
+  box-shadow: 0 24px 80px rgba(0, 0, 0, 0.45);
+}
+
+.app-error-boundary-kicker {
+  margin: 0 0 8px;
+  color: var(--accent-cyan);
+  font-family: var(--font-mono);
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+}
+
+.app-error-boundary h1 {
+  margin: 0 0 12px;
+  font-size: clamp(32px, 6vw, 48px);
+  line-height: 0.95;
+}
+
+.app-error-boundary-message {
+  margin: 0;
+  color: var(--text-soft);
+  font-size: 17px;
+  line-height: 1.45;
+}
+
+.app-error-boundary-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+  margin-top: 22px;
+}
+
+.app-error-boundary-actions button {
+  border: 1px solid rgba(43, 200, 255, 0.48);
+  border-radius: 999px;
+  padding: 10px 16px;
+  color: var(--text-main);
+  background: rgba(43, 200, 255, 0.12);
+  cursor: pointer;
+}
+
+.app-error-boundary-actions button:hover {
+  border-color: var(--accent-cyan);
+  background: rgba(43, 200, 255, 0.22);
+}
+
+.app-error-boundary-details {
+  max-height: 220px;
+  overflow: auto;
+  margin: 20px 0 0;
+  padding: 14px;
+  border-radius: 10px;
+  color: #ffd1d1;
+  background: rgba(0, 0, 0, 0.34);
+  white-space: pre-wrap;
+}
