@@ -38,20 +38,32 @@ function RenderSelect(props) {
 
   useEffect(
     function () {
+      let frameId = null;
+
       if (isOpen && rootRef.current) {
-        const triggerRect = rootRef.current.getBoundingClientRect();
-        const windowContent = rootRef.current.closest(".window-content");
-        const contentRect = windowContent
-          ? windowContent.getBoundingClientRect()
-          : { top: 0, bottom: window.innerHeight };
-        const estimatedMenuHeight = Math.min(options.length * 30 + 12, 180);
-        const spaceBelow = contentRect.bottom - triggerRect.bottom;
-        const spaceAbove = triggerRect.top - contentRect.top;
-        setOpenUpward(spaceBelow < estimatedMenuHeight && spaceAbove > spaceBelow);
+        frameId = window.requestAnimationFrame(function () {
+          if (!rootRef.current) {
+            return;
+          }
+
+          const triggerRect = rootRef.current.getBoundingClientRect();
+          const windowContent = rootRef.current.closest(".window-content");
+          const contentRect = windowContent
+            ? windowContent.getBoundingClientRect()
+            : { top: 0, bottom: window.innerHeight };
+          const estimatedMenuHeight = Math.min(options.length * 30 + 12, 180);
+          const spaceBelow = contentRect.bottom - triggerRect.bottom;
+          const spaceAbove = triggerRect.top - contentRect.top;
+          setOpenUpward(spaceBelow < estimatedMenuHeight && spaceAbove > spaceBelow);
+        });
       }
 
       if (!isOpen) {
-        return;
+        return function () {
+          if (frameId !== null) {
+            window.cancelAnimationFrame(frameId);
+          }
+        };
       }
 
       const handlePointerDown = function (event) {
@@ -72,11 +84,14 @@ function RenderSelect(props) {
       document.addEventListener("mousedown", handlePointerDown);
       document.addEventListener("keydown", handleEscape);
       return function () {
+        if (frameId !== null) {
+          window.cancelAnimationFrame(frameId);
+        }
         document.removeEventListener("mousedown", handlePointerDown);
         document.removeEventListener("keydown", handleEscape);
       };
     },
-    [isOpen],
+    [isOpen, options.length],
   );
 
   const activeOption =

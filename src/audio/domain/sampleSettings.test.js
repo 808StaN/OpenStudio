@@ -83,6 +83,28 @@ describe("getSafeSampleSettings", () => {
     expect(result.envSustainPct).toBe(100);
   });
 
+  it("falls back to defaults for non-finite numeric values", () => {
+    const result = getSafeSampleSettings({
+      pitchCents: "bad",
+      lengthPct: Number.NaN,
+      stretchMultiplier: Infinity,
+      stretchSourceBpm: -Infinity,
+    });
+    expect(result.pitchCents).toBe(0);
+    expect(result.lengthPct).toBe(100);
+    expect(result.stretchMultiplier).toBe(1);
+    expect(result.stretchSourceBpm).toBe(120);
+  });
+
+  it("falls back to defaults for nullish numeric values", () => {
+    const result = getSafeSampleSettings({
+      lengthPct: null,
+      stretchMultiplier: undefined,
+    });
+    expect(result.lengthPct).toBe(100);
+    expect(result.stretchMultiplier).toBe(1);
+  });
+
   it("does not mutate the input object", () => {
     const input = { pitchSemitones: 5, lengthPct: 80 };
     getSafeSampleSettings(input);

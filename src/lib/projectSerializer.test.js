@@ -28,6 +28,10 @@ describe("serializeProject", () => {
     result.daw.project.name = "Mutated";
     expect(state.project.name).toBe("Test");
   });
+
+  it("throws a controlled error for invalid project state", () => {
+    expect(() => serializeProject(undefined)).toThrow();
+  });
 });
 
 describe("deserializeProject", () => {
@@ -96,5 +100,11 @@ describe("downloadProjectFile", () => {
     createElementSpy.mockRestore();
     appendSpy.mockRestore();
     removeSpy.mockRestore();
+  });
+
+  it("throws a controlled error when download data cannot be serialized", () => {
+    const circular = {};
+    circular.self = circular;
+    expect(() => downloadProjectFile(circular, "Broken")).toThrow();
   });
 });

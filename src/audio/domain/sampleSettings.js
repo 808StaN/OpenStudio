@@ -13,6 +13,20 @@ const SAMPLE_STRETCH_TIME_MODES = new Set([
   "bar-4",
 ]);
 
+function getFiniteNumber(value, fallback) {
+  if (value === null || value === undefined) {
+    return fallback;
+  }
+
+  const normalized = Number(value);
+  return Number.isFinite(normalized) ? normalized : fallback;
+}
+
+function clampNumber(value, min, max, fallback) {
+  const normalized = getFiniteNumber(value, fallback);
+  return Math.max(min, Math.min(max, normalized));
+}
+
 // Canonical default shape for sample settings across app/editor/export paths.
 export const DEFAULT_SAMPLE_SETTINGS = {
   cutItself: false,
@@ -43,36 +57,31 @@ export const DEFAULT_SAMPLE_SETTINGS = {
 export function getSafeSampleSettings(raw) {
   // Backward compatibility: older projects may still store semitone-based pitch.
   const hasPitchCents = Object.hasOwn(raw || {}, "pitchCents");
+  const migratedPitchCents = hasPitchCents
+    ? getFiniteNumber(raw?.pitchCents, 0)
+    : getFiniteNumber(raw?.pitchSemitones, 0) * 100;
   const base = {
     ...DEFAULT_SAMPLE_SETTINGS,
-    pitchCents: hasPitchCents
-      ? Number(raw?.pitchCents)
-      : Number(raw?.pitchSemitones || 0) * 100,
     ...(raw || {}),
+    pitchCents: migratedPitchCents,
   };
 
   const next = {
     cutItself: Boolean(base.cutItself),
     normalize: Boolean(base.normalize),
-    lengthPct: Math.max(5, Math.min(100, Number(base.lengthPct ?? 100))),
-    fadeInPct: Math.max(0, Math.min(95, Number(base.fadeInPct ?? 0))),
-    fadeOutPct: Math.max(0, Math.min(95, Number(base.fadeOutPct ?? 0))),
+    lengthPct: clampNumber(base.lengthPct, 5, 100, 100),
+    fadeInPct: clampNumber(base.fadeInPct, 0, 95, 0),
+    fadeOutPct: clampNumber(base.fadeOutPct, 0, 95, 0),
     envEnabled: Boolean(base.envEnabled),
-    envDelayMs: Math.max(0, Math.min(3000, Number(base.envDelayMs ?? 0))),
-    envAttackMs: Math.max(0, Math.min(3000, Number(base.envAttackMs ?? 0))),
-    envHoldMs: Math.max(0, Math.min(3000, Number(base.envHoldMs ?? 0))),
-    envDecayMs: Math.max(0, Math.min(3000, Number(base.envDecayMs ?? 0))),
-    envSustainPct: Math.max(
-      0,
-      Math.min(100, Number(base.envSustainPct ?? 100)),
-    ),
-    envReleaseMs: Math.max(0, Math.min(3000, Number(base.envReleaseMs ?? 0))),
-    attackMs: Math.max(0, Math.min(400, Number(base.attackMs ?? 8))),
-    releaseMs: Math.max(0, Math.min(1000, Number(base.releaseMs ?? 420))),
-    pitchCents: Math.max(
-      -100,
-      Math.min(100, Math.round(Number(base.pitchCents ?? 0))),
-    ),
+    envDelayMs: clampNumber(base.envDelayMs, 0, 3000, 0),
+    envAttackMs: clampNumber(base.envAttackMs, 0, 3000, 0),
+    envHoldMs: clampNumber(base.envHoldMs, 0, 3000, 0),
+    envDecayMs: clampNumber(base.envDecayMs, 0, 3000, 0),
+    envSustainPct: clampNumber(base.envSustainPct, 0, 100, 100),
+    envReleaseMs: clampNumber(base.envReleaseMs, 0, 3000, 0),
+    attackMs: clampNumber(base.attackMs, 0, 400, 8),
+    releaseMs: clampNumber(base.releaseMs, 0, 1000, 420),
+    pitchCents: Math.round(clampNumber(base.pitchCents, -100, 100, 0)),
     monoMode: Boolean(base.monoMode),
     stretchMode: SAMPLE_STRETCH_MODES.has(
       String(base.stretchMode || "")
@@ -83,22 +92,10 @@ export function getSafeSampleSettings(raw) {
           .trim()
           .toLowerCase()
       : "none",
-    stretchPitchSemitones: Math.max(
-      -24,
-      Math.min(24, Number(base.stretchPitchSemitones ?? 0)),
-    ),
-    stretchMultiplier: Math.max(
-      0.25,
-      Math.min(8, Number(base.stretchMultiplier ?? 1)),
-    ),
-    stretchSourceBpm: Math.max(
-      20,
-      Math.min(300, Number(base.stretchSourceBpm ?? 120)),
-    ),
-    stretchProjectTempoBpm: Math.max(
-      20,
-      Math.min(300, Number(base.stretchProjectTempoBpm ?? 120)),
-    ),
+    stretchPitchSemitones: clampNumber(base.stretchPitchSemitones, -24, 24, 0),
+    stretchMultiplier: clampNumber(base.stretchMultiplier, 0.25, 8, 1),
+    stretchSourceBpm: clampNumber(base.stretchSourceBpm, 20, 300, 120),
+    stretchProjectTempoBpm: clampNumber(base.stretchProjectTempoBpm, 20, 300, 120),
     stretchTimeMode: SAMPLE_STRETCH_TIME_MODES.has(
       String(base.stretchTimeMode || "")
         .trim()

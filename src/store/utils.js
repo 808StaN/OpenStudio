@@ -14,9 +14,11 @@ import {
   MAX_PLAYLIST_BARS,
   MIN_CLIP_BAR_LENGTH,
   DEFAULT_PATTERN_COLOR,
-  SAMPLE_STRETCH_MODES,
-  SAMPLE_STRETCH_TIME_MODES,
 } from "./constants";
+import {
+  DEFAULT_SAMPLE_SETTINGS,
+  getSafeSampleSettings,
+} from "../audio/domain/sampleSettings";
 
 // ------------------------------------------------------------------
 // Generic helpers
@@ -388,46 +390,11 @@ export function makeFxSlots() {
 // ------------------------------------------------------------------
 
 export function makeSampleSettings() {
-  return {
-    cutItself: false,
-    normalize: false,
-    lengthPct: 100,
-    fadeInPct: 0,
-    fadeOutPct: 0,
-    envEnabled: false,
-    envDelayMs: 0,
-    envAttackMs: 0,
-    envHoldMs: 0,
-    envDecayMs: 0,
-    envSustainPct: 100,
-    envReleaseMs: 0,
-    attackMs: 8,
-    releaseMs: 420,
-    pitchCents: 0,
-    monoMode: false,
-    stretchMode: "resample",
-    stretchPitchSemitones: 0,
-    stretchMultiplier: 1,
-    stretchSourceBpm: 120,
-    stretchProjectTempoBpm: 120,
-    stretchTimeMode: "none",
-  };
+  return { ...DEFAULT_SAMPLE_SETTINGS };
 }
 
 export function sanitizeLoadedSampleSettings(raw) {
-  const merged = {
-    ...makeSampleSettings(),
-    ...(isObjectLike(raw) ? raw : {}),
-  };
-
-  merged.stretchMode = SAMPLE_STRETCH_MODES.has(merged.stretchMode)
-    ? merged.stretchMode
-    : "resample";
-  merged.stretchTimeMode = SAMPLE_STRETCH_TIME_MODES.has(merged.stretchTimeMode)
-    ? merged.stretchTimeMode
-    : "none";
-
-  return merged;
+  return getSafeSampleSettings(isObjectLike(raw) ? raw : null);
 }
 
 // ------------------------------------------------------------------

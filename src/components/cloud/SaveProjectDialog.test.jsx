@@ -24,8 +24,8 @@ vi.mock("../../lib/projectSerializer", () => ({
 function renderWithStore(ui, { preloadedState } = {}) {
   const store = configureStore({
     reducer: {
-      user: (state = { currentUser: null }, action) => state,
-      daw: (state = {}, action) => state,
+      user: (state = { currentUser: null }) => state,
+      daw: (state = {}) => state,
     },
     preloadedState: preloadedState || { user: { currentUser: null }, daw: {} },
   });

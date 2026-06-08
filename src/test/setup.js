@@ -2,7 +2,7 @@ import { vi } from "vitest";
 import "@testing-library/jest-dom";
 
 // Stub AudioContext for jsdom
-global.AudioContext = class AudioContext {
+globalThis.AudioContext = class AudioContext {
   constructor() {
     this.sampleRate = 44100;
     this.currentTime = 0;
@@ -33,7 +33,7 @@ global.AudioContext = class AudioContext {
   }
 };
 
-global.OfflineAudioContext = class OfflineAudioContext {
+globalThis.OfflineAudioContext = class OfflineAudioContext {
   constructor(channels, length, sampleRate) {
     this.sampleRate = sampleRate || 44100;
     this.length = length || 44100;
@@ -56,7 +56,7 @@ global.OfflineAudioContext = class OfflineAudioContext {
 };
 
 // Stub DataTransfer for jsdom
-global.DataTransfer = class DataTransfer {
+globalThis.DataTransfer = class DataTransfer {
   constructor() {
     this._data = new Map();
   }
@@ -72,8 +72,8 @@ global.DataTransfer = class DataTransfer {
 };
 
 // Stub crypto.randomUUID if missing (jsdom)
-if (!global.crypto || !global.crypto.randomUUID) {
-  Object.defineProperty(global, "crypto", {
+if (!globalThis.crypto || !globalThis.crypto.randomUUID) {
+  Object.defineProperty(globalThis, "crypto", {
     value: {
       randomUUID: () => "00000000-0000-0000-0000-000000000000",
     },

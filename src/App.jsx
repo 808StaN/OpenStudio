@@ -289,21 +289,25 @@ function App() {
 
   useEffect(function () {
     const syncUserProfile = async function (session) {
-      const { data: profile } = await supabase
-        .from("profiles")
-        .select("username,nickname,email")
-        .eq("id", session.user.id)
-        .single();
+      try {
+        const { data: profile } = await supabase
+          .from("profiles")
+          .select("username,nickname,email")
+          .eq("id", session.user.id)
+          .single();
 
-      if (profile) {
-        dispatch(
-          setUser({
-            id: session.user.id,
-            username: profile.username,
-            nickname: profile.nickname,
-            email: profile.email,
-          }),
-        );
+        if (profile) {
+          dispatch(
+            setUser({
+              id: session.user.id,
+              username: profile.username,
+              nickname: profile.nickname,
+              email: profile.email,
+            }),
+          );
+        }
+      } catch (error) {
+        console.warn("Could not sync Supabase user profile", error);
       }
     };
 

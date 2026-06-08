@@ -245,8 +245,25 @@ describe("store/utils", () => {
     it("sanitizeLoadedSampleSettings fixes invalid stretch mode", () => {
       const raw = { stretchMode: "invalid", stretchTimeMode: "invalid" };
       const safe = sanitizeLoadedSampleSettings(raw);
-      expect(safe.stretchMode).toBe("resample");
+      expect(safe.stretchMode).toBe("none");
       expect(safe.stretchTimeMode).toBe("none");
+    });
+
+    it("sanitizeLoadedSampleSettings migrates legacy pitch semitones", () => {
+      const safe = sanitizeLoadedSampleSettings({ pitchSemitones: 0.5 });
+      expect(safe.pitchCents).toBe(50);
+      expect(safe.pitchSemitones).toBeUndefined();
+    });
+
+    it("sanitizeLoadedSampleSettings falls back for non-finite numbers", () => {
+      const safe = sanitizeLoadedSampleSettings({
+        lengthPct: Number.NaN,
+        pitchCents: "bad",
+        stretchMultiplier: Infinity,
+      });
+      expect(safe.lengthPct).toBe(100);
+      expect(safe.pitchCents).toBe(0);
+      expect(safe.stretchMultiplier).toBe(1);
     });
 
     it("sanitizeLoadedSampleSettings preserves valid modes", () => {
