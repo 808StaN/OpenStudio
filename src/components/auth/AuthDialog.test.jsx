@@ -7,6 +7,9 @@ import { AuthDialog } from "./AuthDialog";
 import { userReducer } from "../../store/userSlice";
 
 vi.mock("../../lib/supabase", () => ({
+  isSupabaseConfigured: false,
+  SUPABASE_UNCONFIGURED_MESSAGE:
+    "Cloud login is unavailable because Supabase is not configured.",
   supabase: {
     auth: { signInWithPassword: vi.fn(), signUp: vi.fn() },
     from: vi.fn().mockReturnValue({
@@ -56,6 +59,16 @@ describe("AuthDialog", () => {
     await userEvent.type(screen.getByPlaceholderText("••••••••"), "123");
     await userEvent.click(screen.getByRole("button", { name: /Sign In/i }));
     expect(screen.getByText(/Password must be at least 6 characters/i)).toBeInTheDocument();
+  });
+
+  it("shows server configuration error when Supabase is unavailable", async () => {
+    renderWithStore(<AuthDialog onClose={vi.fn()} />);
+    await userEvent.type(screen.getByPlaceholderText("your_username"), "testuser");
+    await userEvent.type(screen.getByPlaceholderText("••••••••"), "123456");
+
+    await userEvent.click(screen.getByRole("button", { name: /Sign In/i }));
+
+    expect(screen.getByText(/Supabase is not configured/i)).toBeInTheDocument();
   });
 
   it("calls onClose when close button is clicked", async () => {

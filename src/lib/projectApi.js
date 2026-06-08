@@ -1,4 +1,4 @@
-import { supabase } from "./supabase";
+import { assertSupabaseConfigured, supabase } from "./supabase";
 
 function getProjectBpm(projectData) {
   return projectData?.daw?.transport?.bpm || projectData?.transport?.bpm || 140;
@@ -9,6 +9,8 @@ function serializeProjectFile(projectData) {
 }
 
 async function getAuthenticatedUserId() {
+  assertSupabaseConfigured();
+
   const {
     data: { user },
     error,
@@ -99,6 +101,8 @@ export async function fetchProjects() {
 }
 
 export async function loadProjectFromCloud(projectId) {
+  assertSupabaseConfigured();
+
   const { data: meta, error: metaError } = await supabase
     .from("projects")
     .select("storage_path")

@@ -77,7 +77,11 @@ export function UserMenu({ onOpenAuth }) {
             type="button"
             className="project-dropdown-item"
             onClick={async function () {
-              await supabase.auth.signOut();
+              try {
+                await supabase.auth.signOut();
+              } catch (error) {
+                console.warn("Could not sign out from Supabase", error);
+              }
               dispatch(clearUser());
               setMenuOpen(false);
             }}

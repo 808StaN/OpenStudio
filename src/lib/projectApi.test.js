@@ -6,10 +6,20 @@ vi.mock("./supabase", () => {
     from: vi.fn(),
     storage: { from: vi.fn() },
   };
-  return { supabase: mockSupabase };
+  return {
+    SUPABASE_UNCONFIGURED_MESSAGE:
+      "Cloud login is unavailable because Supabase is not configured.",
+    assertSupabaseConfigured: vi.fn(),
+    isSupabaseConfigured: true,
+    supabase: mockSupabase,
+  };
 });
 
-import { supabase } from "./supabase";
+import {
+  SUPABASE_UNCONFIGURED_MESSAGE,
+  assertSupabaseConfigured,
+  supabase,
+} from "./supabase";
 import {
   saveProjectToCloud,
   overwriteProjectInCloud,
@@ -24,7 +34,17 @@ describe("projectApi", () => {
 
   beforeEach(() => {
     vi.clearAllMocks();
+    assertSupabaseConfigured.mockImplementation(function () {});
     supabase.auth.getUser.mockResolvedValue({ data: { user: { id: userId } }, error: null });
+  });
+
+  it("throws a clear error when Supabase is not configured", async () => {
+    assertSupabaseConfigured.mockImplementation(function () {
+      throw new Error(SUPABASE_UNCONFIGURED_MESSAGE);
+    });
+
+    await expect(fetchProjects()).rejects.toThrow("Supabase is not configured");
+    expect(supabase.auth.getUser).not.toHaveBeenCalled();
   });
 
   describe("saveProjectToCloud", () => {

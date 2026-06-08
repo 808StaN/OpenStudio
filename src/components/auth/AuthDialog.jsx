@@ -1,7 +1,11 @@
 import { useState, useCallback } from "react";
 import { useDispatch, useSelector } from "react-redux";
 import { setUser, setAuthLoading, setAuthError } from "../../store/userSlice";
-import { supabase } from "../../lib/supabase";
+import {
+  SUPABASE_UNCONFIGURED_MESSAGE,
+  isSupabaseConfigured,
+  supabase,
+} from "../../lib/supabase";
 
 export function AuthDialog({ onClose }) {
   const dispatch = useDispatch();
@@ -61,6 +65,11 @@ export function AuthDialog({ onClose }) {
 
   const handleLogin = useCallback(
     async function () {
+      if (!isSupabaseConfigured) {
+        dispatch(setAuthError(SUPABASE_UNCONFIGURED_MESSAGE));
+        return;
+      }
+
       dispatch(setAuthLoading(true));
       try {
         const { data: profile, error: profileError } = await supabase
@@ -113,6 +122,11 @@ export function AuthDialog({ onClose }) {
 
   const handleRegister = useCallback(
     async function () {
+      if (!isSupabaseConfigured) {
+        dispatch(setAuthError(SUPABASE_UNCONFIGURED_MESSAGE));
+        return;
+      }
+
       dispatch(setAuthLoading(true));
       try {
         const { data: existing } = await supabase

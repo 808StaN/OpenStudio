@@ -15,7 +15,7 @@ import { SampleSettingsWindow } from "./components/SampleSettingsWindow";
 import { TopToolbar } from "./components/TopToolbar";
 import { setPlaying, undoLastChange, toggleWindowMaximize } from "./store";
 import { setUser, clearUser } from "./store/userSlice";
-import { supabase } from "./lib/supabase";
+import { isSupabaseConfigured, supabase } from "./lib/supabase";
 import { MIDI_FILE_DND_MIME } from "./utils/midiImport";
 import { MIDI_PATTERN_DND_MIME } from "./utils/midiPattern";
 
@@ -288,6 +288,10 @@ function App() {
   }, []);
 
   useEffect(function () {
+    if (!isSupabaseConfigured) {
+      return undefined;
+    }
+
     const syncUserProfile = async function (session) {
       try {
         const { data: profile } = await supabase
