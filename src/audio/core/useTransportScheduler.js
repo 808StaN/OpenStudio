@@ -11,6 +11,10 @@ import { clamp } from "../../store/utils";
 import { computeSamplePlaybackParams } from "./computeSamplePlaybackParams";
 import { createSamplePlaybackNodes } from "./createSamplePlaybackNodes";
 import {
+  applySampleGainAutomation,
+  computeSampleFadeParams,
+} from "./sampleGainAutomation";
+import {
   DEFAULT_SAMPLE_MIDI_PITCH,
   midiPitchToPlaybackRate,
 } from "../domain/pitch";
@@ -323,7 +327,6 @@ export function useTransportScheduler({
           ),
         );
 
-        const fadeOutAt = time + Math.max(0, playDuration - 0.012);
         const clipGain = Math.max(
           MIN_DURATION_SEC,
           Number(channel?.volume ?? 0.75) *
@@ -336,9 +339,13 @@ export function useTransportScheduler({
 
         source.buffer = scheduledBuffer;
         source.playbackRate.setValueAtTime(playbackRate, time);
-        gain.gain.setValueAtTime(clipGain, time);
-        gain.gain.setValueAtTime(clipGain, fadeOutAt);
-        gain.gain.linearRampToValueAtTime(0.0001, time + playDuration);
+        applySampleGainAutomation(
+          gain.gain,
+          time,
+          playDuration,
+          clipGain,
+          computeSampleFadeParams(playDuration, settings),
+        );
         panner.pan.setValueAtTime(clipPan, time);
 
         source.connect(gain);

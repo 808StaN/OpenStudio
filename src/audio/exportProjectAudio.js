@@ -6,6 +6,10 @@ import { applyInsertSettings } from "./core/applyInsertSettings";
 import { createMixerInsertNodes } from "./core/createMixerInsertNodes";
 import { computeSamplePlaybackParams } from "./core/computeSamplePlaybackParams";
 import { createSamplePlaybackNodes } from "./core/createSamplePlaybackNodes";
+import {
+  applySampleGainAutomation,
+  computeSampleFadeParams,
+} from "./core/sampleGainAutomation";
 import { DEFAULT_SAMPLE_MIDI_PITCH, midiPitchToPlaybackRate } from "./domain/pitch";
 import { getSafeSampleSettings } from "./domain/sampleSettings";
 import { getTimeStretchProfile } from "./domain/timeStretch";
@@ -747,7 +751,6 @@ export async function renderPlaylistArrangementToFile(options) {
         playDuration * playbackRate,
       ),
     );
-    const fadeOutAt = clipStartTime + Math.max(0, playDuration - 0.012);
     const clipGain = Math.max(
       MIN_DURATION_SEC,
       Number(channel?.volume ?? 0.75) *
@@ -764,9 +767,13 @@ export async function renderPlaylistArrangementToFile(options) {
 
     source.buffer = scheduledBuffer;
     source.playbackRate.setValueAtTime(playbackRate, clipStartTime);
-    gain.gain.setValueAtTime(clipGain, clipStartTime);
-    gain.gain.setValueAtTime(clipGain, fadeOutAt);
-    gain.gain.linearRampToValueAtTime(0.0001, clipStartTime + playDuration);
+    applySampleGainAutomation(
+      gain.gain,
+      clipStartTime,
+      playDuration,
+      clipGain,
+      computeSampleFadeParams(playDuration, settings),
+    );
     panner.pan.setValueAtTime(clipPan, clipStartTime);
 
     source.connect(gain);

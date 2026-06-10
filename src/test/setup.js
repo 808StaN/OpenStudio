@@ -11,7 +11,7 @@ globalThis.AudioContext = class AudioContext {
     return { duration: length / sampleRate, length, sampleRate, numberOfChannels: channels };
   }
   createGain() {
-    return { connect: vi.fn(), gain: { value: 1, setValueAtTime: vi.fn(), linearRampToValueAtTime: vi.fn() } };
+    return { connect: vi.fn(), gain: { value: 1, setValueAtTime: vi.fn(), linearRampToValueAtTime: vi.fn(), exponentialRampToValueAtTime: vi.fn() } };
   }
   createBufferSource() {
     return { connect: vi.fn(), start: vi.fn(), stop: vi.fn(), playbackRate: { value: 1 } };
@@ -44,7 +44,7 @@ globalThis.OfflineAudioContext = class OfflineAudioContext {
     return { connect: vi.fn(), start: vi.fn(), stop: vi.fn(), playbackRate: { value: 1 } };
   }
   createGain() {
-    return { connect: vi.fn(), gain: { value: 1 } };
+    return { connect: vi.fn(), gain: { value: 1, setValueAtTime: vi.fn(), linearRampToValueAtTime: vi.fn(), exponentialRampToValueAtTime: vi.fn() } };
   }
   createStereoPanner() {
     return { connect: vi.fn(), pan: { value: 0 } };
