@@ -1,6 +1,5 @@
 import { applyVolumeEnvelopeToGain } from "../domain/envelope";
-
-const MIN_AUDIO_GAIN = 0.0001;
+import { applySampleGainAutomation } from "./sampleGainAutomation";
 
 /**
  * Creates the Web Audio node chain for a single sample voice, schedules the
@@ -51,30 +50,17 @@ export function createSamplePlaybackNodes(
     shouldApplyEnvelope,
   } = params;
 
-  const sampleStopAt = time + sourcePlayDuration;
-  const fadeOutStart = Math.max(time, sampleStopAt - finalFadeOut);
-
   source.buffer = buffer;
   source.playbackRate.setValueAtTime(playbackRate, time);
 
-  const fadeIn =
-    options.retriggerFadeInSec > 0.001
-      ? Math.max(finalFadeIn, options.retriggerFadeInSec)
-      : finalFadeIn;
-
-  if (fadeIn > 0.001) {
-    gain.gain.setValueAtTime(MIN_AUDIO_GAIN, time);
-    gain.gain.linearRampToValueAtTime(finalGain, time + fadeIn);
-  } else {
-    gain.gain.setValueAtTime(finalGain, time);
-  }
-
-  gain.gain.setValueAtTime(finalGain, fadeOutStart);
-  if (finalFadeOut > 0.001) {
-    gain.gain.exponentialRampToValueAtTime(MIN_AUDIO_GAIN, sampleStopAt);
-  } else {
-    gain.gain.setValueAtTime(MIN_AUDIO_GAIN, sampleStopAt);
-  }
+  applySampleGainAutomation(
+    gain.gain,
+    time,
+    sourcePlayDuration,
+    finalGain,
+    { finalFadeIn, finalFadeOut },
+    options,
+  );
 
   panner.pan.setValueAtTime(Math.max(-1, Math.min(1, panValue)), time);
 

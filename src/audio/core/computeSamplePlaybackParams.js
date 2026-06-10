@@ -23,6 +23,7 @@ import {
   MIN_DURATION_SEC,
   MIN_PLAYBACK_RATE,
 } from "../domain/constants";
+import { computeSampleFadeParams } from "./sampleGainAutomation";
 
 export function computeSamplePlaybackParams(
   sampleBuffer,
@@ -77,17 +78,7 @@ export function computeSamplePlaybackParams(
     ? Math.max(MIN_DURATION_SEC, Math.min(noteGateDuration, sourcePlayDuration))
     : sourcePlayDuration;
 
-  const fadeInSec = sourcePlayDuration * (settings.fadeInPct / 100);
-  const shapedFadeOutPct =
-    Math.pow(settings.fadeOutPct / 100, 0.7) * 100;
-  const fadeOutSec = sourcePlayDuration * (shapedFadeOutPct / 100);
-  const fadeTotal = fadeInSec + fadeOutSec;
-  const fadeScale =
-    fadeTotal > sourcePlayDuration * 0.98
-      ? (sourcePlayDuration * 0.98) / Math.max(0.0001, fadeTotal)
-      : 1;
-  const finalFadeIn = fadeInSec * fadeScale;
-  const finalFadeOut = fadeOutSec * fadeScale;
+  const fadeParams = computeSampleFadeParams(sourcePlayDuration, settings);
 
   return {
     playbackRate,
@@ -99,12 +90,6 @@ export function computeSamplePlaybackParams(
     envReleaseSec,
     sourcePlayDuration,
     envelopeGateDuration,
-    fadeInSec,
-    shapedFadeOutPct,
-    fadeOutSec,
-    fadeTotal,
-    fadeScale,
-    finalFadeIn,
-    finalFadeOut,
+    ...fadeParams,
   };
 }
