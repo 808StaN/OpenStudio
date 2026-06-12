@@ -2,7 +2,7 @@ import { useCallback, useEffect, useRef, useState } from "react";
 import { isMidiFileName } from "../../utils/midiImport";
 import { toSafeSampleUrl } from "../../utils/sampleUrl";
 import { discoverPacksFromDirectoryIndex as discoverPacksFromDirectoryIndexUtil } from "./browserPackDiscoveryUtils";
-import { buildPackTree, getPackParentPath, mergePackGroups } from "./browserPackUtils";
+import { buildPackTree, getPackParentPath } from "./browserPackUtils";
 
 // Encapsulates Packs tab state and behavior:
 // - manifest loading / fallback discovery
@@ -160,10 +160,7 @@ export function useBrowserPacksManager({ browserTab }) {
               };
             })
           : [];
-        const discoveredFolders = await discoverPacksFromDirectoryIndex();
-        const merged = mergePackGroups(manifestFolders, discoveredFolders);
-
-        setPackGroups(merged);
+        setPackGroups(manifestFolders);
         setManifestStatus("ready");
       } catch {
         setPackGroups([]);

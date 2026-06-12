@@ -6,55 +6,6 @@ export const normalizePackFolderPath = function (folderPath) {
   return folderPath;
 };
 
-// Merge manifest-based and discovered pack groups by folder/path, deduplicating items.
-export const mergePackGroups = function (manifestFolders, discoveredFolders) {
-  const mergedMap = new Map();
-
-  const appendFolders = function (folders) {
-    (Array.isArray(folders) ? folders : []).forEach(function (group) {
-      const folder = String(group?.folder || "Root");
-      if (!mergedMap.has(folder)) {
-        mergedMap.set(folder, new Map());
-      }
-
-      const itemMap = mergedMap.get(folder);
-      (Array.isArray(group?.items) ? group.items : []).forEach(function (item) {
-        const name = String(item?.name || "").trim();
-        const path = String(item?.path || "").trim();
-        if (!name || !path) {
-          return;
-        }
-
-        if (!itemMap.has(path)) {
-          itemMap.set(path, {
-            name,
-            path,
-          });
-        }
-      });
-    });
-  };
-
-  appendFolders(manifestFolders);
-  appendFolders(discoveredFolders);
-
-  return Array.from(mergedMap.entries())
-    .map(function (entry) {
-      const folder = entry[0];
-      const items = Array.from(entry[1].values()).sort(function (a, b) {
-        return a.name.localeCompare(b.name);
-      });
-
-      return {
-        folder,
-        items,
-      };
-    })
-    .sort(function (a, b) {
-      return a.folder.localeCompare(b.folder);
-    });
-};
-
 // Convert flat folder groups into nested tree used by Browser panel UI.
 export const buildPackTree = function ({
   folders,
