@@ -110,12 +110,12 @@ export function usePreviewAudio({
           return;
         }
 
-        masterNode.analyser.getByteTimeDomainData(masterNode.meterData);
+        masterNode.analyser.getFloatTimeDomainData(masterNode.meterData);
 
         let squareSum = 0;
         let peak = 0;
         for (let i = 0; i < masterNode.meterData.length; i += 1) {
-          const centered = (masterNode.meterData[i] - 128) / 128;
+          const centered = Number(masterNode.meterData[i] || 0);
           squareSum += centered * centered;
 
           const absolute = Math.abs(centered);
