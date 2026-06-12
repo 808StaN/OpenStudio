@@ -8,6 +8,8 @@ import {
 } from "../domain/fxParams";
 import { clamp } from "../../store/utils";
 
+const MAX_DYNAMICS_COMPRESSOR_RATIO = 20;
+
 /**
  * Applies all mixer-insert parameters (pan, stereo width, EQ, reverb,
  * maximizer) to a previously created insert node graph.
@@ -287,7 +289,11 @@ export function applyInsertSettings(
     modeConfig.releaseFast +
     character * (modeConfig.releaseSlow - modeConfig.releaseFast);
   const kneeDb = modeConfig.knee + character * 1.6;
-  const ratio = modeConfig.ratio + (1 - character) * 6;
+  const ratio = clamp(
+    modeConfig.ratio + (1 - character) * 6,
+    1,
+    MAX_DYNAMICS_COMPRESSOR_RATIO,
+  );
   const clipStrength = clamp(
     (driveDb / 24) * (0.06 + (1 - character) * 0.12),
     0,
