@@ -25,6 +25,7 @@ export function usePreviewAudio({
   mixerSettingsRef,
   ensureContext,
   ensureMixerGraph,
+  startMixerInsertModulators,
   applyMixerSettingsToGraph,
   loadSampleBuffer,
   transportIsPlaying,
@@ -46,6 +47,7 @@ export function usePreviewAudio({
       }
 
       ensureMixerGraph();
+      startMixerInsertModulators();
       applyMixerSettingsToGraph();
 
       const buffer = await loadSampleBuffer(safeSamplePath);
@@ -183,6 +185,7 @@ export function usePreviewAudio({
       dispatch,
       ensureContext,
       ensureMixerGraph,
+      startMixerInsertModulators,
       loadSampleBuffer,
       mixerGraphRef,
       mixerSettingsRef,

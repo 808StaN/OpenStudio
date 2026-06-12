@@ -3,7 +3,10 @@ import {
   GRAPHIC_EQ_DEFAULT_POINT_FREQUENCIES,
 } from "./domain/fxParams";
 import { applyInsertSettings } from "./core/applyInsertSettings";
-import { createMixerInsertNodes } from "./core/createMixerInsertNodes";
+import {
+  createMixerInsertNodes,
+  startMixerInsertModulators,
+} from "./core/createMixerInsertNodes";
 import { computeSamplePlaybackParams } from "./core/computeSamplePlaybackParams";
 import { createSamplePlaybackNodes } from "./core/createSamplePlaybackNodes";
 import {
@@ -82,6 +85,8 @@ function buildInsertInputNodes(audioCtx, mixerInserts) {
     }
     applyInsertSettings(node, insert, 0, { useSmoothing: false });
   });
+
+  startMixerInsertModulators(insertMap, audioCtx);
 
   const masterNode =
     insertMap.get("master") ||

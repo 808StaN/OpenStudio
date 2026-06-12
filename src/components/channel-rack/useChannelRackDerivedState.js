@@ -19,10 +19,8 @@ export function useChannelRackDerivedState() {
   const channels = useSelector(function (state) {
     return state.daw.project.channels;
   });
-  const mixerInserts = useSelector(function (state) {
-    return state.daw.mixer.inserts.filter(function (insert) {
-      return !insert.isMaster;
-    });
+  const allMixerInserts = useSelector(function (state) {
+    return state.daw.mixer.inserts;
   });
   const playhead = useSelector(function (state) {
     return state.daw.transport.currentStep16;
@@ -44,6 +42,15 @@ export function useChannelRackDerivedState() {
   const playheadStep = isPlaying
     ? (normalizedPlayheadStep - 1 + patternLength) % patternLength
     : normalizedPlayheadStep;
+
+  const mixerInserts = useMemo(
+    function () {
+      return allMixerInserts.filter(function (insert) {
+        return !insert.isMaster;
+      });
+    },
+    [allMixerInserts],
+  );
 
   const insertLabelById = useMemo(
     function () {

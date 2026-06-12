@@ -1,5 +1,9 @@
 import { useCallback, useRef } from "react";
-import { createMixerInsertNodes } from "./createMixerInsertNodes";
+import {
+  createMixerInsertNodes,
+  startMixerInsertModulators as startMixerInsertModulatorsForGraph,
+  stopMixerInsertModulators,
+} from "./createMixerInsertNodes";
 import { applyInsertSettings } from "./applyInsertSettings";
 
 /**
@@ -219,6 +223,7 @@ export function useMixerGraph(ensureContext) {
             });
           }
           if (Array.isArray(node.reverbModulators)) {
+            stopMixerInsertModulators(node);
             node.reverbModulators.forEach(function (mod) {
               safeDisconnect(mod.lfo);
               safeDisconnect(mod.depth);
@@ -312,6 +317,14 @@ export function useMixerGraph(ensureContext) {
     [ensureContext],
   );
 
+  const startMixerInsertModulators = useCallback(
+    function () {
+      const audioCtx = ensureContext();
+      startMixerInsertModulatorsForGraph(mixerGraphRef.current, audioCtx);
+    },
+    [ensureContext],
+  );
+
   const getInsertInputNodeForChannel = useCallback(
     function (channel) {
       const graph = mixerGraphRef.current;
@@ -339,6 +352,7 @@ export function useMixerGraph(ensureContext) {
     mixerGraphRef,
     mixerSettingsRef,
     ensureMixerGraph,
+    startMixerInsertModulators,
     applyMixerSettingsToGraph,
     getInsertInputNodeForChannel,
     areMixerSettingsEqual,

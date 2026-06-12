@@ -257,10 +257,10 @@ export function createMixerInsertNodes(audioCtx, mixerInserts, options = {}) {
       depth.gain.value = 0;
       lfo.connect(depth);
       depth.connect(targetDelay.delayTime);
-      lfo.start();
       return {
         lfo,
         depth,
+        isStarted: false,
       };
     });
 
@@ -361,4 +361,54 @@ export function createMixerInsertNodes(audioCtx, mixerInserts, options = {}) {
     insertMap,
     getOutputNode,
   };
+}
+
+export function startMixerInsertModulators(graphOrInsertMap, audioCtx) {
+  if (!graphOrInsertMap || !audioCtx) {
+    return;
+  }
+
+  const inserts = graphOrInsertMap instanceof Map
+    ? graphOrInsertMap
+    : graphOrInsertMap.inserts;
+
+  if (!(inserts instanceof Map)) {
+    return;
+  }
+
+  inserts.forEach(function (node) {
+    if (!Array.isArray(node.reverbModulators)) {
+      return;
+    }
+
+    node.reverbModulators.forEach(function (mod) {
+      if (mod.isStarted) {
+        return;
+      }
+
+      try {
+        mod.lfo.start(audioCtx.currentTime);
+      } catch {
+        // OscillatorNode.start can only succeed once; mark as started either way.
+      }
+
+      mod.isStarted = true;
+    });
+  });
+}
+
+export function stopMixerInsertModulators(node) {
+  if (!Array.isArray(node?.reverbModulators)) {
+    return;
+  }
+
+  node.reverbModulators.forEach(function (mod) {
+    try {
+      if (mod.isStarted) {
+        mod.lfo.stop();
+      }
+    } catch {
+      // The oscillator may already have stopped during graph teardown.
+    }
+  });
 }

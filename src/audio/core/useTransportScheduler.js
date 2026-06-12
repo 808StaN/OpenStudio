@@ -50,6 +50,7 @@ export function useTransportScheduler({
   mixerGraphRef,
   mixerSettingsRef,
   ensureMixerGraph,
+  startMixerInsertModulators,
   applyMixerSettingsToGraph,
   getInsertInputNodeForChannel,
   sampleBufferCacheRef,
@@ -557,12 +558,20 @@ export function useTransportScheduler({
       }
 
       resetVisualTail();
+      const startModulatorsAfterResume = function () {
+        startMixerInsertModulators();
+      };
+
       if (audioCtx.state === "suspended") {
-        void audioCtx.resume();
+        void audioCtx.resume().then(startModulatorsAfterResume);
       }
 
       ensureMixerGraph();
       applyMixerSettingsToGraph();
+
+      if (audioCtx.state !== "suspended") {
+        startMixerInsertModulators();
+      }
 
       const scheduleAhead = 0.11;
 
@@ -990,6 +999,7 @@ export function useTransportScheduler({
       applyMixerSettingsToGraph,
       ensureContext,
       ensureMixerGraph,
+      startMixerInsertModulators,
       getInsertInputNodeForChannel,
       loadSampleBuffer,
       loadPluginInstrument,

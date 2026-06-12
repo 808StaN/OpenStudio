@@ -28,6 +28,7 @@ export function useSampleSettingsPreview({
   mixerGraphRef,
   mixerSettingsRef,
   ensureMixerGraph,
+  startMixerInsertModulators,
   applyMixerSettingsToGraph,
   getInsertInputNodeForChannel,
   updateMixerMeters,
@@ -49,7 +50,7 @@ export function useSampleSettingsPreview({
 
   useEffect(
     function () {
-      const onSampleSettingsPreviewPlay = function (event) {
+      const onSampleSettingsPreviewPlay = async function (event) {
         const channelId = String(event?.detail?.channelId || "").trim();
         if (!channelId) {
           return;
@@ -64,10 +65,11 @@ export function useSampleSettingsPreview({
 
         const previewContext = ensureContext();
         if (previewContext.state === "suspended") {
-          void previewContext.resume();
+          await previewContext.resume();
         }
 
         ensureMixerGraph();
+        startMixerInsertModulators();
         applyMixerSettingsToGraph();
 
         const outputNode = getInsertInputNodeForChannel(channel);
@@ -262,6 +264,7 @@ export function useSampleSettingsPreview({
       mixerGraphRef,
       mixerSettingsRef,
       ensureMixerGraph,
+      startMixerInsertModulators,
       applyMixerSettingsToGraph,
       getInsertInputNodeForChannel,
       updateMixerMeters,

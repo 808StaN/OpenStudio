@@ -118,6 +118,7 @@ export function useAudioScheduler() {
     mixerGraphRef,
     mixerSettingsRef,
     ensureMixerGraph,
+    startMixerInsertModulators,
     applyMixerSettingsToGraph,
     getInsertInputNodeForChannel,
   } = useMixerGraph(ensureContext);
@@ -157,6 +158,7 @@ export function useAudioScheduler() {
     mixerSettingsRef,
     ensureContext,
     ensureMixerGraph,
+    startMixerInsertModulators,
     applyMixerSettingsToGraph,
     loadSampleBuffer,
     transportIsPlaying: transport.isPlaying,
@@ -287,6 +289,7 @@ export function useAudioScheduler() {
     mixerGraphRef,
     mixerSettingsRef,
     ensureMixerGraph,
+    startMixerInsertModulators,
     applyMixerSettingsToGraph,
     getInsertInputNodeForChannel,
     sampleBufferCacheRef,
