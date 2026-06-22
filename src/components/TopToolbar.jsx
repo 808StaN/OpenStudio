@@ -14,6 +14,9 @@ import {
   setTransportMode,
 } from "../store";
 
+// Keep the unfinished recording control easy to re-enable when recording lands.
+const SHOW_RECORD_BUTTON = false;
+
 export function TopToolbar() {
   const dispatch = useDispatch();
   const [authDialogOpen, setAuthDialogOpen] = useState(false);
@@ -43,14 +46,18 @@ export function TopToolbar() {
           >
             {transport.isPlaying ? <Square size={15} /> : <Play size={15} />}
           </button>
-          <button
-            className={"transport-btn" + (transport.isRecording ? " is-rec" : "")}
-            onClick={function () {
-              dispatch(setRecording(!transport.isRecording));
-            }}
-          >
-            <Circle size={15} />
-          </button>
+          {SHOW_RECORD_BUTTON ? (
+            <button
+              className={"transport-btn" + (transport.isRecording ? " is-rec" : "")}
+              title={transport.isRecording ? "Stop recording" : "Record"}
+              aria-label={transport.isRecording ? "Stop recording" : "Record"}
+              onClick={function () {
+                dispatch(setRecording(!transport.isRecording));
+              }}
+            >
+              <Circle size={15} />
+            </button>
+          ) : null}
 
           <DraggableBpm
             value={transport.bpm}
