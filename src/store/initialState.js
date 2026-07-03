@@ -130,6 +130,16 @@ export const initialState = {
         isMaximized: false,
         restoreRect: null,
       },
+      aiAgent: {
+        open: false,
+        z: 11,
+        x: 760,
+        y: 130,
+        width: 560,
+        height: 480,
+        isMaximized: false,
+        restoreRect: null,
+      },
     },
   },
   project: {
