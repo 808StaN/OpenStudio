@@ -1,6 +1,63 @@
 import { PLUGIN_EFFECTS } from "../data/pluginEffects";
 import { PLUGIN_INSTRUMENTS } from "../data/pluginInstruments";
 
+// Returns { channelId: [{ start, length, pitch, velocity }] } without note ids.
+// Only used for the active pattern so the payload stays compact.
+function summarizePianoPreview(pianoPreview) {
+  if (!pianoPreview || typeof pianoPreview !== "object") {
+    return {};
+  }
+
+  const result = {};
+  Object.keys(pianoPreview).forEach(function (channelId) {
+    const notes = Array.isArray(pianoPreview[channelId])
+      ? pianoPreview[channelId]
+      : [];
+    if (notes.length === 0) {
+      return;
+    }
+    result[channelId] = notes.map(function (note) {
+      return {
+        start: note.start,
+        length: note.length,
+        pitch: note.pitch,
+        velocity: note.velocity,
+      };
+    });
+  });
+  return result;
+}
+
+// Returns { channelId: [bool, bool, ...] } for the active pattern only.
+function summarizeStepGrid(stepGrid) {
+  if (!stepGrid || typeof stepGrid !== "object") {
+    return {};
+  }
+
+  const result = {};
+  Object.keys(stepGrid).forEach(function (channelId) {
+    const row = Array.isArray(stepGrid[channelId]) ? stepGrid[channelId] : [];
+    if (row.length === 0) {
+      return;
+    }
+    result[channelId] = row.map(Boolean);
+  });
+  return result;
+}
+
+// Lightweight count so the agent knows a non-active pattern is not empty
+// without receiving every note (keeps the token budget reasonable).
+function countPianoNotes(pianoPreview) {
+  if (!pianoPreview || typeof pianoPreview !== "object") {
+    return 0;
+  }
+  return Object.keys(pianoPreview).reduce(function (total, channelId) {
+    return total + (Array.isArray(pianoPreview[channelId])
+      ? pianoPreview[channelId].length
+      : 0);
+  }, 0);
+}
+
 function summarizeFxSlots(insert) {
   return (Array.isArray(insert?.fxSlots) ? insert.fxSlots : [])
     .filter(function (slot) {
@@ -30,10 +87,14 @@ export function buildAiProjectSummary(dawState, availableSamples = []) {
     activeChannelId: project.activeChannelId,
     patterns: (Array.isArray(project.patterns) ? project.patterns : []).map(
       function (pattern) {
+        const isActive = pattern.id === project.activePatternId;
         return {
           id: pattern.id,
           name: pattern.name,
           lengthSteps: pattern.lengthSteps,
+          notes: isActive ? summarizePianoPreview(pattern.pianoPreview) : null,
+          steps: isActive ? summarizeStepGrid(pattern.stepGrid) : null,
+          noteCount: isActive ? null : countPianoNotes(pattern.pianoPreview),
         };
       },
     ),
