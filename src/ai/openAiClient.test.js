@@ -35,6 +35,37 @@ describe("openAiClient", function () {
     expect(result.message).toBe("Plan ready");
     expect(result.operations).toHaveLength(1);
     expect(fetchMock).toHaveBeenCalledTimes(1);
+
+    // GPT-5.5 must not send temperature (only default 1 is supported)
+    const sentBody = JSON.parse(fetchMock.mock.calls[0][1].body);
+    expect(sentBody).not.toHaveProperty("temperature");
+  });
+
+  it("sends temperature for models that support it", async function () {
+    const fetchMock = vi.spyOn(globalThis, "fetch").mockResolvedValue({
+      ok: true,
+      json: async function () {
+        return {
+          choices: [
+            {
+              message: {
+                content: JSON.stringify({ message: "ok", operations: [] }),
+              },
+            },
+          ],
+        };
+      },
+    });
+
+    await requestAiAgentPlan({
+      apiKey: "sk-test",
+      model: "gpt-5.4",
+      userMessage: "hi",
+      projectSummary: {},
+    });
+
+    const sentBody = JSON.parse(fetchMock.mock.calls[0][1].body);
+    expect(sentBody.temperature).toBe(0.35);
   });
 
   it("tests model access through the models endpoint", async function () {

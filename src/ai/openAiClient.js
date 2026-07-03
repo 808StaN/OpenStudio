@@ -38,30 +38,39 @@ export async function requestAiAgentPlan({
     throw new Error("Write a request for the AI Agent first.");
   }
 
+  // GPT-5.5 (and other reasoning models) reject custom temperature values,
+  // only the default (1) is supported. Older GPT-5.4 variants still accept it.
+  const supportsTemperature = !safeModel.startsWith("gpt-5.5");
+
+  const requestBody = {
+    model: safeModel,
+    response_format: { type: "json_object" },
+    messages: [
+      {
+        role: "system",
+        content: getAiAgentSystemPrompt(),
+      },
+      {
+        role: "user",
+        content: JSON.stringify({
+          request: safeMessage,
+          project: projectSummary,
+        }),
+      },
+    ],
+  };
+
+  if (supportsTemperature) {
+    requestBody.temperature = 0.35;
+  }
+
   const response = await fetch(OPENAI_CHAT_COMPLETIONS_URL, {
     method: "POST",
     headers: {
       "content-type": "application/json",
       authorization: "Bearer " + safeApiKey,
     },
-    body: JSON.stringify({
-      model: safeModel,
-      response_format: { type: "json_object" },
-      temperature: 0.35,
-      messages: [
-        {
-          role: "system",
-          content: getAiAgentSystemPrompt(),
-        },
-        {
-          role: "user",
-          content: JSON.stringify({
-            request: safeMessage,
-            project: projectSummary,
-          }),
-        },
-      ],
-    }),
+    body: JSON.stringify(requestBody),
   });
 
   const result = await response.json().catch(function () {
