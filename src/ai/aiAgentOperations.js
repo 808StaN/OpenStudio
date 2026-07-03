@@ -86,7 +86,9 @@ function resolveChannelId(dawState, payload = {}) {
     ? dawState.project.channels
     : [];
 
-  if (requestedId && requestedId !== "$active") {
+  // "$new" refers to the channel just created by add_channel in the same
+  // batch. addChannel() sets the new channel as active, so $new === $active.
+  if (requestedId && requestedId !== "$active" && requestedId !== "$new") {
     const direct = channels.find(function (channel) {
       return channel.id === requestedId;
     });
@@ -105,7 +107,7 @@ function resolveChannelId(dawState, payload = {}) {
     }
   }
 
-  if (!requestedId || requestedId === "$active") {
+  if (!requestedId || requestedId === "$active" || requestedId === "$new") {
     return getActiveChannelId(dawState);
   }
 
@@ -273,6 +275,7 @@ function validateAiOperation(operation, dawState, availableSamples = []) {
   if (
     channelId &&
     channelId !== "$active" &&
+    channelId !== "$new" &&
     !channelIds.has(channelId) &&
     operation.type !== "add_channel" &&
     operation.type !== "add_sample_as_channel"

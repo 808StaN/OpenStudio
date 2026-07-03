@@ -396,4 +396,63 @@ describe("applyAiOperations", function () {
     );
     expect(validated[0].status).toBe("ready");
   });
+
+  it("treats $new like $active in validation (no missing-channel warning)", function () {
+    const validated = validatePreparedAiOperations(
+      prepareAiOperations([
+        {
+          type: "add_piano_notes",
+          payload: {
+            channelId: "$new",
+            notes: [{ start: 0, length: 4, pitch: 60, velocity: 95 }],
+          },
+        },
+      ]).operations,
+      { dawState: createDawState() },
+    );
+
+    expect(validated[0].issues).not.toContain(
+      expect.stringContaining("Channel id does not exist"),
+    );
+  });
+});
+
+describe("applyAiOperations with $new channel reference", function () {
+  it("resolves $new to the channel just created by add_channel", function () {
+    const dawState = createDawState();
+    const dispatched = [];
+    const dispatch = function (action) {
+      dispatched.push(action);
+    };
+    const getState = function () {
+      return { daw: dawState };
+    };
+
+    applyAiOperations(
+      prepareAiOperations([
+        {
+          type: "add_channel",
+          payload: { name: "Melody", pluginRef: "openstudio-piano" },
+        },
+        {
+          type: "add_piano_notes",
+          payload: {
+            channelId: "$new",
+            notes: [{ start: 0, length: 4, pitch: 60, velocity: 95 }],
+          },
+        },
+      ]).operations,
+      { dispatch, getState },
+    );
+
+    // addPianoNotesBatch should have been dispatched with a real channel id,
+    // not the literal string "$new".
+    const notesAction = dispatched.find(function (action) {
+      return action.type === "daw/addPianoNotesBatch";
+    });
+    expect(notesAction).toBeDefined();
+    expect(notesAction.payload.channelId).not.toBe("$new");
+    expect(notesAction.payload.channelId).not.toBe("$active");
+    expect(notesAction.payload.notes).toHaveLength(1);
+  });
 });

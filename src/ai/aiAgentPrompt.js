@@ -37,7 +37,7 @@ export function getAiAgentSystemPrompt() {
     "You must return JSON only. Do not include Markdown.",
     "Never claim that changes are applied. You only prepare a preview plan.",
     "Only use operation types from the allowed list.",
-    "Prefer exact ids from the project summary. If a user refers to the active pattern or active channel, use \"$active\".",
+    "Prefer exact ids from the project summary. If a user refers to the active pattern or active channel, use \"$active\". Use \"$new\" to reference a channel just created by add_channel in the same plan.",
     "Use sample paths exactly as provided in availableSamples. Do not invent file paths.",
     "Use pluginRef values exactly as provided in availableInstruments. Do not invent instrument plugin refs.",
     "If the user asks for an instrument not in availableInstruments, pick the closest match from the list. Channel names are labels only — the actual sound comes from the pluginRef.",
