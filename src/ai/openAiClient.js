@@ -25,6 +25,7 @@ export async function requestAiAgentPlan({
   model = AI_AGENT_DEFAULT_MODEL,
   userMessage,
   projectSummary,
+  conversationHistory = [],
 }) {
   const safeApiKey = String(apiKey || "").trim();
   const safeMessage = String(userMessage || "").trim();
@@ -42,6 +43,21 @@ export async function requestAiAgentPlan({
   // only the default (1) is supported. Older GPT-5.4 variants still accept it.
   const supportsTemperature = !safeModel.startsWith("gpt-5.5");
 
+  // Build the full message list: system prompt, prior conversation turns,
+  // then the current user request with the live project summary. This gives
+  // the model context from earlier in the chat (loaded from Supabase or
+  // built up during the current session).
+  const historyMessages = (Array.isArray(conversationHistory)
+    ? conversationHistory
+    : []
+  )
+    .filter(function (msg) {
+      return msg && (msg.role === "user" || msg.role === "assistant") && msg.content;
+    })
+    .map(function (msg) {
+      return { role: msg.role, content: msg.content };
+    });
+
   const requestBody = {
     model: safeModel,
     response_format: { type: "json_object" },
@@ -50,6 +66,7 @@ export async function requestAiAgentPlan({
         role: "system",
         content: getAiAgentSystemPrompt(),
       },
+      ...historyMessages,
       {
         role: "user",
         content: JSON.stringify({

@@ -230,6 +230,11 @@ export function useAiAgentController() {
     setPendingOperations([]);
     setOperationResults([]);
     setRejectedOperations([]);
+
+    // Snapshot the conversation history before adding the new user message,
+    // so the API receives prior turns as context (works for loaded chats too).
+    const conversationHistory = messages.slice();
+
     setMessages(function (current) {
       return current.concat({ role: "user", content: userMessage });
     });
@@ -247,6 +252,7 @@ export function useAiAgentController() {
         model,
         userMessage,
         projectSummary,
+        conversationHistory,
       });
       const prepared = prepareAiOperations(response.operations);
       const validatedOperations = validatePreparedAiOperations(

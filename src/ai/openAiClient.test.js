@@ -83,4 +83,107 @@ describe("openAiClient", function () {
 
     expect(result.model).toBe("gpt-5.5");
   });
+
+  it("includes conversation history in the messages array", async function () {
+    const fetchMock = vi.spyOn(globalThis, "fetch").mockResolvedValue({
+      ok: true,
+      json: async function () {
+        return {
+          choices: [
+            {
+              message: {
+                content: JSON.stringify({ message: "ok", operations: [] }),
+              },
+            },
+          ],
+        };
+      },
+    });
+
+    await requestAiAgentPlan({
+      apiKey: "sk-test",
+      model: "gpt-5.4",
+      userMessage: "add a snare",
+      projectSummary: {},
+      conversationHistory: [
+        { role: "user", content: "create a trap beat" },
+        { role: "assistant", content: "I created a pattern with kick and hats." },
+      ],
+    });
+
+    const sentBody = JSON.parse(fetchMock.mock.calls[0][1].body);
+    expect(sentBody.messages).toHaveLength(4);
+    expect(sentBody.messages[0].role).toBe("system");
+    expect(sentBody.messages[1]).toEqual({
+      role: "user",
+      content: "create a trap beat",
+    });
+    expect(sentBody.messages[2].role).toBe("assistant");
+    expect(sentBody.messages[3].role).toBe("user");
+  });
+
+  it("works without conversation history (empty array default)", async function () {
+    const fetchMock = vi.spyOn(globalThis, "fetch").mockResolvedValue({
+      ok: true,
+      json: async function () {
+        return {
+          choices: [
+            {
+              message: {
+                content: JSON.stringify({ message: "ok", operations: [] }),
+              },
+            },
+          ],
+        };
+      },
+    });
+
+    await requestAiAgentPlan({
+      apiKey: "sk-test",
+      model: "gpt-5.4",
+      userMessage: "hi",
+      projectSummary: {},
+    });
+
+    const sentBody = JSON.parse(fetchMock.mock.calls[0][1].body);
+    expect(sentBody.messages).toHaveLength(2);
+    expect(sentBody.messages[0].role).toBe("system");
+    expect(sentBody.messages[1].role).toBe("user");
+  });
+
+  it("filters out system-role messages from conversation history", async function () {
+    const fetchMock = vi.spyOn(globalThis, "fetch").mockResolvedValue({
+      ok: true,
+      json: async function () {
+        return {
+          choices: [
+            {
+              message: {
+                content: JSON.stringify({ message: "ok", operations: [] }),
+              },
+            },
+          ],
+        };
+      },
+    });
+
+    await requestAiAgentPlan({
+      apiKey: "sk-test",
+      model: "gpt-5.4",
+      userMessage: "hi",
+      projectSummary: {},
+      conversationHistory: [
+        { role: "user", content: "create a beat" },
+        { role: "system", content: "Applied 2 operations." },
+      ],
+    });
+
+    const sentBody = JSON.parse(fetchMock.mock.calls[0][1].body);
+    // system prompt + 1 history (user only) + current user message = 3
+    expect(sentBody.messages).toHaveLength(3);
+    expect(sentBody.messages[1]).toEqual({
+      role: "user",
+      content: "create a beat",
+    });
+  });
 });
