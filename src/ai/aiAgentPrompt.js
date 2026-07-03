@@ -1,6 +1,7 @@
 export const AI_AGENT_DEFAULT_MODEL = "gpt-5.5";
 
 export const AI_AGENT_OPERATION_TYPES = [
+  "set_bpm",
   "create_pattern",
   "set_active_pattern",
   "rename_pattern",
@@ -11,6 +12,7 @@ export const AI_AGENT_OPERATION_TYPES = [
   "add_sample_as_channel",
   "set_step",
   "add_piano_notes",
+  "add_chord_progression",
   "set_channel_volume",
   "set_channel_pan",
   "set_channel_mute",
@@ -39,6 +41,10 @@ export function getAiAgentSystemPrompt() {
     "Use sample paths exactly as provided in availableSamples. Do not invent file paths.",
     "Use pluginRef values exactly as provided in availableInstruments. Do not invent instrument plugin refs.",
     "If the user asks for an instrument melody, create or choose a channel, use assign_plugin_to_channel, set channel input mode to piano, then add piano notes.",
+    "If the user asks for chords or a chord progression, use add_chord_progression with chords containing start, length, pitches and velocity.",
+    "Use MIDI velocity values from 1 to 127. Prefer 80-105 for musical notes.",
+    "For chord progressions, use longer note lengths such as 8 or 16 steps, not tiny one-step notes.",
+    "Use set_bpm when the user asks to change project tempo or BPM.",
     "Keep edits small and musically useful. If unsure, ask for clarification in the message and return an empty operations array.",
     "Return this shape: {\"message\": string, \"operations\": [{\"type\": string, \"payload\": object}] }.",
     "Allowed operation types: " + AI_AGENT_OPERATION_TYPES.join(", "),

@@ -10,6 +10,7 @@ import {
   beginAiOperationBatch,
   createPattern,
   endAiOperationBatch,
+  setBpm,
   renameChannel,
   renamePattern,
   setActivePattern,
@@ -35,6 +36,10 @@ import { PLUGIN_INSTRUMENTS } from "../data/pluginInstruments";
 import { AI_AGENT_OPERATION_TYPES } from "./aiAgentPrompt";
 
 const ALLOWED_OPERATION_TYPES = new Set(AI_AGENT_OPERATION_TYPES);
+const DEFAULT_AI_NOTE_VELOCITY = 95;
+const DEFAULT_AI_NOTE_LENGTH = 1;
+const DEFAULT_AI_CHORD_LENGTH = 16;
+const MIN_AI_CHORD_LENGTH = 4;
 const PLUGIN_INSTRUMENT_BY_REF = PLUGIN_INSTRUMENTS.reduce(function (acc, instrument) {
   acc[instrument.pluginRef] = instrument;
   return acc;
@@ -129,6 +134,8 @@ function getOperationDescription(operation) {
   switch (operation.type) {
     case "create_pattern":
       return "Create pattern" + (payload.name ? " " + payload.name : "");
+    case "set_bpm":
+      return "Set project BPM to " + (payload.bpm || payload.value || 140);
     case "set_active_pattern":
       return "Set active pattern to " + (payload.patternId || "$active");
     case "rename_pattern":
@@ -147,6 +154,8 @@ function getOperationDescription(operation) {
       return "Set sequencer step " + Number(payload.stepIndex || 0);
     case "add_piano_notes":
       return "Add " + (Array.isArray(payload.notes) ? payload.notes.length : 0) + " piano notes";
+    case "add_chord_progression":
+      return "Add " + (Array.isArray(payload.chords) ? payload.chords.length : 0) + " chord progression blocks";
     case "set_channel_volume":
       return "Set channel volume for " + (payload.channelName || payload.channelId || "$active");
     case "set_channel_pan":
@@ -310,6 +319,20 @@ function validateAiOperation(operation, dawState, availableSamples = []) {
     }
   }
 
+  if (operation.type === "add_chord_progression") {
+    const chords = Array.isArray(payload.chords) ? payload.chords : [];
+    if (chords.length === 0) {
+      issues.push("Missing chords.");
+    }
+
+    chords.forEach(function (chord, index) {
+      const pitches = Array.isArray(chord?.pitches) ? chord.pitches : [];
+      if (pitches.length < 2) {
+        issues.push("Chord " + (index + 1) + " must contain at least 2 pitches.");
+      }
+    });
+  }
+
   return issues;
 }
 
@@ -368,12 +391,102 @@ function applySetStep(operation, dispatch, getState) {
   }
 }
 
+function normalizeAiVelocity(rawVelocity) {
+  const numeric = Number(rawVelocity);
+  if (!Number.isFinite(numeric) || numeric <= 0) {
+    return DEFAULT_AI_NOTE_VELOCITY;
+  }
+
+  if (numeric <= 1) {
+    return Math.max(1, Math.min(127, Math.round(numeric * 127)));
+  }
+
+  return Math.max(1, Math.min(127, Math.round(numeric)));
+}
+
+function normalizeAiPitch(rawPitch) {
+  return Math.max(0, Math.min(127, Math.round(Number(rawPitch || 72))));
+}
+
+function normalizeAiNoteLength(rawLength, fallbackLength, maxLength) {
+  const numeric = Number(rawLength);
+  const fallback = Number.isFinite(Number(fallbackLength))
+    ? Number(fallbackLength)
+    : DEFAULT_AI_NOTE_LENGTH;
+  const nextLength = Number.isFinite(numeric) && numeric > 0 ? numeric : fallback;
+  return Math.max(0.0625, Math.min(Math.max(0.0625, maxLength), nextLength));
+}
+
+function getPatternLength(dawState, patternId) {
+  const pattern = (dawState.project?.patterns || []).find(function (item) {
+    return item.id === patternId;
+  });
+  return Math.max(1, Number(pattern?.lengthSteps || 16));
+}
+
+function normalizeAiPianoNotes(rawNotes, patternLength, fallbackLength = DEFAULT_AI_NOTE_LENGTH) {
+  return (Array.isArray(rawNotes) ? rawNotes : []).map(function (note) {
+    const start = Math.max(
+      0,
+      Math.min(patternLength - 0.0625, Number(note?.start || 0)),
+    );
+    const maxLength = Math.max(0.0625, patternLength - start);
+    return {
+      ...note,
+      start,
+      length: normalizeAiNoteLength(note?.length, fallbackLength, maxLength),
+      pitch: normalizeAiPitch(note?.pitch),
+      velocity: normalizeAiVelocity(note?.velocity),
+    };
+  });
+}
+
+function normalizeAiChordProgression(chords, patternLength) {
+  const notes = [];
+
+  (Array.isArray(chords) ? chords : []).forEach(function (chord, chordIndex) {
+    const pitches = Array.isArray(chord?.pitches) ? chord.pitches : [];
+    if (pitches.length < 2) {
+      return;
+    }
+
+    const start = Math.max(
+      0,
+      Math.min(patternLength - 0.0625, Number(chord?.start || 0)),
+    );
+    const maxLength = Math.max(0.0625, patternLength - start);
+    const length = Math.max(
+      MIN_AI_CHORD_LENGTH,
+      normalizeAiNoteLength(chord?.length, DEFAULT_AI_CHORD_LENGTH, maxLength),
+    );
+    const safeLength = Math.min(length, maxLength);
+    const velocity = normalizeAiVelocity(chord?.velocity);
+
+    pitches.forEach(function (pitch, pitchIndex) {
+      notes.push({
+        id: "ai-chord-" + chordIndex + "-" + pitchIndex,
+        start,
+        length: safeLength,
+        pitch: normalizeAiPitch(pitch),
+        velocity,
+      });
+    });
+  });
+
+  return notes;
+}
+
 function applyAiOperation(operation, dispatch, getState) {
   const dawState = getDawState(getState());
   const payload = operation.payload || {};
 
   if (operation.type === "create_pattern") {
     applyCreatePattern(operation, dispatch, getState);
+    return true;
+  }
+
+  if (operation.type === "set_bpm") {
+    dispatch(setBpm(payload.bpm || payload.value));
     return true;
   }
 
@@ -440,11 +553,25 @@ function applyAiOperation(operation, dispatch, getState) {
   }
 
   if (operation.type === "add_piano_notes") {
+    const patternId = resolvePatternId(dawState, payload);
+    const patternLength = getPatternLength(dawState, patternId);
     dispatch(addPianoNotesBatch({
-      patternId: resolvePatternId(dawState, payload),
+      patternId,
       channelId: resolveChannelId(dawState, payload),
-      notes: Array.isArray(payload.notes) ? payload.notes : [],
+      notes: normalizeAiPianoNotes(payload.notes, patternLength),
       allowOverlaps: Boolean(payload.allowOverlaps),
+    }));
+    return true;
+  }
+
+  if (operation.type === "add_chord_progression") {
+    const patternId = resolvePatternId(dawState, payload);
+    const patternLength = getPatternLength(dawState, patternId);
+    dispatch(addPianoNotesBatch({
+      patternId,
+      channelId: resolveChannelId(dawState, payload),
+      notes: normalizeAiChordProgression(payload.chords, patternLength),
+      allowOverlaps: true,
     }));
     return true;
   }
