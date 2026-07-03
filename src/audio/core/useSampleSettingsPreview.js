@@ -15,6 +15,8 @@ import {
   getPluginInstrumentCacheKey,
 } from "./usePluginInstruments";
 import { BASE_CHANNEL_TRIGGER_GAIN } from "../domain/constants";
+import { DEFAULT_SAMPLE_MIDI_PITCH } from "../domain/pitch";
+import { getSafeSampleSettings } from "../domain/sampleSettings";
 
 const SAMPLE_SETTINGS_PREVIEW_PLAY_EVENT =
   "openstudio:sample-settings-preview-play";
@@ -128,6 +130,9 @@ export function useSampleSettingsPreview({
             hasPluginInstrument &&
             typeof schedulePluginInstrumentRef.current === "function"
           ) {
+            const channelSettings = getSafeSampleSettings(
+              channel.sampleSettings,
+            );
             schedulePluginInstrumentRef.current(
               pluginRef,
               startAt,
@@ -135,6 +140,9 @@ export function useSampleSettingsPreview({
               channel.pan,
               channel,
               outputNode,
+              DEFAULT_SAMPLE_MIDI_PITCH,
+              1,
+              channelSettings,
             );
             return;
           }
