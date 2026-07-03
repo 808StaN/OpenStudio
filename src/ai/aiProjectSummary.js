@@ -1,3 +1,6 @@
+import { PLUGIN_EFFECTS } from "../data/pluginEffects";
+import { PLUGIN_INSTRUMENTS } from "../data/pluginInstruments";
+
 function summarizeFxSlots(insert) {
   return (Array.isArray(insert?.fxSlots) ? insert.fxSlots : [])
     .filter(function (slot) {
@@ -64,6 +67,20 @@ export function buildAiProjectSummary(dawState, availableSamples = []) {
         };
       },
     ),
+    availableInstruments: PLUGIN_INSTRUMENTS.map(function (instrument) {
+      return {
+        pluginRef: instrument.pluginRef,
+        name: instrument.name,
+        description: instrument.description,
+      };
+    }),
+    availableEffects: PLUGIN_EFFECTS.map(function (effect) {
+      return {
+        effectType: effect.effectType,
+        name: effect.name,
+        description: effect.description,
+      };
+    }),
     playlistTracks: (Array.isArray(project.playlistTracks)
       ? project.playlistTracks
       : []

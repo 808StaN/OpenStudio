@@ -6,6 +6,7 @@ import {
   addPlaylistPatternClip,
   addPlaylistSampleAsChannel,
   assignSampleToChannel,
+  assignPluginToChannel,
   beginAiOperationBatch,
   createPattern,
   endAiOperationBatch,
@@ -29,9 +30,18 @@ import {
   toggleFxSlot,
   toggleStep,
 } from "../store";
+import { PLUGIN_EFFECTS } from "../data/pluginEffects";
+import { PLUGIN_INSTRUMENTS } from "../data/pluginInstruments";
 import { AI_AGENT_OPERATION_TYPES } from "./aiAgentPrompt";
 
 const ALLOWED_OPERATION_TYPES = new Set(AI_AGENT_OPERATION_TYPES);
+const PLUGIN_INSTRUMENT_BY_REF = PLUGIN_INSTRUMENTS.reduce(function (acc, instrument) {
+  acc[instrument.pluginRef] = instrument;
+  return acc;
+}, {});
+const PLUGIN_EFFECT_TYPES = new Set(PLUGIN_EFFECTS.map(function (effect) {
+  return effect.effectType;
+}));
 
 function getDawState(rootOrDawState) {
   return rootOrDawState?.daw || rootOrDawState || {};
@@ -67,18 +77,31 @@ function resolvePatternId(dawState, payload = {}) {
 
 function resolveChannelId(dawState, payload = {}) {
   const requestedId = asString(payload.channelId);
-  if (!requestedId || requestedId === "$active") {
-    return getActiveChannelId(dawState);
-  }
-
   const channels = Array.isArray(dawState?.project?.channels)
     ? dawState.project.channels
     : [];
-  const direct = channels.find(function (channel) {
-    return channel.id === requestedId;
-  });
-  if (direct) {
-    return direct.id;
+
+  if (requestedId && requestedId !== "$active") {
+    const direct = channels.find(function (channel) {
+      return channel.id === requestedId;
+    });
+    if (direct) {
+      return direct.id;
+    }
+  }
+
+  const explicitName = asString(payload.channelName).toLowerCase();
+  if (explicitName) {
+    const byExplicitName = channels.find(function (channel) {
+      return asString(channel.name).toLowerCase() === explicitName;
+    });
+    if (byExplicitName) {
+      return byExplicitName.id;
+    }
+  }
+
+  if (!requestedId || requestedId === "$active") {
+    return getActiveChannelId(dawState);
   }
 
   const requestedName = asString(payload.channelName || requestedId).toLowerCase();
@@ -114,6 +137,8 @@ function getOperationDescription(operation) {
       return "Set pattern length to " + (payload.lengthSteps || payload.length || 16) + " steps";
     case "add_channel":
       return "Add channel" + (payload.name ? " " + payload.name : "");
+    case "assign_plugin_to_channel":
+      return "Assign instrument " + (payload.pluginName || payload.pluginRef || "Plugin") + " to channel " + (payload.channelName || payload.channelId || "$active");
     case "assign_sample_to_channel":
       return "Assign sample to channel " + (payload.channelName || payload.channelId || "$active");
     case "add_sample_as_channel":
@@ -271,8 +296,17 @@ function validateAiOperation(operation, dawState, availableSamples = []) {
 
   if (operation.type === "set_fx_slot_effect") {
     const effectType = asString(payload.effectType || "none");
-    if (!["none", "graphic-eq", "reverb", "maximizer"].includes(effectType)) {
+    if (effectType !== "none" && !PLUGIN_EFFECT_TYPES.has(effectType)) {
       issues.push("Unsupported effectType: " + effectType);
+    }
+  }
+
+  if (operation.type === "assign_plugin_to_channel") {
+    const pluginRef = asString(payload.pluginRef);
+    if (!pluginRef) {
+      issues.push("Missing pluginRef.");
+    } else if (!PLUGIN_INSTRUMENT_BY_REF[pluginRef]) {
+      issues.push("Unknown instrument pluginRef: " + pluginRef);
     }
   }
 
@@ -374,6 +408,17 @@ function applyAiOperation(operation, dispatch, getState) {
       channelId: resolveChannelId(dawState, payload),
       sampleRef: payload.samplePath || payload.sampleRef,
       sampleName: payload.sampleName || payload.clipName,
+    }));
+    return true;
+  }
+
+  if (operation.type === "assign_plugin_to_channel") {
+    const pluginRef = asString(payload.pluginRef);
+    const plugin = PLUGIN_INSTRUMENT_BY_REF[pluginRef];
+    dispatch(assignPluginToChannel({
+      channelId: resolveChannelId(dawState, payload),
+      pluginRef,
+      pluginName: payload.pluginName || plugin?.name,
     }));
     return true;
   }

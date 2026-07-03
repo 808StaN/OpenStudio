@@ -76,6 +76,23 @@ describe("validatePreparedAiOperations", function () {
     expect(validated[0].status).toBe("warning");
     expect(validated[0].issues[0]).toContain("Channel id does not exist");
   });
+
+  it("warns when an instrument pluginRef is unknown", function () {
+    const prepared = prepareAiOperations([
+      {
+        type: "assign_plugin_to_channel",
+        payload: { channelId: "ch-kick", pluginRef: "missing-plugin" },
+      },
+    ]).operations;
+
+    const validated = validatePreparedAiOperations(prepared, {
+      dawState: createDawState(),
+      availableSamples: [],
+    });
+
+    expect(validated[0].status).toBe("warning");
+    expect(validated[0].issues[0]).toContain("Unknown instrument pluginRef");
+  });
 });
 
 describe("applyAiOperations", function () {
@@ -121,5 +138,39 @@ describe("applyAiOperations", function () {
     expect(dispatched).toHaveLength(2);
     expect(dispatched[0].type).toBe("daw/beginAiOperationBatch");
     expect(dispatched[1].type).toBe("daw/endAiOperationBatch");
+  });
+
+  it("dispatches instrument assignment operations", function () {
+    const dawState = createDawState();
+    const dispatched = [];
+    const dispatch = function (action) {
+      dispatched.push(action);
+    };
+    const getState = function () {
+      return { daw: dawState };
+    };
+
+    applyAiOperations(
+      prepareAiOperations([
+        {
+          type: "assign_plugin_to_channel",
+          payload: {
+            channelId: "ch-kick",
+            pluginRef: "openstudio-piano",
+            pluginName: "Piano",
+          },
+        },
+      ]).operations,
+      { dispatch, getState },
+    );
+
+    expect(dispatched[1]).toMatchObject({
+      type: "daw/assignPluginToChannel",
+      payload: {
+        channelId: "ch-kick",
+        pluginRef: "openstudio-piano",
+        pluginName: "Piano",
+      },
+    });
   });
 });
