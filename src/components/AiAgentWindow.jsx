@@ -112,6 +112,12 @@ export function AiAgentWindow() {
               onChange={function (event) {
                 agent.setInput(event.target.value);
               }}
+              onKeyDown={function (event) {
+                if (event.key === "Enter" && !event.shiftKey) {
+                  event.preventDefault();
+                  agent.sendMessage(event);
+                }
+              }}
             />
             <button
               type="submit"
