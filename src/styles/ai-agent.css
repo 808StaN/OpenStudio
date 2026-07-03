@@ -203,6 +203,13 @@
   white-space: pre-wrap;
   font-size: 12px;
   line-height: 1.5;
+  -webkit-user-select: text;
+  user-select: text;
+}
+
+.ai-agent-message span {
+  -webkit-user-select: text;
+  user-select: text;
 }
 
 .ai-agent-empty-state {
