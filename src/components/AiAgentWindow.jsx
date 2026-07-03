@@ -68,6 +68,23 @@ export function AiAgentWindow() {
           />
           <span>Remember on this device</span>
         </label>
+        <div className="ai-agent-key-actions">
+          <button
+            type="button"
+            onClick={agent.testConnection}
+            disabled={agent.isTestingConnection || !agent.apiKey.trim()}
+          >
+            {agent.isTestingConnection ? "Testing..." : "Test connection"}
+          </button>
+          <button type="button" onClick={agent.forgetKey}>
+            Forget key
+          </button>
+        </div>
+        {agent.connectionStatus ? (
+          <div className="ai-agent-connection-status">
+            {agent.connectionStatus}
+          </div>
+        ) : null}
       </div>
 
       <div className="ai-agent-layout">
@@ -96,6 +113,7 @@ export function AiAgentWindow() {
 
         <AiAgentPlanPanel
           operations={agent.pendingOperations}
+          operationResults={agent.operationResults}
           rejectedOperations={agent.rejectedOperations}
           isApplying={agent.isApplying}
           onApply={agent.applyPendingOperations}

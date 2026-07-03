@@ -14,8 +14,11 @@ import { userReducer } from "./store/userSlice";
 // ------------------------------------------------------------------
 
 const undoLastChange = createAction("daw/undoLastChange");
+const beginAiOperationBatch = createAction("daw/beginAiOperationBatch");
+const endAiOperationBatch = createAction("daw/endAiOperationBatch");
 const undoPastStates = [];
 const undoFutureStates = [];
+let undoBatchBaseState = null;
 
 const LOAD_PROJECT_FROM_FILE_ACTION = "daw/loadProjectFromFile";
 const RESET_TO_DEFAULT_PROJECT_ACTION = "daw/resetToDefaultProject";
@@ -31,6 +34,8 @@ const nonUndoableActionTypes = new Set([
   "daw/setTheme",
   "daw/bringWindowToFront",
   "daw/setPianoRollScale",
+  beginAiOperationBatch.type,
+  endAiOperationBatch.type,
   LOAD_PROJECT_FROM_FILE_ACTION,
   RESET_TO_DEFAULT_PROJECT_ACTION,
 ]);
@@ -114,11 +119,31 @@ const dawReducerWithUndo = function (state = initialState, action) {
     return previousState;
   }
 
+  if (action.type === beginAiOperationBatch.type) {
+    if (!undoBatchBaseState) {
+      undoBatchBaseState = state;
+    }
+    return state;
+  }
+
+  if (action.type === endAiOperationBatch.type) {
+    if (undoBatchBaseState && undoBatchBaseState !== state) {
+      undoPastStates.push(undoBatchBaseState);
+      if (undoPastStates.length > 140) {
+        undoPastStates.shift();
+      }
+      undoFutureStates.length = 0;
+    }
+    undoBatchBaseState = null;
+    return state;
+  }
+
   if (action.type === LOAD_PROJECT_FROM_FILE_ACTION) {
     const loadedState = dawSlice.reducer(state, action);
     if (loadedState !== state) {
       undoPastStates.length = 0;
       undoFutureStates.length = 0;
+      undoBatchBaseState = null;
     }
     return loadedState;
   }
@@ -128,6 +153,7 @@ const dawReducerWithUndo = function (state = initialState, action) {
     if (resetState !== state) {
       undoPastStates.length = 0;
       undoFutureStates.length = 0;
+      undoBatchBaseState = null;
     }
     return resetState;
   }
@@ -137,7 +163,7 @@ const dawReducerWithUndo = function (state = initialState, action) {
     return state;
   }
 
-  if (shouldTrackUndoForAction(action)) {
+  if (shouldTrackUndoForAction(action) && !undoBatchBaseState) {
     undoPastStates.push(state);
     if (undoPastStates.length > 140) {
       undoPastStates.shift();
@@ -238,4 +264,4 @@ export const {
   setInsertMeter,
 } = dawSlice.actions;
 
-export { undoLastChange };
+export { undoLastChange, beginAiOperationBatch, endAiOperationBatch };

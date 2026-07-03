@@ -1,10 +1,14 @@
 import { useEffect, useState } from "react";
 import { useDispatch, useStore } from "react-redux";
-import { applyAiOperations, prepareAiOperations } from "../../ai/aiAgentOperations";
+import {
+  applyAiOperations,
+  prepareAiOperations,
+  validatePreparedAiOperations,
+} from "../../ai/aiAgentOperations";
 import { AI_AGENT_DEFAULT_MODEL } from "../../ai/aiAgentPrompt";
 import { buildAiProjectSummary } from "../../ai/aiProjectSummary";
-import { loadAiSampleIndex } from "../../ai/aiSampleIndex";
-import { requestAiAgentPlan } from "../../ai/openAiClient";
+import { loadAiSampleIndex, searchAiSamples } from "../../ai/aiSampleIndex";
+import { requestAiAgentPlan, testOpenAiConnection } from "../../ai/openAiClient";
 
 const AI_AGENT_KEY_STORAGE = "openstudio.ai.openaiKey";
 const AI_AGENT_MODEL_STORAGE = "openstudio.ai.model";
@@ -52,10 +56,13 @@ export function useAiAgentController() {
   const [input, setInput] = useState("");
   const [messages, setMessages] = useState([]);
   const [pendingOperations, setPendingOperations] = useState([]);
+  const [operationResults, setOperationResults] = useState([]);
   const [rejectedOperations, setRejectedOperations] = useState([]);
   const [error, setError] = useState("");
+  const [connectionStatus, setConnectionStatus] = useState("");
   const [isSending, setIsSending] = useState(false);
   const [isApplying, setIsApplying] = useState(false);
+  const [isTestingConnection, setIsTestingConnection] = useState(false);
 
   useEffect(
     function () {
@@ -83,13 +90,15 @@ export function useAiAgentController() {
     setInput("");
     setIsSending(true);
     setPendingOperations([]);
+    setOperationResults([]);
     setRejectedOperations([]);
     setMessages(function (current) {
       return current.concat({ role: "user", content: userMessage });
     });
 
     try {
-      const availableSamples = await loadAiSampleIndex();
+      const allSamples = await loadAiSampleIndex(800);
+      const availableSamples = searchAiSamples(allSamples, userMessage, 120);
       const currentDawState = store.getState().daw;
       const projectSummary = buildAiProjectSummary(
         currentDawState,
@@ -102,8 +111,15 @@ export function useAiAgentController() {
         projectSummary,
       });
       const prepared = prepareAiOperations(response.operations);
+      const validatedOperations = validatePreparedAiOperations(
+        prepared.operations,
+        {
+          dawState: currentDawState,
+          availableSamples,
+        },
+      );
 
-      setPendingOperations(prepared.operations);
+      setPendingOperations(validatedOperations);
       setRejectedOperations(prepared.rejected);
       setMessages(function (current) {
         return current.concat({
@@ -135,6 +151,7 @@ export function useAiAgentController() {
       dispatch,
       getState: store.getState,
     });
+    setOperationResults(result.results);
     setPendingOperations([]);
     setRejectedOperations([]);
     setMessages(function (current) {
@@ -153,6 +170,34 @@ export function useAiAgentController() {
     setIsApplying(false);
   };
 
+  const testConnection = async function () {
+    if (isTestingConnection) {
+      return;
+    }
+
+    setError("");
+    setConnectionStatus("");
+    setIsTestingConnection(true);
+
+    try {
+      const result = await testOpenAiConnection({ apiKey, model });
+      setConnectionStatus("Connected to " + result.model + ".");
+    } catch (testError) {
+      const message = String(testError?.message || testError);
+      setError(message);
+      setConnectionStatus("");
+    } finally {
+      setIsTestingConnection(false);
+    }
+  };
+
+  const forgetKey = function () {
+    setApiKey("");
+    setRememberKey(false);
+    setConnectionStatus("");
+    writeStoredValue(AI_AGENT_KEY_STORAGE, "");
+  };
+
   return {
     apiKey,
     setApiKey,
@@ -164,11 +209,16 @@ export function useAiAgentController() {
     setInput,
     messages,
     pendingOperations,
+    operationResults,
     rejectedOperations,
     error,
+    connectionStatus,
     isSending,
     isApplying,
+    isTestingConnection,
     sendMessage,
     applyPendingOperations,
+    testConnection,
+    forgetKey,
   };
 }

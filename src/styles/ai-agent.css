@@ -62,13 +62,48 @@
 
 .ai-agent-settings-card {
   display: grid;
-  grid-template-columns: minmax(180px, 1fr) 150px auto;
+  grid-template-columns: minmax(180px, 1fr) 150px auto auto;
   gap: 10px;
   align-items: end;
   border: 1px solid var(--app-border);
   border-radius: 14px;
   padding: 10px;
   background: rgba(7, 11, 18, 0.62);
+}
+
+.ai-agent-key-actions {
+  display: flex;
+  gap: 6px;
+  align-items: center;
+  height: 34px;
+}
+
+.ai-agent-key-actions button {
+  height: 30px;
+  border: 1px solid var(--app-border);
+  border-radius: 8px;
+  padding: 0 9px;
+  color: var(--app-text);
+  background: rgba(255, 255, 255, 0.05);
+  font-size: 11px;
+  font-weight: 700;
+}
+
+.ai-agent-key-actions button:first-child {
+  border-color: rgba(61, 217, 118, 0.34);
+  color: var(--app-accent);
+}
+
+.ai-agent-key-actions button:disabled {
+  cursor: not-allowed;
+  opacity: 0.5;
+}
+
+.ai-agent-connection-status {
+  grid-column: 1 / -1;
+  color: var(--app-accent);
+  font-size: 11px;
+  font-weight: 700;
 }
 
 .ai-agent-settings-card label {
@@ -275,6 +310,28 @@
 
 .ai-agent-operation-list li + li {
   margin-top: 7px;
+}
+
+.ai-agent-operation-list li span {
+  display: block;
+}
+
+.ai-agent-operation-list li small {
+  display: block;
+  margin-top: 3px;
+  color: #ffd89a;
+  font-size: 10px;
+  line-height: 1.35;
+}
+
+.ai-agent-operation-list li.has-warning,
+.ai-agent-operation-list li.is-skipped,
+.ai-agent-operation-list li.is-failed {
+  color: #ffd89a;
+}
+
+.ai-agent-operation-list li.is-applied {
+  color: var(--app-accent);
 }
 
 .ai-agent-rejected-list {

@@ -6,7 +6,9 @@ import {
   addPlaylistPatternClip,
   addPlaylistSampleAsChannel,
   assignSampleToChannel,
+  beginAiOperationBatch,
   createPattern,
+  endAiOperationBatch,
   renameChannel,
   renamePattern,
   setActivePattern,
@@ -189,6 +191,106 @@ export function prepareAiOperations(rawOperations) {
   });
 
   return { operations, rejected };
+}
+
+function getExistingIds(dawState, key) {
+  const source = key === "patterns"
+    ? dawState?.project?.patterns
+    : key === "channels"
+      ? dawState?.project?.channels
+      : key === "tracks"
+        ? dawState?.project?.playlistTracks
+        : dawState?.mixer?.inserts;
+
+  return new Set((Array.isArray(source) ? source : []).map(function (item) {
+    return String(item?.id || "").trim();
+  }).filter(Boolean));
+}
+
+function validateAiOperation(operation, dawState, availableSamples = []) {
+  const payload = operation.payload || {};
+  const issues = [];
+  const patternIds = getExistingIds(dawState, "patterns");
+  const channelIds = getExistingIds(dawState, "channels");
+  const trackIds = getExistingIds(dawState, "tracks");
+  const insertIds = getExistingIds(dawState, "inserts");
+  const samplePaths = new Set(
+    (Array.isArray(availableSamples) ? availableSamples : []).map(function (sample) {
+      return asString(sample?.path);
+    }).filter(Boolean),
+  );
+
+  const patternId = asString(payload.patternId);
+  if (
+    patternId &&
+    patternId !== "$active" &&
+    !patternIds.has(patternId) &&
+    operation.type !== "create_pattern"
+  ) {
+    issues.push("Pattern id does not exist yet: " + patternId);
+  }
+
+  const channelId = asString(payload.channelId);
+  if (
+    channelId &&
+    channelId !== "$active" &&
+    !channelIds.has(channelId) &&
+    operation.type !== "add_channel" &&
+    operation.type !== "add_sample_as_channel"
+  ) {
+    issues.push("Channel id does not exist yet: " + channelId);
+  }
+
+  const trackId = asString(payload.trackId);
+  if (trackId && !trackIds.has(trackId)) {
+    issues.push("Playlist track id does not exist: " + trackId);
+  }
+
+  const insertId = asString(payload.insertId);
+  if (insertId && !insertIds.has(insertId)) {
+    issues.push("Mixer insert id does not exist: " + insertId);
+  }
+
+  const samplePath = asString(payload.samplePath || payload.sampleRef);
+  if (
+    samplePath &&
+    samplePaths.size > 0 &&
+    !samplePaths.has(samplePath)
+  ) {
+    issues.push("Sample path was not found in the current Browser index.");
+  }
+
+  if (
+    (operation.type === "assign_sample_to_channel" ||
+      operation.type === "add_sample_as_channel" ||
+      operation.type === "add_playlist_audio_clip") &&
+    !samplePath
+  ) {
+    issues.push("Missing samplePath.");
+  }
+
+  if (operation.type === "set_fx_slot_effect") {
+    const effectType = asString(payload.effectType || "none");
+    if (!["none", "graphic-eq", "reverb", "maximizer"].includes(effectType)) {
+      issues.push("Unsupported effectType: " + effectType);
+    }
+  }
+
+  return issues;
+}
+
+export function validatePreparedAiOperations(
+  operations,
+  { dawState, availableSamples } = {},
+) {
+  return (Array.isArray(operations) ? operations : []).map(function (operation) {
+    const issues = validateAiOperation(operation, dawState || {}, availableSamples);
+    return {
+      ...operation,
+      issues,
+      status: issues.length > 0 ? "warning" : "ready",
+    };
+  });
 }
 
 function applyCreatePattern(operation, dispatch, getState) {
@@ -454,23 +556,38 @@ function applyAiOperation(operation, dispatch, getState) {
 }
 
 export function applyAiOperations(operations, { dispatch, getState }) {
-  const applied = [];
-  const skipped = [];
+  const results = [];
 
-  (Array.isArray(operations) ? operations : []).forEach(function (operation) {
-    try {
-      const wasApplied = applyAiOperation(operation, dispatch, getState);
-      if (wasApplied) {
-        applied.push(operation.description || operation.type);
-      } else {
-        skipped.push(operation.description || operation.type);
+  dispatch(beginAiOperationBatch());
+
+  try {
+    (Array.isArray(operations) ? operations : []).forEach(function (operation) {
+      try {
+        const wasApplied = applyAiOperation(operation, dispatch, getState);
+        results.push({
+          id: operation.id,
+          description: operation.description || operation.type,
+          status: wasApplied ? "applied" : "skipped",
+        });
+      } catch (error) {
+        results.push({
+          id: operation.id,
+          description: operation.description || operation.type,
+          status: "failed",
+          reason: String(error?.message || error),
+        });
       }
-    } catch (error) {
-      skipped.push(
-        (operation.description || operation.type) + ": " + String(error?.message || error),
-      );
-    }
+    });
+  } finally {
+    dispatch(endAiOperationBatch());
+  }
+
+  const applied = results.filter(function (result) {
+    return result.status === "applied";
+  });
+  const skipped = results.filter(function (result) {
+    return result.status !== "applied";
   });
 
-  return { applied, skipped };
+  return { applied, skipped, results };
 }

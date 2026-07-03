@@ -2,11 +2,13 @@ import { CheckCircle2 } from "lucide-react";
 
 export function AiAgentPlanPanel({
   operations,
+  operationResults,
   rejectedOperations,
   isApplying,
   onApply,
 }) {
   const hasOperations = Array.isArray(operations) && operations.length > 0;
+  const hasResults = Array.isArray(operationResults) && operationResults.length > 0;
   const hasRejected =
     Array.isArray(rejectedOperations) && rejectedOperations.length > 0;
 
@@ -20,7 +22,25 @@ export function AiAgentPlanPanel({
       {hasOperations ? (
         <ol className="ai-agent-operation-list">
           {operations.map(function (operation) {
-            return <li key={operation.id}>{operation.description}</li>;
+            return (
+              <li key={operation.id} className={operation.status === "warning" ? "has-warning" : ""}>
+                <span>{operation.description}</span>
+                {Array.isArray(operation.issues) && operation.issues.length > 0 ? (
+                  <small>{operation.issues.join(" ")}</small>
+                ) : null}
+              </li>
+            );
+          })}
+        </ol>
+      ) : hasResults ? (
+        <ol className="ai-agent-operation-list">
+          {operationResults.map(function (result) {
+            return (
+              <li key={result.id || result.description} className={"is-" + result.status}>
+                <span>{result.description}</span>
+                {result.reason ? <small>{result.reason}</small> : null}
+              </li>
+            );
           })}
         </ol>
       ) : (

@@ -1,5 +1,9 @@
 import { describe, it, expect } from "vitest";
-import { applyAiOperations, prepareAiOperations } from "./aiAgentOperations";
+import {
+  applyAiOperations,
+  prepareAiOperations,
+  validatePreparedAiOperations,
+} from "./aiAgentOperations";
 
 function createDawState() {
   return {
@@ -55,6 +59,25 @@ describe("prepareAiOperations", function () {
   });
 });
 
+describe("validatePreparedAiOperations", function () {
+  it("marks operations with missing referenced ids as warnings", function () {
+    const prepared = prepareAiOperations([
+      {
+        type: "set_channel_volume",
+        payload: { channelId: "missing-channel", value: 0.5 },
+      },
+    ]).operations;
+
+    const validated = validatePreparedAiOperations(prepared, {
+      dawState: createDawState(),
+      availableSamples: [],
+    });
+
+    expect(validated[0].status).toBe("warning");
+    expect(validated[0].issues[0]).toContain("Channel id does not exist");
+  });
+});
+
 describe("applyAiOperations", function () {
   it("dispatches a step toggle only when the desired value differs", function () {
     const dawState = createDawState();
@@ -73,8 +96,9 @@ describe("applyAiOperations", function () {
       { dispatch, getState },
     );
 
-    expect(dispatched).toHaveLength(1);
-    expect(dispatched[0]).toMatchObject({
+    expect(dispatched).toHaveLength(3);
+    expect(dispatched[0].type).toBe("daw/beginAiOperationBatch");
+    expect(dispatched[1]).toMatchObject({
       type: "daw/toggleStep",
       payload: {
         patternId: "pat-1",
@@ -82,6 +106,7 @@ describe("applyAiOperations", function () {
         stepIndex: 0,
       },
     });
+    expect(dispatched[2].type).toBe("daw/endAiOperationBatch");
 
     dawState.project.patterns[0].stepGrid["ch-kick"][0] = true;
     dispatched.length = 0;
@@ -93,6 +118,8 @@ describe("applyAiOperations", function () {
       { dispatch, getState },
     );
 
-    expect(dispatched).toHaveLength(0);
+    expect(dispatched).toHaveLength(2);
+    expect(dispatched[0].type).toBe("daw/beginAiOperationBatch");
+    expect(dispatched[1].type).toBe("daw/endAiOperationBatch");
   });
 });

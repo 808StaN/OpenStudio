@@ -1,6 +1,7 @@
 import { AI_AGENT_DEFAULT_MODEL, getAiAgentSystemPrompt } from "./aiAgentPrompt";
 
 const OPENAI_CHAT_COMPLETIONS_URL = "https://api.openai.com/v1/chat/completions";
+const OPENAI_MODELS_URL = "https://api.openai.com/v1/models";
 
 function parseAiJsonContent(content) {
   const raw = String(content || "").trim();
@@ -80,5 +81,42 @@ export async function requestAiAgentPlan({
   return {
     message: String(parsed?.message || "I prepared a project edit plan."),
     operations: Array.isArray(parsed?.operations) ? parsed.operations : [],
+  };
+}
+
+export async function testOpenAiConnection({
+  apiKey,
+  model = AI_AGENT_DEFAULT_MODEL,
+}) {
+  const safeApiKey = String(apiKey || "").trim();
+  const safeModel = String(model || AI_AGENT_DEFAULT_MODEL).trim() || AI_AGENT_DEFAULT_MODEL;
+
+  if (!safeApiKey) {
+    throw new Error("Paste your OpenAI API key before testing the connection.");
+  }
+
+  const response = await fetch(
+    OPENAI_MODELS_URL + "/" + encodeURIComponent(safeModel),
+    {
+      method: "GET",
+      headers: {
+        authorization: "Bearer " + safeApiKey,
+      },
+    },
+  );
+
+  const result = await response.json().catch(function () {
+    return null;
+  });
+
+  if (!response.ok) {
+    throw new Error(
+      result?.error?.message ||
+      "OpenAI connection test failed with status " + response.status,
+    );
+  }
+
+  return {
+    model: result?.id || safeModel,
   };
 }
