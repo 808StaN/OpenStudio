@@ -49,7 +49,8 @@
 .load-project-window-table-body,
 .ai-agent-messages,
 .ai-agent-operation-list,
-.ai-agent-conversation-items {
+.ai-agent-conversation-items,
+.ai-agent-composer textarea {
   scrollbar-width: thin;
   scrollbar-color: var(--scrollbar-thumb-bg) var(--scrollbar-track-bg);
 }
@@ -64,7 +65,8 @@
 .load-project-window-table-body::-webkit-scrollbar,
 .ai-agent-messages::-webkit-scrollbar,
 .ai-agent-operation-list::-webkit-scrollbar,
-.ai-agent-conversation-items::-webkit-scrollbar {
+.ai-agent-conversation-items::-webkit-scrollbar,
+.ai-agent-composer textarea::-webkit-scrollbar {
   width: 10px;
   height: 10px;
 }
@@ -79,7 +81,8 @@
 .load-project-window-table-body::-webkit-scrollbar-track,
 .ai-agent-messages::-webkit-scrollbar-track,
 .ai-agent-operation-list::-webkit-scrollbar-track,
-.ai-agent-conversation-items::-webkit-scrollbar-track {
+.ai-agent-conversation-items::-webkit-scrollbar-track,
+.ai-agent-composer textarea::-webkit-scrollbar-track {
   background: var(--scrollbar-track-bg);
   border: 1px solid var(--scrollbar-track-border);
   border-radius: 999px;
@@ -96,7 +99,8 @@
 .load-project-window-table-body::-webkit-scrollbar-thumb,
 .ai-agent-messages::-webkit-scrollbar-thumb,
 .ai-agent-operation-list::-webkit-scrollbar-thumb,
-.ai-agent-conversation-items::-webkit-scrollbar-thumb {
+.ai-agent-conversation-items::-webkit-scrollbar-thumb,
+.ai-agent-composer textarea::-webkit-scrollbar-thumb {
   border-radius: 999px;
   border: 2px solid var(--scrollbar-thumb-border);
   background: var(--scrollbar-thumb-bg);
@@ -113,7 +117,8 @@
 .load-project-window-table-body::-webkit-scrollbar-thumb:hover,
 .ai-agent-messages::-webkit-scrollbar-thumb:hover,
 .ai-agent-operation-list::-webkit-scrollbar-thumb:hover,
-.ai-agent-conversation-items::-webkit-scrollbar-thumb:hover {
+.ai-agent-conversation-items::-webkit-scrollbar-thumb:hover,
+.ai-agent-composer textarea::-webkit-scrollbar-thumb:hover {
   filter: brightness(1.08);
 }
 
@@ -121,7 +126,8 @@
 .load-project-window-table-body::-webkit-scrollbar-corner,
 .ai-agent-messages::-webkit-scrollbar-corner,
 .ai-agent-operation-list::-webkit-scrollbar-corner,
-.ai-agent-conversation-items::-webkit-scrollbar-corner {
+.ai-agent-conversation-items::-webkit-scrollbar-corner,
+.ai-agent-composer textarea::-webkit-scrollbar-corner {
   background: var(--scrollbar-track-bg);
 }
 
