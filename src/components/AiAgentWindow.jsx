@@ -1,4 +1,5 @@
 import { Bot } from "lucide-react";
+import { AiAgentConversationList } from "./ai-agent/AiAgentConversationList";
 import { AiAgentMessages } from "./ai-agent/AiAgentMessages";
 import { AiAgentPlanPanel } from "./ai-agent/AiAgentPlanPanel";
 import { useAiAgentController } from "./ai-agent/useAiAgentController";
@@ -88,6 +89,16 @@ export function AiAgentWindow() {
       </div>
 
       <div className="ai-agent-layout">
+        <AiAgentConversationList
+          conversations={agent.conversations}
+          activeConversationId={agent.activeConversationId}
+          onSelect={agent.selectConversation}
+          onNew={agent.startNewConversation}
+          onDelete={agent.deleteConversation}
+          isLoading={agent.isLoadingConversations}
+          isAuthenticated={agent.isAuthenticated}
+        />
+
         <div className="ai-agent-chat-card">
           <AiAgentMessages messages={agent.messages} />
 

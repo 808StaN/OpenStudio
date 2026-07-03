@@ -43,3 +43,25 @@ create policy "Users CRUD own projects"
   on projects for all
   using (auth.uid() = user_id)
   with check (auth.uid() = user_id);
+
+-- Tabela ai_conversations (historia czatów AI Agent)
+create table ai_conversations (
+  id uuid default gen_random_uuid() primary key,
+  user_id uuid references auth.users on delete cascade not null,
+  title text not null default 'New chat',
+  messages jsonb not null default '[]'::jsonb,
+  pending_operations jsonb not null default '[]'::jsonb,
+  operation_results jsonb not null default '[]'::jsonb,
+  rejected_operations jsonb not null default '[]'::jsonb,
+  created_at timestamptz not null default now(),
+  updated_at timestamptz not null default now()
+);
+
+-- Włącz RLS
+alter table ai_conversations enable row level security;
+
+-- Polityki RLS
+create policy "Users CRUD own AI conversations"
+  on ai_conversations for all
+  using (auth.uid() = user_id)
+  with check (auth.uid() = user_id);
