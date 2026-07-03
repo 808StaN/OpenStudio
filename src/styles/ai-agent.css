@@ -80,7 +80,7 @@
 }
 
 .ai-agent-settings-card input[type="password"],
-.ai-agent-settings-card input[type="text"] {
+.ai-agent-settings-card select {
   height: 34px;
   box-sizing: border-box;
   border: 1px solid var(--app-border);
@@ -89,6 +89,10 @@
   color: var(--app-text);
   background: rgba(0, 0, 0, 0.28);
   outline: none;
+}
+
+.ai-agent-settings-card select {
+  cursor: pointer;
 }
 
 .ai-agent-settings-card input:focus {

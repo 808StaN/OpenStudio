@@ -1,4 +1,4 @@
-export const AI_AGENT_DEFAULT_MODEL = "gpt-4o-mini";
+export const AI_AGENT_DEFAULT_MODEL = "gpt-5.5";
 
 export const AI_AGENT_OPERATION_TYPES = [
   "create_pattern",

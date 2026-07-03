@@ -3,6 +3,12 @@ import { AiAgentMessages } from "./ai-agent/AiAgentMessages";
 import { AiAgentPlanPanel } from "./ai-agent/AiAgentPlanPanel";
 import { useAiAgentController } from "./ai-agent/useAiAgentController";
 
+const AI_AGENT_MODEL_OPTIONS = [
+  { value: "gpt-5.5", label: "GPT-5.5" },
+  { value: "gpt-5.4", label: "GPT-5.4" },
+  { value: "gpt-5.4-mini", label: "GPT-5.4 mini" },
+];
+
 export function AiAgentWindow() {
   const agent = useAiAgentController();
 
@@ -37,13 +43,20 @@ export function AiAgentWindow() {
         </label>
         <label>
           <span>Model</span>
-          <input
-            type="text"
+          <select
             value={agent.model}
             onChange={function (event) {
               agent.setModel(event.target.value);
             }}
-          />
+          >
+            {AI_AGENT_MODEL_OPTIONS.map(function (option) {
+              return (
+                <option key={option.value} value={option.value}>
+                  {option.label}
+                </option>
+              );
+            })}
+          </select>
         </label>
         <label className="ai-agent-remember-key">
           <input
