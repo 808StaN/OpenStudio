@@ -1,6 +1,19 @@
+import { useEffect, useRef } from "react";
 import { Sparkles } from "lucide-react";
 
 export function AiAgentMessages({ messages }) {
+  const scrollRef = useRef(null);
+
+  useEffect(
+    function () {
+      const el = scrollRef.current;
+      if (el) {
+        el.scrollTop = el.scrollHeight;
+      }
+    },
+    [messages],
+  );
+
   if (!Array.isArray(messages) || messages.length === 0) {
     return (
       <div className="ai-agent-empty-state">
@@ -15,7 +28,7 @@ export function AiAgentMessages({ messages }) {
   }
 
   return (
-    <div className="ai-agent-messages">
+    <div className="ai-agent-messages" ref={scrollRef}>
       {messages.map(function (message, index) {
         return (
           <div
