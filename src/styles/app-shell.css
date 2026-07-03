@@ -46,7 +46,10 @@
 .pattern-list-body,
 .mixer-left,
 .sample-settings-panel,
-.load-project-window-table-body {
+.load-project-window-table-body,
+.ai-agent-messages,
+.ai-agent-operation-list,
+.ai-agent-conversation-items {
   scrollbar-width: thin;
   scrollbar-color: var(--scrollbar-thumb-bg) var(--scrollbar-track-bg);
 }
@@ -58,7 +61,10 @@
 .pattern-list-body::-webkit-scrollbar,
 .mixer-left::-webkit-scrollbar,
 .sample-settings-panel::-webkit-scrollbar,
-.load-project-window-table-body::-webkit-scrollbar {
+.load-project-window-table-body::-webkit-scrollbar,
+.ai-agent-messages::-webkit-scrollbar,
+.ai-agent-operation-list::-webkit-scrollbar,
+.ai-agent-conversation-items::-webkit-scrollbar {
   width: 10px;
   height: 10px;
 }
@@ -70,7 +76,10 @@
 .pattern-list-body::-webkit-scrollbar-track,
 .mixer-left::-webkit-scrollbar-track,
 .sample-settings-panel::-webkit-scrollbar-track,
-.load-project-window-table-body::-webkit-scrollbar-track {
+.load-project-window-table-body::-webkit-scrollbar-track,
+.ai-agent-messages::-webkit-scrollbar-track,
+.ai-agent-operation-list::-webkit-scrollbar-track,
+.ai-agent-conversation-items::-webkit-scrollbar-track {
   background: var(--scrollbar-track-bg);
   border: 1px solid var(--scrollbar-track-border);
   border-radius: 999px;
@@ -84,7 +93,10 @@
 .pattern-list-body::-webkit-scrollbar-thumb,
 .mixer-left::-webkit-scrollbar-thumb,
 .sample-settings-panel::-webkit-scrollbar-thumb,
-.load-project-window-table-body::-webkit-scrollbar-thumb {
+.load-project-window-table-body::-webkit-scrollbar-thumb,
+.ai-agent-messages::-webkit-scrollbar-thumb,
+.ai-agent-operation-list::-webkit-scrollbar-thumb,
+.ai-agent-conversation-items::-webkit-scrollbar-thumb {
   border-radius: 999px;
   border: 2px solid var(--scrollbar-thumb-border);
   background: var(--scrollbar-thumb-bg);
@@ -98,12 +110,18 @@
 .pattern-list-body::-webkit-scrollbar-thumb:hover,
 .mixer-left::-webkit-scrollbar-thumb:hover,
 .sample-settings-panel::-webkit-scrollbar-thumb:hover,
-.load-project-window-table-body::-webkit-scrollbar-thumb:hover {
+.load-project-window-table-body::-webkit-scrollbar-thumb:hover,
+.ai-agent-messages::-webkit-scrollbar-thumb:hover,
+.ai-agent-operation-list::-webkit-scrollbar-thumb:hover,
+.ai-agent-conversation-items::-webkit-scrollbar-thumb:hover {
   filter: brightness(1.08);
 }
 
 .sample-settings-panel::-webkit-scrollbar-corner,
-.load-project-window-table-body::-webkit-scrollbar-corner {
+.load-project-window-table-body::-webkit-scrollbar-corner,
+.ai-agent-messages::-webkit-scrollbar-corner,
+.ai-agent-operation-list::-webkit-scrollbar-corner,
+.ai-agent-conversation-items::-webkit-scrollbar-corner {
   background: var(--scrollbar-track-bg);
 }
 
