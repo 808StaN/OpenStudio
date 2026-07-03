@@ -110,7 +110,11 @@ describe("validatePreparedAiOperations", function () {
     });
 
     expect(validated[0].status).toBe("warning");
-    expect(validated[0].issues[0]).toContain("at least 2 pitches");
+    expect(validated[0].issues).toEqual(
+      expect.arrayContaining([
+        expect.stringContaining("at least 2 pitches"),
+      ]),
+    );
   });
 });
 
@@ -282,5 +286,114 @@ describe("applyAiOperations", function () {
       type: "daw/setBpm",
       payload: 150,
     });
+  });
+
+  it("auto-assigns pluginRef when add_channel includes one", function () {
+    const dawState = createDawState();
+    const dispatched = [];
+    const dispatch = function (action) {
+      dispatched.push(action);
+    };
+    const getState = function () {
+      return { daw: dawState };
+    };
+
+    applyAiOperations(
+      prepareAiOperations([
+        {
+          type: "add_channel",
+          payload: {
+            name: "Piano Track",
+            pluginRef: "openstudio-piano",
+          },
+        },
+      ]).operations,
+      { dispatch, getState },
+    );
+
+    const assignAction = dispatched.find(function (action) {
+      return action.type === "daw/assignPluginToChannel";
+    });
+    expect(assignAction).toBeDefined();
+    expect(assignAction.payload.pluginRef).toBe("openstudio-piano");
+    expect(assignAction.payload.pluginName).toBe("Piano");
+  });
+
+  it("does not auto-assign when pluginRef is invalid", function () {
+    const dawState = createDawState();
+    const dispatched = [];
+    const dispatch = function (action) {
+      dispatched.push(action);
+    };
+    const getState = function () {
+      return { daw: dawState };
+    };
+
+    applyAiOperations(
+      prepareAiOperations([
+        {
+          type: "add_channel",
+          payload: {
+            name: "Mystery",
+            pluginRef: "nonexistent-instrument",
+          },
+        },
+      ]).operations,
+      { dispatch, getState },
+    );
+
+    const assignAction = dispatched.find(function (action) {
+      return action.type === "daw/assignPluginToChannel";
+    });
+    expect(assignAction).toBeUndefined();
+  });
+
+  it("warns when add_piano_notes targets a channel without instrument", function () {
+    const dawState = createDawState();
+
+    const validated = validatePreparedAiOperations(
+      prepareAiOperations([
+        {
+          type: "add_piano_notes",
+          payload: {
+            channelId: "ch-kick",
+            notes: [{ start: 0, length: 4, pitch: 60, velocity: 95 }],
+          },
+        },
+      ]).operations,
+      { dawState },
+    );
+
+    // ch-kick has no pluginRef or sampleRef in createDawState, so the
+    // validation should flag it.
+    expect(validated[0].issues).toEqual(
+      expect.arrayContaining([
+        expect.stringContaining("has no instrument assigned"),
+      ]),
+    );
+    expect(validated[0].status).toBe("warning");
+  });
+
+  it("does not warn when channel has a pluginRef", function () {
+    const dawState = createDawState();
+    dawState.project.channels[0].pluginRef = "openstudio-piano";
+
+    const validated = validatePreparedAiOperations(
+      prepareAiOperations([
+        {
+          type: "add_piano_notes",
+          payload: {
+            channelId: "ch-kick",
+            notes: [{ start: 0, length: 4, pitch: 60, velocity: 95 }],
+          },
+        },
+      ]).operations,
+      { dawState },
+    );
+
+    expect(validated[0].issues).not.toContain(
+      expect.stringContaining("has no instrument assigned"),
+    );
+    expect(validated[0].status).toBe("ready");
   });
 });

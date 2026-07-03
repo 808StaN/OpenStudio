@@ -244,8 +244,13 @@ function getExistingIds(dawState, key) {
 function validateAiOperation(operation, dawState, availableSamples = []) {
   const payload = operation.payload || {};
   const issues = [];
+  const channels = Array.isArray(dawState?.project?.channels)
+    ? dawState.project.channels
+    : [];
   const patternIds = getExistingIds(dawState, "patterns");
-  const channelIds = getExistingIds(dawState, "channels");
+  const channelIds = new Set(channels.map(function (item) {
+    return String(item?.id || "").trim();
+  }).filter(Boolean));
   const trackIds = getExistingIds(dawState, "tracks");
   const insertIds = getExistingIds(dawState, "inserts");
   const samplePaths = new Set(
@@ -319,6 +324,27 @@ function validateAiOperation(operation, dawState, availableSamples = []) {
     }
   }
 
+  // Warn when notes are added to a channel that has no instrument or sample
+  // assigned — the notes will be silent.
+  if (
+    operation.type === "add_piano_notes" ||
+    operation.type === "add_chord_progression"
+  ) {
+    const targetChannelId = resolveChannelId(dawState, payload);
+    const targetChannel = (channels || []).find(function (item) {
+      return item.id === targetChannelId;
+    });
+    if (
+      targetChannel &&
+      !asString(targetChannel.pluginRef) &&
+      !asString(targetChannel.sampleRef)
+    ) {
+      issues.push(
+        "Channel " + targetChannelId + " has no instrument assigned. Use assign_plugin_to_channel first.",
+      );
+    }
+  }
+
   if (operation.type === "add_chord_progression") {
     const chords = Array.isArray(payload.chords) ? payload.chords : [];
     if (chords.length === 0) {
@@ -371,6 +397,18 @@ function applyAddChannel(operation, dispatch, getState) {
   const name = asString(payload.name);
   if (newChannelId && name) {
     dispatch(renameChannel({ channelId: newChannelId, name }));
+  }
+
+  // Auto-assign instrument if pluginRef is provided and valid, so the
+  // agent can skip a separate assign_plugin_to_channel step.
+  const pluginRef = asString(payload.pluginRef);
+  if (newChannelId && pluginRef && PLUGIN_INSTRUMENT_BY_REF[pluginRef]) {
+    const plugin = PLUGIN_INSTRUMENT_BY_REF[pluginRef];
+    dispatch(assignPluginToChannel({
+      channelId: newChannelId,
+      pluginRef,
+      pluginName: plugin.name,
+    }));
   }
 }
 
