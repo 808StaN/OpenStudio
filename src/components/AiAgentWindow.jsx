@@ -22,10 +22,6 @@ export function AiAgentWindow() {
         <div>
           <p className="ai-agent-kicker">Project assistant</p>
           <h2>AI Agent</h2>
-          <p>
-            Paste your own OpenAI API key, describe the change, then review the
-            safe action plan before applying it to the project.
-          </p>
         </div>
       </div>
 
