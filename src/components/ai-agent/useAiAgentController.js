@@ -241,7 +241,12 @@ export function useAiAgentController() {
 
     try {
       const allSamples = await loadAiSampleIndex(800);
-      const availableSamples = searchAiSamples(allSamples, userMessage, 120);
+      // Always send a broad sample catalog so the agent knows what's
+      // available without the user having to mention specific names.
+      const searched = searchAiSamples(allSamples, userMessage, 120);
+      const availableSamples = searched.length >= 20
+        ? searched
+        : allSamples.slice(0, 200);
       const currentDawState = store.getState().daw;
       const projectSummary = buildAiProjectSummary(
         currentDawState,
