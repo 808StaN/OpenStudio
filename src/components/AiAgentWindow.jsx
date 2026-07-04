@@ -113,9 +113,6 @@ export function AiAgentWindow() {
           >
             {agent.isTestingConnection ? "Testing..." : "Test connection"}
           </button>
-          <button type="button" onClick={agent.forgetKey}>
-            Forget key
-          </button>
         </div>
         {agent.connectionStatus ? (
           <div className="ai-agent-connection-status">
@@ -170,6 +167,8 @@ export function AiAgentWindow() {
           rejectedOperations={agent.rejectedOperations}
           isApplying={agent.isApplying}
           onApply={agent.applyPendingOperations}
+          onUndo={agent.undoLastAppliedChange}
+          canUndo={agent.canUndoAppliedPlan}
         />
       </div>
     </section>

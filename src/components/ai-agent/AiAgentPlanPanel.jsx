@@ -6,6 +6,8 @@ export function AiAgentPlanPanel({
   rejectedOperations,
   isApplying,
   onApply,
+  onUndo,
+  canUndo,
 }) {
   const hasOperations = Array.isArray(operations) && operations.length > 0;
   const hasResults = Array.isArray(operationResults) && operationResults.length > 0;
@@ -59,14 +61,24 @@ export function AiAgentPlanPanel({
         </div>
       ) : null}
 
-      <button
-        type="button"
-        className="ai-agent-apply-btn"
-        disabled={!hasOperations || isApplying}
-        onClick={onApply}
-      >
-        {isApplying ? "Applying..." : "Apply Plan"}
-      </button>
+      <div className="ai-agent-plan-actions">
+        <button
+          type="button"
+          className="ai-agent-apply-btn"
+          disabled={!hasOperations || isApplying}
+          onClick={onApply}
+        >
+          {isApplying ? "Applying..." : "Apply Plan"}
+        </button>
+        <button
+          type="button"
+          className="ai-agent-undo-btn"
+          disabled={!canUndo}
+          onClick={onUndo}
+        >
+          Undo
+        </button>
+      </div>
     </aside>
   );
 }

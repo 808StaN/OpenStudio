@@ -6,9 +6,7 @@
   gap: 14px;
   padding: 16px;
   color: var(--app-text);
-  background:
-    radial-gradient(circle at top left, rgba(61, 217, 118, 0.16), transparent 36%),
-    linear-gradient(180deg, rgba(15, 23, 34, 0.98), rgba(8, 12, 18, 0.98));
+  background: var(--ai-agent-shell-glow), var(--ai-agent-shell-bg);
 }
 
 .ai-agent-hero {
@@ -21,13 +19,13 @@
 .ai-agent-avatar {
   width: 42px;
   height: 42px;
-  border: 1px solid rgba(61, 217, 118, 0.4);
-  border-radius: 14px;
+  border: 1px solid var(--ai-agent-avatar-border);
+  border-radius: var(--app-radius-lg);
   display: grid;
   place-items: center;
   color: var(--app-accent);
-  background: rgba(61, 217, 118, 0.1);
-  box-shadow: 0 0 18px rgba(61, 217, 118, 0.16);
+  background: var(--ai-agent-avatar-bg);
+  box-shadow: var(--ai-agent-avatar-shadow);
 }
 
 .ai-agent-kicker {
@@ -66,9 +64,9 @@
   gap: 10px;
   align-items: end;
   border: 1px solid var(--app-border);
-  border-radius: 14px;
+  border-radius: var(--app-radius-lg);
   padding: 10px;
-  background: rgba(7, 11, 18, 0.62);
+  background: var(--ai-agent-panel-bg);
 }
 
 .ai-agent-key-actions {
@@ -81,16 +79,16 @@
 .ai-agent-key-actions button {
   height: 30px;
   border: 1px solid var(--app-border);
-  border-radius: 8px;
+  border-radius: var(--app-radius-md);
   padding: 0 9px;
   color: var(--app-text);
-  background: rgba(255, 255, 255, 0.05);
+  background: var(--ai-agent-secondary-bg);
   font-size: 11px;
   font-weight: 700;
 }
 
 .ai-agent-key-actions button:first-child {
-  border-color: rgba(61, 217, 118, 0.34);
+  border-color: var(--ai-agent-primary-border);
   color: var(--app-accent);
 }
 
@@ -119,9 +117,9 @@
   height: 34px;
   box-sizing: border-box;
   border: 1px solid var(--app-border);
-  border-radius: 9px;
+  border-radius: var(--app-radius-md);
   color: var(--app-text);
-  background: rgba(0, 0, 0, 0.28);
+  background: var(--ai-agent-control-bg);
   outline: none;
 }
 
@@ -135,6 +133,7 @@
 }
 
 .ai-agent-model-select .rack-modern-select-dropdown {
+  box-sizing: border-box;
   left: 0;
   right: 0;
   width: 100%;
@@ -143,9 +142,13 @@
   z-index: 80;
 }
 
+.ai-agent-model-select .rack-modern-select-option {
+  min-width: 0;
+}
+
 .ai-agent-settings-card input:focus {
-  border-color: rgba(61, 217, 118, 0.52);
-  box-shadow: 0 0 0 2px rgba(61, 217, 118, 0.12);
+  border-color: var(--ai-agent-focus-border);
+  box-shadow: var(--ai-agent-focus-ring);
 }
 
 .ai-agent-remember-key {
@@ -160,7 +163,7 @@
   -webkit-appearance: none;
   width: 16px;
   height: 16px;
-  border-radius: 4px;
+  border-radius: var(--app-radius-sm);
   border: 1px solid var(--auth-checkbox-border);
   background: var(--auth-checkbox-bg);
   cursor: pointer;
@@ -194,9 +197,9 @@
 .ai-agent-plan-card {
   min-height: 0;
   border: 1px solid var(--app-border);
-  border-radius: 14px;
-  background: rgba(7, 11, 18, 0.78);
-  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.05);
+  border-radius: var(--app-radius-lg);
+  background: var(--ai-agent-card-bg);
+  box-shadow: var(--ai-agent-inset-shadow);
 }
 
 .ai-agent-chat-card {
@@ -217,23 +220,23 @@
 .ai-agent-message {
   max-width: 86%;
   border: 1px solid var(--app-border);
-  border-radius: 12px;
+  border-radius: var(--app-radius-lg);
   padding: 9px 10px;
-  background: rgba(255, 255, 255, 0.04);
+  background: var(--ai-agent-message-bg);
 }
 
 .ai-agent-message.is-user {
   align-self: flex-end;
-  border-color: rgba(61, 217, 118, 0.34);
-  background: rgba(61, 217, 118, 0.1);
+  border-color: var(--ai-agent-user-border);
+  background: var(--ai-agent-user-bg);
 }
 
 .ai-agent-message.is-system {
   max-width: 100%;
   align-self: center;
-  border-color: rgba(146, 215, 255, 0.28);
+  border-color: var(--ai-agent-system-border);
   color: var(--app-text-muted);
-  background: rgba(146, 215, 255, 0.08);
+  background: var(--ai-agent-system-bg);
 }
 
 .ai-agent-message span {
@@ -298,22 +301,27 @@
   max-height: 96px;
   resize: vertical;
   border: 1px solid var(--app-border);
-  border-radius: 10px;
+  border-radius: var(--app-radius-md);
   padding: 10px;
   color: var(--app-text);
-  background: rgba(0, 0, 0, 0.28);
+  background: var(--ai-agent-control-bg);
   font: inherit;
   font-size: 12px;
   outline: none;
 }
 
+.ai-agent-composer textarea:focus {
+  border-color: var(--ai-agent-focus-border);
+  box-shadow: var(--ai-agent-focus-ring);
+}
+
 .ai-agent-composer button {
   align-self: end;
   height: 38px;
-  border: 1px solid rgba(61, 217, 118, 0.38);
-  border-radius: 10px;
+  border: 1px solid var(--ai-agent-primary-border);
+  border-radius: var(--app-radius-md);
   padding: 0 14px;
-  color: #061208;
+  color: var(--ai-agent-primary-text);
   background: var(--app-accent);
   font-weight: 700;
 }
@@ -325,10 +333,10 @@
 }
 
 .ai-agent-error {
-  border-top: 1px solid rgba(255, 87, 87, 0.24);
+  border-top: 1px solid var(--ai-agent-error-border);
   padding: 8px 10px;
-  color: #ffb4b4;
-  background: rgba(255, 87, 87, 0.08);
+  color: var(--ai-agent-error-text);
+  background: var(--ai-agent-error-bg);
   font-size: 12px;
 }
 
@@ -374,7 +382,7 @@
 .ai-agent-operation-list li small {
   display: block;
   margin-top: 3px;
-  color: #ffd89a;
+  color: var(--ai-agent-warning-text);
   font-size: 10px;
   line-height: 1.35;
 }
@@ -382,7 +390,7 @@
 .ai-agent-operation-list li.has-warning,
 .ai-agent-operation-list li.is-skipped,
 .ai-agent-operation-list li.is-failed {
-  color: #ffd89a;
+  color: var(--ai-agent-warning-text);
 }
 
 .ai-agent-operation-list li.is-applied {
@@ -392,11 +400,11 @@
 .ai-agent-rejected-list {
   display: grid;
   gap: 4px;
-  border: 1px solid rgba(255, 183, 77, 0.22);
-  border-radius: 10px;
+  border: 1px solid var(--ai-agent-warning-border);
+  border-radius: var(--app-radius-md);
   padding: 8px;
-  color: #ffd89a;
-  background: rgba(255, 183, 77, 0.08);
+  color: var(--ai-agent-warning-text);
+  background: var(--ai-agent-warning-bg);
   font-size: 11px;
 }
 
@@ -407,11 +415,31 @@
 .ai-agent-apply-btn {
   width: 100%;
   height: 36px;
-  border: 1px solid rgba(61, 217, 118, 0.38);
-  border-radius: 10px;
-  color: #061208;
+  border: 1px solid var(--ai-agent-primary-border);
+  border-radius: var(--app-radius-md);
+  color: var(--ai-agent-primary-text);
   background: var(--app-accent);
   font-weight: 800;
+}
+
+.ai-agent-plan-actions {
+  display: grid;
+  gap: 8px;
+}
+
+.ai-agent-undo-btn {
+  width: 100%;
+  height: 34px;
+  border: 1px solid var(--app-border);
+  border-radius: var(--app-radius-md);
+  color: var(--app-text);
+  background: var(--ai-agent-secondary-bg);
+  font-weight: 700;
+}
+
+.ai-agent-undo-btn:disabled {
+  cursor: not-allowed;
+  opacity: 0.48;
 }
 
 .ai-agent-apply-btn:disabled {
@@ -439,8 +467,8 @@
   min-height: 0;
   overflow: hidden;
   border: 1px solid var(--app-border);
-  border-radius: 14px;
-  background: rgba(7, 11, 18, 0.6);
+  border-radius: var(--app-radius-lg);
+  background: var(--ai-agent-panel-bg);
   padding: 8px;
 }
 
@@ -452,9 +480,9 @@
   width: 100%;
   box-sizing: border-box;
   padding: 7px 8px;
-  border: 1px solid rgba(61, 217, 118, 0.34);
-  border-radius: 8px;
-  background: rgba(61, 217, 118, 0.1);
+  border: 1px solid var(--ai-agent-primary-border);
+  border-radius: var(--app-radius-md);
+  background: var(--ai-agent-conversation-new-bg);
   color: var(--app-accent);
   font-size: 11px;
   font-weight: 700;
@@ -463,7 +491,7 @@
 }
 
 .ai-agent-conversation-new:hover {
-  background: rgba(61, 217, 118, 0.18);
+  background: var(--ai-agent-conversation-new-hover-bg);
 }
 
 .ai-agent-conversation-loading,
@@ -489,12 +517,12 @@
 
 .ai-agent-conversation-item {
   position: relative;
-  border-radius: 8px;
+  border-radius: var(--app-radius-md);
   overflow: hidden;
 }
 
 .ai-agent-conversation-item.is-active {
-  background: rgba(61, 217, 118, 0.12);
+  background: var(--ai-agent-conversation-active-bg);
 }
 
 .ai-agent-conversation-select {
@@ -505,7 +533,7 @@
   box-sizing: border-box;
   padding: 7px 24px 7px 8px;
   border: none;
-  border-radius: 8px;
+  border-radius: var(--app-radius-md);
   background: transparent;
   color: var(--app-text);
   text-align: left;
@@ -514,11 +542,11 @@
 }
 
 .ai-agent-conversation-select:hover {
-  background: rgba(255, 255, 255, 0.06);
+  background: var(--ai-agent-secondary-bg);
 }
 
 .ai-agent-conversation-item.is-active .ai-agent-conversation-select:hover {
-  background: rgba(61, 217, 118, 0.16);
+  background: var(--ai-agent-conversation-active-hover-bg);
 }
 
 .ai-agent-conversation-title {
@@ -547,7 +575,7 @@
   width: 20px;
   height: 20px;
   border: none;
-  border-radius: 5px;
+  border-radius: var(--app-radius-sm);
   background: transparent;
   color: var(--app-text-muted);
   cursor: pointer;
@@ -560,6 +588,6 @@
 }
 
 .ai-agent-conversation-delete:hover {
-  color: #ff6b6b;
-  background: rgba(255, 107, 107, 0.12);
+  color: var(--ai-agent-delete-hover-text);
+  background: var(--ai-agent-delete-hover-bg);
 }

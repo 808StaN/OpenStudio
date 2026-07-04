@@ -111,6 +111,41 @@
   --window-control-btn-radius: var(--titlebar-btn-radius);
 
   /* =============================================
+     AI AGENT
+     ============================================= */
+  --ai-agent-shell-glow: radial-gradient(circle at top left, rgba(61, 217, 118, 0.16), transparent 36%);
+  --ai-agent-shell-bg: linear-gradient(180deg, rgba(15, 23, 34, 0.98), rgba(8, 12, 18, 0.98));
+  --ai-agent-card-bg: rgba(7, 11, 18, 0.78);
+  --ai-agent-panel-bg: rgba(7, 11, 18, 0.62);
+  --ai-agent-control-bg: rgba(0, 0, 0, 0.28);
+  --ai-agent-secondary-bg: rgba(255, 255, 255, 0.05);
+  --ai-agent-inset-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.05);
+  --ai-agent-avatar-border: rgba(61, 217, 118, 0.4);
+  --ai-agent-avatar-bg: rgba(61, 217, 118, 0.1);
+  --ai-agent-avatar-shadow: 0 0 18px rgba(61, 217, 118, 0.16);
+  --ai-agent-focus-border: rgba(61, 217, 118, 0.52);
+  --ai-agent-focus-ring: 0 0 0 2px rgba(61, 217, 118, 0.12);
+  --ai-agent-message-bg: rgba(255, 255, 255, 0.04);
+  --ai-agent-user-border: rgba(61, 217, 118, 0.34);
+  --ai-agent-user-bg: rgba(61, 217, 118, 0.1);
+  --ai-agent-system-border: rgba(146, 215, 255, 0.28);
+  --ai-agent-system-bg: rgba(146, 215, 255, 0.08);
+  --ai-agent-warning-text: #ffd89a;
+  --ai-agent-warning-border: rgba(255, 183, 77, 0.22);
+  --ai-agent-warning-bg: rgba(255, 183, 77, 0.08);
+  --ai-agent-error-text: #ffb4b4;
+  --ai-agent-error-border: rgba(255, 87, 87, 0.24);
+  --ai-agent-error-bg: rgba(255, 87, 87, 0.08);
+  --ai-agent-primary-border: rgba(61, 217, 118, 0.38);
+  --ai-agent-primary-text: var(--app-accent-text);
+  --ai-agent-conversation-active-bg: rgba(61, 217, 118, 0.12);
+  --ai-agent-conversation-active-hover-bg: rgba(61, 217, 118, 0.16);
+  --ai-agent-conversation-new-bg: rgba(61, 217, 118, 0.1);
+  --ai-agent-conversation-new-hover-bg: rgba(61, 217, 118, 0.18);
+  --ai-agent-delete-hover-text: #ff6b6b;
+  --ai-agent-delete-hover-bg: rgba(255, 107, 107, 0.12);
+
+  /* =============================================
      BROWSER
      ============================================= */
   --browser-bg: #0c1116;

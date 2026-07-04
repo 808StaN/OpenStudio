@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import { useDispatch, useSelector, useStore } from "react-redux";
 import {
   applyAiOperations,
@@ -21,6 +21,7 @@ import {
   loadConversation,
   updateConversation,
 } from "../../lib/aiConversationsApi";
+import { loadProjectFromFile } from "../../store";
 
 const AI_AGENT_PROVIDER_STORAGE = "openstudio.ai.provider";
 const AI_AGENT_LEGACY_OPENAI_KEY_STORAGE = "openstudio.ai.openaiKey";
@@ -87,6 +88,10 @@ function readProviderModel(providerId) {
   return getAiProviderModel(provider.id, storedModel);
 }
 
+function cloneSerializable(value) {
+  return JSON.parse(JSON.stringify(value));
+}
+
 /**
  * Derives a short title from the first user message, truncated on a word
  * boundary so the title does not cut mid-word.
@@ -132,6 +137,8 @@ export function useAiAgentController() {
   const [isSending, setIsSending] = useState(false);
   const [isApplying, setIsApplying] = useState(false);
   const [isTestingConnection, setIsTestingConnection] = useState(false);
+  const [canUndoAppliedPlan, setCanUndoAppliedPlan] = useState(false);
+  const appliedPlanSnapshotsRef = useRef([]);
 
   // Conversation history (Supabase-backed, authenticated users only)
   const [conversations, setConversations] = useState([]);
@@ -210,6 +217,8 @@ export function useAiAgentController() {
   );
 
   const startNewConversation = useCallback(function () {
+    appliedPlanSnapshotsRef.current = [];
+    setCanUndoAppliedPlan(false);
     setActiveConversationId(null);
     setMessages([]);
     setPendingOperations([]);
@@ -248,6 +257,8 @@ export function useAiAgentController() {
             ? convo.rejected_operations
             : [],
         );
+        appliedPlanSnapshotsRef.current = [];
+        setCanUndoAppliedPlan(false);
         setError("");
       } catch {
         // If load fails, stay on the current conversation.
@@ -404,6 +415,8 @@ export function useAiAgentController() {
     }
 
     setIsApplying(true);
+    appliedPlanSnapshotsRef.current.push(cloneSerializable(store.getState().daw));
+    setCanUndoAppliedPlan(true);
     const result = applyAiOperations(pendingOperations, {
       dispatch,
       getState: store.getState,
@@ -476,12 +489,15 @@ export function useAiAgentController() {
     }
   };
 
-  const forgetKey = function () {
-    const providerConfig = getAiProviderConfig(provider);
-    setApiKey("");
-    setRememberKey(false);
-    setConnectionStatus("");
-    writeStoredValue(providerConfig.keyStorage, "");
+  const undoLastAppliedChange = function () {
+    const snapshot = appliedPlanSnapshotsRef.current.pop();
+    if (!snapshot) {
+      setCanUndoAppliedPlan(false);
+      return;
+    }
+
+    dispatch(loadProjectFromFile(snapshot));
+    setCanUndoAppliedPlan(appliedPlanSnapshotsRef.current.length > 0);
   };
 
   return {
@@ -513,7 +529,8 @@ export function useAiAgentController() {
     sendMessage,
     applyPendingOperations,
     testConnection,
-    forgetKey,
+    undoLastAppliedChange,
+    canUndoAppliedPlan,
     isAuthenticated,
     conversations,
     activeConversationId,

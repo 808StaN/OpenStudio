@@ -111,6 +111,41 @@ WINDOW / FLOATING
 --window-control-btn-radius: 4px;
 
 /* =============================================
+AI AGENT
+============================================= */
+--ai-agent-shell-glow: radial-gradient(circle at top left, rgba(0, 173, 181, 0.18), transparent 38%);
+--ai-agent-shell-bg: linear-gradient(180deg, rgba(34, 40, 49, 0.98), rgba(28, 33, 40, 0.98));
+--ai-agent-card-bg: rgba(34, 40, 49, 0.82);
+--ai-agent-panel-bg: rgba(44, 51, 59, 0.78);
+--ai-agent-control-bg: #1c2128;
+--ai-agent-secondary-bg: rgba(238, 238, 238, 0.05);
+--ai-agent-inset-shadow: inset 0 1px 0 rgba(238, 238, 238, 0.04);
+--ai-agent-avatar-border: rgba(0, 173, 181, 0.34);
+--ai-agent-avatar-bg: rgba(0, 173, 181, 0.12);
+--ai-agent-avatar-shadow: 0 0 18px rgba(0, 173, 181, 0.14);
+--ai-agent-focus-border: rgba(0, 173, 181, 0.48);
+--ai-agent-focus-ring: 0 0 0 2px rgba(0, 173, 181, 0.14);
+--ai-agent-message-bg: rgba(238, 238, 238, 0.04);
+--ai-agent-user-border: rgba(0, 173, 181, 0.38);
+--ai-agent-user-bg: rgba(0, 173, 181, 0.12);
+--ai-agent-system-border: rgba(77, 208, 225, 0.28);
+--ai-agent-system-bg: rgba(77, 208, 225, 0.1);
+--ai-agent-warning-text: #f0c978;
+--ai-agent-warning-border: rgba(212, 160, 74, 0.26);
+--ai-agent-warning-bg: rgba(212, 160, 74, 0.1);
+--ai-agent-error-text: #f4c4c7;
+--ai-agent-error-border: rgba(224, 85, 85, 0.24);
+--ai-agent-error-bg: rgba(224, 85, 85, 0.1);
+--ai-agent-primary-border: rgba(0, 173, 181, 0.42);
+--ai-agent-primary-text: #111111;
+--ai-agent-conversation-active-bg: rgba(0, 173, 181, 0.14);
+--ai-agent-conversation-active-hover-bg: rgba(0, 173, 181, 0.18);
+--ai-agent-conversation-new-bg: rgba(0, 173, 181, 0.12);
+--ai-agent-conversation-new-hover-bg: rgba(0, 173, 181, 0.18);
+--ai-agent-delete-hover-text: #f07d7d;
+--ai-agent-delete-hover-bg: rgba(224, 85, 85, 0.14);
+
+/* =============================================
 BROWSER
 ============================================= */
 --browser-bg: #222831;

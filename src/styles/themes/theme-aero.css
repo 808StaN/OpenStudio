@@ -115,7 +115,42 @@
   --window-control-btn-radius: var(--titlebar-btn-radius);
 
   /* =============================================
-  BROWSER
+     AI AGENT
+     ============================================= */
+  --ai-agent-shell-glow: radial-gradient(circle at top left, rgba(180, 215, 255, 0.42), transparent 42%);
+  --ai-agent-shell-bg: linear-gradient(180deg, rgba(237, 243, 250, 0.98), rgba(226, 236, 247, 0.98));
+  --ai-agent-card-bg: rgba(237, 243, 250, 0.86);
+  --ai-agent-panel-bg: rgba(228, 236, 245, 0.82);
+  --ai-agent-control-bg: #d8e4f0;
+  --ai-agent-secondary-bg: rgba(255, 255, 255, 0.45);
+  --ai-agent-inset-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.72);
+  --ai-agent-avatar-border: rgba(74, 144, 226, 0.34);
+  --ai-agent-avatar-bg: rgba(74, 144, 226, 0.1);
+  --ai-agent-avatar-shadow: 0 0 18px rgba(140, 200, 255, 0.18);
+  --ai-agent-focus-border: rgba(74, 144, 226, 0.46);
+  --ai-agent-focus-ring: 0 0 0 2px rgba(74, 144, 226, 0.16);
+  --ai-agent-message-bg: rgba(255, 255, 255, 0.55);
+  --ai-agent-user-border: rgba(74, 144, 226, 0.42);
+  --ai-agent-user-bg: rgba(74, 144, 226, 0.12);
+  --ai-agent-system-border: rgba(90, 160, 220, 0.28);
+  --ai-agent-system-bg: rgba(180, 220, 255, 0.2);
+  --ai-agent-warning-text: #8a6422;
+  --ai-agent-warning-border: rgba(200, 154, 58, 0.3);
+  --ai-agent-warning-bg: rgba(200, 154, 58, 0.1);
+  --ai-agent-error-text: #a04a58;
+  --ai-agent-error-border: rgba(224, 92, 106, 0.24);
+  --ai-agent-error-bg: rgba(224, 92, 106, 0.1);
+  --ai-agent-primary-border: rgba(74, 144, 226, 0.42);
+  --ai-agent-primary-text: #f0f6ff;
+  --ai-agent-conversation-active-bg: rgba(74, 144, 226, 0.12);
+  --ai-agent-conversation-active-hover-bg: rgba(74, 144, 226, 0.18);
+  --ai-agent-conversation-new-bg: rgba(74, 144, 226, 0.1);
+  --ai-agent-conversation-new-hover-bg: rgba(74, 144, 226, 0.16);
+  --ai-agent-delete-hover-text: #c04f62;
+  --ai-agent-delete-hover-bg: rgba(224, 92, 106, 0.12);
+
+  /* =============================================
+   BROWSER
   ============================================= */
   --browser-bg: #edf3fa;
   --browser-border: var(--app-border);
