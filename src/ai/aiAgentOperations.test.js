@@ -116,6 +116,41 @@ describe("validatePreparedAiOperations", function () {
       ]),
     );
   });
+
+  it("warns on duplicate set_step for the same channel and step", function () {
+    const prepared = prepareAiOperations([
+      { type: "set_step", payload: { channelId: "ch-kick", stepIndex: 0 } },
+      { type: "set_step", payload: { channelId: "ch-kick", stepIndex: 0 } },
+    ]).operations;
+
+    const validated = validatePreparedAiOperations(prepared, {
+      dawState: createDawState(),
+      availableSamples: [],
+    });
+
+    expect(validated[0].status).toBe("ready");
+    expect(validated[1].status).toBe("warning");
+    expect(validated[1].issues).toEqual(
+      expect.arrayContaining([
+        expect.stringContaining("Duplicate set_step"),
+      ]),
+    );
+  });
+
+  it("does not warn when set_step uses different stepIndex values", function () {
+    const prepared = prepareAiOperations([
+      { type: "set_step", payload: { channelId: "ch-kick", stepIndex: 0 } },
+      { type: "set_step", payload: { channelId: "ch-kick", stepIndex: 1 } },
+    ]).operations;
+
+    const validated = validatePreparedAiOperations(prepared, {
+      dawState: createDawState(),
+      availableSamples: [],
+    });
+
+    expect(validated[0].status).toBe("ready");
+    expect(validated[1].status).toBe("ready");
+  });
 });
 
 describe("applyAiOperations", function () {
@@ -286,6 +321,117 @@ describe("applyAiOperations", function () {
       type: "daw/setBpm",
       payload: 150,
     });
+  });
+
+  it("clears existing piano notes and active sequencer steps", function () {
+    const dawState = createDawState();
+    dawState.project.patterns[0].pianoPreview = {
+      "ch-kick": [
+        { id: "n-1", start: 0, length: 4, pitch: 60, velocity: 95 },
+      ],
+    };
+    dawState.project.patterns[0].stepGrid["ch-kick"][0] = true;
+    dawState.project.patterns[0].stepGrid["ch-kick"][4] = true;
+    const dispatched = [];
+    const dispatch = function (action) {
+      dispatched.push(action);
+    };
+    const getState = function () {
+      return { daw: dawState };
+    };
+
+    applyAiOperations(
+      prepareAiOperations([
+        {
+          type: "clear_channel_pattern",
+          payload: { patternId: "pat-1", channelId: "ch-kick", mode: "all" },
+        },
+      ]).operations,
+      { dispatch, getState },
+    );
+
+    const clearAction = dispatched.find(function (action) {
+      return action.type === "daw/removePianoNotesBatch";
+    });
+    expect(clearAction).toBeDefined();
+    expect(clearAction.payload.notes).toEqual(
+      expect.arrayContaining([
+        expect.objectContaining({ id: "n-1", source: "piano" }),
+        expect.objectContaining({ start: 0, source: "step" }),
+        expect.objectContaining({ start: 4, source: "step" }),
+      ]),
+    );
+  });
+
+  it("auto-expands pattern length before adding notes beyond the current pattern", function () {
+    const dawState = createDawState();
+    const dispatched = [];
+    const dispatch = function (action) {
+      dispatched.push(action);
+    };
+    const getState = function () {
+      return { daw: dawState };
+    };
+
+    applyAiOperations(
+      prepareAiOperations([
+        {
+          type: "add_piano_notes",
+          payload: {
+            channelId: "ch-kick",
+            notes: [{ start: 30, length: 4, pitch: 60, velocity: 95 }],
+          },
+        },
+      ]).operations,
+      { dispatch, getState },
+    );
+
+    const lengthAction = dispatched.find(function (action) {
+      return action.type === "daw/setPatternLength";
+    });
+    const notesAction = dispatched.find(function (action) {
+      return action.type === "daw/addPianoNotesBatch";
+    });
+    expect(lengthAction.payload).toEqual({ patternId: "pat-1", length: 34 });
+    expect(notesAction.payload.notes[0]).toEqual(
+      expect.objectContaining({ start: 30, length: 4 }),
+    );
+  });
+
+  it("auto-expands pattern length before adding chord progressions", function () {
+    const dawState = createDawState();
+    const dispatched = [];
+    const dispatch = function (action) {
+      dispatched.push(action);
+    };
+    const getState = function () {
+      return { daw: dawState };
+    };
+
+    applyAiOperations(
+      prepareAiOperations([
+        {
+          type: "add_chord_progression",
+          payload: {
+            channelId: "ch-kick",
+            chords: [{ start: 24, length: 8, pitches: [60, 64, 67], velocity: 95 }],
+          },
+        },
+      ]).operations,
+      { dispatch, getState },
+    );
+
+    const lengthAction = dispatched.find(function (action) {
+      return action.type === "daw/setPatternLength";
+    });
+    const notesAction = dispatched.find(function (action) {
+      return action.type === "daw/addPianoNotesBatch";
+    });
+    expect(lengthAction.payload).toEqual({ patternId: "pat-1", length: 32 });
+    expect(notesAction.payload.notes).toHaveLength(3);
+    expect(notesAction.payload.notes[0]).toEqual(
+      expect.objectContaining({ start: 24, length: 8 }),
+    );
   });
 
   it("auto-assigns pluginRef when add_channel includes one", function () {

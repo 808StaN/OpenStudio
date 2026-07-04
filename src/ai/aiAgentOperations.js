@@ -13,6 +13,7 @@ import {
   setBpm,
   renameChannel,
   renamePattern,
+  removePianoNotesBatch,
   setActivePattern,
   setChannelInputMode,
   setChannelMixerInsert,
@@ -152,6 +153,8 @@ function getOperationDescription(operation) {
       return "Assign sample to channel " + (payload.channelName || payload.channelId || "$active");
     case "add_sample_as_channel":
       return "Add sample as a new channel";
+    case "clear_channel_pattern":
+      return "Clear channel pattern data for " + (payload.channelName || payload.channelId || "$active");
     case "set_step":
       return "Set sequencer step " + Number(payload.stepIndex || 0);
     case "add_piano_notes":
@@ -327,6 +330,13 @@ function validateAiOperation(operation, dawState, availableSamples = []) {
     }
   }
 
+  if (operation.type === "clear_channel_pattern") {
+    const mode = asString(payload.mode || "all").toLowerCase();
+    if (!["all", "notes", "steps"].includes(mode)) {
+      issues.push("Unsupported clear mode: " + mode);
+    }
+  }
+
   // Warn when notes are added to a channel that has no instrument or sample
   // assigned — the notes will be silent.
   if (
@@ -369,14 +379,71 @@ export function validatePreparedAiOperations(
   operations,
   { dawState, availableSamples } = {},
 ) {
+  const stepKeys = new Set();
+
   return (Array.isArray(operations) ? operations : []).map(function (operation) {
     const issues = validateAiOperation(operation, dawState || {}, availableSamples);
+
+    if (operation.type === "set_step") {
+      const payload = operation.payload || {};
+      const key = [
+        resolvePatternId(dawState || {}, payload),
+        resolveChannelId(dawState || {}, payload),
+        Math.round(clampNumber(payload.stepIndex, 0, 127, 0)),
+      ].join(":");
+      if (stepKeys.has(key)) {
+        issues.push("Duplicate set_step for the same channel and stepIndex.");
+      }
+      stepKeys.add(key);
+    }
+
     return {
       ...operation,
       issues,
       status: issues.length > 0 ? "warning" : "ready",
     };
   });
+}
+
+function applyClearChannelPattern(operation, dispatch, getState) {
+  const dawState = getDawState(getState());
+  const payload = operation.payload || {};
+  const patternId = resolvePatternId(dawState, payload);
+  const channelId = resolveChannelId(dawState, payload);
+  const pattern = getPatternById(dawState, patternId);
+  const mode = asString(payload.mode || "all").toLowerCase();
+  const shouldClearNotes = mode === "all" || mode === "notes";
+  const shouldClearSteps = mode === "all" || mode === "steps";
+  const removals = [];
+
+  if (shouldClearNotes) {
+    (Array.isArray(pattern?.pianoPreview?.[channelId])
+      ? pattern.pianoPreview[channelId]
+      : []
+    ).forEach(function (note) {
+      removals.push({
+        id: note.id,
+        start: note.start,
+        pitch: note.pitch,
+        source: "piano",
+      });
+    });
+  }
+
+  if (shouldClearSteps) {
+    (Array.isArray(pattern?.stepGrid?.[channelId])
+      ? pattern.stepGrid[channelId]
+      : []
+    ).forEach(function (value, stepIndex) {
+      if (value) {
+        removals.push({ start: stepIndex, source: "step" });
+      }
+    });
+  }
+
+  if (removals.length > 0) {
+    dispatch(removePianoNotesBatch({ patternId, channelId, notes: removals }));
+  }
 }
 
 function applyCreatePattern(operation, dispatch, getState) {
@@ -458,11 +525,45 @@ function normalizeAiNoteLength(rawLength, fallbackLength, maxLength) {
   return Math.max(0.0625, Math.min(Math.max(0.0625, maxLength), nextLength));
 }
 
-function getPatternLength(dawState, patternId) {
-  const pattern = (dawState.project?.patterns || []).find(function (item) {
+function getPatternById(dawState, patternId) {
+  return (dawState.project?.patterns || []).find(function (item) {
     return item.id === patternId;
   });
+}
+
+function getPatternLength(dawState, patternId) {
+  const pattern = getPatternById(dawState, patternId);
   return Math.max(1, Number(pattern?.lengthSteps || 16));
+}
+
+function getMaxPianoNoteEnd(notes) {
+  return (Array.isArray(notes) ? notes : []).reduce(function (maxEnd, note) {
+    const start = Math.max(0, Number(note?.start || 0));
+    const length = Math.max(0.0625, Number(note?.length || DEFAULT_AI_NOTE_LENGTH));
+    return Math.max(maxEnd, start + length);
+  }, 0);
+}
+
+function getMaxChordEnd(chords) {
+  return (Array.isArray(chords) ? chords : []).reduce(function (maxEnd, chord) {
+    const start = Math.max(0, Number(chord?.start || 0));
+    const length = Math.max(0.0625, Number(chord?.length || DEFAULT_AI_CHORD_LENGTH));
+    return Math.max(maxEnd, start + length);
+  }, 0);
+}
+
+function ensurePatternLengthForEnd(dispatch, dawState, patternId, maxEnd) {
+  const currentLength = getPatternLength(dawState, patternId);
+  if (maxEnd <= currentLength) {
+    return currentLength;
+  }
+
+  const nextLength = Math.max(4, Math.min(128, Math.ceil(maxEnd)));
+  if (nextLength > currentLength) {
+    dispatch(setPatternLength({ patternId, length: nextLength }));
+    return nextLength;
+  }
+  return currentLength;
 }
 
 function normalizeAiPianoNotes(rawNotes, patternLength, fallbackLength = DEFAULT_AI_NOTE_LENGTH) {
@@ -552,6 +653,11 @@ function applyAiOperation(operation, dispatch, getState) {
     return true;
   }
 
+  if (operation.type === "clear_channel_pattern") {
+    applyClearChannelPattern(operation, dispatch, getState);
+    return true;
+  }
+
   if (operation.type === "add_channel") {
     applyAddChannel(operation, dispatch, getState);
     return true;
@@ -595,7 +701,12 @@ function applyAiOperation(operation, dispatch, getState) {
 
   if (operation.type === "add_piano_notes") {
     const patternId = resolvePatternId(dawState, payload);
-    const patternLength = getPatternLength(dawState, patternId);
+    const patternLength = ensurePatternLengthForEnd(
+      dispatch,
+      dawState,
+      patternId,
+      getMaxPianoNoteEnd(payload.notes),
+    );
     dispatch(addPianoNotesBatch({
       patternId,
       channelId: resolveChannelId(dawState, payload),
@@ -607,7 +718,12 @@ function applyAiOperation(operation, dispatch, getState) {
 
   if (operation.type === "add_chord_progression") {
     const patternId = resolvePatternId(dawState, payload);
-    const patternLength = getPatternLength(dawState, patternId);
+    const patternLength = ensurePatternLengthForEnd(
+      dispatch,
+      dawState,
+      patternId,
+      getMaxChordEnd(payload.chords),
+    );
     dispatch(addPianoNotesBatch({
       patternId,
       channelId: resolveChannelId(dawState, payload),
