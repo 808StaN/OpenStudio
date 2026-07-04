@@ -5,17 +5,11 @@ import { AiAgentMessages } from "./ai-agent/AiAgentMessages";
 import { AiAgentPlanPanel } from "./ai-agent/AiAgentPlanPanel";
 import { useAiAgentController } from "./ai-agent/useAiAgentController";
 
-const AI_AGENT_MODEL_OPTIONS = [
-  { value: "gpt-5.5", label: "GPT-5.5" },
-  { value: "gpt-5.4", label: "GPT-5.4" },
-  { value: "gpt-5.4-mini", label: "GPT-5.4 mini" },
-];
-
-function AiAgentModelSelect({ value, onChange }) {
+function AiAgentSelect({ value, options, onChange }) {
   const [isOpen, setIsOpen] = useState(false);
-  const activeOption = AI_AGENT_MODEL_OPTIONS.find(function (option) {
+  const activeOption = options.find(function (option) {
     return option.value === value;
-  }) || AI_AGENT_MODEL_OPTIONS[0];
+  }) || options[0];
 
   return (
     <div className={"ai-agent-model-select rack-modern-select" + (isOpen ? " is-open" : "")}>
@@ -28,12 +22,12 @@ function AiAgentModelSelect({ value, onChange }) {
           });
         }}
       >
-        <span className="rack-modern-select-value">{activeOption.label}</span>
+        <span className="rack-modern-select-value">{activeOption?.label || "Select"}</span>
         <span className="rack-modern-select-caret">v</span>
       </button>
       {isOpen ? (
         <div className="rack-modern-select-dropdown">
-          {AI_AGENT_MODEL_OPTIONS.map(function (option) {
+          {options.map(function (option) {
             const isActive = option.value === value;
             return (
               <button
@@ -72,11 +66,19 @@ export function AiAgentWindow() {
 
       <div className="ai-agent-settings-card">
         <label>
-          <span>OpenAI API key</span>
+          <span>Provider</span>
+          <AiAgentSelect
+            value={agent.provider}
+            options={agent.providerOptions}
+            onChange={agent.setProvider}
+          />
+        </label>
+        <label>
+          <span>{agent.providerLabel} API key</span>
           <input
             type="password"
             value={agent.apiKey}
-            placeholder="sk-..."
+            placeholder={agent.apiKeyPlaceholder}
             autoComplete="off"
             onChange={function (event) {
               agent.setApiKey(event.target.value);
@@ -85,8 +87,9 @@ export function AiAgentWindow() {
         </label>
         <label>
           <span>Model</span>
-          <AiAgentModelSelect
+          <AiAgentSelect
             value={agent.model}
+            options={agent.modelOptions}
             onChange={function (nextModel) {
               agent.setModel(nextModel);
             }}

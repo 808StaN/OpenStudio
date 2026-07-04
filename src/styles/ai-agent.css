@@ -62,7 +62,7 @@
 
 .ai-agent-settings-card {
   display: grid;
-  grid-template-columns: minmax(180px, 1fr) 150px auto auto;
+  grid-template-columns: 120px minmax(180px, 1fr) 170px auto auto;
   gap: 10px;
   align-items: end;
   border: 1px solid var(--app-border);

@@ -5,10 +5,15 @@ import {
   prepareAiOperations,
   validatePreparedAiOperations,
 } from "../../ai/aiAgentOperations";
-import { AI_AGENT_DEFAULT_MODEL } from "../../ai/aiAgentPrompt";
+import {
+  AI_AGENT_DEFAULT_PROVIDER,
+  AI_AGENT_PROVIDERS,
+  getAiProviderConfig,
+  getAiProviderModel,
+} from "../../ai/aiProviders";
 import { buildAiProjectSummary } from "../../ai/aiProjectSummary";
 import { loadAiSampleIndex, searchAiSamples } from "../../ai/aiSampleIndex";
-import { requestAiAgentPlan, testOpenAiConnection } from "../../ai/openAiClient";
+import { requestAiAgentPlan, testAiConnection } from "../../ai/aiClient";
 import {
   createConversation,
   deleteConversation as deleteConversationApi,
@@ -17,8 +22,9 @@ import {
   updateConversation,
 } from "../../lib/aiConversationsApi";
 
-const AI_AGENT_KEY_STORAGE = "openstudio.ai.openaiKey";
-const AI_AGENT_MODEL_STORAGE = "openstudio.ai.model";
+const AI_AGENT_PROVIDER_STORAGE = "openstudio.ai.provider";
+const AI_AGENT_LEGACY_OPENAI_KEY_STORAGE = "openstudio.ai.openaiKey";
+const AI_AGENT_LEGACY_MODEL_STORAGE = "openstudio.ai.model";
 
 // Max characters for the auto-generated conversation title.
 const TITLE_MAX_LENGTH = 50;
@@ -51,6 +57,36 @@ function writeStoredValue(key, value) {
   }
 }
 
+function readStoredProvider() {
+  const storedProvider = readStoredValue(
+    AI_AGENT_PROVIDER_STORAGE,
+    AI_AGENT_DEFAULT_PROVIDER,
+  );
+  return getAiProviderConfig(storedProvider).id;
+}
+
+function readProviderKey(providerId) {
+  const provider = getAiProviderConfig(providerId);
+  const storedKey = readStoredValue(provider.keyStorage);
+  if (storedKey) {
+    return storedKey;
+  }
+  if (provider.id === "openai") {
+    return readStoredValue(AI_AGENT_LEGACY_OPENAI_KEY_STORAGE);
+  }
+  return "";
+}
+
+function readProviderModel(providerId) {
+  const provider = getAiProviderConfig(providerId);
+  const storedModel =
+    readStoredValue(provider.modelStorage) ||
+    (provider.id === "openai"
+      ? readStoredValue(AI_AGENT_LEGACY_MODEL_STORAGE)
+      : "");
+  return getAiProviderModel(provider.id, storedModel);
+}
+
 /**
  * Derives a short title from the first user message, truncated on a word
  * boundary so the title does not cut mid-word.
@@ -75,15 +111,16 @@ export function useAiAgentController() {
     return state.user.currentUser;
   });
   const isAuthenticated = Boolean(currentUser);
+  const [provider, setProviderState] = useState(readStoredProvider);
 
   const [apiKey, setApiKey] = useState(function () {
-    return readStoredValue(AI_AGENT_KEY_STORAGE);
+    return readProviderKey(provider);
   });
   const [rememberKey, setRememberKey] = useState(function () {
-    return Boolean(readStoredValue(AI_AGENT_KEY_STORAGE));
+    return Boolean(readProviderKey(provider));
   });
   const [model, setModel] = useState(function () {
-    return readStoredValue(AI_AGENT_MODEL_STORAGE, AI_AGENT_DEFAULT_MODEL);
+    return readProviderModel(provider);
   });
   const [input, setInput] = useState("");
   const [messages, setMessages] = useState([]);
@@ -103,16 +140,44 @@ export function useAiAgentController() {
 
   useEffect(
     function () {
-      writeStoredValue(AI_AGENT_MODEL_STORAGE, model || AI_AGENT_DEFAULT_MODEL);
+      const providerConfig = getAiProviderConfig(provider);
+      writeStoredValue(
+        providerConfig.modelStorage,
+        getAiProviderModel(providerConfig.id, model),
+      );
     },
-    [model],
+    [model, provider],
   );
 
   useEffect(
     function () {
-      writeStoredValue(AI_AGENT_KEY_STORAGE, rememberKey ? apiKey : "");
+      const providerConfig = getAiProviderConfig(provider);
+      writeStoredValue(providerConfig.keyStorage, rememberKey ? apiKey : "");
     },
-    [apiKey, rememberKey],
+    [apiKey, rememberKey, provider],
+  );
+
+  const setProvider = useCallback(
+    function (nextProvider) {
+      const currentProviderConfig = getAiProviderConfig(provider);
+      writeStoredValue(
+        currentProviderConfig.keyStorage,
+        rememberKey ? apiKey : "",
+      );
+
+      const nextProviderConfig = getAiProviderConfig(nextProvider);
+      const nextProviderId = nextProviderConfig.id;
+      const nextKey = readProviderKey(nextProviderId);
+
+      writeStoredValue(AI_AGENT_PROVIDER_STORAGE, nextProviderId);
+      setProviderState(nextProviderId);
+      setApiKey(nextKey);
+      setRememberKey(Boolean(nextKey));
+      setModel(readProviderModel(nextProviderId));
+      setConnectionStatus("");
+      setError("");
+    },
+    [apiKey, provider, rememberKey],
   );
 
   // Load conversation list when the user signs in; clear when signed out.
@@ -253,6 +318,7 @@ export function useAiAgentController() {
         availableSamples,
       );
       const response = await requestAiAgentPlan({
+        provider,
         apiKey,
         model,
         userMessage,
@@ -398,8 +464,9 @@ export function useAiAgentController() {
     setIsTestingConnection(true);
 
     try {
-      const result = await testOpenAiConnection({ apiKey, model });
-      setConnectionStatus("Connected to " + result.model + ".");
+      const result = await testAiConnection({ provider, apiKey, model });
+      const providerLabel = getAiProviderConfig(provider).label;
+      setConnectionStatus("Connected to " + providerLabel + " " + result.model + ".");
     } catch (testError) {
       const message = String(testError?.message || testError);
       setError(message);
@@ -410,19 +477,28 @@ export function useAiAgentController() {
   };
 
   const forgetKey = function () {
+    const providerConfig = getAiProviderConfig(provider);
     setApiKey("");
     setRememberKey(false);
     setConnectionStatus("");
-    writeStoredValue(AI_AGENT_KEY_STORAGE, "");
+    writeStoredValue(providerConfig.keyStorage, "");
   };
 
   return {
+    provider,
+    setProvider,
+    providerOptions: AI_AGENT_PROVIDERS.map(function (item) {
+      return { value: item.id, label: item.label };
+    }),
+    providerLabel: getAiProviderConfig(provider).label,
+    apiKeyPlaceholder: getAiProviderConfig(provider).keyPlaceholder,
     apiKey,
     setApiKey,
     rememberKey,
     setRememberKey,
     model,
     setModel,
+    modelOptions: getAiProviderConfig(provider).models,
     input,
     setInput,
     messages,
