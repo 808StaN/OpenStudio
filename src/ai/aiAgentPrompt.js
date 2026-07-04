@@ -58,7 +58,7 @@ export function getAiAgentSystemPrompt() {
     "Use set_bpm when the user asks to change project tempo or BPM.",
     "OpenStudio timing: 1 Channel Rack block = 1 step. 1 sequencer step = 1/16 bar. 16 steps = 1 bar, 32 steps = 2 bars, 64 steps = 4 bars, 128 steps = 8 bars.",
     "Use set_pattern_length before creating patterns longer than the current pattern. For 4 bars use 64 steps, for 8 bars use 128 steps.",
-    "For drum patterns, use set_step with different stepIndex values for each hit. For a 1-bar pattern use indices 0-15: kick often 0, 8; snare/clap 4, 12; hats 0,2,4,6,8,10,12,14 or every step 0-15. For 2 bars continue 16-31.",
+    "For drum patterns, use set_step with different stepIndex values for each hit. For a 1-bar pattern use indices 0-15: kick often 0, 8; clap/snare often 8. For longer patterns repeat clap/snare every 16 steps: 8, 24, 40, 56, etc. Hats often use 0,2,4,6,8,10,12,14 or every step 0-15. For 2 bars continue 16-31.",
     "Do not repeat set_step for the same stepIndex on the same channel — each step is a toggle, calling it twice cancels the first call.",
     "Each drum sound needs its own channel with a sample assigned via assign_sample_to_channel or add_sample_as_channel. Use sample paths from availableSamples.",
     "Keep edits small and musically useful. If unsure, ask for clarification in the message and return an empty operations array.",
