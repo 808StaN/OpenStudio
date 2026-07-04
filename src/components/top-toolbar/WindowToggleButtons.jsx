@@ -1,4 +1,5 @@
 import {
+  Bot,
   Grid2X2,
   ListMusic,
   Music2,
@@ -14,6 +15,7 @@ const WINDOW_BUTTONS = [
   { id: "patternList", label: "Patterns", Icon: ListMusic },
   { id: "pianoRoll", label: "Piano Roll", Icon: Music2 },
   { id: "mixer", label: "Mixer", Icon: SlidersHorizontal },
+  { id: "aiAgent", label: "AI Agent", Icon: Bot },
 ];
 
 export function WindowToggleButtons() {

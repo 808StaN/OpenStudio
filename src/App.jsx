@@ -2,6 +2,7 @@ import { useEffect, useRef } from "react";
 import { useDispatch, useSelector } from "react-redux";
 import { useAudioScheduler } from "./audio/useAudioScheduler";
 import { BrowserPanel } from "./components/BrowserPanel";
+import { AiAgentWindow } from "./components/AiAgentWindow";
 import { AppTitleBar } from "./components/AppTitleBar";
 import { ChannelRackWindow } from "./components/ChannelRackWindow";
 import { FxPluginWindow } from "./components/FxPluginWindow";
@@ -29,6 +30,7 @@ import "./styles/plugins.css";
 import "./styles/pattern-list.css";
 import "./styles/render-window.css";
 import "./styles/auth.css";
+import "./styles/ai-agent.css";
 import "./styles/load-project.css";
 import "./styles/theme-main.css";
 import "./styles/theme-plugins.css";
@@ -424,6 +426,16 @@ function App() {
             minHeight={320}
           >
             <PatternListWindow />
+          </FloatingWindow>
+
+          <FloatingWindow
+            id="aiAgent"
+            title="AI Agent"
+            minWidth={520}
+            minHeight={380}
+            centerOnOpen
+          >
+            <AiAgentWindow />
           </FloatingWindow>
 
           <FloatingWindow

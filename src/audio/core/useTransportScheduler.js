@@ -102,6 +102,7 @@ export function useTransportScheduler({
     mixerGraphRef,
     mixerSettingsRef,
     ensureMixerGraph,
+    startMixerInsertModulators,
     applyMixerSettingsToGraph,
     getInsertInputNodeForChannel,
     updateMixerMeters,
