@@ -12,7 +12,7 @@
 # OpenStudio
 
 
-OpenStudio is a browser and desktop DAW built with React, Web Audio API, and Electron. It brings the core beatmaking workflow into one app: browse sounds, build patterns, edit melodies, arrange clips, mix tracks, save projects locally or in the cloud, and export the final track to WAV or MP3.
+OpenStudio is a browser and desktop DAW built with React, Web Audio API, and Electron. It brings the core beatmaking workflow into one app: browse sounds, build patterns, edit melodies, arrange clips, mix tracks, save projects locally or in the cloud, and export the final track to WAV or MP3. The built-in AI Agent helps shape your project, from melodies and drum patterns to instruments, mixer settings, clips, BPM, and FX.
 <br><br>
 ![OpenStudio Preview](docs/media/openstudio-preview.gif)
 
@@ -22,6 +22,7 @@ OpenStudio is a browser and desktop DAW built with React, Web Audio API, and Ele
 - [Why OpenStudio](#why-openstudio)
 - [Highlights](#highlights)
 - [Feature Overview](#feature-overview)
+- [AI Agent](#ai-agent)
 - [Themes](#themes)
 - [Built-in Instruments](#built-in-instruments)
 - [Screenshots](#screenshots)
@@ -52,6 +53,7 @@ It is a full interactive app rather than a static UI mockup, with multiple DAW w
 - Realtime sample playback, SoundFont instruments, mixer routing, meters, and built-in FX
 - Local `.os` project files plus Supabase-backed cloud saves, loading, overwrites, search, sorting, and deletion
 - Offline WAV / MP3 rendering through the same audio-domain timing logic used by playback
+- Built-in AI Agent with OpenAI/Gemini BYOK support, project-aware edit plans, Preview + Apply, and one-click plan undo
 - Runtime DAW themes with separate plugin styling for consistent built-in effect UIs
 - Electron desktop packaging from the same React/Web Audio codebase
 
@@ -127,6 +129,19 @@ It is a full interactive app rather than a static UI mockup, with multiple DAW w
 - Cloud project overwrite protection when a project with the same name already exists
 - Load project window with cloud project search, sortable columns, local file loading, and delete confirmation
 - Cloud project files are stored in Supabase Storage while project metadata lives in a Supabase database table
+
+## AI Agent
+
+OpenStudio includes a built-in AI Agent for project-aware music production assistance. It can prepare editable plans for melodies, drum patterns, channels, instruments, mixer settings, playlist clips, BPM, chords, and FX.
+
+The agent uses a Preview + Apply workflow: it proposes a validated operation list first, then you decide whether to apply it. Applied AI plans can be undone in one step.
+
+AI provider support is bring-your-own-key:
+
+- OpenAI
+- Gemini
+
+API keys are used client-side and are only stored on the device when `Remember on this device` is enabled. Authenticated users can also keep Supabase-backed AI conversation history.
 
 ## Themes
 
@@ -274,10 +289,12 @@ Installer artifacts are generated in `release/`.
 ```text
 OpenStudio/
 |-- src/
+|   |-- ai/                AI Agent prompts, provider clients, summaries, sample index, and operation validation
 |   |-- audio/             realtime scheduling, mixer graph, export/render pipeline
 |   |   |-- core/          scheduler, mixer graph, playback nodes, voice helpers
 |   |   `-- domain/        pure audio/domain helpers for samples, stretch, FX params
 |   |-- components/        DAW windows, editors, Browser, Mixer, Playlist, Piano Roll
+|   |   |-- ai-agent/      AI Agent chat, plan panel, conversation list, and controller hook
 |   |   |-- browser/       Packs and plugin browser trees
 |   |   |-- channel-rack/  Channel Rack rows, controls, step grid, piano preview
 |   |   |-- fx-plugin/     Graphic EQ, Reverb, Maximizer, FX editor utilities
@@ -305,8 +322,9 @@ OpenStudio/
 - `soundfont-player` - built-in SoundFont instrument playback
 - `@breezystack/lamejs` - MP3 encoding for rendered projects
 - Supabase Auth - account creation, sign in, and authenticated user sessions
-- PostgreSQL / Supabase Database - project metadata and user profile records
+- PostgreSQL / Supabase Database - project metadata, user profile records, and AI conversation history
 - Supabase Storage - cloud `.os` project file storage
+- OpenAI / Gemini APIs - optional BYOK AI Agent providers for project-aware edit plans
 - Vite 8 - dev server and production bundling
 - Electron 41 - desktop runtime for the Windows app
 - Electron Builder - unpacked desktop builds and NSIS installer packaging
