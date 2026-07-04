@@ -115,19 +115,32 @@
 }
 
 .ai-agent-settings-card input[type="password"],
-.ai-agent-settings-card select {
+.ai-agent-model-select {
   height: 34px;
   box-sizing: border-box;
   border: 1px solid var(--app-border);
   border-radius: 9px;
-  padding: 0 10px;
   color: var(--app-text);
   background: rgba(0, 0, 0, 0.28);
   outline: none;
 }
 
-.ai-agent-settings-card select {
-  cursor: pointer;
+.ai-agent-settings-card input[type="password"] {
+  padding: 0 10px;
+}
+
+.ai-agent-model-select .rack-modern-select-trigger {
+  height: 100%;
+  padding: 0 10px;
+}
+
+.ai-agent-model-select .rack-modern-select-dropdown {
+  left: 0;
+  right: 0;
+  width: 100%;
+  min-width: 100%;
+  max-width: none;
+  z-index: 80;
 }
 
 .ai-agent-settings-card input:focus {
@@ -140,6 +153,41 @@
   align-items: center;
   height: 34px;
   user-select: none;
+}
+
+.ai-agent-remember-key input[type="checkbox"] {
+  appearance: none;
+  -webkit-appearance: none;
+  width: 16px;
+  height: 16px;
+  border-radius: 4px;
+  border: 1px solid var(--auth-checkbox-border);
+  background: var(--auth-checkbox-bg);
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+  transition: border-color 120ms ease, box-shadow 120ms ease;
+}
+
+.ai-agent-remember-key input[type="checkbox"]:hover {
+  border-color: var(--app-border-strong);
+}
+
+.ai-agent-remember-key input[type="checkbox"]:checked {
+  border-color: var(--app-accent-strong);
+  background: var(--auth-checkbox-checked-bg);
+}
+
+.ai-agent-remember-key input[type="checkbox"]:checked::after {
+  content: "";
+  width: 8px;
+  height: 5px;
+  border-left: 2px solid var(--auth-submit-text);
+  border-bottom: 2px solid var(--auth-submit-text);
+  transform: rotate(-55deg) translateY(-1px);
+  display: block;
 }
 
 .ai-agent-chat-card,

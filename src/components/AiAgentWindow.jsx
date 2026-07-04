@@ -1,3 +1,4 @@
+import { useState } from "react";
 import { Bot } from "lucide-react";
 import { AiAgentConversationList } from "./ai-agent/AiAgentConversationList";
 import { AiAgentMessages } from "./ai-agent/AiAgentMessages";
@@ -9,6 +10,50 @@ const AI_AGENT_MODEL_OPTIONS = [
   { value: "gpt-5.4", label: "GPT-5.4" },
   { value: "gpt-5.4-mini", label: "GPT-5.4 mini" },
 ];
+
+function AiAgentModelSelect({ value, onChange }) {
+  const [isOpen, setIsOpen] = useState(false);
+  const activeOption = AI_AGENT_MODEL_OPTIONS.find(function (option) {
+    return option.value === value;
+  }) || AI_AGENT_MODEL_OPTIONS[0];
+
+  return (
+    <div className={"ai-agent-model-select rack-modern-select" + (isOpen ? " is-open" : "")}>
+      <button
+        type="button"
+        className="rack-modern-select-trigger"
+        onClick={function () {
+          setIsOpen(function (current) {
+            return !current;
+          });
+        }}
+      >
+        <span className="rack-modern-select-value">{activeOption.label}</span>
+        <span className="rack-modern-select-caret">v</span>
+      </button>
+      {isOpen ? (
+        <div className="rack-modern-select-dropdown">
+          {AI_AGENT_MODEL_OPTIONS.map(function (option) {
+            const isActive = option.value === value;
+            return (
+              <button
+                key={option.value}
+                type="button"
+                className={"rack-modern-select-option" + (isActive ? " is-active" : "")}
+                onClick={function () {
+                  onChange(option.value);
+                  setIsOpen(false);
+                }}
+              >
+                {option.label}
+              </button>
+            );
+          })}
+        </div>
+      ) : null}
+    </div>
+  );
+}
 
 export function AiAgentWindow() {
   const agent = useAiAgentController();
@@ -40,20 +85,12 @@ export function AiAgentWindow() {
         </label>
         <label>
           <span>Model</span>
-          <select
+          <AiAgentModelSelect
             value={agent.model}
-            onChange={function (event) {
-              agent.setModel(event.target.value);
+            onChange={function (nextModel) {
+              agent.setModel(nextModel);
             }}
-          >
-            {AI_AGENT_MODEL_OPTIONS.map(function (option) {
-              return (
-                <option key={option.value} value={option.value}>
-                  {option.label}
-                </option>
-              );
-            })}
-          </select>
+          />
         </label>
         <label className="ai-agent-remember-key">
           <input
