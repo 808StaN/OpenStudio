@@ -53,7 +53,11 @@ function readStoredValue(key: string, fallback = ""): string {
   }
 
   try {
-    return window.localStorage.getItem(key) || fallback;
+    // Use sessionStorage rather than localStorage so sensitive values (such
+    // as user-supplied AI provider API keys) are not persisted indefinitely
+    // on disk, limiting the exposure window if the page context is
+    // compromised (e.g. via XSS or a malicious extension).
+    return window.sessionStorage.getItem(key) || fallback;
   } catch {
     return fallback;
   }
@@ -66,9 +70,9 @@ function writeStoredValue(key: string, value: string): void {
 
   try {
     if (value) {
-      window.localStorage.setItem(key, value);
+      window.sessionStorage.setItem(key, value);
     } else {
-      window.localStorage.removeItem(key);
+      window.sessionStorage.removeItem(key);
     }
   } catch {
     // Storage can be blocked in privacy modes; the in-memory key still works.
