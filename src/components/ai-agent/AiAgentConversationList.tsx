@@ -1,4 +1,5 @@
 import { MessageSquarePlus, Trash2 } from "lucide-react";
+import type { AiConversationSummary } from "../../types/ai"
 
 /**
  * @fileoverview AiAgentConversationList — Sidebar showing saved AI chat
@@ -6,7 +7,7 @@ import { MessageSquarePlus, Trash2 } from "lucide-react";
  * sign-in prompt instead of the list.
  */
 
-function formatRelativeTime(isoString) {
+function formatRelativeTime(isoString: string | null | undefined): string {
   if (!isoString) {
     return "";
   }
@@ -37,6 +38,16 @@ function formatRelativeTime(isoString) {
   return new Date(then).toLocaleDateString();
 }
 
+interface AiAgentConversationListProps {
+  conversations: AiConversationSummary[]
+  activeConversationId: string | null
+  onSelect: (conversationId: string) => void
+  onNew: () => void
+  onDelete: (conversationId: string) => void
+  isLoading: boolean
+  isAuthenticated: boolean
+}
+
 export function AiAgentConversationList({
   conversations,
   activeConversationId,
@@ -45,7 +56,7 @@ export function AiAgentConversationList({
   onDelete,
   isLoading,
   isAuthenticated,
-}) {
+}: AiAgentConversationListProps) {
   if (!isAuthenticated) {
     return (
       <aside className="ai-agent-conversation-list">

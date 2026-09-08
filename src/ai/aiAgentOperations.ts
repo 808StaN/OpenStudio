@@ -1,3 +1,9 @@
+// This module is moved before the Redux reducers because it dispatches their
+// untyped JS actions directly. Its public contracts are typed in src/types/ai.
+// Internal strict typing follows with the store migration.
+// eslint-disable-next-line @typescript-eslint/ban-ts-comment
+// @ts-nocheck
+
 import {
   addChannel,
   addMixerTrack,

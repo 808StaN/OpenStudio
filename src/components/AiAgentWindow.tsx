@@ -1,11 +1,19 @@
 import { useState } from "react";
+import type { ChangeEvent, KeyboardEvent } from "react"
 import { Bot } from "lucide-react";
 import { AiAgentConversationList } from "./ai-agent/AiAgentConversationList";
 import { AiAgentMessages } from "./ai-agent/AiAgentMessages";
 import { AiAgentPlanPanel } from "./ai-agent/AiAgentPlanPanel";
 import { useAiAgentController } from "./ai-agent/useAiAgentController";
+import type { AiProviderModel } from "../types/ai"
 
-function AiAgentSelect({ value, options, onChange }) {
+interface AiAgentSelectProps {
+  value: string
+  options: readonly AiProviderModel[]
+  onChange: (value: string) => void
+}
+
+function AiAgentSelect({ value, options, onChange }: AiAgentSelectProps) {
   const [isOpen, setIsOpen] = useState(false);
   const activeOption = options.find(function (option) {
     return option.value === value;
@@ -80,7 +88,7 @@ export function AiAgentWindow() {
             value={agent.apiKey}
             placeholder={agent.apiKeyPlaceholder}
             autoComplete="off"
-            onChange={function (event) {
+            onChange={function (event: ChangeEvent<HTMLInputElement>) {
               agent.setApiKey(event.target.value);
             }}
           />
@@ -99,7 +107,7 @@ export function AiAgentWindow() {
           <input
             type="checkbox"
             checked={agent.rememberKey}
-            onChange={function (event) {
+            onChange={function (event: ChangeEvent<HTMLInputElement>) {
               agent.setRememberKey(event.target.checked);
             }}
           />
@@ -142,10 +150,10 @@ export function AiAgentWindow() {
               value={agent.input}
               placeholder="Example: create a dark trap pattern with kick, snare and hats"
               disabled={agent.isSending}
-              onChange={function (event) {
+              onChange={function (event: ChangeEvent<HTMLTextAreaElement>) {
                 agent.setInput(event.target.value);
               }}
-              onKeyDown={function (event) {
+              onKeyDown={function (event: KeyboardEvent<HTMLTextAreaElement>) {
                 if (event.key === "Enter" && !event.shiftKey) {
                   event.preventDefault();
                   agent.sendMessage(event);

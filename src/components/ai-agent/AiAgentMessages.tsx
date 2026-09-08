@@ -1,8 +1,13 @@
 import { useEffect, useRef } from "react";
 import { Sparkles } from "lucide-react";
+import type { AiChatMessage } from "../../types/ai"
 
-export function AiAgentMessages({ messages }) {
-  const scrollRef = useRef(null);
+interface AiAgentMessagesProps {
+  messages: AiChatMessage[]
+}
+
+export function AiAgentMessages({ messages }: AiAgentMessagesProps) {
+  const scrollRef = useRef<HTMLDivElement | null>(null);
 
   useEffect(
     function () {
@@ -14,7 +19,7 @@ export function AiAgentMessages({ messages }) {
     [messages],
   );
 
-  if (!Array.isArray(messages) || messages.length === 0) {
+  if (messages.length === 0) {
     return (
       <div className="ai-agent-empty-state">
         <Sparkles size={20} />

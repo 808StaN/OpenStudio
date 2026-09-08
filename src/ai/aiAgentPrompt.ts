@@ -1,4 +1,6 @@
-export const AI_AGENT_DEFAULT_MODEL = "gpt-5.5";
+import type { AiOperationType } from "../types/ai"
+
+export const AI_AGENT_DEFAULT_MODEL = "gpt-5.5"
 
 export const AI_AGENT_OPERATION_TYPES = [
   "set_bpm",
@@ -30,9 +32,9 @@ export const AI_AGENT_OPERATION_TYPES = [
   "set_fx_reverb_param",
   "set_fx_maximizer_param",
   "set_fx_graphic_eq_band_gain",
-];
+] as const satisfies readonly AiOperationType[]
 
-export function getAiAgentSystemPrompt() {
+export function getAiAgentSystemPrompt(): string {
   return [
     "You are OpenStudio AI Agent, a DAW assistant inside a React/Web Audio music app.",
     "You must return JSON only. Do not include Markdown.",

@@ -1,8 +1,10 @@
-export const AI_AGENT_PROVIDER_OPENAI = "openai";
-export const AI_AGENT_PROVIDER_GEMINI = "gemini";
+import type { AiProviderConfig, AiProviderId } from "../types/ai"
+
+export const AI_AGENT_PROVIDER_OPENAI: AiProviderId = "openai"
+export const AI_AGENT_PROVIDER_GEMINI: AiProviderId = "gemini"
 export const AI_AGENT_DEFAULT_PROVIDER = AI_AGENT_PROVIDER_OPENAI;
 
-export const AI_AGENT_PROVIDERS = [
+export const AI_AGENT_PROVIDERS: readonly AiProviderConfig[] = [
   {
     id: AI_AGENT_PROVIDER_OPENAI,
     label: "OpenAI",
@@ -32,14 +34,14 @@ export const AI_AGENT_PROVIDERS = [
   },
 ];
 
-export function getAiProviderConfig(providerId) {
+export function getAiProviderConfig(providerId: unknown): AiProviderConfig {
   const safeProviderId = String(providerId || "").trim();
   return AI_AGENT_PROVIDERS.find(function (provider) {
     return provider.id === safeProviderId;
   }) || AI_AGENT_PROVIDERS[0];
 }
 
-export function getAiProviderModel(providerId, model) {
+export function getAiProviderModel(providerId: unknown, model: unknown): string {
   const provider = getAiProviderConfig(providerId);
   const safeModel = String(model || "").trim();
   const hasModel = provider.models.some(function (item) {

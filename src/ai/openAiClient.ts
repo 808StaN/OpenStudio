@@ -1,22 +1,40 @@
 import { AI_AGENT_DEFAULT_MODEL, getAiAgentSystemPrompt } from "./aiAgentPrompt";
+import type { AiAgentPlan, AiChatMessage, AiPlanRequest } from "../types/ai"
 
 const OPENAI_CHAT_COMPLETIONS_URL = "https://api.openai.com/v1/chat/completions";
 const OPENAI_MODELS_URL = "https://api.openai.com/v1/models";
 
-function parseAiJsonContent(content) {
+interface OpenAiErrorResponse {
+  error?: { message?: string }
+}
+
+interface OpenAiCompletionResponse extends OpenAiErrorResponse {
+  choices?: Array<{ message?: { content?: string } }>
+}
+
+interface OpenAiModelResponse extends OpenAiErrorResponse {
+  id?: string
+}
+
+interface ParsedAiPlan {
+  message?: unknown
+  operations?: unknown
+}
+
+function parseAiJsonContent(content: unknown): ParsedAiPlan {
   const raw = String(content || "").trim();
   if (!raw) {
     throw new Error("AI returned an empty response.");
   }
 
   try {
-    return JSON.parse(raw);
+    return JSON.parse(raw) as ParsedAiPlan;
   } catch {
     const jsonMatch = raw.match(/\{[\s\S]*\}/);
     if (!jsonMatch) {
       throw new Error("AI response was not valid JSON.");
     }
-    return JSON.parse(jsonMatch[0]);
+    return JSON.parse(jsonMatch[0]) as ParsedAiPlan;
   }
 }
 
@@ -26,7 +44,7 @@ export async function requestAiAgentPlan({
   userMessage,
   projectSummary,
   conversationHistory = [],
-}) {
+}: AiPlanRequest): Promise<AiAgentPlan> {
   const safeApiKey = String(apiKey || "").trim();
   const safeMessage = String(userMessage || "").trim();
   const safeModel = String(model || AI_AGENT_DEFAULT_MODEL).trim() || AI_AGENT_DEFAULT_MODEL;
@@ -47,7 +65,7 @@ export async function requestAiAgentPlan({
   // then the current user request with the live project summary. This gives
   // the model context from earlier in the chat (loaded from Supabase or
   // built up during the current session).
-  const historyMessages = (Array.isArray(conversationHistory)
+  const historyMessages: AiChatMessage[] = (Array.isArray(conversationHistory)
     ? conversationHistory
     : []
   )
@@ -58,7 +76,12 @@ export async function requestAiAgentPlan({
       return { role: msg.role, content: msg.content };
     });
 
-  const requestBody = {
+  const requestBody: {
+    model: string
+    response_format: { type: "json_object" }
+    messages: Array<{ role: "system" | "user" | "assistant"; content: string }>
+    temperature?: number
+  } = {
     model: safeModel,
     response_format: { type: "json_object" },
     messages: [
@@ -90,9 +113,9 @@ export async function requestAiAgentPlan({
     body: JSON.stringify(requestBody),
   });
 
-  const result = await response.json().catch(function () {
-    return null;
-  });
+  const result = await response.json().catch(function (): OpenAiCompletionResponse | null {
+    return null
+  }) as OpenAiCompletionResponse | null
 
   if (!response.ok) {
     const message =
@@ -113,7 +136,7 @@ export async function requestAiAgentPlan({
 export async function testOpenAiConnection({
   apiKey,
   model = AI_AGENT_DEFAULT_MODEL,
-}) {
+}: Pick<AiPlanRequest, "apiKey" | "model">): Promise<{ model: string }> {
   const safeApiKey = String(apiKey || "").trim();
   const safeModel = String(model || AI_AGENT_DEFAULT_MODEL).trim() || AI_AGENT_DEFAULT_MODEL;
 
@@ -131,9 +154,9 @@ export async function testOpenAiConnection({
     },
   );
 
-  const result = await response.json().catch(function () {
-    return null;
-  });
+  const result = await response.json().catch(function (): OpenAiModelResponse | null {
+    return null
+  }) as OpenAiModelResponse | null
 
   if (!response.ok) {
     throw new Error(

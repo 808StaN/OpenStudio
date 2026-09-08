@@ -1,27 +1,50 @@
 import { getAiAgentSystemPrompt } from "./aiAgentPrompt";
 import { getAiProviderConfig, AI_AGENT_PROVIDER_GEMINI } from "./aiProviders";
+import type { AiAgentPlan, AiPlanRequest } from "../types/ai"
 
 const GEMINI_API_BASE_URL = "https://generativelanguage.googleapis.com/v1beta/models";
 
-function parseAiJsonContent(content) {
+interface GeminiErrorResponse {
+  error?: { message?: string }
+}
+
+interface GeminiGenerateResponse extends GeminiErrorResponse {
+  candidates?: Array<{ content?: { parts?: Array<{ text?: string }> } }>
+}
+
+interface ParsedAiPlan {
+  message?: unknown
+  operations?: unknown
+}
+
+interface GeminiContent {
+  role: "user" | "model"
+  parts: Array<{ text: string }>
+}
+
+function parseAiJsonContent(content: unknown): ParsedAiPlan {
   const raw = String(content || "").trim();
   if (!raw) {
     throw new Error("AI returned an empty response.");
   }
 
   try {
-    return JSON.parse(raw);
+    return JSON.parse(raw) as ParsedAiPlan;
   } catch {
     const jsonMatch = raw.match(/\{[\s\S]*\}/);
     if (!jsonMatch) {
       throw new Error("AI response was not valid JSON.");
     }
-    return JSON.parse(jsonMatch[0]);
+    return JSON.parse(jsonMatch[0]) as ParsedAiPlan;
   }
 }
 
-function buildGeminiContents({ userMessage, projectSummary, conversationHistory }) {
-  const historyContents = (Array.isArray(conversationHistory)
+function buildGeminiContents({
+  userMessage,
+  projectSummary,
+  conversationHistory,
+}: Pick<AiPlanRequest, "userMessage" | "projectSummary" | "conversationHistory">): GeminiContent[] {
+  const historyContents: GeminiContent[] = (Array.isArray(conversationHistory)
     ? conversationHistory
     : []
   )
@@ -48,7 +71,7 @@ function buildGeminiContents({ userMessage, projectSummary, conversationHistory 
   });
 }
 
-function makeGeminiGenerateUrl(model, apiKey) {
+function makeGeminiGenerateUrl(model: string, apiKey: string): string {
   return (
     GEMINI_API_BASE_URL +
     "/" +
@@ -64,7 +87,7 @@ export async function requestGeminiAgentPlan({
   userMessage,
   projectSummary,
   conversationHistory = [],
-}) {
+}: AiPlanRequest): Promise<AiAgentPlan> {
   const provider = getAiProviderConfig(AI_AGENT_PROVIDER_GEMINI);
   const safeApiKey = String(apiKey || "").trim();
   const safeMessage = String(userMessage || "").trim();
@@ -98,9 +121,9 @@ export async function requestGeminiAgentPlan({
     }),
   });
 
-  const result = await response.json().catch(function () {
-    return null;
-  });
+  const result = await response.json().catch(function (): GeminiGenerateResponse | null {
+    return null
+  }) as GeminiGenerateResponse | null
 
   if (!response.ok) {
     throw new Error(
@@ -118,7 +141,10 @@ export async function requestGeminiAgentPlan({
   };
 }
 
-export async function testGeminiConnection({ apiKey, model }) {
+export async function testGeminiConnection({
+  apiKey,
+  model,
+}: Pick<AiPlanRequest, "apiKey" | "model">): Promise<{ model: string }> {
   const provider = getAiProviderConfig(AI_AGENT_PROVIDER_GEMINI);
   const safeApiKey = String(apiKey || "").trim();
   const safeModel = String(model || provider.defaultModel).trim() || provider.defaultModel;
@@ -145,9 +171,9 @@ export async function testGeminiConnection({ apiKey, model }) {
     }),
   });
 
-  const result = await response.json().catch(function () {
-    return null;
-  });
+  const result = await response.json().catch(function (): GeminiErrorResponse | null {
+    return null
+  }) as GeminiErrorResponse | null
 
   if (!response.ok) {
     throw new Error(

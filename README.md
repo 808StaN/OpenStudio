@@ -283,6 +283,7 @@ Installer artifacts are generated in `release/`.
 - `npm run desktop:start` - build and launch the unpacked desktop app
 - `npm run desktop:installer` - build the Windows installer
 - `npm run lint` - run ESLint
+- `npm run typecheck` - run TypeScript validation without emitting files
 
 ## Project Structure
 
