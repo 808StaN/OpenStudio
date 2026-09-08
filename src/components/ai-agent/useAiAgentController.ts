@@ -1,4 +1,5 @@
 import { useCallback, useEffect, useRef, useState } from "react";
+import type { FormEvent, KeyboardEvent } from "react"
 import { useDispatch, useSelector, useStore } from "react-redux";
 import {
   applyAiOperations,
@@ -22,6 +23,17 @@ import {
   updateConversation,
 } from "../../lib/aiConversationsApi";
 import { loadProjectFromFile } from "../../store";
+import type {
+  AiChatMessage,
+  AiConversation,
+  AiConversationSummary,
+  AiOperationResult,
+  AiPreparedOperation,
+  AiProviderId,
+  AiRejectedOperation,
+  AiSample,
+} from "../../types/ai"
+import type { DawState } from "../../types/daw"
 
 const AI_AGENT_PROVIDER_STORAGE = "openstudio.ai.provider";
 const AI_AGENT_LEGACY_OPENAI_KEY_STORAGE = "openstudio.ai.openaiKey";
@@ -30,7 +42,12 @@ const AI_AGENT_LEGACY_MODEL_STORAGE = "openstudio.ai.model";
 // Max characters for the auto-generated conversation title.
 const TITLE_MAX_LENGTH = 50;
 
-function readStoredValue(key, fallback = "") {
+interface DawStore {
+  getState: () => { daw: DawState }
+  dispatch: (action: unknown) => unknown
+}
+
+function readStoredValue(key: string, fallback = ""): string {
   if (typeof window === "undefined") {
     return fallback;
   }
@@ -42,7 +59,7 @@ function readStoredValue(key, fallback = "") {
   }
 }
 
-function writeStoredValue(key, value) {
+function writeStoredValue(key: string, value: string): void {
   if (typeof window === "undefined") {
     return;
   }
@@ -58,7 +75,7 @@ function writeStoredValue(key, value) {
   }
 }
 
-function readStoredProvider() {
+function readStoredProvider(): AiProviderId {
   const storedProvider = readStoredValue(
     AI_AGENT_PROVIDER_STORAGE,
     AI_AGENT_DEFAULT_PROVIDER,
@@ -66,7 +83,7 @@ function readStoredProvider() {
   return getAiProviderConfig(storedProvider).id;
 }
 
-function readProviderKey(providerId) {
+function readProviderKey(providerId: string): string {
   const provider = getAiProviderConfig(providerId);
   const storedKey = readStoredValue(provider.keyStorage);
   if (storedKey) {
@@ -78,7 +95,7 @@ function readProviderKey(providerId) {
   return "";
 }
 
-function readProviderModel(providerId) {
+function readProviderModel(providerId: string): string {
   const provider = getAiProviderConfig(providerId);
   const storedModel =
     readStoredValue(provider.modelStorage) ||
@@ -88,15 +105,19 @@ function readProviderModel(providerId) {
   return getAiProviderModel(provider.id, storedModel);
 }
 
-function cloneSerializable(value) {
-  return JSON.parse(JSON.stringify(value));
+function cloneSerializable<T>(value: T): T {
+  return JSON.parse(JSON.stringify(value)) as T
+}
+
+function getErrorMessage(error: unknown): string {
+  return error instanceof Error ? error.message : String(error)
 }
 
 /**
  * Derives a short title from the first user message, truncated on a word
  * boundary so the title does not cut mid-word.
  */
-function deriveTitle(firstMessage) {
+function deriveTitle(firstMessage: string): string {
   const raw = String(firstMessage || "").trim();
   if (!raw) {
     return "New chat";
@@ -110,13 +131,13 @@ function deriveTitle(firstMessage) {
 }
 
 export function useAiAgentController() {
-  const dispatch = useDispatch();
-  const store = useStore();
-  const currentUser = useSelector(function (state) {
+  const dispatch = useDispatch() as DawStore["dispatch"];
+  const store = useStore() as unknown as DawStore;
+  const currentUser = useSelector(function (state: { user: { currentUser: unknown } }) {
     return state.user.currentUser;
   });
   const isAuthenticated = Boolean(currentUser);
-  const [provider, setProviderState] = useState(readStoredProvider);
+  const [provider, setProviderState] = useState<AiProviderId>(readStoredProvider);
 
   const [apiKey, setApiKey] = useState(function () {
     return readProviderKey(provider);
@@ -128,21 +149,21 @@ export function useAiAgentController() {
     return readProviderModel(provider);
   });
   const [input, setInput] = useState("");
-  const [messages, setMessages] = useState([]);
-  const [pendingOperations, setPendingOperations] = useState([]);
-  const [operationResults, setOperationResults] = useState([]);
-  const [rejectedOperations, setRejectedOperations] = useState([]);
+  const [messages, setMessages] = useState<AiChatMessage[]>([]);
+  const [pendingOperations, setPendingOperations] = useState<AiPreparedOperation[]>([]);
+  const [operationResults, setOperationResults] = useState<AiOperationResult[]>([]);
+  const [rejectedOperations, setRejectedOperations] = useState<AiRejectedOperation[]>([]);
   const [error, setError] = useState("");
   const [connectionStatus, setConnectionStatus] = useState("");
   const [isSending, setIsSending] = useState(false);
   const [isApplying, setIsApplying] = useState(false);
   const [isTestingConnection, setIsTestingConnection] = useState(false);
   const [canUndoAppliedPlan, setCanUndoAppliedPlan] = useState(false);
-  const appliedPlanSnapshotsRef = useRef([]);
+  const appliedPlanSnapshotsRef = useRef<DawState[]>([]);
 
   // Conversation history (Supabase-backed, authenticated users only)
-  const [conversations, setConversations] = useState([]);
-  const [activeConversationId, setActiveConversationId] = useState(null);
+  const [conversations, setConversations] = useState<AiConversationSummary[]>([]);
+  const [activeConversationId, setActiveConversationId] = useState<string | null>(null);
   const [isLoadingConversations, setIsLoadingConversations] = useState(false);
 
   useEffect(
@@ -165,7 +186,7 @@ export function useAiAgentController() {
   );
 
   const setProvider = useCallback(
-    function (nextProvider) {
+    function (nextProvider: string) {
       const currentProviderConfig = getAiProviderConfig(provider);
       writeStoredValue(
         currentProviderConfig.keyStorage,
@@ -228,14 +249,14 @@ export function useAiAgentController() {
   }, []);
 
   const selectConversation = useCallback(
-    async function (conversationId) {
+    async function (conversationId: string) {
       if (!conversationId) {
         return;
       }
 
       setIsLoadingConversations(true);
       try {
-        const convo = await loadConversation(conversationId);
+        const convo = await loadConversation(conversationId) as AiConversation | null;
         if (!convo) {
           return;
         }
@@ -270,7 +291,7 @@ export function useAiAgentController() {
   );
 
   const deleteConversation = useCallback(
-    async function (conversationId) {
+    async function (conversationId: string) {
       if (!conversationId) {
         return;
       }
@@ -292,7 +313,9 @@ export function useAiAgentController() {
     [activeConversationId, startNewConversation],
   );
 
-  const sendMessage = async function (event) {
+  const sendMessage = async function (
+    event?: FormEvent<HTMLFormElement> | KeyboardEvent<HTMLTextAreaElement>,
+  ): Promise<void> {
     event?.preventDefault();
 
     const userMessage = String(input || "").trim();
@@ -316,7 +339,7 @@ export function useAiAgentController() {
     });
 
     try {
-      const allSamples = await loadAiSampleIndex(800);
+      const allSamples: AiSample[] = await loadAiSampleIndex(800);
       // Always send a broad sample catalog so the agent knows what's
       // available without the user having to mention specific names.
       const searched = searchAiSamples(allSamples, userMessage, 120);
@@ -348,8 +371,11 @@ export function useAiAgentController() {
       setPendingOperations(validatedOperations);
       setRejectedOperations(prepared.rejected);
 
-      const assistantMessage = { role: "assistant", content: response.message };
-      const updatedMessages = messages.concat(
+      const assistantMessage: AiChatMessage = {
+        role: "assistant",
+        content: response.message,
+      };
+      const updatedMessages: AiChatMessage[] = messages.concat(
         { role: "user", content: userMessage },
         assistantMessage,
       );
@@ -364,7 +390,7 @@ export function useAiAgentController() {
             pendingOperations: validatedOperations,
             operationResults: [],
             rejectedOperations: prepared.rejected,
-          });
+          }) as AiConversation;
           setActiveConversationId(created.id);
           setConversations(function (current) {
             return [
@@ -396,7 +422,7 @@ export function useAiAgentController() {
         }
       }
     } catch (sendError) {
-      const message = String(sendError?.message || sendError);
+      const message = getErrorMessage(sendError);
       setError(message);
       setMessages(function (current) {
         return current.concat({
@@ -425,7 +451,7 @@ export function useAiAgentController() {
     setPendingOperations([]);
     setRejectedOperations([]);
 
-    const systemMessage = {
+    const systemMessage: AiChatMessage = {
       role: "system",
       content:
         "Applied " +
@@ -436,18 +462,18 @@ export function useAiAgentController() {
           ? ". Skipped " + result.skipped.length + "."
           : "."),
     };
-    const updatedMessages = messages.concat(systemMessage);
+    const updatedMessages: AiChatMessage[] = messages.concat(systemMessage);
     setMessages(updatedMessages);
 
     // Persist the applied state to Supabase.
     if (isAuthenticated && activeConversationId) {
-      updateConversation(activeConversationId, {
+      (updateConversation(activeConversationId, {
         messages: updatedMessages,
         pendingOperations: [],
         operationResults: result.results,
         rejectedOperations: [],
-      })
-        .then(function (updated) {
+      }) as Promise<AiConversation>)
+        .then(function (updated: AiConversation) {
           setConversations(function (current) {
             return current.map(function (item) {
               if (item.id !== activeConversationId) {
@@ -481,7 +507,7 @@ export function useAiAgentController() {
       const providerLabel = getAiProviderConfig(provider).label;
       setConnectionStatus("Connected to " + providerLabel + " " + result.model + ".");
     } catch (testError) {
-      const message = String(testError?.message || testError);
+      const message = getErrorMessage(testError);
       setError(message);
       setConnectionStatus("");
     } finally {

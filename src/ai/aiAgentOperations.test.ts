@@ -5,7 +5,49 @@ import {
   validatePreparedAiOperations,
 } from "./aiAgentOperations";
 
-function createDawState() {
+interface TestNote {
+  id?: string
+  start?: number
+  length?: number
+  pitch?: number
+  velocity?: number
+  source?: string
+}
+
+interface TestDawState {
+  project: {
+    activePatternId: string
+    activeChannelId: string
+    patterns: Array<{
+      id: string
+      name: string
+      lengthSteps: number
+      stepGrid: Record<string, boolean[]>
+      pianoPreview: Record<string, TestNote[]>
+    }>
+    channels: Array<{ id: string; name: string; pluginRef?: string }>
+    playlistTracks: Array<{ id: string; name: string }>
+  }
+  mixer: {
+    inserts: Array<{
+      id: string
+      fxSlots: Array<{ id: string; enabled: boolean; effectType: string }>
+    }>
+  }
+}
+
+interface DispatchedAction {
+  type: string
+  payload: {
+    notes: TestNote[]
+    allowOverlaps: boolean
+    pluginRef: string
+    pluginName: string
+    channelId: string
+  }
+}
+
+function createDawState(): TestDawState {
   return {
     project: {
       activePatternId: "pat-1",
@@ -156,8 +198,8 @@ describe("validatePreparedAiOperations", function () {
 describe("applyAiOperations", function () {
   it("dispatches a step toggle only when the desired value differs", function () {
     const dawState = createDawState();
-    const dispatched = [];
-    const dispatch = function (action) {
+    const dispatched: DispatchedAction[] = [];
+    const dispatch = function (action: DispatchedAction) {
       dispatched.push(action);
     };
     const getState = function () {
@@ -200,8 +242,8 @@ describe("applyAiOperations", function () {
 
   it("dispatches instrument assignment operations", function () {
     const dawState = createDawState();
-    const dispatched = [];
-    const dispatch = function (action) {
+    const dispatched: DispatchedAction[] = [];
+    const dispatch = function (action: DispatchedAction) {
       dispatched.push(action);
     };
     const getState = function () {
@@ -234,8 +276,8 @@ describe("applyAiOperations", function () {
 
   it("normalizes AI note velocity before dispatching piano notes", function () {
     const dawState = createDawState();
-    const dispatched = [];
-    const dispatch = function (action) {
+    const dispatched: DispatchedAction[] = [];
+    const dispatch = function (action: DispatchedAction) {
       dispatched.push(action);
     };
     const getState = function () {
@@ -266,8 +308,8 @@ describe("applyAiOperations", function () {
   it("expands chord progressions into long stacked piano notes", function () {
     const dawState = createDawState();
     dawState.project.patterns[0].lengthSteps = 64;
-    const dispatched = [];
-    const dispatch = function (action) {
+    const dispatched: DispatchedAction[] = [];
+    const dispatch = function (action: DispatchedAction) {
       dispatched.push(action);
     };
     const getState = function () {
@@ -302,8 +344,8 @@ describe("applyAiOperations", function () {
 
   it("dispatches BPM changes", function () {
     const dawState = createDawState();
-    const dispatched = [];
-    const dispatch = function (action) {
+    const dispatched: DispatchedAction[] = [];
+    const dispatch = function (action: DispatchedAction) {
       dispatched.push(action);
     };
     const getState = function () {
@@ -332,8 +374,8 @@ describe("applyAiOperations", function () {
     };
     dawState.project.patterns[0].stepGrid["ch-kick"][0] = true;
     dawState.project.patterns[0].stepGrid["ch-kick"][4] = true;
-    const dispatched = [];
-    const dispatch = function (action) {
+    const dispatched: DispatchedAction[] = [];
+    const dispatch = function (action: DispatchedAction) {
       dispatched.push(action);
     };
     const getState = function () {
@@ -352,7 +394,7 @@ describe("applyAiOperations", function () {
 
     const clearAction = dispatched.find(function (action) {
       return action.type === "daw/removePianoNotesBatch";
-    });
+    })!;
     expect(clearAction).toBeDefined();
     expect(clearAction.payload.notes).toEqual(
       expect.arrayContaining([
@@ -365,8 +407,8 @@ describe("applyAiOperations", function () {
 
   it("auto-expands pattern length before adding notes beyond the current pattern", function () {
     const dawState = createDawState();
-    const dispatched = [];
-    const dispatch = function (action) {
+    const dispatched: DispatchedAction[] = [];
+    const dispatch = function (action: DispatchedAction) {
       dispatched.push(action);
     };
     const getState = function () {
@@ -388,10 +430,10 @@ describe("applyAiOperations", function () {
 
     const lengthAction = dispatched.find(function (action) {
       return action.type === "daw/setPatternLength";
-    });
+    })!;
     const notesAction = dispatched.find(function (action) {
       return action.type === "daw/addPianoNotesBatch";
-    });
+    })!;
     expect(lengthAction.payload).toEqual({ patternId: "pat-1", length: 34 });
     expect(notesAction.payload.notes[0]).toEqual(
       expect.objectContaining({ start: 30, length: 4 }),
@@ -400,8 +442,8 @@ describe("applyAiOperations", function () {
 
   it("auto-expands pattern length before adding chord progressions", function () {
     const dawState = createDawState();
-    const dispatched = [];
-    const dispatch = function (action) {
+    const dispatched: DispatchedAction[] = [];
+    const dispatch = function (action: DispatchedAction) {
       dispatched.push(action);
     };
     const getState = function () {
@@ -423,10 +465,10 @@ describe("applyAiOperations", function () {
 
     const lengthAction = dispatched.find(function (action) {
       return action.type === "daw/setPatternLength";
-    });
+    })!;
     const notesAction = dispatched.find(function (action) {
       return action.type === "daw/addPianoNotesBatch";
-    });
+    })!;
     expect(lengthAction.payload).toEqual({ patternId: "pat-1", length: 32 });
     expect(notesAction.payload.notes).toHaveLength(3);
     expect(notesAction.payload.notes[0]).toEqual(
@@ -436,8 +478,8 @@ describe("applyAiOperations", function () {
 
   it("auto-assigns pluginRef when add_channel includes one", function () {
     const dawState = createDawState();
-    const dispatched = [];
-    const dispatch = function (action) {
+    const dispatched: DispatchedAction[] = [];
+    const dispatch = function (action: DispatchedAction) {
       dispatched.push(action);
     };
     const getState = function () {
@@ -459,7 +501,7 @@ describe("applyAiOperations", function () {
 
     const assignAction = dispatched.find(function (action) {
       return action.type === "daw/assignPluginToChannel";
-    });
+    })!;
     expect(assignAction).toBeDefined();
     expect(assignAction.payload.pluginRef).toBe("openstudio-piano");
     expect(assignAction.payload.pluginName).toBe("Piano");
@@ -467,8 +509,8 @@ describe("applyAiOperations", function () {
 
   it("does not auto-assign when pluginRef is invalid", function () {
     const dawState = createDawState();
-    const dispatched = [];
-    const dispatch = function (action) {
+    const dispatched: DispatchedAction[] = [];
+    const dispatch = function (action: DispatchedAction) {
       dispatched.push(action);
     };
     const getState = function () {
@@ -490,7 +532,7 @@ describe("applyAiOperations", function () {
 
     const assignAction = dispatched.find(function (action) {
       return action.type === "daw/assignPluginToChannel";
-    });
+    })!;
     expect(assignAction).toBeUndefined();
   });
 
@@ -566,8 +608,8 @@ describe("applyAiOperations", function () {
 describe("applyAiOperations with $new channel reference", function () {
   it("resolves $new to the channel just created by add_channel", function () {
     const dawState = createDawState();
-    const dispatched = [];
-    const dispatch = function (action) {
+    const dispatched: DispatchedAction[] = [];
+    const dispatch = function (action: DispatchedAction) {
       dispatched.push(action);
     };
     const getState = function () {
@@ -595,7 +637,7 @@ describe("applyAiOperations with $new channel reference", function () {
     // not the literal string "$new".
     const notesAction = dispatched.find(function (action) {
       return action.type === "daw/addPianoNotesBatch";
-    });
+    })!;
     expect(notesAction).toBeDefined();
     expect(notesAction.payload.channelId).not.toBe("$new");
     expect(notesAction.payload.channelId).not.toBe("$active");

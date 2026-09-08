@@ -1,14 +1,16 @@
 import { PLUGIN_EFFECTS } from "../data/pluginEffects";
 import { PLUGIN_INSTRUMENTS } from "../data/pluginInstruments";
+import type { AiProjectSummary, AiSample } from "../types/ai"
+import type { DawFxSlot, DawMixerInsert, DawPattern, DawState, PianoNote } from "../types/daw"
 
 // Returns { channelId: [{ start, length, pitch, velocity }] } without note ids.
 // Only used for the active pattern so the payload stays compact.
-function summarizePianoPreview(pianoPreview) {
+function summarizePianoPreview(pianoPreview: DawPattern["pianoPreview"]): Record<string, PianoNote[]> {
   if (!pianoPreview || typeof pianoPreview !== "object") {
     return {};
   }
 
-  const result = {};
+  const result: Record<string, PianoNote[]> = {};
   Object.keys(pianoPreview).forEach(function (channelId) {
     const notes = Array.isArray(pianoPreview[channelId])
       ? pianoPreview[channelId]
@@ -29,12 +31,12 @@ function summarizePianoPreview(pianoPreview) {
 }
 
 // Returns { channelId: [bool, bool, ...] } for the active pattern only.
-function summarizeStepGrid(stepGrid) {
+function summarizeStepGrid(stepGrid: DawPattern["stepGrid"]): Record<string, boolean[]> {
   if (!stepGrid || typeof stepGrid !== "object") {
     return {};
   }
 
-  const result = {};
+  const result: Record<string, boolean[]> = {};
   Object.keys(stepGrid).forEach(function (channelId) {
     const row = Array.isArray(stepGrid[channelId]) ? stepGrid[channelId] : [];
     if (row.length === 0) {
@@ -47,7 +49,7 @@ function summarizeStepGrid(stepGrid) {
 
 // Lightweight count so the agent knows a non-active pattern is not empty
 // without receiving every note (keeps the token budget reasonable).
-function countPianoNotes(pianoPreview) {
+function countPianoNotes(pianoPreview: DawPattern["pianoPreview"]): number {
   if (!pianoPreview || typeof pianoPreview !== "object") {
     return 0;
   }
@@ -58,7 +60,7 @@ function countPianoNotes(pianoPreview) {
   }, 0);
 }
 
-function summarizeFxSlots(insert) {
+function summarizeFxSlots(insert: DawMixerInsert): Array<Pick<DawFxSlot, "id" | "name" | "enabled" | "effectType">> {
   return (Array.isArray(insert?.fxSlots) ? insert.fxSlots : [])
     .filter(function (slot) {
       return slot?.effectType && slot.effectType !== "none";
@@ -73,7 +75,10 @@ function summarizeFxSlots(insert) {
     });
 }
 
-export function buildAiProjectSummary(dawState, availableSamples = []) {
+export function buildAiProjectSummary(
+  dawState: DawState,
+  availableSamples: AiSample[] = [],
+): AiProjectSummary {
   const project = dawState?.project || {};
   const mixer = dawState?.mixer || {};
   const transport = dawState?.transport || {};

@@ -1,4 +1,19 @@
 import { CheckCircle2 } from "lucide-react";
+import type {
+  AiOperationResult,
+  AiPreparedOperation,
+  AiRejectedOperation,
+} from "../../types/ai"
+
+interface AiAgentPlanPanelProps {
+  operations: AiPreparedOperation[]
+  operationResults: AiOperationResult[]
+  rejectedOperations: AiRejectedOperation[]
+  isApplying: boolean
+  onApply: () => void
+  onUndo: () => void
+  canUndo: boolean
+}
 
 export function AiAgentPlanPanel({
   operations,
@@ -8,11 +23,10 @@ export function AiAgentPlanPanel({
   onApply,
   onUndo,
   canUndo,
-}) {
-  const hasOperations = Array.isArray(operations) && operations.length > 0;
-  const hasResults = Array.isArray(operationResults) && operationResults.length > 0;
-  const hasRejected =
-    Array.isArray(rejectedOperations) && rejectedOperations.length > 0;
+}: AiAgentPlanPanelProps) {
+  const hasOperations = operations.length > 0;
+  const hasResults = operationResults.length > 0;
+  const hasRejected = rejectedOperations.length > 0;
 
   return (
     <aside className="ai-agent-plan-card">
@@ -27,7 +41,7 @@ export function AiAgentPlanPanel({
             return (
               <li key={operation.id} className={operation.status === "warning" ? "has-warning" : ""}>
                 <span>{operation.description}</span>
-                {Array.isArray(operation.issues) && operation.issues.length > 0 ? (
+                {operation.issues && operation.issues.length > 0 ? (
                   <small>{operation.issues.join(" ")}</small>
                 ) : null}
               </li>

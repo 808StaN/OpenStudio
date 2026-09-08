@@ -1,4 +1,20 @@
-function makePacksPath(relativePath) {
+import type { AiSample } from "../types/ai"
+
+interface PackManifestItem {
+  name?: unknown
+  path?: unknown
+}
+
+interface PackManifestFolder {
+  folder?: unknown
+  items?: unknown
+}
+
+interface PackManifest {
+  folders?: unknown
+}
+
+function makePacksPath(relativePath: unknown): string {
   const cleanRelative = String(relativePath || "")
     .replace(/^\/+/, "")
     .trim();
@@ -22,7 +38,7 @@ function makePacksPath(relativePath) {
   return "/" + cleanRelative;
 }
 
-function normalizePackItemPath(rawPath) {
+function normalizePackItemPath(rawPath: unknown): string {
   const input = String(rawPath || "").trim();
   if (!input) {
     return "";
@@ -40,7 +56,7 @@ function normalizePackItemPath(rawPath) {
   return makePacksPath("packs/" + noLeadingSlash);
 }
 
-export async function loadAiSampleIndex(limit = 240) {
+export async function loadAiSampleIndex(limit = 240): Promise<AiSample[]> {
   try {
     const response = await fetch(
       makePacksPath("packs/manifest.json") + "?ts=" + Date.now(),
@@ -51,17 +67,21 @@ export async function loadAiSampleIndex(limit = 240) {
       return [];
     }
 
-    const manifest = await response.json();
-    const folders = Array.isArray(manifest?.folders) ? manifest.folders : [];
-    const samples = [];
+    const manifest = await response.json() as PackManifest;
+    const folders: PackManifestFolder[] = Array.isArray(manifest?.folders)
+      ? manifest.folders
+      : [];
+    const samples: AiSample[] = [];
 
     folders.forEach(function (folder) {
       const folderName = String(folder?.folder || "Packs");
-      const items = Array.isArray(folder?.items) ? folder.items : [];
+      const items: Array<string | PackManifestItem> = Array.isArray(folder?.items)
+        ? folder.items
+        : [];
       items.forEach(function (item) {
         const name = typeof item === "string"
           ? item.split("/").pop() || item
-          : String(item?.name || item?.path || "Sample").split("/").pop();
+          : String(item?.name || item?.path || "Sample").split("/").pop() || "Sample";
         const path = typeof item === "string"
           ? normalizePackItemPath(item)
           : normalizePackItemPath(item?.path);
@@ -84,7 +104,7 @@ export async function loadAiSampleIndex(limit = 240) {
   }
 }
 
-function tokenizeSampleQuery(query) {
+function tokenizeSampleQuery(query: unknown): string[] {
   return String(query || "")
     .toLowerCase()
     .split(/[^a-z0-9]+/i)
@@ -96,7 +116,7 @@ function tokenizeSampleQuery(query) {
     });
 }
 
-function scoreSample(sample, tokens) {
+function scoreSample(sample: AiSample, tokens: string[]): number {
   const haystack = [sample?.name, sample?.folder, sample?.path]
     .join(" ")
     .toLowerCase();
@@ -111,8 +131,12 @@ function scoreSample(sample, tokens) {
   }, 0);
 }
 
-export function searchAiSamples(samples, query, limit = 80) {
-  const source = Array.isArray(samples) ? samples : [];
+export function searchAiSamples(
+  samples: AiSample[] | unknown,
+  query: unknown,
+  limit = 80,
+): AiSample[] {
+  const source: AiSample[] = Array.isArray(samples) ? samples : [];
   const tokens = tokenizeSampleQuery(query);
 
   if (tokens.length === 0) {
