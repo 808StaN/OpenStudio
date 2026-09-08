@@ -12,7 +12,7 @@
 # OpenStudio
 
 
-OpenStudio is a browser and desktop DAW built with React, Web Audio API, and Electron. It brings the core beatmaking workflow into one app: browse sounds, build patterns, edit melodies, arrange clips, mix tracks, save projects locally or in the cloud, and export the final track to WAV or MP3. The built-in AI Agent helps shape your project, from melodies and drum patterns to instruments, mixer settings, clips, BPM, and FX.
+OpenStudio is a browser and desktop DAW built with React, Web Audio API, and Electron. It brings the core beatmaking workflow into one app: browse sounds, build patterns, arrange clips, mix tracks, and export the final track to WAV or MP3. The built-in AI Agent helps shape melodies, drums, instruments, mixer settings, and FX.
 <br><br>
 ![OpenStudio Preview](docs/media/openstudio-preview.gif)
 
@@ -53,7 +53,7 @@ It is a full interactive app rather than a static UI mockup, with multiple DAW w
 - Realtime sample playback, SoundFont instruments, mixer routing, meters, and built-in FX
 - Local `.os` project files plus Supabase-backed cloud saves, loading, overwrites, search, sorting, and deletion
 - Offline WAV / MP3 rendering through the same audio-domain timing logic used by playback
-- Built-in AI Agent with OpenAI/Gemini BYOK support, project-aware edit plans, Preview + Apply, and one-click plan undo
+- Built-in AI Agent with user-provided OpenAI or Gemini API keys, project-aware edit plans, Preview + Apply, and one-click plan undo
 - Runtime DAW themes with separate plugin styling for consistent built-in effect UIs
 - Electron desktop packaging from the same React/Web Audio codebase
 
@@ -136,7 +136,7 @@ OpenStudio includes a built-in AI Agent for project-aware music production assis
 
 The agent uses a Preview + Apply workflow: it proposes a validated operation list first, then you decide whether to apply it. Applied AI plans can be undone in one step.
 
-AI provider support is bring-your-own-key:
+Choose an AI provider and enter your own API key:
 
 - OpenAI
 - Gemini
@@ -314,7 +314,7 @@ OpenStudio/
 
 ## Tech Stack
 
-- JavaScript / ES modules - application codebase and tooling scripts
+- JavaScript and TypeScript / ES modules - application codebase and tooling scripts
 - HTML5 and CSS3 - app shell, custom UI, responsive layouts, and theme styling
 - React 19 - windowed DAW interface, editors, dialogs, and plugin UIs
 - Redux Toolkit + React Redux - project state, mixer state, transport state, patterns, clips, channels, and UI state
@@ -325,7 +325,7 @@ OpenStudio/
 - Supabase Auth - account creation, sign in, and authenticated user sessions
 - PostgreSQL / Supabase Database - project metadata, user profile records, and AI conversation history
 - Supabase Storage - cloud `.os` project file storage
-- OpenAI / Gemini APIs - optional BYOK AI Agent providers for project-aware edit plans
+- OpenAI / Gemini APIs - optional user-provided API keys for project-aware edit plans
 - Vite 8 - dev server and production bundling
 - Electron 41 - desktop runtime for the Windows app
 - Electron Builder - unpacked desktop builds and NSIS installer packaging
