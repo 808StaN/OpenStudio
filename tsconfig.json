@@ -19,5 +19,5 @@
     "types": ["vitest/globals"]
   },
   "include": ["src", "vite.config.js", "eslint.config.js"],
-  "exclude": ["dist", "release", "node_modules", "**/*.test.ts", "**/*.test.tsx"]
+  "exclude": ["dist", "release", "node_modules"]
 }

@@ -52,7 +52,7 @@ describe("buildAiProjectSummary", function () {
             },
           },
         ],
-        channels: [{ id: "ch-1", name: "Piano" }],
+        channels: [createChannel()],
         playlistTracks: [],
         playlistClips: [],
       },
@@ -97,7 +97,7 @@ describe("buildAiProjectSummary", function () {
             stepGrid: { "ch-1": [true] },
           },
         ],
-        channels: [{ id: "ch-1", name: "Piano" }],
+        channels: [createChannel()],
         playlistTracks: [],
         playlistClips: [],
       },
@@ -106,10 +106,10 @@ describe("buildAiProjectSummary", function () {
 
     const activePattern = summary.patterns.find(function (p) {
       return p.id === "pat-1";
-    });
+    })!;
     const inactivePattern = summary.patterns.find(function (p) {
       return p.id === "pat-2";
-    });
+    })!;
 
     expect(activePattern.notes).toEqual({});
     expect(activePattern.steps).toEqual({});
@@ -120,3 +120,18 @@ describe("buildAiProjectSummary", function () {
     expect(inactivePattern.noteCount).toBe(1);
   });
 });
+
+function createChannel() {
+  return {
+    id: "ch-1",
+    name: "Piano",
+    sampleRef: "",
+    pluginRef: "openstudio-piano",
+    volume: 1,
+    pan: 0,
+    muted: false,
+    solo: false,
+    inputMode: "piano",
+    mixerInsertId: "insert-1",
+  };
+}

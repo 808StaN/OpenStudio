@@ -1,5 +1,30 @@
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { requestGeminiAgentPlan, testGeminiConnection } from "./geminiClient";
+import type { AiProjectSummary } from "../types/ai";
+
+interface GeminiRequestBody {
+  systemInstruction: { parts: Array<{ text: string }> }
+  generationConfig: { responseMimeType: string }
+  contents: Array<{ role: string; parts: Array<{ text: string }> }>
+}
+
+function createJsonResponse(body: unknown): Response {
+  return new Response(JSON.stringify(body), { status: 200 });
+}
+
+function createProjectSummary<T extends Record<string, unknown>>(
+  summary: T,
+): T & AiProjectSummary {
+  return summary as T & AiProjectSummary;
+}
+
+function getSentBody(call: Parameters<typeof fetch> | undefined): GeminiRequestBody {
+  const body = call?.[1]?.body;
+  if (typeof body !== "string") {
+    throw new Error("Expected a JSON request body.");
+  }
+  return JSON.parse(body) as GeminiRequestBody;
+}
 
 describe("geminiClient", function () {
   afterEach(function () {
@@ -7,70 +32,62 @@ describe("geminiClient", function () {
   });
 
   it("parses JSON generateContent responses", async function () {
-    const fetchMock = vi.spyOn(globalThis, "fetch").mockResolvedValue({
-      ok: true,
-      json: async function () {
-        return {
-          candidates: [
-            {
-              content: {
-                parts: [
-                  {
-                    text: JSON.stringify({
-                      message: "Plan ready",
-                      operations: [{ type: "create_pattern", payload: {} }],
-                    }),
-                  },
-                ],
-              },
+    const fetchMock = vi.spyOn(globalThis, "fetch").mockResolvedValue(
+      createJsonResponse({
+        candidates: [
+          {
+            content: {
+              parts: [
+                {
+                  text: JSON.stringify({
+                    message: "Plan ready",
+                    operations: [{ type: "create_pattern", payload: {} }],
+                  }),
+                },
+              ],
             },
-          ],
-        };
-      },
-    });
+          },
+        ],
+      }),
+    );
 
     const result = await requestGeminiAgentPlan({
       apiKey: "gemini-key",
       model: "gemini-3.5-flash",
       userMessage: "create pattern",
-      projectSummary: { patterns: [] },
+      projectSummary: createProjectSummary({ patterns: [] }),
     });
 
     expect(result.message).toBe("Plan ready");
     expect(result.operations).toHaveLength(1);
     expect(fetchMock).toHaveBeenCalledTimes(1);
-    expect(fetchMock.mock.calls[0][0]).toContain(
+    expect(fetchMock.mock.calls[0]?.[0]).toContain(
       "/gemini-3.5-flash:generateContent?key=gemini-key",
     );
 
-    const sentBody = JSON.parse(fetchMock.mock.calls[0][1].body);
-    expect(sentBody.systemInstruction.parts[0].text).toContain("OpenStudio");
+    const sentBody = getSentBody(fetchMock.mock.calls[0]);
+    expect(sentBody.systemInstruction.parts[0]?.text).toContain("OpenStudio");
     expect(sentBody.generationConfig.responseMimeType).toBe("application/json");
   });
 
   it("maps conversation history to Gemini roles", async function () {
-    const fetchMock = vi.spyOn(globalThis, "fetch").mockResolvedValue({
-      ok: true,
-      json: async function () {
-        return {
-          candidates: [
-            {
-              content: {
-                parts: [
-                  { text: JSON.stringify({ message: "ok", operations: [] }) },
-                ],
-              },
+    const fetchMock = vi.spyOn(globalThis, "fetch").mockResolvedValue(
+      createJsonResponse({
+        candidates: [
+          {
+            content: {
+              parts: [{ text: JSON.stringify({ message: "ok", operations: [] }) }],
             },
-          ],
-        };
-      },
-    });
+          },
+        ],
+      }),
+    );
 
     await requestGeminiAgentPlan({
       apiKey: "gemini-key",
       model: "gemini-3.1-pro-preview",
       userMessage: "add a snare",
-      projectSummary: { tempo: 140 },
+      projectSummary: createProjectSummary({ tempo: 140 }),
       conversationHistory: [
         { role: "user", content: "create a beat" },
         { role: "assistant", content: "I created kick and hats." },
@@ -78,7 +95,7 @@ describe("geminiClient", function () {
       ],
     });
 
-    const sentBody = JSON.parse(fetchMock.mock.calls[0][1].body);
+    const sentBody = getSentBody(fetchMock.mock.calls[0]);
     expect(sentBody.contents).toHaveLength(3);
     expect(sentBody.contents[0]).toEqual({
       role: "user",
@@ -88,20 +105,17 @@ describe("geminiClient", function () {
       role: "model",
       parts: [{ text: "I created kick and hats." }],
     });
-    expect(sentBody.contents[2].role).toBe("user");
-    expect(JSON.parse(sentBody.contents[2].parts[0].text)).toEqual({
+    expect(sentBody.contents[2]?.role).toBe("user");
+    expect(JSON.parse(sentBody.contents[2]?.parts[0]?.text || "")).toEqual({
       request: "add a snare",
       project: { tempo: 140 },
     });
   });
 
   it("tests access with a lightweight JSON request", async function () {
-    const fetchMock = vi.spyOn(globalThis, "fetch").mockResolvedValue({
-      ok: true,
-      json: async function () {
-        return { candidates: [] };
-      },
-    });
+    const fetchMock = vi.spyOn(globalThis, "fetch").mockResolvedValue(
+      createJsonResponse({ candidates: [] }),
+    );
 
     const result = await testGeminiConnection({
       apiKey: "gemini-key",
@@ -109,8 +123,8 @@ describe("geminiClient", function () {
     });
 
     expect(result.model).toBe("gemini-3.1-flash-lite");
-    const sentBody = JSON.parse(fetchMock.mock.calls[0][1].body);
-    expect(sentBody.contents[0].parts[0].text).toBe(
+    const sentBody = getSentBody(fetchMock.mock.calls[0]);
+    expect(sentBody.contents[0]?.parts[0]?.text).toBe(
       "Return {\"ok\":true} as JSON.",
     );
   });
@@ -121,7 +135,7 @@ describe("geminiClient", function () {
         apiKey: "",
         model: "gemini-3.5-flash",
         userMessage: "hi",
-        projectSummary: {},
+        projectSummary: createProjectSummary({}),
       }),
     ).rejects.toThrow("Paste your Gemini API key");
   });

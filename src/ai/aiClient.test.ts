@@ -28,6 +28,13 @@ import {
   testOpenAiConnection,
 } from "./openAiClient";
 import { requestGeminiAgentPlan, testGeminiConnection } from "./geminiClient";
+import type { AiProjectSummary } from "../types/ai";
+
+function createProjectSummary<T extends Record<string, unknown>>(
+  summary: T,
+): T & AiProjectSummary {
+  return summary as T & AiProjectSummary;
+}
 
 describe("aiClient", function () {
   beforeEach(function () {
@@ -38,9 +45,11 @@ describe("aiClient", function () {
     const result = await requestAiAgentPlan({
       apiKey: "sk-test",
       model: "gpt-5.5",
+      userMessage: "create pattern",
+      projectSummary: createProjectSummary({}),
     });
 
-    expect(result.provider).toBe("openai");
+    expect((result as typeof result & { provider: string }).provider).toBe("openai");
     expect(requestOpenAiAgentPlan).toHaveBeenCalledTimes(1);
     expect(requestGeminiAgentPlan).not.toHaveBeenCalled();
   });
@@ -50,9 +59,11 @@ describe("aiClient", function () {
       provider: "gemini",
       apiKey: "gemini-key",
       model: "gemini-3.5-flash",
+      userMessage: "create pattern",
+      projectSummary: createProjectSummary({}),
     });
 
-    expect(result.provider).toBe("gemini");
+    expect((result as typeof result & { provider: string }).provider).toBe("gemini");
     expect(requestGeminiAgentPlan).toHaveBeenCalledTimes(1);
     expect(requestOpenAiAgentPlan).not.toHaveBeenCalled();
   });
