@@ -22,6 +22,7 @@ OpenStudio is a browser and desktop DAW built with React, Web Audio API, and Ele
 - [Why OpenStudio](#why-openstudio)
 - [Highlights](#highlights)
 - [Feature Overview](#feature-overview)
+- [Roadmap](#roadmap)
 - [AI Agent](#ai-agent)
 - [Themes](#themes)
 - [Built-in Instruments](#built-in-instruments)
@@ -129,6 +130,16 @@ It is a full interactive app rather than a static UI mockup, with multiple DAW w
 - Cloud project overwrite protection when a project with the same name already exists
 - Load project window with cloud project search, sortable columns, local file loading, and delete confirmation
 - Cloud project files are stored in Supabase Storage while project metadata lives in a Supabase database table
+
+## Roadmap
+
+- [ ] Continue the incremental TypeScript migration across the application
+- [ ] Add MIDI device input and record MIDI notes into Piano Roll
+- [ ] Add a metronome, count-in, loop regions, and transport shortcuts
+- [ ] Record audio from a microphone or audio interface, with input-device selection, monitoring, waveform clips, and project persistence
+- [ ] Add user-facing automation lanes for mixer and plugin parameters
+- [ ] Improve arrangement editing with multi-select, copy/paste, duplicate, and clip grouping
+- [ ] Add autosave and crash-recovery snapshots for local projects
 
 ## AI Agent
 
